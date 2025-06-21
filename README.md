@@ -1,4 +1,4 @@
-# mobile
+# communal_mobile
 
 A new Flutter project.
 

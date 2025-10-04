@@ -2,6 +2,7 @@
 import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/screens/splash/splash_screen.dart';
+import 'package:communal_mobile/screens/onboarding/onboarding_screen.dart';
 // import 'package:communal_mobile/core/features/wallet/screens/pages/wallet_page.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -11,6 +12,11 @@ final GoRouter appRouter = GoRouter(
       path: '/',
       name: 'splash',
       builder: (context, state) => const SplashScreen(),
+    ),
+    GoRoute(
+      path: '/onboarding',
+      name: 'onboarding',
+      builder: (context, state) => const OnBoardingScreen(),
     ),
     // GoRoute(
     //   path: '/wallet/:userId',

@@ -11,7 +11,10 @@ class SplashFirstTimeUser extends SplashState {}
 
 class SplashLoggedOut extends SplashState {}
 
-class SplashLoggedIn extends SplashState {}
+class SplashLoggedIn extends SplashState {
+  final Map<String, dynamic> settingsMap;
+  SplashLoggedIn(this.settingsMap);
+}
 
 class SplashError extends SplashState {
   final String message;

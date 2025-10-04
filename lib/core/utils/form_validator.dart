@@ -1,4 +1,3 @@
-import 'dart:developer';
 
 class FormValidator {
   static String? isValidEmail(String? email) {

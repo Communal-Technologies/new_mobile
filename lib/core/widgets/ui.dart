@@ -135,7 +135,7 @@ class UiService {
       barrierDismissible: false,
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: theme.colorScheme.surfaceVariant,
+        backgroundColor: theme.colorScheme.surfaceContainerHighest,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -162,7 +162,7 @@ class UiService {
       context: context,
       isScrollControlled: true,
       isDismissible: isDismissible,
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),

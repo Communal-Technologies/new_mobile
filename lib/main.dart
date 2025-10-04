@@ -8,6 +8,7 @@ import 'package:communal_mobile/routes/app_routes.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/cubits/splash/splash_cubit.dart';
+import 'package:communal_mobile/cubits/settings/settings_cubit.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
@@ -34,6 +35,7 @@ void main() async {
         providers: [
           BlocProvider(create: (_) => getIt<AuthBloc>()..add(AppStarted())),
           BlocProvider(create: (_) => getIt<SplashCubit>()..initApp()),
+          BlocProvider(create: (_) => getIt<SettingsCubit>()),
         ],
         child: const MyApp(),
       ),
@@ -68,7 +70,6 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});

@@ -1,3 +1,4 @@
+import 'package:communal_mobile/screens/onboarding/onboarding_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -27,7 +28,10 @@ class _SplashScreenState extends State<SplashScreen> {
         context,
       ).showSnackBar(const SnackBar(content: Text("No Internet Connection")));
     } else if (state is SplashFirstTimeUser) {
-      Navigator.pushReplacementNamed(context, '/onboarding');
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const OnBoardingScreen()),
+      );
     } else if (state is SplashLoggedOut) {
       Navigator.pushReplacementNamed(context, '/welcome');
     } else if (state is SplashLoggedIn) {

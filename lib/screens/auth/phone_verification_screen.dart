@@ -1,0 +1,601 @@
+import 'dart:async';
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:communal_mobile/core/constants/images.dart';
+import 'package:communal_mobile/core/widgets/otp_input_field.dart';
+import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
+import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:go_router/go_router.dart';
+
+enum VerificationMethod { sms, whatsapp, call }
+
+class PhoneVerificationScreen extends StatefulWidget {
+  const PhoneVerificationScreen({
+    super.key,
+    required this.phoneNumber,
+    this.method = VerificationMethod.sms,
+  });
+
+  final String phoneNumber;
+  final VerificationMethod method;
+
+  @override
+  State<PhoneVerificationScreen> createState() =>
+      _PhoneVerificationScreenState();
+}
+
+class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
+  String _code = '';
+  int _resendTimer = 34;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_resendTimer > 0) {
+        setState(() {
+          _resendTimer--;
+        });
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  void _resendCode() {
+    setState(() {
+      _resendTimer = 34;
+    });
+    _startTimer();
+    // TODO: Implement actual resend logic
+  }
+
+  String get _maskedPhone {
+    if (widget.phoneNumber.length >= 11) {
+      final prefix = widget.phoneNumber.substring(0, 7);
+      final suffix = widget.phoneNumber.substring(widget.phoneNumber.length - 4);
+      return '$prefix****$suffix';
+    }
+    return widget.phoneNumber;
+  }
+
+  String get _title {
+    switch (widget.method) {
+      case VerificationMethod.sms:
+        return 'Verify Phone via SMS';
+      case VerificationMethod.whatsapp:
+        return 'Verify Phone via Whatsapp';
+      case VerificationMethod.call:
+        return 'Verify Phone via Call';
+    }
+  }
+
+  String get _instruction {
+    switch (widget.method) {
+      case VerificationMethod.sms:
+        return 'Enter the code we sent to your phone number (SMS)';
+      case VerificationMethod.whatsapp:
+        return 'Enter the code we sent to you on Whatsapp';
+      case VerificationMethod.call:
+        return 'Enter the code you heard on the Voice Call';
+    }
+  }
+
+  List<String> get _howToCheckSteps {
+    switch (widget.method) {
+      case VerificationMethod.sms:
+        return [
+          'Open your messaging app on your phone',
+          'Check for a message from PalmPayInfo',
+          'Enter the 6-digit code in the box above',
+        ];
+      case VerificationMethod.whatsapp:
+        return [
+          'Open your whatsapp app on your phone',
+          'Check for a message from PalmPayInfo',
+          'Enter the 6-digit code in the box above',
+        ];
+      case VerificationMethod.call:
+        return [
+          'You will receive a call from us',
+          'Enter the 6-digit code you hear in the box above',
+        ];
+    }
+  }
+
+  List<Widget> get _alternativeMethods {
+    final methods = <Widget>[];
+
+    if (widget.method != VerificationMethod.sms) {
+      methods.add(
+        _MethodButton(
+          icon: Icons.sms_outlined,
+          label: 'SMS',
+          onTap: () {
+            context.pushReplacement('/verify-phone', extra: {
+              'phone': widget.phoneNumber,
+              'method': 'sms',
+            });
+          },
+        ),
+      );
+    }
+
+    if (widget.method != VerificationMethod.whatsapp) {
+      methods.add(
+        _MethodButton(
+          icon: Icons.chat_bubble_outline,
+          label: 'Whatsapp',
+          iconColor: Colors.green,
+          onTap: () {
+            context.pushReplacement('/verify-phone', extra: {
+              'phone': widget.phoneNumber,
+              'method': 'whatsapp',
+            });
+          },
+        ),
+      );
+    }
+
+    if (widget.method != VerificationMethod.call) {
+      methods.add(
+        _MethodButton(
+          icon: Icons.phone_outlined,
+          label: 'Voice Call',
+          onTap: () {
+            context.pushReplacement('/verify-phone', extra: {
+              'phone': widget.phoneNumber,
+              'method': 'call',
+            });
+          },
+        ),
+      );
+    }
+
+    return methods;
+  }
+
+  void _verifyCode() {
+    if (_code.length == 6) {
+      // TODO: Verify code with backend
+      // Navigate to PIN setup
+      context.push('/set-pin');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => context.pop(),
+        ),
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24.w),
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+              vSpace(20),
+
+              // Logo
+              Center(
+                child: Image.asset(
+                  Images.coloredLogo,
+                  width: 180.w,
+                ),
+              ),
+
+              vSpace(40),
+
+              // Title
+              Center(
+                child: Text(
+                  _title,
+                  style: TextStyle(
+                    fontSize: 28.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+
+              vSpace(12),
+
+              // Instruction
+              Center(
+                child: RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      color: Colors.grey.shade600,
+                      height: 1.5,
+                    ),
+                    children: [
+                      TextSpan(text: _instruction),
+                      TextSpan(
+                        text: '\n$_maskedPhone',
+                        style: TextStyle(
+                          color: theme.primaryColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              vSpace(32),
+
+              // OTP Input
+              OtpInputField(
+                length: 6,
+                onChanged: (code) {
+                  setState(() {
+                    _code = code;
+                  });
+                },
+              ),
+
+              vSpace(16),
+
+              // Resend code
+              Center(
+                child: _resendTimer > 0
+                    ? Text(
+                        'Resend code in ${_resendTimer}s',
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color: Colors.grey.shade600,
+                        ),
+                      )
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Didn\'t receive the code?',
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          hSpace(4),
+                          TextButton(
+                            onPressed: _resendCode,
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
+                              'Resend',
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                color: theme.primaryColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+
+              vSpace(24),
+
+              // Continue button
+              AppElevatedButton(
+                title: 'Continue',
+                onPressed: _code.length == 6 ? _verifyCode : null,
+              ),
+
+              vSpace(32),
+
+              // How to check code box
+              CustomPaint(
+                painter: DashedBorderPainter(
+                  color: const Color(0xFF00BCD4),
+                  strokeWidth: 1.5,
+                  dashWidth: 5,
+                  dashSpace: 3,
+                  borderRadius: 12.r,
+                ),
+                child: Container(
+                  padding: EdgeInsets.all(16.w),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE0F7FA), // Light blue/teal background
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.method == VerificationMethod.call
+                            ? 'Check the Code'
+                            : 'How to check the Code',
+                        style: TextStyle(
+                          fontSize: 15.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                      vSpace(12),
+                      ..._howToCheckSteps.map((step) => Padding(
+                            padding: EdgeInsets.only(bottom: 8.h),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '• ',
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
+                                    color: Colors.grey.shade700,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    step,
+                                    style: TextStyle(
+                                      fontSize: 14.sp,
+                                      color: Colors.grey.shade700,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
+                    ],
+                  ),
+                ),
+              ),
+
+              vSpace(24),
+
+              // Alternative methods
+              if (_alternativeMethods.isNotEmpty) ...[
+                Center(
+                  child: Text(
+                    'Or Send Code via',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ),
+                vSpace(16),
+                Row(
+                  children: _alternativeMethods
+                      .expand((widget) => [
+                            Expanded(child: widget),
+                            if (widget != _alternativeMethods.last) hSpace(12),
+                          ])
+                      .toList(),
+                ),
+              ],
+
+              vSpace(40),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Footer - regulatory info (fixed at bottom)
+              vSpace(16),
+              Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Licensed by CBN',
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    hSpace(4),
+                    Container(
+                      width: 20.w,
+                      height: 20.w,
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade100,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          'CBN',
+                          style: TextStyle(
+                            fontSize: 6.sp,
+                            color: Colors.green.shade800,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    hSpace(8),
+                    Text(
+                      '|',
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        color: Colors.grey.shade400,
+                      ),
+                    ),
+                    hSpace(8),
+                    Text(
+                      'Deposits insured by',
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    hSpace(4),
+                    Container(
+                      width: 40.w,
+                      height: 20.w,
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade100,
+                        borderRadius: BorderRadius.circular(4.r),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'NDIC',
+                          style: TextStyle(
+                            fontSize: 8.sp,
+                            color: Colors.blue.shade800,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              vSpace(24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MethodButton extends StatelessWidget {
+  const _MethodButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.iconColor,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color? iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 14.h),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: Colors.grey.shade300,
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 20.sp,
+              color: iconColor ?? Colors.black87,
+            ),
+            hSpace(8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Custom painter for dashed border
+class DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double dashWidth;
+  final double dashSpace;
+  final double borderRadius;
+
+  DashedBorderPainter({
+    required this.color,
+    required this.strokeWidth,
+    required this.dashWidth,
+    required this.dashSpace,
+    required this.borderRadius,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final path = Path()
+      ..addRRect(RRect.fromRectAndRadius(
+        Rect.fromLTWH(0, 0, size.width, size.height),
+        Radius.circular(borderRadius),
+      ));
+
+    final dashPath = _createDashedPath(path, dashWidth, dashSpace);
+    canvas.drawPath(dashPath, paint);
+  }
+
+  Path _createDashedPath(Path source, double dashWidth, double dashSpace) {
+    final Path dest = Path();
+    for (final PathMetric metric in source.computeMetrics()) {
+      double distance = 0;
+      bool draw = true;
+      while (distance < metric.length) {
+        final double length = draw ? dashWidth : dashSpace;
+        if (distance + length > metric.length) {
+          if (draw) {
+            dest.addPath(
+              metric.extractPath(distance, metric.length),
+              Offset.zero,
+            );
+          }
+          break;
+        }
+        if (draw) {
+          dest.addPath(
+            metric.extractPath(distance, distance + length),
+            Offset.zero,
+          );
+        }
+        distance += length;
+        draw = !draw;
+      }
+    }
+    return dest;
+  }
+
+  @override
+  bool shouldRepaint(DashedBorderPainter oldDelegate) => false;
+}
+

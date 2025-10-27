@@ -49,7 +49,7 @@ class AppTheme {
 
   /// Light theme
   static final ThemeData light = ThemeData(
-    fontFamily: GoogleFonts.poppins().fontFamily,
+    fontFamily: GoogleFonts.sen().fontFamily,
     brightness: Brightness.light,
     primaryColor: const Color(0xFF742CE7),
     secondaryHeaderColor: const Color(0xFFB09FFF),
@@ -64,7 +64,7 @@ class AppTheme {
 
   /// Dark theme
   static final ThemeData dark = ThemeData(
-    fontFamily: GoogleFonts.poppins().fontFamily,
+    fontFamily: GoogleFonts.sen().fontFamily,
     brightness: Brightness.dark,
     primaryColor: const Color(0xFF742CE7),
     secondaryHeaderColor: const Color(0xFFB09FFF),

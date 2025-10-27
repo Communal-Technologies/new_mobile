@@ -14,24 +14,32 @@ class AppElevatedButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: theme.primaryColor,
-        foregroundColor: theme.colorScheme.onPrimary,
-        minimumSize: Size(double.infinity, 50.h),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.r),
-        ),
-      ),
-      child:
-          child ??
-          SmallAppText(
-            title ?? "",
-            color: theme.colorScheme.onPrimary,
-            fontWeight: FontWeight.w600,
-            fontSize: 16.sp,
+    return SizedBox(
+      width: double.infinity,
+      height: 50.h,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: theme.primaryColor,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25.r),
           ),
+          padding: EdgeInsets.symmetric(vertical: 14.h),
+        ),
+        child:
+            child ??
+            Text(
+              title ?? "",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
+      ),
     );
   }
 }
@@ -69,6 +77,58 @@ class AppOutlinedButton extends StatelessWidget {
             fontWeight: FontWeight.w600,
             fontSize: 16.sp,
           ),
+    );
+  }
+}
+
+class AppSecondaryButton extends StatelessWidget {
+  const AppSecondaryButton({
+    super.key,
+    this.onPressed,
+    required this.title,
+    this.child,
+    this.isDark = true, // true for dark bg (white border), false for light bg (gray border)
+  });
+
+  final void Function()? onPressed;
+  final String title;
+  final Widget? child;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor = isDark ? Colors.white : Colors.grey.shade300;
+    final textColor = isDark ? Colors.white : Colors.black87;
+
+    return SizedBox(
+      width: double.infinity,
+      height: 50.h,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(
+            width: 1.5,
+            color: borderColor,
+          ),
+          backgroundColor: Colors.transparent,
+          foregroundColor: textColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25.r),
+          ),
+          padding: EdgeInsets.symmetric(vertical: 14.h),
+        ),
+        child:
+            child ??
+            Text(
+              title,
+              style: TextStyle(
+                color: textColor,
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
+      ),
     );
   }
 }

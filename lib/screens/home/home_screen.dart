@@ -1,0 +1,618 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
+import 'package:go_router/go_router.dart';
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _currentIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark.copyWith(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.grey.shade50,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                _buildHeader(theme),
+
+                vSpace(16),
+
+                // KYC Alert
+                _buildKycAlert(theme),
+
+                vSpace(20),
+
+                // Quick Actions
+                _buildQuickActions(theme),
+
+                vSpace(24),
+
+                // Recent Transactions
+                _buildRecentTransactions(theme),
+
+                vSpace(20),
+
+                // New Feature Banner
+                _buildNewFeatureBanner(theme),
+
+                vSpace(100),
+              ],
+            ),
+          ),
+        ),
+        bottomNavigationBar: BottomNavBar(
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(ThemeData theme) {
+    return Container(
+      padding: EdgeInsets.only(right: 16.w, top: 12.h, bottom: 12.h),
+      color: Colors.white,
+      child: Row(
+        children: [
+          // Logo - touches left edge
+          Container(
+            width: 48.w,
+            height: 48.w,
+            margin: EdgeInsets.only(left: 16.w, right: 8.w),
+            decoration: BoxDecoration(
+              color: theme.primaryColor,
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+            child: Icon(
+              Icons.unfold_more,
+              color: Colors.white,
+              size: 24.sp,
+            ),
+          ),
+          // Cooperative name
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'ExxonMobil',
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.red,
+                  height: 1.1,
+                ),
+              ),
+              Text(
+                'Bullion Crib',
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black,
+                  height: 1.1,
+                ),
+              ),
+            ],
+          ),
+          hSpace(12),
+          // User info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'Pado Lebari',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                      ),
+                    ),
+                    hSpace(6),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10.r),
+                      ),
+                      child: Text(
+                        'Member',
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w600,
+                          color: theme.primaryColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                vSpace(3),
+                RichText(
+                  text: TextSpan(
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: Colors.grey.shade600,
+                    ),
+                    children: [
+                      const TextSpan(text: 'Lets save that '),
+                      TextSpan(
+                        text: '1 million',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const TextSpan(text: ' this month'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Notification
+          IconButton(
+            onPressed: () {},
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: Icon(
+              Icons.notifications_outlined,
+              color: Colors.black,
+              size: 24.sp,
+            ),
+          ),
+          hSpace(12),
+          // Profile picture
+          CircleAvatar(
+            radius: 20.w,
+            backgroundColor: Colors.grey.shade300,
+            backgroundImage: const AssetImage('assets/images/demo_user.png'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildKycAlert(ThemeData theme) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16.w),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF0F5),
+        borderRadius: BorderRadius.circular(12.r),
+      ),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44.w,
+                height: 44.w,
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.error_outline,
+                  color: Colors.white,
+                  size: 26.sp,
+                ),
+              ),
+              hSpace(12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'KYC NOT COMPLETED',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                      ),
+                    ),
+                    vSpace(8),
+                    Text(
+                      'We\'ve detected that some of your details may be inaccurate or incomplete, kindly update to continue.',
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: Colors.grey.shade700,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          vSpace(16),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ElevatedButton(
+              onPressed: () {
+                context.push('/kyc/profile-info');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                elevation: 0,
+                padding: EdgeInsets.symmetric(horizontal: 32.w, vertical: 14.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(100.r),
+                ),
+              ),
+              child: Text(
+                'Update Now >',
+                style: TextStyle(
+                  fontSize: 15.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(ThemeData theme) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Quick actions',
+            style: TextStyle(
+              fontSize: 20.sp,
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+            ),
+          ),
+          vSpace(14),
+          // First row - 4 buttons
+          Row(
+            children: [
+              _buildQuickActionButton(
+                icon: Icons.account_balance,
+                label: 'Transfer',
+                theme: theme,
+              ),
+              hSpace(10),
+              _buildQuickActionButton(
+                icon: Icons.phone_android,
+                label: 'Buy Data',
+                theme: theme,
+              ),
+              hSpace(10),
+              _buildQuickActionButton(
+                icon: Icons.phone,
+                label: 'Airtime',
+                theme: theme,
+              ),
+              hSpace(10),
+              _buildQuickActionButton(
+                icon: Icons.favorite_border,
+                label: 'Loan',
+                theme: theme,
+              ),
+            ],
+          ),
+          vSpace(10),
+          // Second row - 3 buttons
+          Row(
+            children: [
+              _buildQuickActionButton(
+                icon: Icons.account_balance,
+                label: 'Invest',
+                theme: theme,
+              ),
+              hSpace(10),
+              _buildQuickActionButton(
+                icon: Icons.account_balance,
+                label: 'Buy Now, Pay Later',
+                theme: theme,
+              ),
+              hSpace(10),
+              _buildQuickActionButton(
+                icon: Icons.credit_card,
+                label: 'Pay Bills',
+                theme: theme,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionButton({
+    required IconData icon,
+    required String label,
+    required ThemeData theme,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: () {},
+        borderRadius: BorderRadius.circular(12.r),
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 4.w),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.shade200,
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color: theme.primaryColor,
+                size: 32.sp,
+              ),
+              vSpace(6),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                  height: 1.1,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentTransactions(ThemeData theme) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Recent transactions',
+                style: TextStyle(
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black,
+                ),
+              ),
+              TextButton(
+                onPressed: () {},
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  'See all',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    color: Colors.grey.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          vSpace(12),
+          _buildTransactionItem(
+            icon: Icons.send,
+            iconBgColor: theme.primaryColor.withValues(alpha: 0.1),
+            iconColor: theme.primaryColor,
+            title: 'Transfer to Mary John',
+            date: 'Today, 2:30 PM',
+            amount: '-₦5,000',
+            isCredit: false,
+          ),
+          vSpace(10),
+          _buildTransactionItem(
+            icon: Icons.people_outline,
+            iconBgColor: theme.primaryColor.withValues(alpha: 0.1),
+            iconColor: theme.primaryColor,
+            title: 'Loan Payment',
+            date: 'Yesterday, 9:45 AM',
+            amount: '+₦15,000',
+            isCredit: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransactionItem({
+    required IconData icon,
+    required Color iconBgColor,
+    required Color iconColor,
+    required String title,
+    required String date,
+    required String amount,
+    required bool isCredit,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48.w,
+            height: 48.w,
+            decoration: BoxDecoration(
+              color: iconBgColor,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: iconColor,
+              size: 24.sp,
+            ),
+          ),
+          hSpace(12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
+                ),
+                vSpace(4),
+                Text(
+                  date,
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            amount,
+            style: TextStyle(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w700,
+              color: isCredit ? Colors.green : Colors.red,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNewFeatureBanner(ThemeData theme) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(24.w),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  theme.primaryColor,
+                  theme.primaryColor.withValues(alpha: 0.85),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16.r),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Text(
+                    'New Feature',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                vSpace(16),
+                Text(
+                  'Boost Your\nSavings',
+                  style: TextStyle(
+                    fontSize: 28.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    height: 1.2,
+                  ),
+                ),
+                vSpace(8),
+                Text(
+                  'Earn up to 15% interest on\nfixed deposits',
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    color: Colors.white.withValues(alpha: 0.95),
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          vSpace(12),
+          // Carousel dots
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildDot(isActive: false, theme: theme),
+              hSpace(6),
+              _buildDot(isActive: true, theme: theme),
+              hSpace(6),
+              _buildDot(isActive: false, theme: theme),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDot({required bool isActive, required ThemeData theme}) {
+    return Container(
+      width: isActive ? 20.w : 6.w,
+      height: 6.h,
+      decoration: BoxDecoration(
+        color: isActive ? theme.primaryColor : Colors.grey.shade300,
+        borderRadius: BorderRadius.circular(3.r),
+      ),
+    );
+  }
+}

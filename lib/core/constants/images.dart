@@ -10,6 +10,7 @@ class Images {
   static const String unitedKingdom = 'assets/images/united_kindom.png';
   static const String maintenance = 'assets/images/maintenance.png';
   static const String background = 'assets/images/background.png';
+  static const String welcomeBg = 'assets/images/welcome_bg.jpg';
   static const String apple = 'assets/images/apple.png';
   static const String google = 'assets/images/google.png';
   static const String verifySuccess = 'assets/images/verify_success.png';

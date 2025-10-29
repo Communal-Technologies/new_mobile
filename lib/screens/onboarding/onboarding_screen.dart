@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:communal_mobile/core/constants/images.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
@@ -46,10 +47,7 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
     await prefs.setBool('first_time', false);
 
     if (!mounted) return;
-    Navigator.pushReplacementNamed(
-      context,
-      '/welcome',
-    ); // GoRouter can be used here too
+    context.goNamed('welcome');
   }
 
   @override
@@ -85,36 +83,36 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
                   total: onboardingData.length,
                 ),
                 vSpace(20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _currentIndex != onboardingData.length - 1
-                        ? AppElevatedButton(
-                            title: 'Skip',
-                            onPressed: _onSkip,
-                          )
-                        : const SizedBox.shrink(),
-                    hSpace(10),
-                    Expanded(
-                      child: ElevatedButton(
+                _currentIndex != onboardingData.length - 1
+                    ? Row(
+                        children: [
+                          Expanded(
+                            child: AppElevatedButton(
+                              title: 'Skip',
+                              onPressed: _onSkip,
+                            ),
+                          ),
+                          hSpace(10),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _onNextPressed,
+                              style: ButtonStyle(
+                                backgroundColor: WidgetStateProperty.all<Color>(
+                                  Theme.of(context).primaryColor,
+                                ),
+                                foregroundColor: WidgetStateProperty.all<Color>(
+                                  Colors.white,
+                                ),
+                              ),
+                              child: const Text('Next'),
+                            ),
+                          ),
+                        ],
+                      )
+                    : AppElevatedButton(
+                        title: "Let's Go",
                         onPressed: _onNextPressed,
-                        style: ButtonStyle(
-                          backgroundColor: WidgetStateProperty.all<Color>(
-                            Theme.of(context).primaryColor,
-                          ),
-                          foregroundColor: WidgetStateProperty.all<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                        child: Text(
-                          _currentIndex == onboardingData.length - 1
-                              ? "Let's Go"
-                              : 'Next',
-                        ),
                       ),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),

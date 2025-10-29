@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
+import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
 import 'package:go_router/go_router.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -14,6 +15,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +28,11 @@ class _HomeScreenState extends State<HomeScreen> {
         statusBarBrightness: Brightness.light,
       ),
       child: Scaffold(
+        key: _scaffoldKey,
         backgroundColor: Colors.grey.shade50,
+        drawer: const CooperativeSidebar(),
+        drawerEdgeDragWidth: 50.w,
+        drawerScrimColor: Colors.black.withValues(alpha: 0.4), // Darker overlay for better visibility
         body: SafeArea(
           child: SingleChildScrollView(
             child: Column(
@@ -74,49 +80,82 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHeader(ThemeData theme) {
     return Container(
-      padding: EdgeInsets.only(right: 16.w, top: 12.h, bottom: 12.h),
+      padding: EdgeInsets.only(right: 16.w, top: 12.h, bottom: 12.h, left: 0),
       color: Colors.white,
       child: Row(
         children: [
-          // Logo - touches left edge
-          Container(
-            width: 48.w,
-            height: 48.w,
-            margin: EdgeInsets.only(left: 16.w, right: 8.w),
-            decoration: BoxDecoration(
-              color: theme.primaryColor,
-              borderRadius: BorderRadius.circular(8.r),
-            ),
-            child: Icon(
-              Icons.unfold_more,
-              color: Colors.white,
-              size: 24.sp,
+          // Purple button with switch arrow - TOUCHES LEFT EDGE - Opens Drawer
+          InkWell(
+            onTap: () {
+              _scaffoldKey.currentState?.openDrawer();
+            },
+            child: Container(
+              width: 40.w,
+              height: 40.w,
+              margin: EdgeInsets.only(right: 8.w),
+              decoration: BoxDecoration(
+                color: theme.primaryColor,
+                borderRadius: BorderRadius.only(
+                  topRight: Radius.circular(20.r),
+                  bottomRight: Radius.circular(20.r),
+                ),
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.swap_horiz,
+                  color: Colors.white,
+                  size: 22.sp,
+                ),
+              ),
             ),
           ),
-          // Cooperative name
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'ExxonMobil',
-                style: TextStyle(
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.red,
-                  height: 1.1,
-                ),
+          // Logo card with white background - NARROWER
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6.r),
+              border: Border.all(
+                color: Colors.grey.shade200,
+                width: 1,
               ),
-              Text(
-                'Bullion Crib',
-                style: TextStyle(
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black,
-                  height: 1.1,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                RichText(
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: 'Exxon',
+                        style: TextStyle(
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.red,
+                        ),
+                      ),
+                      TextSpan(
+                        text: 'Mobil',
+                        style: TextStyle(
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                Text(
+                  'Bullion Crib',
+                  style: TextStyle(
+                    fontSize: 9.sp,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.blue.shade700,
+                  ),
+                ),
+              ],
+            ),
           ),
           hSpace(12),
           // User info
@@ -127,33 +166,36 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      'Pado Lebari',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
+                    Flexible(
+                      child: Text(
+                        'Pado Lebari',
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.grey.shade800,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    hSpace(6),
+                    hSpace(8),
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                       decoration: BoxDecoration(
-                        color: theme.primaryColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10.r),
+                        color: theme.primaryColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12.r),
                       ),
                       child: Text(
                         'Member',
                         style: TextStyle(
-                          fontSize: 12.sp,
+                          fontSize: 11.sp,
                           fontWeight: FontWeight.w600,
-                          color: theme.primaryColor,
+                          color: Colors.grey.shade700,
                         ),
                       ),
                     ),
                   ],
                 ),
-                vSpace(3),
+                vSpace(4),
                 RichText(
                   text: TextSpan(
                     style: TextStyle(
@@ -164,9 +206,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       const TextSpan(text: 'Lets save that '),
                       TextSpan(
                         text: '1 million',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w700,
-                          color: Colors.black,
+                          color: Colors.grey.shade800,
                         ),
                       ),
                       const TextSpan(text: ' this month'),
@@ -176,21 +218,21 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          // Notification
+          // Notification - LARGER
           IconButton(
             onPressed: () {},
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
             icon: Icon(
               Icons.notifications_outlined,
-              color: Colors.black,
-              size: 24.sp,
+              color: Colors.grey.shade700,
+              size: 28.sp,
             ),
           ),
           hSpace(12),
-          // Profile picture
+          // Profile picture - LARGER
           CircleAvatar(
-            radius: 20.w,
+            radius: 22.w,
             backgroundColor: Colors.grey.shade300,
             backgroundImage: const AssetImage('assets/images/demo_user.png'),
           ),
@@ -420,7 +462,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               TextButton(
-                onPressed: () {},
+                onPressed: () => context.pushNamed('transactions'),
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,
                   minimumSize: Size.zero,
@@ -429,7 +471,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Text(
                   'See all',
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 20.sp,
                     color: Colors.grey.shade700,
                     fontWeight: FontWeight.w500,
                   ),

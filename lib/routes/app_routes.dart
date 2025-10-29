@@ -21,6 +21,7 @@ import 'package:communal_mobile/screens/kyc/proof_of_identity_screen.dart';
 import 'package:communal_mobile/screens/kyc/verifying_identity_screen.dart';
 import 'package:communal_mobile/screens/kyc/all_set_screen.dart';
 import 'package:communal_mobile/screens/home/home_screen.dart';
+import 'package:communal_mobile/screens/transactions/transaction_history_screen.dart';
 // import 'package:communal_mobile/core/features/wallet/screens/pages/wallet_page.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -170,6 +171,13 @@ final GoRouter appRouter = GoRouter(
       path: '/home',
       name: 'home',
       builder: (context, state) => const HomeScreen(),
+    ),
+    
+    // Transaction History
+    GoRoute(
+      path: '/transactions',
+      name: 'transactions',
+      builder: (context, state) => const TransactionHistoryScreen(),
     ),
     
     // GoRoute(

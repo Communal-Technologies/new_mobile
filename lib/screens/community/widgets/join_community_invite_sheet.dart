@@ -32,7 +32,9 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Container(
         color: Colors.transparent,
         child: Container(
@@ -91,11 +93,15 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                         hintText: 'E.G. COOP-XXXX-XXXX',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16.r),
-                          borderSide: const BorderSide(color: Color(0xFFE1E1EB)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE1E1EB),
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16.r),
-                          borderSide: const BorderSide(color: Color(0xFF7434FF)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF7434FF),
+                          ),
                         ),
                         filled: true,
                         fillColor: const Color(0xFFF7F7FB),
@@ -104,8 +110,10 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                     vSpace(16),
                     Container(
                       width: double.infinity,
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 16.w,
+                        vertical: 14.h,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF3E9FF),
                         borderRadius: BorderRadius.circular(16.r),
@@ -196,8 +204,9 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                                     height: 20.sp,
                                     child: const CircularProgressIndicator(
                                       strokeWidth: 2.5,
-                                      valueColor:
-                                          AlwaysStoppedAnimation(Colors.white),
+                                      valueColor: AlwaysStoppedAnimation(
+                                        Colors.white,
+                                      ),
                                     ),
                                   )
                                 : Text(
@@ -221,4 +230,3 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
     );
   }
 }
-

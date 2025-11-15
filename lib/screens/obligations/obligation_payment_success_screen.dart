@@ -1,0 +1,323 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:intl/intl.dart';
+
+import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
+
+class ObligationPaymentSuccessScreen extends StatelessWidget {
+  const ObligationPaymentSuccessScreen({
+    super.key,
+    required this.obligation,
+    required this.amount,
+    required this.method,
+    required this.reference,
+    required this.date,
+  });
+
+  final Obligation obligation;
+  final double amount;
+  final String method;
+  final String reference;
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context) {
+    final formattedAmount =
+        '₦${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\\d)(?=(\\d{3})+(?!\\d))'), (m) => '${m[1]},')}';
+    final dateLabel = DateFormat('MMM dd, yyyy, hh:mm a').format(date);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F5F7),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.black),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        centerTitle: true,
+        title: Text(
+          'Payment Successful',
+          style: TextStyle(
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w700,
+            color: Colors.black,
+          ),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+        child: Column(
+          children: [
+            Container(
+              width: 80.w,
+              height: 80.w,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE7F8EF),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.check_circle,
+                color: const Color(0xFF1AAE70),
+                size: 44.sp,
+              ),
+            ),
+            vSpace(16),
+            Text(
+              'Payment Successful!',
+              style: TextStyle(
+                fontSize: 20.sp,
+                fontWeight: FontWeight.w700,
+                color: Colors.black,
+              ),
+            ),
+            vSpace(6),
+            Text(
+              'Your obligation payment has been processed successfully',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
+            ),
+            vSpace(18),
+            Text(
+              formattedAmount,
+              style: TextStyle(
+                fontSize: 28.sp,
+                fontWeight: FontWeight.w800,
+                color: Colors.black,
+              ),
+            ),
+            vSpace(4),
+            Text(
+              'Paid to Total Lenders Forum',
+              style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
+            ),
+            vSpace(24),
+            _DetailsCard(
+              obligation: obligation,
+              amountLabel: formattedAmount,
+              method: method,
+              reference: reference,
+              dateLabel: dateLabel,
+            ),
+            vSpace(24),
+            Row(
+              children: [
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.download_rounded,
+                    label: 'Download',
+                    onTap: () => _showSnack(context, 'Downloading receipt...'),
+                  ),
+                ),
+                hSpace(12),
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.share_outlined,
+                    label: 'Share',
+                    onTap: () => _showSnack(context, 'Sharing receipt...'),
+                  ),
+                ),
+              ],
+            ),
+            vSpace(20),
+            _NextStepsCard(),
+            vSpace(24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF7434FF),
+                  minimumSize: Size(double.infinity, 52.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18.r),
+                  ),
+                ),
+                child: Text(
+                  'Done',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSnack(BuildContext context, String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+class _DetailsCard extends StatelessWidget {
+  const _DetailsCard({
+    required this.obligation,
+    required this.amountLabel,
+    required this.method,
+    required this.reference,
+    required this.dateLabel,
+  });
+
+  final Obligation obligation;
+  final String amountLabel;
+  final String method;
+  final String reference;
+  final String dateLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(18.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22.r),
+      ),
+      child: Column(
+        children: [
+          _DetailRow(label: 'Obligation', value: obligation.title),
+          _DetailRow(label: 'Type', value: obligation.category),
+          _DetailRow(label: 'Amount', value: amountLabel),
+          _DetailRow(label: 'Payment Method', value: method),
+          _DetailRow(label: 'Reference', value: reference, isLink: true),
+          _DetailRow(label: 'Date & Time', value: dateLabel),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({
+    required this.label,
+    required this.value,
+    this.isLink = false,
+  });
+
+  final String label;
+  final String value;
+  final bool isLink;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 8.h),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
+            ),
+          ),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w600,
+                  color: isLink ? const Color(0xFF7434FF) : Colors.black,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 14.h),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.black87, size: 20.sp),
+            hSpace(8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.black,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NextStepsCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE9F2FF),
+        borderRadius: BorderRadius.circular(18.r),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, color: Colors.blue.shade600, size: 20.sp),
+          hSpace(12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "What's Next?",
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                  ),
+                ),
+                vSpace(6),
+                Text(
+                  'Your payment will reflect in your obligation history within a few minutes. You can view all your payments in the obligation details.',
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

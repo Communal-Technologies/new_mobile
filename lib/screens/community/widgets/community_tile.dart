@@ -181,4 +181,3 @@ class CommunityTile extends StatelessWidget {
     );
   }
 }
-

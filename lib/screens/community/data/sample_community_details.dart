@@ -69,8 +69,9 @@ class CommunityDetail {
 class SampleCommunityDetails {
   static final Map<String, CommunityDetail> _details = {
     'lagos-market': CommunityDetail(
-      location: SampleCommunityLocations.all
-          .firstWhere((community) => community.id == 'lagos-market'),
+      location: SampleCommunityLocations.all.firstWhere(
+        (community) => community.id == 'lagos-market',
+      ),
       categoryLabel: 'Trading Cooperative',
       stats: const CommunityDetailStats(
         totalLoans: '₦45.2M',
@@ -130,9 +131,10 @@ class SampleCommunityDetails {
   static CommunityDetail getById(String id) {
     if (_details.containsKey(id)) return _details[id]!;
 
-    final fallbackLocation = SampleCommunityLocations.all
-        .firstWhere((community) => community.id == id,
-            orElse: () => SampleCommunityLocations.all.first);
+    final fallbackLocation = SampleCommunityLocations.all.firstWhere(
+      (community) => community.id == id,
+      orElse: () => SampleCommunityLocations.all.first,
+    );
 
     return CommunityDetail(
       location: fallbackLocation,
@@ -159,4 +161,3 @@ class SampleCommunityDetails {
     );
   }
 }
-

@@ -45,3 +45,4 @@ class CommunityMapScreen extends StatelessWidget {
     );
   }
 }
+

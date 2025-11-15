@@ -4,6 +4,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
 import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
+import 'package:communal_mobile/screens/transactions/models/sample_transactions.dart';
+import 'package:communal_mobile/screens/transactions/widgets/transaction_tile.dart';
 import 'package:go_router/go_router.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -32,7 +34,9 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.grey.shade50,
         drawer: const CooperativeSidebar(),
         drawerEdgeDragWidth: 50.w,
-        drawerScrimColor: Colors.black.withValues(alpha: 0.4), // Darker overlay for better visibility
+        drawerScrimColor: Colors.black.withValues(
+          alpha: 0.4,
+        ), // Darker overlay for better visibility
         body: SafeArea(
           child: SingleChildScrollView(
             child: Column(
@@ -69,6 +73,10 @@ class _HomeScreenState extends State<HomeScreen> {
         bottomNavigationBar: BottomNavBar(
           currentIndex: _currentIndex,
           onTap: (index) {
+            if (index == 1) {
+              context.pushNamed('obligations');
+              return;
+            }
             setState(() {
               _currentIndex = index;
             });
@@ -101,11 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               child: Center(
-                child: Icon(
-                  Icons.swap_horiz,
-                  color: Colors.white,
-                  size: 22.sp,
-                ),
+                child: Icon(Icons.swap_horiz, color: Colors.white, size: 22.sp),
               ),
             ),
           ),
@@ -115,10 +119,7 @@ class _HomeScreenState extends State<HomeScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(6.r),
-              border: Border.all(
-                color: Colors.grey.shade200,
-                width: 1,
-              ),
+              border: Border.all(color: Colors.grey.shade200, width: 1),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,7 +180,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     hSpace(8),
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10.w,
+                        vertical: 4.h,
+                      ),
                       decoration: BoxDecoration(
                         color: theme.primaryColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12.r),
@@ -420,11 +424,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                color: theme.primaryColor,
-                size: 32.sp,
-              ),
+              Icon(icon, color: theme.primaryColor, size: 32.sp),
               vSpace(6),
               Text(
                 label,
@@ -446,6 +446,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildRecentTransactions(ThemeData theme) {
+    final recentTransactions = SampleTransactions.recentTransactions
+        .take(4)
+        .toList();
+
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
       child: Column(
@@ -480,91 +484,21 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           vSpace(12),
-          _buildTransactionItem(
-            icon: Icons.send,
-            iconBgColor: theme.primaryColor.withValues(alpha: 0.1),
-            iconColor: theme.primaryColor,
-            title: 'Transfer to Mary John',
-            date: 'Today, 2:30 PM',
-            amount: '-₦5,000',
-            isCredit: false,
-          ),
-          vSpace(10),
-          _buildTransactionItem(
-            icon: Icons.people_outline,
-            iconBgColor: theme.primaryColor.withValues(alpha: 0.1),
-            iconColor: theme.primaryColor,
-            title: 'Loan Payment',
-            date: 'Yesterday, 9:45 AM',
-            amount: '+₦15,000',
-            isCredit: true,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTransactionItem({
-    required IconData icon,
-    required Color iconBgColor,
-    required Color iconColor,
-    required String title,
-    required String date,
-    required String amount,
-    required bool isCredit,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48.w,
-            height: 48.w,
-            decoration: BoxDecoration(
-              color: iconBgColor,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              color: iconColor,
-              size: 24.sp,
-            ),
-          ),
-          hSpace(12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                  ),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: recentTransactions.length,
+            separatorBuilder: (_, __) => vSpace(10),
+            itemBuilder: (_, index) {
+              final item = recentTransactions[index];
+              return TransactionTile(
+                item: item,
+                onTap: () => context.pushNamed(
+                  'transaction-details',
+                  extra: item.details,
                 ),
-                vSpace(4),
-                Text(
-                  date,
-                  style: TextStyle(
-                    fontSize: 13.sp,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            amount,
-            style: TextStyle(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w700,
-              color: isCredit ? Colors.green : Colors.red,
-            ),
+              );
+            },
           ),
         ],
       ),
@@ -594,7 +528,10 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 10.w,
+                    vertical: 4.h,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12.r),

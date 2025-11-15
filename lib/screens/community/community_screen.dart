@@ -72,9 +72,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   ),
                 ),
                 vSpace(24),
-                FindNearbyCard(
-                  onTap: () => context.pushNamed('community-map'),
-                ),
+                FindNearbyCard(onTap: () => context.pushNamed('community-map')),
                 vSpace(32),
               ],
             ),
@@ -127,8 +125,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
         IconButton(
           icon: const Icon(Icons.menu, color: Colors.black),
           onPressed: () {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(const SnackBar(content: Text('Open menu')));
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Open menu')));
           },
         ),
         Expanded(
@@ -151,8 +150,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
   }
 
   void _showComingSoon(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature is coming soon')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('$feature is coming soon')));
   }
 }

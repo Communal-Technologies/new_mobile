@@ -21,6 +21,12 @@ import 'package:communal_mobile/screens/kyc/proof_of_identity_screen.dart';
 import 'package:communal_mobile/screens/kyc/verifying_identity_screen.dart';
 import 'package:communal_mobile/screens/kyc/all_set_screen.dart';
 import 'package:communal_mobile/screens/home/home_screen.dart';
+import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
+import 'package:communal_mobile/screens/obligations/financial_obligations_screen.dart';
+import 'package:communal_mobile/screens/obligations/obligation_detail_screen.dart';
+import 'package:communal_mobile/screens/obligations/obligation_payment_screen.dart';
+import 'package:communal_mobile/screens/obligations/obligation_confirm_payment_screen.dart';
+import 'package:communal_mobile/screens/obligations/obligation_payment_success_screen.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 import 'package:communal_mobile/screens/transactions/transaction_details_screen.dart';
 import 'package:communal_mobile/screens/transactions/transaction_history_screen.dart';
@@ -45,14 +51,14 @@ final GoRouter appRouter = GoRouter(
       name: 'welcome',
       builder: (context, state) => const WelcomeScreen(),
     ),
-    
+
     // Auth routes - Signup
     GoRoute(
       path: '/signup',
       name: 'signup',
       builder: (context, state) => const SignupScreen(),
     ),
-    
+
     // Auth routes - Login
     GoRoute(
       path: '/login',
@@ -66,18 +72,18 @@ final GoRouter appRouter = GoRouter(
         final extra = state.extra as Map<String, dynamic>?;
         final phone = extra?['phone'] ?? '';
         final method = extra?['method'] ?? 'pin';
-        
+
         return WelcomeBackScreen(
           phoneNumber: phone,
           method: method == 'pin'
               ? SignInMethod.pin
               : method == 'fingerprint'
-                  ? SignInMethod.fingerprint
-                  : SignInMethod.password,
+              ? SignInMethod.fingerprint
+              : SignInMethod.password,
         );
       },
     ),
-    
+
     // Password Reset Flow
     GoRoute(
       path: '/forgot-password',
@@ -91,7 +97,7 @@ final GoRouter appRouter = GoRouter(
         final extra = state.extra as Map<String, dynamic>?;
         final contact = extra?['contact'] ?? '';
         final isEmail = extra?['isEmail'] ?? true;
-        
+
         return VerifyResetScreen(contact: contact, isEmail: isEmail);
       },
     ),
@@ -112,14 +118,14 @@ final GoRouter appRouter = GoRouter(
         final extra = state.extra as Map<String, dynamic>?;
         final phone = extra?['phone'] ?? '';
         final method = extra?['method'] ?? 'sms';
-        
+
         return PhoneVerificationScreen(
           phoneNumber: phone,
           method: method == 'sms'
               ? VerificationMethod.sms
               : method == 'whatsapp'
-                  ? VerificationMethod.whatsapp
-                  : VerificationMethod.call,
+              ? VerificationMethod.whatsapp
+              : VerificationMethod.call,
         );
       },
     ),
@@ -138,7 +144,7 @@ final GoRouter appRouter = GoRouter(
       name: 'account-success',
       builder: (context, state) => const AccountSuccessScreen(),
     ),
-    
+
     // KYC routes
     GoRoute(
       path: '/kyc/profile-info',
@@ -165,14 +171,115 @@ final GoRouter appRouter = GoRouter(
       name: 'kyc-all-set',
       builder: (context, state) => const AllSetScreen(),
     ),
-    
+
     // Home screen
     GoRoute(
       path: '/home',
       name: 'home',
       builder: (context, state) => const HomeScreen(),
     ),
-    
+    GoRoute(
+      path: '/obligations',
+      name: 'obligations',
+      builder: (context, state) => const FinancialObligationsScreen(),
+    ),
+    GoRoute(
+      path: '/obligation-detail',
+      name: 'obligation-detail',
+      builder: (context, state) {
+        final extra = state.extra;
+        final obligation = extra is Obligation
+            ? extra
+            : SampleObligations.all.first;
+        return ObligationDetailScreen(obligation: obligation);
+      },
+    ),
+    GoRoute(
+      path: '/obligation-payment',
+      name: 'obligation-payment',
+      builder: (context, state) {
+        final extra = state.extra;
+        final obligation = extra is Obligation
+            ? extra
+            : SampleObligations.all.first;
+        return ObligationPaymentScreen(obligation: obligation);
+      },
+    ),
+    GoRoute(
+      path: '/obligation-confirm-payment',
+      name: 'obligation-confirm-payment',
+      builder: (context, state) {
+        Obligation obligation = SampleObligations.all.first;
+        double amount = obligation.perInstallment;
+        String method = 'Wallet';
+
+        final extra = state.extra;
+        if (extra is Map) {
+          final maybeObligation = extra['obligation'];
+          if (maybeObligation is Obligation) {
+            obligation = maybeObligation;
+          }
+          final maybeAmount = extra['amount'];
+          if (maybeAmount is num) {
+            amount = maybeAmount.toDouble();
+          }
+          final maybeMethod = extra['method'];
+          if (maybeMethod is String) {
+            method = maybeMethod;
+          }
+        }
+
+        return ObligationConfirmPaymentScreen(
+          obligation: obligation,
+          amount: amount,
+          method: method,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/obligation-payment-success',
+      name: 'obligation-payment-success',
+      builder: (context, state) {
+        Obligation obligation = SampleObligations.all.first;
+        double amount = obligation.perInstallment;
+        String method = 'Wallet';
+        String reference = 'REF-${DateTime.now().millisecondsSinceEpoch}';
+        DateTime date = DateTime.now();
+
+        final extra = state.extra;
+        if (extra is Map) {
+          final maybeObligation = extra['obligation'];
+          if (maybeObligation is Obligation) {
+            obligation = maybeObligation;
+          }
+          final maybeAmount = extra['amount'];
+          if (maybeAmount is num) {
+            amount = maybeAmount.toDouble();
+          }
+          final maybeMethod = extra['method'];
+          if (maybeMethod is String && maybeMethod.isNotEmpty) {
+            method = maybeMethod;
+          }
+          final maybeReference = extra['reference'];
+          if (maybeReference is String && maybeReference.isNotEmpty) {
+            reference = maybeReference;
+          }
+          final maybeDate = extra['date'];
+          if (maybeDate is DateTime) {
+            date = maybeDate;
+          }
+        }
+
+        return ObligationPaymentSuccessScreen(
+          obligation: obligation,
+          amount: amount,
+          method: method,
+          reference: reference,
+          date: date,
+        );
+      },
+    ),
+
     // Transaction History
     GoRoute(
       path: '/transactions',
@@ -214,7 +321,7 @@ final GoRouter appRouter = GoRouter(
         );
       },
     ),
-    
+
     // GoRoute(
     //   path: '/wallet/:userId',
     //   name: 'wallet',

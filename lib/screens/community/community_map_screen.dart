@@ -170,7 +170,9 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
     if (result is Map && result['status'] == 'pending') {
       _openApplicationStatus(community);
     } else if (result is String) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result)));
     }
   }
 
@@ -768,10 +770,9 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
     setState(() => _isSubmitting = true);
     await Future.delayed(const Duration(milliseconds: 600));
     if (!mounted) return;
-    Navigator.of(context).pop({
-      'status': 'pending',
-      'community': widget.community,
-    });
+    Navigator.of(
+      context,
+    ).pop({'status': 'pending', 'community': widget.community});
   }
 
   @override

@@ -169,6 +169,10 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result)));
   }
 
+  void _openCommunityDetails(CommunityLocation community) {
+    context.pushNamed('community-detail', extra: community);
+  }
+
   Widget _buildMap(Set<Marker> markers) {
     return GoogleMap(
       initialCameraPosition: SampleCommunityLocations.initialCameraPosition,
@@ -338,7 +342,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
             ),
             hSpace(12),
             OutlinedButton(
-              onPressed: () => _focusOnCommunity(community),
+              onPressed: () => _openCommunityDetails(community),
               style: OutlinedButton.styleFrom(
                 backgroundColor: Colors.white.withOpacity(0.15),
                 foregroundColor: Colors.white,

@@ -30,6 +30,7 @@ import 'package:communal_mobile/screens/obligations/obligation_payment_success_s
 import 'package:communal_mobile/screens/community/community_screen.dart';
 import 'package:communal_mobile/screens/community/community_map_screen.dart';
 import 'package:communal_mobile/screens/community/community_detail_screen.dart';
+import 'package:communal_mobile/screens/community/community_application_status_screen.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_details.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_locations.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
@@ -203,6 +204,18 @@ final GoRouter appRouter = GoRouter(
             : SampleCommunityLocations.featured;
         final detail = SampleCommunityDetails.getById(location.id);
         return CommunityDetailScreen(detail: detail);
+      },
+    ),
+    GoRoute(
+      path: '/community-application-status',
+      name: 'community-application-status',
+      builder: (context, state) {
+        final extra = state.extra;
+        final location = extra is CommunityLocation
+            ? extra
+            : SampleCommunityLocations.featured;
+        final detail = SampleCommunityDetails.getById(location.id);
+        return CommunityApplicationStatusScreen(detail: detail);
       },
     ),
     GoRoute(

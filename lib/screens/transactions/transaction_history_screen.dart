@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
 import 'package:go_router/go_router.dart';
+import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 import 'package:communal_mobile/screens/transactions/widgets/filter_category_bottomsheet.dart';
 import 'package:communal_mobile/screens/transactions/widgets/filter_status_bottomsheet.dart';
 import 'package:communal_mobile/screens/transactions/widgets/download_statement_bottomsheet.dart';
@@ -12,7 +13,8 @@ class TransactionHistoryScreen extends StatefulWidget {
   const TransactionHistoryScreen({super.key});
 
   @override
-  State<TransactionHistoryScreen> createState() => _TransactionHistoryScreenState();
+  State<TransactionHistoryScreen> createState() =>
+      _TransactionHistoryScreenState();
 }
 
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
@@ -63,7 +65,10 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   );
                 },
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 14.w,
+                    vertical: 10.h,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(20.r),
@@ -71,7 +76,11 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.download, size: 18.sp, color: Colors.grey.shade700),
+                      Icon(
+                        Icons.download,
+                        size: 18.sp,
+                        color: Colors.grey.shade700,
+                      ),
                       hSpace(6),
                       Text(
                         'Statement',
@@ -116,10 +125,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   ),
                   hSpace(12),
                   Flexible(
-                    child: _buildFilterButton(
-                      icon: null,
-                      label: 'Successful',
-                    ),
+                    child: _buildFilterButton(icon: null, label: 'Successful'),
                   ),
                 ],
               ),
@@ -132,9 +138,19 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
               child: ListView(
                 padding: EdgeInsets.symmetric(horizontal: 16.w),
                 children: [
-                  _buildMonthSection('October', '552.65k', '165.00k', _octoberTransactions()),
+                  _buildMonthSection(
+                    'October',
+                    '552.65k',
+                    '165.00k',
+                    _octoberTransactions(),
+                  ),
                   vSpace(16),
-                  _buildMonthSection('September', '125.00k', '75.00k', _septemberTransactions()),
+                  _buildMonthSection(
+                    'September',
+                    '125.00k',
+                    '75.00k',
+                    _septemberTransactions(),
+                  ),
                 ],
               ),
             ),
@@ -227,14 +243,23 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
               ),
             ),
             hSpace(4),
-            Icon(Icons.keyboard_arrow_down, size: 16.sp, color: Colors.grey.shade700),
+            Icon(
+              Icons.keyboard_arrow_down,
+              size: 16.sp,
+              color: Colors.grey.shade700,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMonthSection(String month, String incoming, String outgoing, List<Widget> transactions) {
+  Widget _buildMonthSection(
+    String month,
+    String incoming,
+    String outgoing,
+    List<Widget> transactions,
+  ) {
     final isExpanded = _expandedMonths[month] ?? false;
 
     return Column(
@@ -267,7 +292,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     ),
                     hSpace(6),
                     Icon(
-                      isExpanded ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_right,
+                      isExpanded
+                          ? Icons.keyboard_arrow_down
+                          : Icons.keyboard_arrow_right,
                       color: Colors.grey.shade600,
                       size: 20.sp,
                     ),
@@ -297,12 +324,13 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         ),
 
         // Transactions list
-        if (isExpanded) ...[
-          vSpace(8),
-          ...transactions,
-        ],
+        if (isExpanded) ...[vSpace(8), ...transactions],
       ],
     );
+  }
+
+  void _openTransactionDetails(TransactionDetailsData data) {
+    context.pushNamed('transaction-details', extra: data);
   }
 
   Widget _buildTransactionItem({
@@ -313,8 +341,11 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     required String date,
     required String amount,
     required Color amountColor,
+    VoidCallback? onTap,
   }) {
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       margin: EdgeInsets.only(bottom: 8.h),
       padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
@@ -330,11 +361,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
               color: iconBgColor,
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icon,
-              color: iconColor,
-              size: 22.sp,
-            ),
+              child: Icon(icon, color: iconColor, size: 22.sp),
           ),
           hSpace(12),
           Expanded(
@@ -369,11 +396,14 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             ),
           ),
         ],
+        ),
       ),
     );
   }
 
   List<Widget> _octoberTransactions() {
+    final details = kSampleTransactionDetails;
+
     return [
       _buildTransactionItem(
         icon: Icons.people,
@@ -383,6 +413,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         date: 'Oct 18, 2025 6:40 AM',
         amount: '+₦50,000.00',
         amountColor: Colors.green,
+        onTap: () => _openTransactionDetails(details),
       ),
       _buildTransactionItem(
         icon: Icons.trending_up,
@@ -392,6 +423,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         date: 'Oct 17, 2025 12:00 PM',
         amount: '+₦1,274.00',
         amountColor: Colors.green,
+        onTap: () => _openTransactionDetails(details),
       ),
       _buildTransactionItem(
         icon: Icons.account_balance_wallet,
@@ -401,6 +433,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         date: 'Oct 16, 2025 9:15 AM',
         amount: '₦100,000.00',
         amountColor: Colors.black,
+        onTap: () => _openTransactionDetails(details),
       ),
       _buildTransactionItem(
         icon: Icons.send,
@@ -410,6 +443,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         date: 'Oct 15, 2025 3:30 PM',
         amount: '₦50,000.00',
         amountColor: Colors.black,
+        onTap: () => _openTransactionDetails(details),
       ),
       _buildTransactionItem(
         icon: Icons.flash_on,
@@ -419,6 +453,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         date: 'Oct 14, 2025 10:20 AM',
         amount: '₦15,000.00',
         amountColor: Colors.black,
+        onTap: () => _openTransactionDetails(details),
       ),
       _buildTransactionItem(
         icon: Icons.trending_up,
@@ -428,6 +463,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         date: 'Oct 13, 2025 12:00 PM',
         amount: '+₦1,372.00',
         amountColor: Colors.green,
+        onTap: () => _openTransactionDetails(details),
       ),
       _buildTransactionItem(
         icon: Icons.people,
@@ -437,11 +473,14 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         date: 'Oct 12, 2025 8:45 AM',
         amount: '+₦500,000.00',
         amountColor: Colors.green,
+        onTap: () => _openTransactionDetails(details),
       ),
     ];
   }
 
   List<Widget> _septemberTransactions() {
+    final details = kSampleTransactionDetails;
+
     return [
       _buildTransactionItem(
         icon: Icons.people,
@@ -451,6 +490,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         date: 'Sep 18, 2025 6:40 AM',
         amount: '+₦50,000.00',
         amountColor: Colors.green,
+        onTap: () => _openTransactionDetails(details),
       ),
       _buildTransactionItem(
         icon: Icons.people,
@@ -460,6 +500,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         date: 'Sep 15, 2025 2:15 PM',
         amount: '₦25,000.00',
         amountColor: Colors.black,
+        onTap: () => _openTransactionDetails(details),
       ),
       _buildTransactionItem(
         icon: Icons.call_received,
@@ -469,8 +510,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         date: 'Sep 10, 2025 11:30 AM',
         amount: '+₦75,000.00',
         amountColor: Colors.green,
+        onTap: () => _openTransactionDetails(details),
       ),
     ];
   }
 }
-

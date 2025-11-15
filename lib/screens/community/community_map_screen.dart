@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
 import 'package:communal_mobile/core/widgets/bottomsheet_handlebar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_locations.dart';
@@ -18,19 +20,47 @@ class CommunityMapScreen extends StatefulWidget {
 class _CommunityMapScreenState extends State<CommunityMapScreen> {
   final Completer<GoogleMapController> _mapController = Completer();
   final TextEditingController _searchController = TextEditingController();
+  final DraggableScrollableController _sheetController =
+      DraggableScrollableController();
   String _searchQuery = '';
   String? _selectedCommunityId;
+  int _currentIndex = 2;
+  bool _isSheetExpanded = false;
+
+  static const double _collapsedSheetSize = 0.34;
+  static const double _expandedSheetSize = 0.82;
 
   @override
   void initState() {
     super.initState();
     _selectedCommunityId = SampleCommunityLocations.featured.id;
+    _sheetController.addListener(_handleSheetExtentChange);
   }
 
   @override
   void dispose() {
+    _sheetController.removeListener(_handleSheetExtentChange);
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _handleSheetExtentChange() {
+    final isExpanded =
+        _sheetController.size > (_collapsedSheetSize + _expandedSheetSize) / 2;
+    if (isExpanded != _isSheetExpanded) {
+      setState(() => _isSheetExpanded = isExpanded);
+    }
+  }
+
+  Future<void> _toggleBottomSheet() async {
+    final targetSize = _isSheetExpanded
+        ? _collapsedSheetSize
+        : _expandedSheetSize;
+    await _sheetController.animateTo(
+      targetSize,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeInOut,
+    );
   }
 
   List<CommunityLocation> get _filteredCommunities =>
@@ -97,17 +127,46 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
       floatingActionButton: Padding(
         padding: EdgeInsets.only(bottom: 96.h),
         child: FloatingActionButton(
-          heroTag: 'community-map-fab',
+          heroTag: 'community-map-toggle',
           backgroundColor: const Color(0xFF7434FF),
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Create community coming soon')),
-            );
-          },
-          child: const Icon(Icons.add, color: Colors.white),
+          onPressed: _toggleBottomSheet,
+          child: Icon(
+            _isSheetExpanded ? Icons.map : Icons.list,
+            color: Colors.white,
+          ),
         ),
       ),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          if (index == _currentIndex) return;
+          switch (index) {
+            case 0:
+              context.goNamed('home');
+              break;
+            case 1:
+              context.goNamed('obligations');
+              break;
+            default:
+              setState(() => _currentIndex = index);
+          }
+        },
+      ),
     );
+  }
+
+  Future<void> _handleCommunityAction(CommunityLocation community) async {
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return JoinCommunityBottomSheet(community: community);
+      },
+    );
+
+    if (!mounted || result == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result)));
   }
 
   Widget _buildMap(Set<Marker> markers) {
@@ -173,78 +232,141 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
   }
 
   Widget _buildFeaturedBanner(CommunityLocation community) {
+    final initials = community.name
+        .split(' ')
+        .where((word) => word.isNotEmpty)
+        .take(2)
+        .map((word) => word[0])
+        .join()
+        .toUpperCase();
+
     return Positioned(
-      top: 96.h,
-      left: 16.w,
-      right: 16.w,
+      top: 118.h,
+      left: 12.w,
+      right: 12.w,
       child: Container(
-        padding: EdgeInsets.all(18.w),
+        padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 14.h),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [Color(0xFF7434FF), Color(0xFF9749FF)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(26.r),
+          borderRadius: BorderRadius.circular(24.r),
           boxShadow: [
             BoxShadow(
               color: const Color(0xFF7434FF).withOpacity(0.25),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Text(
-              community.name,
-              style: TextStyle(
-                fontSize: 20.sp,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
+            Container(
+              width: 56.w,
+              height: 56.w,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  initials.isNotEmpty ? initials : 'CM',
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
-            vSpace(4),
-            Text(
-              '${community.communityType} • ${community.members} members',
-              style: TextStyle(
-                fontSize: 13.sp,
-                color: Colors.white.withOpacity(0.85),
+            hSpace(14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    community.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  vSpace(4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.verified_user,
+                        size: 14.sp,
+                        color: Colors.white70,
+                      ),
+                      hSpace(4),
+                      Text(
+                        '${community.communityType} • ${community.members} members',
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          color: Colors.white.withOpacity(0.85),
+                        ),
+                      ),
+                    ],
+                  ),
+                  vSpace(6),
+                  Row(
+                    children: [
+                      Icon(Icons.place, size: 14.sp, color: Colors.white70),
+                      hSpace(4),
+                      Expanded(
+                        child: Text(
+                          community.address,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: Colors.white.withOpacity(0.85),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            vSpace(16),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Member • ${community.membersLabel}',
+            hSpace(12),
+            OutlinedButton(
+              onPressed: () => _focusOnCommunity(community),
+              style: OutlinedButton.styleFrom(
+                backgroundColor: Colors.white.withOpacity(0.15),
+                foregroundColor: Colors.white,
+                side: BorderSide(color: Colors.white.withOpacity(0.6)),
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Open',
                     style: TextStyle(
                       fontSize: 13.sp,
-                      color: Colors.white.withOpacity(0.85),
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
                     ),
                   ),
-                ),
-                ElevatedButton(
-                  onPressed: () => _focusOnCommunity(community),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF7434FF),
-                    elevation: 0,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 20.w,
-                      vertical: 10.h,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16.r),
-                    ),
+                  hSpace(6),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 14.sp,
+                    color: Colors.white,
                   ),
-                  child: const Text(
-                    'Open',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -254,9 +376,10 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
 
   Widget _buildBottomSheet(List<CommunityLocation> communities) {
     return DraggableScrollableSheet(
-      initialChildSize: 0.38,
-      minChildSize: 0.3,
-      maxChildSize: 0.85,
+      controller: _sheetController,
+      initialChildSize: _collapsedSheetSize,
+      minChildSize: _collapsedSheetSize,
+      maxChildSize: _expandedSheetSize,
       builder: (context, scrollController) {
         return Container(
           decoration: BoxDecoration(
@@ -502,46 +625,59 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
               ],
             ),
             vSpace(12),
-            Text(
-              'Min. Contribution',
-              style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
-            ),
-            vSpace(4),
-            Text(
-              community.minContributionLabel,
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF0F1D40),
-              ),
-            ),
-            vSpace(12),
-            ElevatedButton(
-              onPressed: () {
-                final message = community.isMember
-                    ? 'Opening ${community.name}'
-                    : 'Request sent to join ${community.name}';
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(message)));
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: community.isMember
-                    ? const Color(0xFF31E3FF)
-                    : const Color(0xFF7434FF),
-                foregroundColor: community.isMember
-                    ? const Color(0xFF0F1D40)
-                    : Colors.white,
-                elevation: 0,
-                minimumSize: Size(double.infinity, 48.h),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14.r),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Min. Contribution',
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      vSpace(4),
+                      Text(
+                        community.minContributionLabel,
+                        style: TextStyle(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0F1D40),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              child: Text(
-                community.isMember ? 'Open Community' : 'Join Community',
-                style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w700),
-              ),
+                SizedBox(
+                  width: 160.w,
+                  child: ElevatedButton(
+                    onPressed: () => _handleCommunityAction(community),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF7434FF),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      minimumSize: Size(double.infinity, 38.h),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 4.w,
+                        vertical: 8.h,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                    ),
+                    child: Text(
+                      'Join Community',
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -586,5 +722,258 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
 
   Color _markerColorFromHue(double hue) {
     return HSVColor.fromAHSV(1, hue, 0.6, 0.9).toColor();
+  }
+}
+
+class JoinCommunityBottomSheet extends StatefulWidget {
+  const JoinCommunityBottomSheet({required this.community});
+
+  final CommunityLocation community;
+
+  @override
+  State<JoinCommunityBottomSheet> createState() =>
+      _JoinCommunityBottomSheetState();
+}
+
+class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
+  late final TextEditingController _messageController;
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _messageController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    setState(() => _isSubmitting = true);
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+    Navigator.of(
+      context,
+    ).pop('Application submitted to ${widget.community.name}');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 24.w,
+                right: 24.w,
+                top: 12.h,
+                bottom: 24.h,
+              ),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const BottomSheetHandlebar(),
+                    _buildHeader(),
+                    vSpace(16),
+                    _buildMessageField(),
+                    vSpace(16),
+                    _buildAlertCard(),
+                    vSpace(16),
+                    _buildActions(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      children: [
+        Container(
+          height: 64.w,
+          width: 64.w,
+          decoration: BoxDecoration(
+            color: const Color(0xFFEDE5FF),
+            borderRadius: BorderRadius.circular(20.r),
+          ),
+          child: Icon(
+            Icons.store_mall_directory_outlined,
+            color: const Color(0xFF7434FF),
+            size: 30.sp,
+          ),
+        ),
+        vSpace(12),
+        Text(
+          'Join ${widget.community.name}?',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF0F1D40),
+          ),
+        ),
+        vSpace(8),
+        Text(
+          'By joining, you agree to the community guidelines and contribution requirements.',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMessageField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Add a message (optional)',
+          style: TextStyle(
+            fontSize: 13.sp,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF0F1D40),
+          ),
+        ),
+        vSpace(8),
+        TextField(
+          controller: _messageController,
+          maxLines: 3,
+          decoration: InputDecoration(
+            hintText: 'Hi, my name is ... I would like to join because...',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16.r),
+              borderSide: const BorderSide(color: Color(0xFFE6E6F0)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16.r),
+              borderSide: const BorderSide(color: Color(0xFF7434FF)),
+            ),
+            filled: true,
+            fillColor: const Color(0xFFF8F8FB),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAlertCard() {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4E9),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: const Color(0xFFFFD9B3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.error_outline, color: Color(0xFFEE7B00)),
+          hSpace(12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Application Review Required',
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF9A4F00),
+                  ),
+                ),
+                vSpace(4),
+                Text(
+                  'Your application will be reviewed by the community coordinator. You’ll receive a response within 2-3 business days.',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: const Color(0xFF9A4F00),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActions() {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: OutlinedButton.styleFrom(
+              minimumSize: Size(double.infinity, 52.h),
+              side: const BorderSide(color: Color(0xFFE0E0EC)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16.r),
+              ),
+            ),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF0F1D40),
+              ),
+            ),
+          ),
+        ),
+        hSpace(12),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: _isSubmitting ? null : _submit,
+            style: ElevatedButton.styleFrom(
+              minimumSize: Size(double.infinity, 52.h),
+              backgroundColor: const Color(0xFF7434FF),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16.r),
+              ),
+            ),
+            child: _isSubmitting
+                ? SizedBox(
+                    height: 20.sp,
+                    width: 20.sp,
+                    child: const CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation(Colors.white),
+                    ),
+                  )
+                : Text(
+                    'Submit Request',
+                    style: TextStyle(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    );
   }
 }

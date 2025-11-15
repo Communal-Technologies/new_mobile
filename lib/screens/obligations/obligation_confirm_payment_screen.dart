@@ -189,12 +189,13 @@ class _ObligationConfirmPaymentScreenState
   }
 
   Widget _buildPinInputs() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 12.w,
       children: List.generate(
         4,
         (index) => SizedBox(
-          width: 60.w,
+          width: 56.w,
           child: TextField(
             controller: _pinControllers[index],
             focusNode: _pinFocusNodes[index],
@@ -202,10 +203,15 @@ class _ObligationConfirmPaymentScreenState
             obscureText: _obscurePin,
             maxLength: 1,
             keyboardType: TextInputType.number,
-            style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              fontSize: 26.sp,
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+            ),
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: InputDecoration(
               counterText: '',
+              contentPadding: EdgeInsets.symmetric(vertical: 18.h),
               filled: true,
               fillColor: Colors.white,
               border: OutlineInputBorder(

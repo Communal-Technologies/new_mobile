@@ -28,6 +28,7 @@ import 'package:communal_mobile/screens/obligations/obligation_payment_screen.da
 import 'package:communal_mobile/screens/obligations/obligation_confirm_payment_screen.dart';
 import 'package:communal_mobile/screens/obligations/obligation_payment_success_screen.dart';
 import 'package:communal_mobile/screens/community/community_screen.dart';
+import 'package:communal_mobile/screens/community/community_map_screen.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 import 'package:communal_mobile/screens/transactions/transaction_details_screen.dart';
 import 'package:communal_mobile/screens/transactions/transaction_history_screen.dart';
@@ -183,6 +184,11 @@ final GoRouter appRouter = GoRouter(
       path: '/community',
       name: 'community',
       builder: (context, state) => const CommunityScreen(),
+    ),
+    GoRoute(
+      path: '/community-map',
+      name: 'community-map',
+      builder: (context, state) => const CommunityMapScreen(),
     ),
     GoRoute(
       path: '/obligations',

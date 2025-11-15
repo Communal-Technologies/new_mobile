@@ -29,10 +29,7 @@ class CommunityDetailScreen extends StatelessWidget {
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.share_outlined),
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.share_outlined), onPressed: () {}),
         ],
       ),
       body: SingleChildScrollView(
@@ -94,8 +91,11 @@ class CommunityDetailScreen extends StatelessWidget {
                   color: const Color(0xFFE8ECFF),
                   borderRadius: BorderRadius.circular(16.r),
                 ),
-                child: const Icon(Icons.apartment_rounded,
-                    color: Color(0xFF7434FF), size: 32),
+                child: const Icon(
+                  Icons.apartment_rounded,
+                  color: Color(0xFF7434FF),
+                  size: 32,
+                ),
               ),
               hSpace(16),
               Expanded(
@@ -170,10 +170,7 @@ class CommunityDetailScreen extends StatelessWidget {
               ),
               child: Text(
                 'Join Community',
-                style: TextStyle(
-                  fontSize: 15.sp,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w700),
               ),
             ),
           ),
@@ -190,10 +187,7 @@ class CommunityDetailScreen extends StatelessWidget {
           hSpace(6),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 12.sp,
-              color: Colors.grey.shade700,
-            ),
+            style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade700),
           ),
         ],
       ),
@@ -323,10 +317,10 @@ class CommunityDetailScreen extends StatelessWidget {
             child: Text(
               detail.coordinatorName.isNotEmpty
                   ? detail.coordinatorName
-                      .split(' ')
-                      .map((word) => word[0])
-                      .take(2)
-                      .join()
+                        .split(' ')
+                        .map((word) => word[0])
+                        .take(2)
+                        .join()
                   : 'CC',
               style: TextStyle(
                 fontSize: 16.sp,
@@ -365,8 +359,10 @@ class CommunityDetailScreen extends StatelessWidget {
           ),
           IconButton(
             onPressed: () {},
-            icon:
-                const Icon(Icons.chat_bubble_outline, color: Color(0xFF7434FF)),
+            icon: const Icon(
+              Icons.chat_bubble_outline,
+              color: Color(0xFF7434FF),
+            ),
           ),
         ],
       ),
@@ -415,8 +411,11 @@ class CommunityDetailScreen extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.check_circle,
-                        color: Color(0xFF4CAF50), size: 20),
+                    const Icon(
+                      Icons.check_circle,
+                      color: Color(0xFF4CAF50),
+                      size: 20,
+                    ),
                     hSpace(12),
                     Expanded(
                       child: Text(
@@ -597,4 +596,3 @@ class _SectionCard extends StatelessWidget {
     );
   }
 }
-

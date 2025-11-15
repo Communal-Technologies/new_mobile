@@ -158,4 +158,3 @@ class FeaturedCommunityCard extends StatelessWidget {
     );
   }
 }
-

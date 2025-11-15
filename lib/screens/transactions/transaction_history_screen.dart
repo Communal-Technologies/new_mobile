@@ -3,8 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
-import 'package:go_router/go_router.dart';
+import 'package:communal_mobile/core/utils/money_formatter.dart';
+import 'package:communal_mobile/screens/transactions/models/sample_transactions.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
+import 'package:communal_mobile/screens/transactions/widgets/transaction_tile.dart';
+import 'package:go_router/go_router.dart';
 import 'package:communal_mobile/screens/transactions/widgets/filter_category_bottomsheet.dart';
 import 'package:communal_mobile/screens/transactions/widgets/filter_status_bottomsheet.dart';
 import 'package:communal_mobile/screens/transactions/widgets/download_statement_bottomsheet.dart';
@@ -20,10 +23,20 @@ class TransactionHistoryScreen extends StatefulWidget {
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   int _currentTabIndex = 0; // 0 = Communal, 1 = Ledger
   int _currentNavIndex = 0;
-  final Map<String, bool> _expandedMonths = {
-    'October': true,
-    'September': true,
-  };
+  late final List<MapEntry<String, List<TransactionListItem>>>
+  _monthlyTransactions;
+  late final Map<String, bool> _expandedMonths;
+
+  @override
+  void initState() {
+    super.initState();
+    _monthlyTransactions = SampleTransactions.transactionsByMonth.entries
+        .toList();
+    _expandedMonths = {
+      for (int i = 0; i < _monthlyTransactions.length; i++)
+        _monthlyTransactions[i].key: i == 0,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -135,23 +148,14 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
             // Transaction List
             Expanded(
-              child: ListView(
+              child: ListView.separated(
                 padding: EdgeInsets.symmetric(horizontal: 16.w),
-                children: [
-                  _buildMonthSection(
-                    'October',
-                    '552.65k',
-                    '165.00k',
-                    _octoberTransactions(),
-                  ),
-                  vSpace(16),
-                  _buildMonthSection(
-                    'September',
-                    '125.00k',
-                    '75.00k',
-                    _septemberTransactions(),
-                  ),
-                ],
+                itemBuilder: (_, index) => _buildMonthSection(
+                  _monthlyTransactions[index].key,
+                  _monthlyTransactions[index].value,
+                ),
+                separatorBuilder: (_, __) => vSpace(16),
+                itemCount: _monthlyTransactions.length,
               ),
             ),
           ],
@@ -170,7 +174,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
   Widget _buildTab(String label, int index, ThemeData theme) {
     final isActive = _currentTabIndex == index;
-    
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -256,11 +260,15 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
   Widget _buildMonthSection(
     String month,
-    String incoming,
-    String outgoing,
-    List<Widget> transactions,
+    List<TransactionListItem> transactions,
   ) {
     final isExpanded = _expandedMonths[month] ?? false;
+    final incoming = transactions
+        .where((t) => t.isCredit)
+        .fold<double>(0, (sum, item) => sum + item.details.amount);
+    final outgoing = transactions
+        .where((t) => !t.isCredit)
+        .fold<double>(0, (sum, item) => sum + item.details.amount);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,7 +310,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 ),
                 const Spacer(),
                 Text(
-                  'In: ₦$incoming',
+                  'In: ₦${formatMoney(incoming)}',
                   style: TextStyle(
                     fontSize: 13.sp,
                     fontWeight: FontWeight.w600,
@@ -311,7 +319,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 ),
                 hSpace(12),
                 Text(
-                  'Out: ₦$outgoing',
+                  'Out: ₦${formatMoney(outgoing)}',
                   style: TextStyle(
                     fontSize: 13.sp,
                     fontWeight: FontWeight.w600,
@@ -324,194 +332,24 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         ),
 
         // Transactions list
-        if (isExpanded) ...[vSpace(8), ...transactions],
+        if (isExpanded) ...[
+          vSpace(8),
+          for (int i = 0; i < transactions.length; i++)
+            Padding(
+              padding: EdgeInsets.only(
+                bottom: i == transactions.length - 1 ? 0 : 8.h,
+              ),
+              child: TransactionTile(
+                item: transactions[i],
+                onTap: () => _openTransactionDetails(transactions[i].details),
+              ),
+            ),
+        ],
       ],
     );
   }
 
   void _openTransactionDetails(TransactionDetailsData data) {
     context.pushNamed('transaction-details', extra: data);
-  }
-
-  Widget _buildTransactionItem({
-    required IconData icon,
-    required Color iconColor,
-    required Color iconBgColor,
-    required String title,
-    required String date,
-    required String amount,
-    required Color amountColor,
-    VoidCallback? onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-      margin: EdgeInsets.only(bottom: 8.h),
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44.w,
-            height: 44.w,
-            decoration: BoxDecoration(
-              color: iconBgColor,
-              shape: BoxShape.circle,
-            ),
-              child: Icon(icon, color: iconColor, size: 22.sp),
-          ),
-          hSpace(12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                  ),
-                ),
-                vSpace(4),
-                Text(
-                  date,
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            amount,
-            style: TextStyle(
-              fontSize: 15.sp,
-              fontWeight: FontWeight.w700,
-              color: amountColor,
-            ),
-          ),
-        ],
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _octoberTransactions() {
-    final details = kSampleTransactionDetails;
-
-    return [
-      _buildTransactionItem(
-        icon: Icons.people,
-        iconColor: Colors.white,
-        iconBgColor: Color(0xFF742CE7),
-        title: 'Cooperative Contribution',
-        date: 'Oct 18, 2025 6:40 AM',
-        amount: '+₦50,000.00',
-        amountColor: Colors.green,
-        onTap: () => _openTransactionDetails(details),
-      ),
-      _buildTransactionItem(
-        icon: Icons.trending_up,
-        iconColor: Colors.white,
-        iconBgColor: Color(0xFF00BCD4),
-        title: 'Interest Earned',
-        date: 'Oct 17, 2025 12:00 PM',
-        amount: '+₦1,274.00',
-        amountColor: Colors.green,
-        onTap: () => _openTransactionDetails(details),
-      ),
-      _buildTransactionItem(
-        icon: Icons.account_balance_wallet,
-        iconColor: Colors.white,
-        iconBgColor: Color(0xFF742CE7),
-        title: 'Savings Deposit',
-        date: 'Oct 16, 2025 9:15 AM',
-        amount: '₦100,000.00',
-        amountColor: Colors.black,
-        onTap: () => _openTransactionDetails(details),
-      ),
-      _buildTransactionItem(
-        icon: Icons.send,
-        iconColor: Colors.white,
-        iconBgColor: Colors.red,
-        title: 'Send - Mary Johnson',
-        date: 'Oct 15, 2025 3:30 PM',
-        amount: '₦50,000.00',
-        amountColor: Colors.black,
-        onTap: () => _openTransactionDetails(details),
-      ),
-      _buildTransactionItem(
-        icon: Icons.flash_on,
-        iconColor: Colors.white,
-        iconBgColor: Colors.orange,
-        title: 'Bill Payment - Electricity',
-        date: 'Oct 14, 2025 10:20 AM',
-        amount: '₦15,000.00',
-        amountColor: Colors.black,
-        onTap: () => _openTransactionDetails(details),
-      ),
-      _buildTransactionItem(
-        icon: Icons.trending_up,
-        iconColor: Colors.white,
-        iconBgColor: Color(0xFF00BCD4),
-        title: 'Interest Earned',
-        date: 'Oct 13, 2025 12:00 PM',
-        amount: '+₦1,372.00',
-        amountColor: Colors.green,
-        onTap: () => _openTransactionDetails(details),
-      ),
-      _buildTransactionItem(
-        icon: Icons.people,
-        iconColor: Colors.white,
-        iconBgColor: Color(0xFF4CAF50),
-        title: 'Loan Disbursement',
-        date: 'Oct 12, 2025 8:45 AM',
-        amount: '+₦500,000.00',
-        amountColor: Colors.green,
-        onTap: () => _openTransactionDetails(details),
-      ),
-    ];
-  }
-
-  List<Widget> _septemberTransactions() {
-    final details = kSampleTransactionDetails;
-
-    return [
-      _buildTransactionItem(
-        icon: Icons.people,
-        iconColor: Colors.white,
-        iconBgColor: Color(0xFF742CE7),
-        title: 'Cooperative Contribution',
-        date: 'Sep 18, 2025 6:40 AM',
-        amount: '+₦50,000.00',
-        amountColor: Colors.green,
-        onTap: () => _openTransactionDetails(details),
-      ),
-      _buildTransactionItem(
-        icon: Icons.people,
-        iconColor: Colors.white,
-        iconBgColor: Colors.red,
-        title: 'Loan Repayment',
-        date: 'Sep 15, 2025 2:15 PM',
-        amount: '₦25,000.00',
-        amountColor: Colors.black,
-        onTap: () => _openTransactionDetails(details),
-      ),
-      _buildTransactionItem(
-        icon: Icons.call_received,
-        iconColor: Colors.white,
-        iconBgColor: Color(0xFF4CAF50),
-        title: 'Receive - John Doe',
-        date: 'Sep 10, 2025 11:30 AM',
-        amount: '+₦75,000.00',
-        amountColor: Colors.green,
-        onTap: () => _openTransactionDetails(details),
-      ),
-    ];
   }
 }

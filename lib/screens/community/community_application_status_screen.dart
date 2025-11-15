@@ -29,10 +29,7 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.share_outlined),
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.share_outlined), onPressed: () {}),
         ],
       ),
       bottomNavigationBar: _buildPendingFooter(),
@@ -72,18 +69,13 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          SizedBox(
-            height: 64.w,
-            width: 64.w,
-            child: Image.asset(
-              'assets/icons/community_placeholder.png',
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => CircleAvatar(
-                radius: 32.r,
-                backgroundColor: const Color(0xFFE5E0FF),
-                child: const Icon(Icons.apartment_rounded,
-                    color: Color(0xFF7434FF), size: 28),
-              ),
+          CircleAvatar(
+            radius: 32.r,
+            backgroundColor: const Color(0xFFE5E0FF),
+            child: const Icon(
+              Icons.apartment_rounded,
+              color: Color(0xFF7434FF),
+              size: 28,
             ),
           ),
           vSpace(12),
@@ -120,7 +112,10 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
               hSpace(16),
               _buildMeta(Icons.place_outlined, '${location.distanceKm} km'),
               hSpace(16),
-              _buildMeta(Icons.star, '${location.rating} (${location.members})'),
+              _buildMeta(
+                Icons.star,
+                '${location.rating} (${location.members})',
+              ),
             ],
           ),
         ],
@@ -219,7 +214,10 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
                 vSpace(4),
                 Text(
                   label,
-                  style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: Colors.grey.shade600,
+                  ),
                 ),
               ],
             ),
@@ -279,10 +277,7 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
         hSpace(4),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12.sp,
-            color: Colors.grey.shade600,
-          ),
+          style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
         ),
       ],
     );
@@ -354,7 +349,10 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
                   vSpace(4),
                   Text(
                     'We’ll notify you once the admin reviews your request.',
-                    style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: Colors.grey.shade600,
+                    ),
                   ),
                 ],
               ),
@@ -365,4 +363,3 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
     );
   }
 }
-

@@ -73,13 +73,24 @@ class _HomeScreenState extends State<HomeScreen> {
         bottomNavigationBar: BottomNavBar(
           currentIndex: _currentIndex,
           onTap: (index) {
-            if (index == 1) {
-              context.pushNamed('obligations');
-              return;
+            if (index == _currentIndex && index == 0) return;
+            switch (index) {
+              case 0:
+                setState(() {
+                  _currentIndex = 0;
+                });
+                break;
+              case 1:
+                context.pushNamed('obligations');
+                break;
+              case 2:
+                context.pushNamed('community');
+                break;
+              default:
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Coming soon')));
             }
-            setState(() {
-              _currentIndex = index;
-            });
           },
         ),
       ),

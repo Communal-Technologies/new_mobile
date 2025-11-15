@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
@@ -27,56 +28,64 @@ class _CommunityScreenState extends State<CommunityScreen> {
   Widget build(BuildContext context) {
     final featured = SampleCommunities.featured;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F5),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildTopBar(),
-              vSpace(20),
-              _buildFeaturedCard(featured),
-              vSpace(24),
-              Text(
-                'Your Communities',
-                style: TextStyle(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark.copyWith(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF2F2F5),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTopBar(),
+                vSpace(20),
+                _buildFeaturedCard(featured),
+                vSpace(24),
+                Text(
+                  'Your Communities',
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
                 ),
-              ),
-              vSpace(12),
-              ...SampleCommunities.all.map(_buildCommunityCard).toList(),
-              vSpace(24),
-              _buildFindNearbyCard(),
-              vSpace(32),
-            ],
+                vSpace(12),
+                ...SampleCommunities.all.map(_buildCommunityCard).toList(),
+                vSpace(24),
+                _buildFindNearbyCard(),
+                vSpace(32),
+              ],
+            ),
           ),
         ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF7434FF),
-        onPressed: () => context.pushNamed('community-map'),
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          if (index == _currentIndex) return;
-          switch (index) {
-            case 0:
-              context.goNamed('home');
-              break;
-            case 1:
-              context.goNamed('obligations');
-              break;
-            default:
-              setState(() => _currentIndex = index);
-          }
-        },
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        floatingActionButton: FloatingActionButton(
+          shape: const CircleBorder(),
+          backgroundColor: const Color(0xFF7434FF),
+          onPressed: () => context.pushNamed('community-map'),
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
+        bottomNavigationBar: BottomNavBar(
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            if (index == _currentIndex) return;
+            switch (index) {
+              case 0:
+                context.goNamed('home');
+                break;
+              case 1:
+                context.goNamed('obligations');
+                break;
+              default:
+                setState(() => _currentIndex = index);
+            }
+          },
+        ),
       ),
     );
   }
@@ -85,7 +94,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     return Row(
       children: [
         IconButton(
-          icon: const Icon(Icons.menu),
+          icon: const Icon(Icons.menu, color: Colors.black),
           onPressed: () {
             ScaffoldMessenger.of(
               context,
@@ -104,7 +113,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.location_on_outlined),
+          icon: const Icon(Icons.location_on_outlined, color: Colors.black),
           onPressed: () {},
         ),
       ],
@@ -178,10 +187,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 child: ElevatedButton(
                   onPressed: () {},
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.2),
+                    backgroundColor: const Color(0xFF9C6BFF),
                     minimumSize: Size(double.infinity, 46.h),
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16.r),
+                      borderRadius: BorderRadius.circular(12.r),
                     ),
                   ),
                   child: Text(
@@ -202,7 +212,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     backgroundColor: const Color(0xFF31E3FF),
                     minimumSize: Size(double.infinity, 46.h),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16.r),
+                      borderRadius: BorderRadius.circular(12.r),
                     ),
                   ),
                   child: Text(
@@ -343,7 +353,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 minimumSize: Size(double.infinity, 48.h),
                 side: const BorderSide(color: Color(0xFF7434FF), width: 1.5),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16.r),
+                  borderRadius: BorderRadius.circular(12.r),
                 ),
               ),
               child: Text(
@@ -392,48 +402,29 @@ class _CommunityScreenState extends State<CommunityScreen> {
   Widget _buildFindNearbyCard() {
     return InkWell(
       onTap: () => context.pushNamed('community-map'),
-      borderRadius: BorderRadius.circular(20.r),
+      borderRadius: BorderRadius.circular(12.r),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
         decoration: BoxDecoration(
           color: const Color(0xFFEDE5FF),
-          borderRadius: BorderRadius.circular(20.r),
+          borderRadius: BorderRadius.circular(12.r),
         ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.location_on_outlined,
               color: const Color(0xFF7434FF),
-              size: 24.sp,
+              size: 22.sp,
             ),
-            hSpace(12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Find Nearby Communities',
-                    style: TextStyle(
-                      fontSize: 15.sp,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF4B3D8F),
-                    ),
-                  ),
-                  vSpace(4),
-                  Text(
-                    'Discover cooperatives close to you and connect instantly.',
-                    style: TextStyle(
-                      fontSize: 13.sp,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                ],
+            hSpace(8),
+            Text(
+              'Find Nearby Communities',
+              style: TextStyle(
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF4B3D8F),
               ),
-            ),
-            const Icon(
-              Icons.arrow_forward_ios,
-              size: 18,
-              color: Color(0xFF7434FF),
             ),
           ],
         ),

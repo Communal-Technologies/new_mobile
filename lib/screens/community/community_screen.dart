@@ -56,6 +56,12 @@ class _CommunityScreenState extends State<CommunityScreen> {
           ),
         ),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF7434FF),
+        onPressed: () => context.pushNamed('community-map'),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: _currentIndex,
         onTap: (index) {
@@ -329,24 +335,26 @@ class _CommunityScreenState extends State<CommunityScreen> {
             ),
           ),
           vSpace(12),
-          OutlinedButton(
-            onPressed: () => setState(() => _activeCommunityId = community.id),
-            style: OutlinedButton.styleFrom(
-              minimumSize: Size(double.infinity, 48.h),
-              side: BorderSide(color: const Color(0xFF7434FF), width: 1.5),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16.r),
+          if (!isActive)
+            OutlinedButton(
+              onPressed: () =>
+                  setState(() => _activeCommunityId = community.id),
+              style: OutlinedButton.styleFrom(
+                minimumSize: Size(double.infinity, 48.h),
+                side: const BorderSide(color: Color(0xFF7434FF), width: 1.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+              ),
+              child: Text(
+                'Switch to this Community',
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF7434FF),
+                ),
               ),
             ),
-            child: Text(
-              isActive ? 'Current Community' : 'Switch to this Community',
-              style: TextStyle(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF7434FF),
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -382,53 +390,53 @@ class _CommunityScreenState extends State<CommunityScreen> {
   }
 
   Widget _buildFindNearbyCard() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEDE5FF),
-        borderRadius: BorderRadius.circular(20.r),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.location_on_outlined,
-            color: const Color(0xFF7434FF),
-            size: 24.sp,
-          ),
-          hSpace(12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Find Nearby Communities',
-                  style: TextStyle(
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF4B3D8F),
-                  ),
-                ),
-                vSpace(4),
-                Text(
-                  'Discover cooperatives close to you and connect instantly.',
-                  style: TextStyle(
-                    fontSize: 13.sp,
-                    color: Colors.grey.shade700,
-                  ),
-                ),
-              ],
+    return InkWell(
+      onTap: () => context.pushNamed('community-map'),
+      borderRadius: BorderRadius.circular(20.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEDE5FF),
+          borderRadius: BorderRadius.circular(20.r),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.location_on_outlined,
+              color: const Color(0xFF7434FF),
+              size: 24.sp,
             ),
-          ),
-          Container(
-            width: 42.w,
-            height: 42.w,
-            decoration: const BoxDecoration(
+            hSpace(12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Find Nearby Communities',
+                    style: TextStyle(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF4B3D8F),
+                    ),
+                  ),
+                  vSpace(4),
+                  Text(
+                    'Discover cooperatives close to you and connect instantly.',
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios,
+              size: 18,
               color: Color(0xFF7434FF),
-              shape: BoxShape.circle,
             ),
-            child: Icon(Icons.add, color: Colors.white, size: 22.sp),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

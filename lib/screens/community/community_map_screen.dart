@@ -54,31 +54,34 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
       orElse: () => SampleCommunityLocations.featured,
     );
 
-    final markers = communities
-        .map(
-          (community) => Marker(
-            markerId: MarkerId(community.id),
-            position: community.coordinate,
-            icon: BitmapDescriptor.defaultMarkerWithHue(
-              community.id == _selectedCommunityId
-                  ? BitmapDescriptor.hueViolet
-                  : community.markerHue,
+    final markers =
+        communities
+            .map(
+              (community) => Marker(
+                markerId: MarkerId(community.id),
+                position: community.coordinate,
+                icon: BitmapDescriptor.defaultMarkerWithHue(
+                  community.id == _selectedCommunityId
+                      ? BitmapDescriptor.hueViolet
+                      : community.markerHue,
+                ),
+                infoWindow: InfoWindow(
+                  title: community.name,
+                  snippet: community.address,
+                ),
+                onTap: () => _focusOnCommunity(community),
+              ),
+            )
+            .toSet()
+          ..add(
+            Marker(
+              markerId: const MarkerId('user-location'),
+              position: SampleCommunityLocations.userLocation,
+              icon: BitmapDescriptor.defaultMarkerWithHue(
+                BitmapDescriptor.hueAzure,
+              ),
             ),
-            infoWindow: InfoWindow(
-              title: community.name,
-              snippet: community.address,
-            ),
-            onTap: () => _focusOnCommunity(community),
-          ),
-        )
-        .toSet()
-      ..add(
-        Marker(
-          markerId: const MarkerId('user-location'),
-          position: SampleCommunityLocations.userLocation,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-        ),
-      );
+          );
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -142,9 +145,9 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
           children: [
             _roundIconButton(
               icon: Icons.menu,
-              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Menu coming soon')),
-              ),
+              onTap: () => ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Menu coming soon'))),
             ),
             Expanded(
               child: Text(
@@ -228,8 +231,10 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                     backgroundColor: Colors.white,
                     foregroundColor: const Color(0xFF7434FF),
                     elevation: 0,
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 20.w,
+                      vertical: 10.h,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16.r),
                     ),
@@ -276,12 +281,16 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                       setState(() => _searchQuery = value.trim()),
                   decoration: InputDecoration(
                     hintText: 'Search communities near you...',
-                    prefixIcon: const Icon(Icons.search,
-                        color: Color(0xFF6C6C80)),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: Color(0xFF6C6C80),
+                    ),
                     filled: true,
                     fillColor: const Color(0xFFF5F4F9),
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 16.w, vertical: 0),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 0,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(18.r),
                       borderSide: BorderSide.none,
@@ -304,8 +313,10 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                     ),
                     hSpace(8),
                     Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 8.w,
+                        vertical: 4.h,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFEDE5FF),
                         borderRadius: BorderRadius.circular(14.r),
@@ -340,8 +351,11 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                         padding: EdgeInsets.only(top: 32.h),
                         child: Column(
                           children: [
-                            const Icon(Icons.location_off_outlined,
-                                color: Color(0xFFB0B0C3), size: 48),
+                            const Icon(
+                              Icons.location_off_outlined,
+                              color: Color(0xFFB0B0C3),
+                              size: 48,
+                            ),
                             vSpace(12),
                             Text(
                               'No communities match your search',
@@ -356,7 +370,10 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                     : ListView.separated(
                         controller: scrollController,
                         padding: EdgeInsets.only(
-                            left: 20.w, right: 20.w, bottom: 32.h),
+                          left: 20.w,
+                          right: 20.w,
+                          bottom: 32.h,
+                        ),
                         itemCount: communities.length,
                         separatorBuilder: (_, __) => vSpace(12),
                         itemBuilder: (context, index) {
@@ -426,16 +443,18 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                   ),
                 ),
                 Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFF4D9),
                     borderRadius: BorderRadius.circular(16.r),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.star,
-                          color: Color(0xFFFFA426), size: 14),
+                      const Icon(
+                        Icons.star,
+                        color: Color(0xFFFFA426),
+                        size: 14,
+                      ),
                       hSpace(4),
                       Text(
                         community.rating.toStringAsFixed(1),
@@ -453,8 +472,11 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
             vSpace(12),
             Row(
               children: [
-                Icon(Icons.people_alt,
-                    size: 16.sp, color: Colors.grey.shade600),
+                Icon(
+                  Icons.people_alt,
+                  size: 16.sp,
+                  color: Colors.grey.shade600,
+                ),
                 hSpace(4),
                 Text(
                   community.membersLabel,
@@ -464,8 +486,11 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                   ),
                 ),
                 hSpace(12),
-                Icon(Icons.place_outlined,
-                    size: 16.sp, color: Colors.grey.shade600),
+                Icon(
+                  Icons.place_outlined,
+                  size: 16.sp,
+                  color: Colors.grey.shade600,
+                ),
                 hSpace(4),
                 Text(
                   community.distanceLabel,
@@ -479,10 +504,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
             vSpace(12),
             Text(
               'Min. Contribution',
-              style: TextStyle(
-                fontSize: 12.sp,
-                color: Colors.grey.shade600,
-              ),
+              style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
             ),
             vSpace(4),
             Text(
@@ -499,15 +521,17 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                 final message = community.isMember
                     ? 'Opening ${community.name}'
                     : 'Request sent to join ${community.name}';
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(SnackBar(content: Text(message)));
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(message)));
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: community.isMember
                     ? const Color(0xFF31E3FF)
                     : const Color(0xFF7434FF),
-                foregroundColor:
-                    community.isMember ? const Color(0xFF0F1D40) : Colors.white,
+                foregroundColor: community.isMember
+                    ? const Color(0xFF0F1D40)
+                    : Colors.white,
                 elevation: 0,
                 minimumSize: Size(double.infinity, 48.h),
                 shape: RoundedRectangleBorder(
@@ -516,10 +540,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
               ),
               child: Text(
                 community.isMember ? 'Open Community' : 'Join Community',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w700),
               ),
             ),
           ],
@@ -528,7 +549,10 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
     );
   }
 
-  Widget _roundIconButton({required IconData icon, required VoidCallback onTap}) {
+  Widget _roundIconButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -556,11 +580,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
         color: accentColor.withOpacity(0.15),
         borderRadius: BorderRadius.circular(16.r),
       ),
-      child: Icon(
-        Icons.apartment_rounded,
-        color: accentColor,
-        size: 24.sp,
-      ),
+      child: Icon(Icons.apartment_rounded, color: accentColor, size: 24.sp),
     );
   }
 
@@ -568,4 +588,3 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
     return HSVColor.fromAHSV(1, hue, 0.6, 0.9).toColor();
   }
 }
-

@@ -21,7 +21,10 @@ import 'package:communal_mobile/screens/kyc/proof_of_identity_screen.dart';
 import 'package:communal_mobile/screens/kyc/verifying_identity_screen.dart';
 import 'package:communal_mobile/screens/kyc/all_set_screen.dart';
 import 'package:communal_mobile/screens/home/home_screen.dart';
+import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
+import 'package:communal_mobile/screens/transactions/transaction_details_screen.dart';
 import 'package:communal_mobile/screens/transactions/transaction_history_screen.dart';
+import 'package:communal_mobile/screens/transactions/transaction_receipt_screen.dart';
 // import 'package:communal_mobile/core/features/wallet/screens/pages/wallet_page.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -89,10 +92,7 @@ final GoRouter appRouter = GoRouter(
         final contact = extra?['contact'] ?? '';
         final isEmail = extra?['isEmail'] ?? true;
         
-        return VerifyResetScreen(
-          contact: contact,
-          isEmail: isEmail,
-        );
+        return VerifyResetScreen(contact: contact, isEmail: isEmail);
       },
     ),
     GoRoute(
@@ -179,6 +179,41 @@ final GoRouter appRouter = GoRouter(
       name: 'transactions',
       builder: (context, state) => const TransactionHistoryScreen(),
     ),
+    GoRoute(
+      path: '/transaction-details',
+      name: 'transaction-details',
+      builder: (context, state) {
+        final extra = state.extra;
+        final details = extra is TransactionDetailsData
+            ? extra
+            : kSampleTransactionDetails;
+        return TransactionDetailsScreen(details: details);
+      },
+    ),
+    GoRoute(
+      path: '/transaction-receipt',
+      name: 'transaction-receipt',
+      builder: (context, state) {
+        final extra = state.extra;
+        TransactionDetailsData details = kSampleTransactionDetails;
+        ReceiptAction? action;
+
+        if (extra is Map<String, dynamic>) {
+          final maybeDetails = extra['details'];
+          if (maybeDetails is TransactionDetailsData) {
+            details = maybeDetails;
+          }
+          action = _parseReceiptAction(extra['action']);
+        } else if (extra is TransactionDetailsData) {
+          details = extra;
+        }
+
+        return TransactionReceiptScreen(
+          details: details,
+          initialAction: action,
+        );
+      },
+    ),
     
     // GoRoute(
     //   path: '/wallet/:userId',
@@ -190,3 +225,18 @@ final GoRouter appRouter = GoRouter(
     // ),
   ],
 );
+
+ReceiptAction? _parseReceiptAction(dynamic value) {
+  if (value is ReceiptAction) return value;
+  if (value is String) {
+    switch (value.toLowerCase()) {
+      case 'download':
+        return ReceiptAction.download;
+      case 'share':
+        return ReceiptAction.share;
+      case 'preview':
+        return ReceiptAction.preview;
+    }
+  }
+  return null;
+}

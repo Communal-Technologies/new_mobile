@@ -29,6 +29,9 @@ import 'package:communal_mobile/screens/obligations/obligation_confirm_payment_s
 import 'package:communal_mobile/screens/obligations/obligation_payment_success_screen.dart';
 import 'package:communal_mobile/screens/community/community_screen.dart';
 import 'package:communal_mobile/screens/community/community_map_screen.dart';
+import 'package:communal_mobile/screens/community/community_detail_screen.dart';
+import 'package:communal_mobile/screens/community/data/sample_community_details.dart';
+import 'package:communal_mobile/screens/community/data/sample_community_locations.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 import 'package:communal_mobile/screens/transactions/transaction_details_screen.dart';
 import 'package:communal_mobile/screens/transactions/transaction_history_screen.dart';
@@ -189,6 +192,18 @@ final GoRouter appRouter = GoRouter(
       path: '/community-map',
       name: 'community-map',
       builder: (context, state) => const CommunityMapScreen(),
+    ),
+    GoRoute(
+      path: '/community-detail',
+      name: 'community-detail',
+      builder: (context, state) {
+        final extra = state.extra;
+        final location = extra is CommunityLocation
+            ? extra
+            : SampleCommunityLocations.featured;
+        final detail = SampleCommunityDetails.getById(location.id);
+        return CommunityDetailScreen(detail: detail);
+      },
     ),
     GoRoute(
       path: '/obligations',

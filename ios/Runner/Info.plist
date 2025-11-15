@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Communal needs photo access to let you save or share transaction receipts.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Communal saves your transaction receipts directly to the photo library.</string>
 </dict>
 </plist>

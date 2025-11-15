@@ -151,7 +151,11 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
               ),
               child: Text(
                 'Continue',
-                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
@@ -252,7 +256,11 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
               borderSide: const BorderSide(color: Color(0xFF7434FF), width: 2),
             ),
           ),
-          style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+          ),
         ),
       ],
     );

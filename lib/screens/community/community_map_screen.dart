@@ -156,7 +156,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
   }
 
   Future<void> _handleCommunityAction(CommunityLocation community) async {
-    final result = await showModalBottomSheet<String>(
+    final result = await showModalBottomSheet<dynamic>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -166,11 +166,20 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
     );
 
     if (!mounted || result == null) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result)));
+
+    if (result is Map && result['status'] == 'pending') {
+      _openApplicationStatus(community);
+    } else if (result is String) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result)));
+    }
   }
 
   void _openCommunityDetails(CommunityLocation community) {
     context.pushNamed('community-detail', extra: community);
+  }
+
+  void _openApplicationStatus(CommunityLocation community) {
+    context.pushNamed('community-application-status', extra: community);
   }
 
   Widget _buildMap(Set<Marker> markers) {
@@ -759,9 +768,10 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
     setState(() => _isSubmitting = true);
     await Future.delayed(const Duration(milliseconds: 600));
     if (!mounted) return;
-    Navigator.of(
-      context,
-    ).pop('Application submitted to ${widget.community.name}');
+    Navigator.of(context).pop({
+      'status': 'pending',
+      'community': widget.community,
+    });
   }
 
   @override

@@ -42,4 +42,3 @@ class FindNearbyCard extends StatelessWidget {
     );
   }
 }
-

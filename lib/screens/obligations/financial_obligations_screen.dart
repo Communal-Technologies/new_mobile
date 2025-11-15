@@ -67,8 +67,12 @@ class _FinancialObligationsScreenState
             if (index == _currentNavIndex) return;
             if (index == 0) {
               context.go('/home');
+            } else if (index == 2) {
+              context.goNamed('community');
             } else {
-              setState(() => _currentNavIndex = index);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Section coming soon')),
+              );
             }
           },
         ),

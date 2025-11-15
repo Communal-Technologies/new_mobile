@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import 'package:communal_mobile/core/widgets/space.dart';
@@ -126,7 +127,7 @@ class ObligationPaymentSuccessScreen extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => context.goNamed('obligations'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF7434FF),
                   minimumSize: Size(double.infinity, 52.h),

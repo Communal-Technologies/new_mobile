@@ -96,6 +96,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
               case 1:
                 context.goNamed('obligations');
                 break;
+              case 3:
+                context.goNamed('loans');
+                break;
               default:
                 setState(() => _currentIndex = index);
             }

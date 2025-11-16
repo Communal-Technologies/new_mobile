@@ -224,6 +224,16 @@ class _LoansScreenState extends State<LoansScreen> {
             hSpace(12),
             Expanded(
               child: _buildQuickActionButton(
+                icon: Icons.attach_money,
+                label: 'Apply Now',
+                onTap: () {
+                  context.pushNamed('loan-application');
+                },
+              ),
+            ),
+            hSpace(12),
+            Expanded(
+              child: _buildQuickActionButton(
                 icon: Icons.history,
                 label: 'Loan History',
                 onTap: () {
@@ -234,19 +244,6 @@ class _LoansScreenState extends State<LoansScreen> {
               ),
             ),
           ],
-        ),
-        vSpace(12),
-        Center(
-          child: SizedBox(
-            width: 200.w,
-            child: _buildQuickActionButton(
-              icon: Icons.attach_money,
-              label: 'Apply Now',
-              onTap: () {
-                context.pushNamed('loan-application');
-              },
-            ),
-          ),
         ),
       ],
     );

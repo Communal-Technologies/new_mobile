@@ -20,6 +20,8 @@ class CommunityDetailScreen extends StatelessWidget {
         backgroundColor: const Color(0xFFF6F6FA),
         elevation: 0,
         centerTitle: true,
+        iconTheme: const IconThemeData(color: Color(0xFF0F1D40)),
+        actionsIconTheme: const IconThemeData(color: Color(0xFF0F1D40)),
         title: const Text(
           'Community Details',
           style: TextStyle(color: Color(0xFF0F1D40)),
@@ -132,10 +134,6 @@ class CommunityDetailScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.favorite_border),
-                onPressed: () {},
-              ),
             ],
           ),
           vSpace(16),
@@ -147,32 +145,51 @@ class CommunityDetailScreen extends StatelessWidget {
               ),
               _buildHeaderMeta(
                 icon: Icons.place_outlined,
-                label: '${location.distanceKm} km',
+                label: '${location.distanceLabel}',
               ),
               _buildHeaderMeta(
                 icon: Icons.star,
-                label: location.rating.toStringAsFixed(1),
+                label: '${location.rating.toStringAsFixed(1)} (89)',
               ),
             ],
           ),
           vSpace(16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF7434FF),
-                foregroundColor: Colors.white,
-                minimumSize: Size(double.infinity, 48.h),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16.r),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {},
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF7434FF),
+                    foregroundColor: Colors.white,
+                    minimumSize: Size(double.infinity, 48.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16.r),
+                    ),
+                  ),
+                  child: Text(
+                    'Join Community',
+                    style: TextStyle(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
-              child: Text(
-                'Join Community',
-                style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w700),
+              hSpace(12),
+              Container(
+                width: 48.w,
+                height: 48.w,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F3F9),
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+                child: const Icon(
+                  Icons.favorite_border,
+                  color: Color(0xFF9E9EB5),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -223,6 +240,27 @@ class CommunityDetailScreen extends StatelessWidget {
         ),
         itemBuilder: (context, index) {
           final (value, label) = items[index];
+
+          // Match the design-specific accent colors per metric.
+          Color valueColor;
+          switch (index) {
+            case 0:
+            case 2:
+              valueColor = const Color(0xFF7434FF); // purple
+              break;
+            case 1:
+            case 5:
+              valueColor = const Color(0xFF27AE60); // green
+              break;
+            case 3:
+              valueColor = const Color(0xFF2F80ED); // blue
+              break;
+            case 4:
+              valueColor = const Color(0xFFE67E22); // orange
+              break;
+            default:
+              valueColor = const Color(0xFF0F1D40);
+          }
           return Container(
             padding: EdgeInsets.all(12.w),
             decoration: BoxDecoration(
@@ -237,7 +275,7 @@ class CommunityDetailScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F1D40),
+                    color: valueColor,
                   ),
                 ),
                 vSpace(4),

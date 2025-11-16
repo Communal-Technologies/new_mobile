@@ -15,6 +15,7 @@ class CommunityLocation {
     required this.coordinate,
     required this.markerHue,
     this.isFeatured = false,
+    this.isVerified = false,
     this.isMember = false,
   });
 
@@ -30,6 +31,7 @@ class CommunityLocation {
   final LatLng coordinate;
   final double markerHue;
   final bool isFeatured;
+  final bool isVerified;
   final bool isMember;
 
   String get membersLabel => '$members members';
@@ -64,6 +66,7 @@ class SampleCommunityLocations {
       coordinate: LatLng(6.5355, 3.3548),
       markerHue: BitmapDescriptor.hueViolet,
       isFeatured: true,
+      isVerified: true,
       isMember: true,
     ),
     CommunityLocation(
@@ -78,6 +81,7 @@ class SampleCommunityLocations {
       rating: 4.8,
       coordinate: LatLng(6.5244, 3.3499),
       markerHue: BitmapDescriptor.hueGreen,
+      isVerified: true,
     ),
     CommunityLocation(
       id: 'tech-workers',
@@ -91,6 +95,7 @@ class SampleCommunityLocations {
       rating: 4.9,
       coordinate: LatLng(6.5399, 3.3631),
       markerHue: BitmapDescriptor.hueAzure,
+      isVerified: true,
     ),
     CommunityLocation(
       id: 'tfk-printing',
@@ -117,6 +122,7 @@ class SampleCommunityLocations {
       rating: 4.7,
       coordinate: LatLng(6.5167, 3.3530),
       markerHue: BitmapDescriptor.hueRose,
+      isVerified: true,
     ),
   ];
 

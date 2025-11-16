@@ -427,10 +427,9 @@ class _LoanApplicationStep3ScreenState extends State<LoanApplicationStep3Screen>
           child: ElevatedButton(
             onPressed: _agreedToTerms
                 ? () {
-                    // TODO: Submit application
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Application submitted successfully')),
-                    );
+                    context.pushReplacementNamed('loan-application-success', extra: {
+                      'amount': _loanAmount,
+                    });
                   }
                 : null,
             style: ElevatedButton.styleFrom(

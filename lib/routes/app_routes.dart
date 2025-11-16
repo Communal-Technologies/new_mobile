@@ -42,6 +42,7 @@ import 'package:communal_mobile/screens/loans/loan_calculator_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_application_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_application_step2_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_application_step3_screen.dart';
+import 'package:communal_mobile/screens/loans/loan_application_success_screen.dart';
 import 'package:communal_mobile/screens/loans/data/sample_guarantors.dart';
 // import 'package:communal_mobile/core/features/wallet/screens/pages/wallet_page.dart';
 
@@ -273,6 +274,17 @@ final GoRouter appRouter = GoRouter(
           loanPurpose: extra?['purpose'] as String?,
           firstGuarantor: extra?['firstGuarantor'] as Guarantor?,
           secondGuarantor: extra?['secondGuarantor'] as Guarantor?,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/loan-application-success',
+      name: 'loan-application-success',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        return LoanApplicationSuccessScreen(
+          loanAmount: extra?['amount']?.toDouble() ?? 0,
+          applicationId: extra?['applicationId'] as String?,
         );
       },
     ),

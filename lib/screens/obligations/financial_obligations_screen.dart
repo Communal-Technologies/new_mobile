@@ -75,6 +75,9 @@ class _FinancialObligationsScreenState
               case 3:
                 context.goNamed('loans');
                 break;
+              case 4:
+                context.goNamed('account-settings');
+                break;
               default:
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Section coming soon')),

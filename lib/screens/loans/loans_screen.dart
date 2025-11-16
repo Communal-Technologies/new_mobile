@@ -235,6 +235,19 @@ class _LoansScreenState extends State<LoansScreen> {
             ),
           ],
         ),
+        vSpace(12),
+        Center(
+          child: SizedBox(
+            width: 200.w,
+            child: _buildQuickActionButton(
+              icon: Icons.attach_money,
+              label: 'Apply Now',
+              onTap: () {
+                context.pushNamed('loan-application');
+              },
+            ),
+          ),
+        ),
       ],
     );
   }

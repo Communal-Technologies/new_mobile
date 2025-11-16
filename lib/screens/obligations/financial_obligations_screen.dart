@@ -65,14 +65,20 @@ class _FinancialObligationsScreenState
           currentIndex: _currentNavIndex,
           onTap: (index) {
             if (index == _currentNavIndex) return;
-            if (index == 0) {
-              context.go('/home');
-            } else if (index == 2) {
-              context.goNamed('community');
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Section coming soon')),
-              );
+            switch (index) {
+              case 0:
+                context.go('/home');
+                break;
+              case 2:
+                context.goNamed('community');
+                break;
+              case 3:
+                context.goNamed('loans');
+                break;
+              default:
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Section coming soon')),
+                );
             }
           },
         ),

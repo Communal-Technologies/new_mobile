@@ -506,7 +506,11 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () {
-          context.pushNamed('loan-application-step2');
+          context.pushNamed('loan-application-step2', extra: {
+            'amount': _loanAmount,
+            'duration': _loanDuration,
+            'purpose': _loanUsageController.text,
+          });
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF7434FF),

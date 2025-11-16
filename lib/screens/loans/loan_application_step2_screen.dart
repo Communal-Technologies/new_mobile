@@ -67,45 +67,65 @@ class _LoanApplicationStep2ScreenState extends State<LoanApplicationStep2Screen>
             ),
           ],
         ),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildProgressIndicator(),
-              vSpace(24),
-              _buildInfoCard(),
-              vSpace(24),
-              GuarantorSelector(
-                label: 'First Guarantor',
-                selectedGuarantor: _firstGuarantor,
-                availableGuarantors: SampleGuarantors.all,
-                excludedGuarantorIds: _excludedGuarantorIds,
-                onChanged: (guarantor) {
-                  setState(() {
-                    _firstGuarantor = guarantor;
-                  });
-                },
+        body: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildProgressIndicator(),
+                    vSpace(24),
+                    _buildInfoCard(),
+                    vSpace(24),
+                    GuarantorSelector(
+                      label: 'First Guarantor',
+                      selectedGuarantor: _firstGuarantor,
+                      availableGuarantors: SampleGuarantors.all,
+                      excludedGuarantorIds: _excludedGuarantorIds,
+                      onChanged: (guarantor) {
+                        setState(() {
+                          _firstGuarantor = guarantor;
+                        });
+                      },
+                    ),
+                    vSpace(24),
+                    GuarantorSelector(
+                      label: 'Second Guarantor',
+                      selectedGuarantor: _secondGuarantor,
+                      availableGuarantors: SampleGuarantors.all,
+                      excludedGuarantorIds: _excludedGuarantorIds,
+                      onChanged: (guarantor) {
+                        setState(() {
+                          _secondGuarantor = guarantor;
+                        });
+                      },
+                    ),
+                    vSpace(24),
+                    _buildNotificationCard(),
+                    vSpace(24),
+                  ],
+                ),
               ),
-              vSpace(24),
-              GuarantorSelector(
-                label: 'Second Guarantor',
-                selectedGuarantor: _secondGuarantor,
-                availableGuarantors: SampleGuarantors.all,
-                excludedGuarantorIds: _excludedGuarantorIds,
-                onChanged: (guarantor) {
-                  setState(() {
-                    _secondGuarantor = guarantor;
-                  });
-                },
+            ),
+            Container(
+              padding: EdgeInsets.all(16.w),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
               ),
-              vSpace(24),
-              _buildNotificationCard(),
-              vSpace(40),
-              _buildNavigationButtons(),
-              vSpace(32),
-            ],
-          ),
+              child: SafeArea(
+                child: _buildNavigationButtons(),
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -147,6 +147,9 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
             case 1:
               context.goNamed('obligations');
               break;
+            case 3:
+              context.goNamed('loans');
+              break;
             default:
               setState(() => _currentIndex = index);
           }
@@ -267,7 +270,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(24.r),
+          borderRadius: BorderRadius.circular(12.r),
           boxShadow: [
             BoxShadow(
               color: const Color(0xFF7434FF).withOpacity(0.25),
@@ -302,15 +305,30 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    community.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          community.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      if (_isVerified(community)) ...[
+                        hSpace(6),
+                        Icon(
+                          Icons.verified,
+                          size: 18.sp,
+                          color: Colors.white,
+                        ),
+                      ],
+                    ],
                   ),
                   vSpace(4),
                   Row(
@@ -360,7 +378,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                 side: BorderSide(color: Colors.white.withOpacity(0.6)),
                 padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20.r),
+                  borderRadius: BorderRadius.circular(12.r),
                 ),
               ),
               child: Row(
@@ -399,7 +417,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
         return Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(32.r)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.08),
@@ -430,7 +448,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                       vertical: 0,
                     ),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(18.r),
+                      borderRadius: BorderRadius.circular(12.r),
                       borderSide: BorderSide.none,
                     ),
                   ),
@@ -457,7 +475,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                       ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFEDE5FF),
-                        borderRadius: BorderRadius.circular(14.r),
+                        borderRadius: BorderRadius.circular(8.r),
                       ),
                       child: Text(
                         '${communities.length} found',
@@ -537,7 +555,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(22.r),
+          borderRadius: BorderRadius.circular(12.r),
           border: Border.all(
             color: isSelected ? const Color(0xFF7434FF) : Colors.transparent,
             width: isSelected ? 1.5 : 1,
@@ -561,13 +579,36 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        community.name,
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF0F1D40),
-                        ),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    community.name,
+                                    style: TextStyle(
+                                      fontSize: 16.sp,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF0F1D40),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (_isVerified(community)) ...[
+                                  hSpace(6),
+                                  Icon(
+                                    Icons.verified,
+                                    size: 18.sp,
+                                    color: const Color(0xFF4CAF50),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const Spacer(),
+                        ],
                       ),
                       vSpace(4),
                       Text(
@@ -584,7 +625,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                   padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFF4D9),
-                    borderRadius: BorderRadius.circular(16.r),
+                    borderRadius: BorderRadius.circular(12.r),
                   ),
                   child: Row(
                     children: [
@@ -667,7 +708,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                   ),
                 ),
                 SizedBox(
-                  width: 160.w,
+                  width: 140.w,
                   child: ElevatedButton(
                     onPressed: () => _handleCommunityAction(community),
                     style: ElevatedButton.styleFrom(
@@ -676,18 +717,21 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                       elevation: 0,
                       minimumSize: Size(double.infinity, 38.h),
                       padding: EdgeInsets.symmetric(
-                        horizontal: 4.w,
+                        horizontal: 6.w,
                         vertical: 8.h,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.r),
+                        borderRadius: BorderRadius.circular(10.r),
                       ),
                     ),
-                    child: Text(
-                      'Join Community',
-                      style: TextStyle(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w700,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'Join Community',
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
@@ -700,6 +744,14 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
     );
   }
 
+  bool _isVerified(CommunityLocation community) {
+    try {
+      return community.isVerified;
+    } catch (e) {
+      return false;
+    }
+  }
+
   Widget _roundIconButton({
     required IconData icon,
     required VoidCallback onTap,
@@ -707,7 +759,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(10.r),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.08),
@@ -729,7 +781,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
       width: 48.w,
       decoration: BoxDecoration(
         color: accentColor.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(10.r),
       ),
       child: Icon(Icons.apartment_rounded, color: accentColor, size: 24.sp),
     );
@@ -789,7 +841,7 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
           ),
           child: SafeArea(
             top: false,
@@ -831,7 +883,7 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
           width: 64.w,
           decoration: BoxDecoration(
             color: const Color(0xFFEDE5FF),
-            borderRadius: BorderRadius.circular(20.r),
+            borderRadius: BorderRadius.circular(12.r),
           ),
           child: Icon(
             Icons.store_mall_directory_outlined,
@@ -878,11 +930,11 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
           decoration: InputDecoration(
             hintText: 'Hi, my name is ... I would like to join because...',
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16.r),
+              borderRadius: BorderRadius.circular(12.r),
               borderSide: const BorderSide(color: Color(0xFFE6E6F0)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16.r),
+              borderRadius: BorderRadius.circular(12.r),
               borderSide: const BorderSide(color: Color(0xFF7434FF)),
             ),
             filled: true,
@@ -898,7 +950,7 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF4E9),
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(12.r),
         border: Border.all(color: const Color(0xFFFFD9B3)),
       ),
       child: Row(
@@ -944,7 +996,7 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
               minimumSize: Size(double.infinity, 52.h),
               side: const BorderSide(color: Color(0xFFE0E0EC)),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16.r),
+                borderRadius: BorderRadius.circular(12.r),
               ),
             ),
             child: Text(
@@ -967,7 +1019,7 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16.r),
+                borderRadius: BorderRadius.circular(12.r),
               ),
             ),
             child: _isSubmitting

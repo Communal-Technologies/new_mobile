@@ -63,6 +63,9 @@ class _LoansScreenState extends State<LoansScreen> {
               case 2:
                 context.goNamed('community');
                 break;
+              case 4:
+                context.goNamed('account-settings');
+                break;
               default:
                 setState(() => _currentNavIndex = index);
             }

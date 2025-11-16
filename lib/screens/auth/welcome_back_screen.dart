@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/constants/images.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/core/utils/biometric_service.dart';
 import 'package:go_router/go_router.dart';
 
 enum SignInMethod { pin, fingerprint, password }
@@ -24,6 +25,26 @@ class WelcomeBackScreen extends StatefulWidget {
 class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
   final _pinController = TextEditingController();
   String _pin = '';
+  bool _isBiometricAvailable = false;
+  String _biometricName = 'Fingerprint';
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBiometricAvailability();
+  }
+
+  Future<void> _checkBiometricAvailability() async {
+    final isAvailable = await BiometricService.isBiometricAvailable();
+    final biometricName = await BiometricService.getBiometricName();
+    
+    if (mounted) {
+      setState(() {
+        _isBiometricAvailable = isAvailable;
+        _biometricName = biometricName;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -161,9 +182,12 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
               vSpace(32),
 
               // Content based on sign-in method
-              if (widget.method == SignInMethod.fingerprint) ...[
+              if (widget.method == SignInMethod.fingerprint && _isBiometricAvailable) ...[
                 _buildFingerprintContent(theme),
               ] else if (widget.method == SignInMethod.pin) ...[
+                _buildPinContent(theme),
+              ] else if (widget.method == SignInMethod.fingerprint && !_isBiometricAvailable) ...[
+                // If fingerprint was selected but not available, fallback to PIN
                 _buildPinContent(theme),
               ],
 
@@ -223,7 +247,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
 
         // Sign in with fingerprint button
         AppElevatedButton(
-          title: 'Sign in with Fingerprint',
+          title: 'Sign in with $_biometricName',
           onPressed: () {
             // TODO: Implement fingerprint auth
             _signIn();
@@ -304,34 +328,35 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
 
         vSpace(20),
 
-        // Alternative: Fingerprint
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            InkWell(
-              onTap: () => _switchMethod(SignInMethod.fingerprint),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.fingerprint,
-                    color: theme.primaryColor,
-                    size: 24.sp,
-                  ),
-                  hSpace(8),
-                  Text(
-                    'Use Fingerprint Instead',
-                    style: TextStyle(
-                      fontSize: 14.sp,
+        // Alternative: Fingerprint (only show if available)
+        if (_isBiometricAvailable)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              InkWell(
+                onTap: () => _switchMethod(SignInMethod.fingerprint),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.fingerprint,
                       color: theme.primaryColor,
-                      fontWeight: FontWeight.w600,
+                      size: 24.sp,
                     ),
-                  ),
-                ],
+                    hSpace(8),
+                    Text(
+                      'Use $_biometricName Instead',
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: theme.primaryColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
       ],
     );
   }

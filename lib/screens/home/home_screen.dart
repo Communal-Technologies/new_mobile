@@ -89,6 +89,9 @@ class _HomeScreenState extends State<HomeScreen> {
               case 3:
                 context.goNamed('loans');
                 break;
+              case 4:
+                context.goNamed('account-settings');
+                break;
               default:
                 ScaffoldMessenger.of(
                   context,

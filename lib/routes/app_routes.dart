@@ -40,6 +40,7 @@ import 'package:communal_mobile/screens/transactions/transaction_receipt_screen.
 import 'package:communal_mobile/screens/loans/loans_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_calculator_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_application_screen.dart';
+import 'package:communal_mobile/screens/loans/loan_application_step2_screen.dart';
 // import 'package:communal_mobile/core/features/wallet/screens/pages/wallet_page.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -246,6 +247,11 @@ final GoRouter appRouter = GoRouter(
           initialDuration: extra?['duration']?.toInt(),
         );
       },
+    ),
+    GoRoute(
+      path: '/loan-application-step2',
+      name: 'loan-application-step2',
+      builder: (context, state) => const LoanApplicationStep2Screen(),
     ),
     GoRoute(
       path: '/obligation-detail',

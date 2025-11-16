@@ -12,10 +12,12 @@ class LoanApplicationScreen extends StatefulWidget {
     super.key,
     this.initialAmount,
     this.initialDuration,
+    this.currencySymbol = '₦',
   });
 
   final double? initialAmount;
   final int? initialDuration;
+  final String currencySymbol;
 
   @override
   State<LoanApplicationScreen> createState() => _LoanApplicationScreenState();
@@ -28,6 +30,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   final double _minAmount = 50000;
   final double _maxAmount = 2000000;
   final TextEditingController _loanUsageController = TextEditingController();
+  final TextEditingController _amountController = TextEditingController();
 
   @override
   void initState() {
@@ -39,11 +42,35 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       _loanDuration = widget.initialDuration!;
     }
     _loanUsageController.text = 'I want to upgrade my business';
+    _amountController.text = _formatCurrencyNoDecimals(_loanAmount);
+    _amountController.addListener(_onAmountChanged);
+  }
+
+  void _onAmountChanged() {
+    final text = _amountController.text.replaceAll(RegExp(r'[^\d]'), '');
+    if (text.isNotEmpty) {
+      final value = double.tryParse(text) ?? 0;
+      if (value != _loanAmount) {
+        setState(() {
+          _loanAmount = value.clamp(_minAmount, _maxAmount);
+        });
+        // Update controller if value was clamped
+        if (value != _loanAmount) {
+          _amountController.value = TextEditingValue(
+            text: _formatCurrencyNoDecimals(_loanAmount),
+            selection: TextSelection.collapsed(
+              offset: _formatCurrencyNoDecimals(_loanAmount).length,
+            ),
+          );
+        }
+      }
+    }
   }
 
   @override
   void dispose() {
     _loanUsageController.dispose();
+    _amountController.dispose();
     super.dispose();
   }
 

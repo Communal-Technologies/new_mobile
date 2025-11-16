@@ -8,7 +8,16 @@ import 'package:communal_mobile/screens/loans/data/sample_guarantors.dart';
 import 'package:communal_mobile/screens/loans/widgets/guarantor_selector.dart';
 
 class LoanApplicationStep2Screen extends StatefulWidget {
-  const LoanApplicationStep2Screen({super.key});
+  const LoanApplicationStep2Screen({
+    super.key,
+    this.loanAmount,
+    this.loanDuration,
+    this.loanPurpose,
+  });
+
+  final double? loanAmount;
+  final int? loanDuration;
+  final String? loanPurpose;
 
   @override
   State<LoanApplicationStep2Screen> createState() => _LoanApplicationStep2ScreenState();
@@ -255,7 +264,8 @@ class _LoanApplicationStep2ScreenState extends State<LoanApplicationStep2Screen>
   Widget _buildNavigationButtons() {
     return Row(
       children: [
-        Expanded(
+        SizedBox(
+          width: 100.w,
           child: OutlinedButton(
             onPressed: () => context.pop(),
             style: OutlinedButton.styleFrom(
@@ -268,7 +278,7 @@ class _LoanApplicationStep2ScreenState extends State<LoanApplicationStep2Screen>
             child: Text(
               'Back',
               style: TextStyle(
-                fontSize: 16.sp,
+                fontSize: 14.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF0F1D40),
               ),
@@ -280,10 +290,13 @@ class _LoanApplicationStep2ScreenState extends State<LoanApplicationStep2Screen>
           child: ElevatedButton(
             onPressed: _firstGuarantor != null && _secondGuarantor != null
                 ? () {
-                    // TODO: Navigate to step 3
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Step 3 coming soon')),
-                    );
+                    context.pushNamed('loan-application-step3', extra: {
+                      'amount': widget.loanAmount,
+                      'duration': widget.loanDuration,
+                      'purpose': widget.loanPurpose,
+                      'firstGuarantor': _firstGuarantor,
+                      'secondGuarantor': _secondGuarantor,
+                    });
                   }
                 : null,
             style: ElevatedButton.styleFrom(

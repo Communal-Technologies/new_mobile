@@ -124,23 +124,43 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           ),
           centerTitle: true,
         ),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildProgressIndicator(),
-              vSpace(32),
-              _buildLoanAmountSection(),
-              vSpace(24),
-              _buildRepaymentSummarySection(),
-              vSpace(32),
-              _buildLoanUsageSection(),
-              vSpace(40),
-              _buildContinueButton(),
-              vSpace(32),
-            ],
-          ),
+        body: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildProgressIndicator(),
+                    vSpace(32),
+                    _buildLoanAmountSection(),
+                    vSpace(24),
+                    _buildRepaymentSummarySection(),
+                    vSpace(32),
+                    _buildLoanUsageSection(),
+                    vSpace(24),
+                  ],
+                ),
+              ),
+            ),
+            Container(
+              padding: EdgeInsets.all(16.w),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                child: _buildContinueButton(),
+              ),
+            ),
+          ],
         ),
       ),
     );

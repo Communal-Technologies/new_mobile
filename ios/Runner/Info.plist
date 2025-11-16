@@ -49,5 +49,7 @@
 	<string>Communal needs photo access to let you save or share transaction receipts.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Communal saves your transaction receipts directly to the photo library.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Communal uses Face ID to securely authenticate you when signing in.</string>
 </dict>
 </plist>

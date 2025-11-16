@@ -89,7 +89,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
 
   String _formatCurrency(double amount) {
     final formatter = NumberFormat('#,##0.00', 'en_NG');
-    return '₦${formatter.format(amount)}';
+    return '${widget.currencySymbol}${formatter.format(amount)}';
   }
 
   String _formatCurrencyNoDecimals(double amount) {
@@ -209,10 +209,10 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           ),
         ),
         vSpace(20),
-        Row(
+            Row(
           children: [
             Text(
-              _formatCurrencyNoDecimals(_minAmount),
+              '${widget.currencySymbol}${_formatCurrencyNoDecimals(_minAmount)}',
               style: TextStyle(
                 fontSize: 13.sp,
                 color: Colors.grey.shade600,
@@ -236,13 +236,20 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                   onChanged: (value) {
                     setState(() {
                       _loanAmount = value;
+                      // Update text field when slider changes
+                      _amountController.value = TextEditingValue(
+                        text: _formatCurrencyNoDecimals(_loanAmount),
+                        selection: TextSelection.collapsed(
+                          offset: _formatCurrencyNoDecimals(_loanAmount).length,
+                        ),
+                      );
                     });
                   },
                 ),
               ),
             ),
             Text(
-              _formatCurrencyNoDecimals(_maxAmount),
+              '${widget.currencySymbol}${_formatCurrencyNoDecimals(_maxAmount)}',
               style: TextStyle(
                 fontSize: 13.sp,
                 color: Colors.grey.shade600,
@@ -251,27 +258,61 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           ],
         ),
         vSpace(16),
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: Colors.grey.shade200),
+        TextField(
+          controller: _amountController,
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 24.sp,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF7434FF),
           ),
-          child: Text(
-            _formatCurrency(_loanAmount),
-            textAlign: TextAlign.center,
-            style: TextStyle(
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[\d,]')),
+          ],
+          decoration: InputDecoration(
+            prefixText: widget.currencySymbol,
+            prefixStyle: TextStyle(
               fontSize: 24.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF7434FF),
             ),
+            filled: true,
+            fillColor: Colors.grey.shade50,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: const BorderSide(color: Color(0xFF7434FF), width: 2),
+            ),
+            contentPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
           ),
+          onChanged: (value) {
+            // Format the input as user types
+            final numericValue = value.replaceAll(RegExp(r'[^\d]'), '');
+            if (numericValue.isNotEmpty) {
+              final numValue = int.tryParse(numericValue) ?? 0;
+              final formatted = _formatCurrencyNoDecimals(numValue.toDouble());
+              if (formatted != value) {
+                _amountController.value = TextEditingValue(
+                  text: formatted,
+                  selection: TextSelection.collapsed(
+                    offset: formatted.length,
+                  ),
+                );
+              }
+            }
+          },
         ),
         vSpace(8),
         Text(
-          'Minimum: ${_formatCurrencyNoDecimals(_minAmount)} | Maximum: ${_formatCurrencyNoDecimals(_maxAmount)}',
+          'Minimum: ${widget.currencySymbol}${_formatCurrencyNoDecimals(_minAmount)} | Maximum: ${widget.currencySymbol}${_formatCurrencyNoDecimals(_maxAmount)}',
           style: TextStyle(
             fontSize: 12.sp,
             color: Colors.grey.shade600,

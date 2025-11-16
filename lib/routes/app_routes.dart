@@ -41,6 +41,8 @@ import 'package:communal_mobile/screens/loans/loans_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_calculator_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_application_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_application_step2_screen.dart';
+import 'package:communal_mobile/screens/loans/loan_application_step3_screen.dart';
+import 'package:communal_mobile/screens/loans/data/sample_guarantors.dart';
 // import 'package:communal_mobile/core/features/wallet/screens/pages/wallet_page.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -252,6 +254,20 @@ final GoRouter appRouter = GoRouter(
       path: '/loan-application-step2',
       name: 'loan-application-step2',
       builder: (context, state) => const LoanApplicationStep2Screen(),
+    ),
+    GoRoute(
+      path: '/loan-application-step3',
+      name: 'loan-application-step3',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        return LoanApplicationStep3Screen(
+          loanAmount: extra?['amount']?.toDouble(),
+          loanDuration: extra?['duration']?.toInt(),
+          loanPurpose: extra?['purpose'] as String?,
+          firstGuarantor: extra?['firstGuarantor'] as Guarantor?,
+          secondGuarantor: extra?['secondGuarantor'] as Guarantor?,
+        );
+      },
     ),
     GoRoute(
       path: '/obligation-detail',

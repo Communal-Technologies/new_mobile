@@ -41,16 +41,32 @@ class FeaturedCommunityCard extends StatelessWidget {
               ),
               hSpace(12),
               Expanded(
-                child: Column(
+                  child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      community.name,
-                      style: TextStyle(
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            community.name,
+                            style: TextStyle(
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (_isVerified(community)) ...[
+                          hSpace(6),
+                          Icon(
+                            Icons.verified,
+                            size: 18.sp,
+                            color: Colors.white,
+                          ),
+                        ],
+                      ],
                     ),
                     vSpace(4),
                     Text(
@@ -127,6 +143,14 @@ class FeaturedCommunityCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  bool _isVerified(Community community) {
+    try {
+      return community.isVerified;
+    } catch (e) {
+      return false;
+    }
   }
 
   Widget _buildAvatar(

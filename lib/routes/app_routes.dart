@@ -253,7 +253,14 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/loan-application-step2',
       name: 'loan-application-step2',
-      builder: (context, state) => const LoanApplicationStep2Screen(),
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        return LoanApplicationStep2Screen(
+          loanAmount: extra?['amount']?.toDouble(),
+          loanDuration: extra?['duration']?.toInt(),
+          loanPurpose: extra?['purpose'] as String?,
+        );
+      },
     ),
     GoRoute(
       path: '/loan-application-step3',

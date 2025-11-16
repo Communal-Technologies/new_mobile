@@ -59,8 +59,8 @@ class BottomNavBar extends StatelessWidget {
                 theme: theme,
               ),
               _buildNavItem(
-                icon: Icons.account_balance_wallet_outlined,
-                activeIcon: Icons.account_balance_wallet,
+                icon: Icons.trending_up_outlined,
+                activeIcon: Icons.trending_up,
                 label: 'Loans',
                 index: 3,
                 theme: theme,

@@ -20,6 +20,8 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
         backgroundColor: const Color(0xFFF6F6FA),
         elevation: 0,
         centerTitle: true,
+        iconTheme: const IconThemeData(color: Color(0xFF0F1D40)),
+        actionsIconTheme: const IconThemeData(color: Color(0xFF0F1D40)),
         title: const Text(
           'Community Details',
           style: TextStyle(color: Color(0xFF0F1D40)),
@@ -110,11 +112,11 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
             children: [
               _buildMeta(Icons.people, '${location.members} members'),
               hSpace(16),
-              _buildMeta(Icons.place_outlined, '${location.distanceKm} km'),
+              _buildMeta(Icons.place_outlined, location.distanceLabel),
               hSpace(16),
               _buildMeta(
                 Icons.star,
-                '${location.rating} (${location.members})',
+                '${location.rating.toStringAsFixed(1)} (89)',
               ),
             ],
           ),
@@ -135,7 +137,10 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline, color: Color(0xFFEE7B00)),
+          const Icon(
+            Icons.warning_amber_rounded,
+            color: Color(0xFFEE7B00),
+          ),
           hSpace(12),
           Expanded(
             child: Column(
@@ -194,6 +199,26 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
         ),
         itemBuilder: (context, index) {
           final (value, label) = items[index];
+
+          Color valueColor;
+          switch (index) {
+            case 0:
+            case 2:
+              valueColor = const Color(0xFF7434FF); // purple
+              break;
+            case 1:
+            case 5:
+              valueColor = const Color(0xFF27AE60); // green
+              break;
+            case 3:
+              valueColor = const Color(0xFF2F80ED); // blue
+              break;
+            case 4:
+              valueColor = const Color(0xFFE67E22); // orange
+              break;
+            default:
+              valueColor = const Color(0xFF0F1D40);
+          }
           return Container(
             padding: EdgeInsets.all(12.w),
             decoration: BoxDecoration(
@@ -208,7 +233,7 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F1D40),
+                    color: valueColor,
                   ),
                 ),
                 vSpace(4),
@@ -310,51 +335,25 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
       child: Container(
         width: double.infinity,
         margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+        padding: EdgeInsets.symmetric(vertical: 14.h),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: const Color(0xFFF1F0F5),
           borderRadius: BorderRadius.circular(20.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 12,
-              offset: const Offset(0, -2),
-            ),
-          ],
         ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 36.w,
-              height: 36.w,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF4EFE7),
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-              child: const Icon(Icons.schedule, color: Color(0xFF9A4F00)),
+            const Icon(
+              Icons.schedule,
+              color: Color(0xFF9A4F00),
             ),
-            hSpace(12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Application Pending',
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF0F1D40),
-                    ),
-                  ),
-                  vSpace(4),
-                  Text(
-                    'We’ll notify you once the admin reviews your request.',
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                ],
+            hSpace(8),
+            Text(
+              'Application Pending',
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF8B8C99),
               ),
             ),
           ],

@@ -38,6 +38,7 @@ import 'package:communal_mobile/screens/transactions/transaction_details_screen.
 import 'package:communal_mobile/screens/transactions/transaction_history_screen.dart';
 import 'package:communal_mobile/screens/transactions/transaction_receipt_screen.dart';
 import 'package:communal_mobile/screens/loans/loans_screen.dart';
+import 'package:communal_mobile/screens/loans/loan_calculator_screen.dart';
 // import 'package:communal_mobile/core/features/wallet/screens/pages/wallet_page.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -228,6 +229,11 @@ final GoRouter appRouter = GoRouter(
       path: '/loans',
       name: 'loans',
       builder: (context, state) => const LoansScreen(),
+    ),
+    GoRoute(
+      path: '/loan-calculator',
+      name: 'loan-calculator',
+      builder: (context, state) => const LoanCalculatorScreen(),
     ),
     GoRoute(
       path: '/obligation-detail',

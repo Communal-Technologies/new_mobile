@@ -486,10 +486,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () {
-          // TODO: Navigate to step 2
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Step 2 coming soon')),
-          );
+          context.pushNamed('loan-application-step2');
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF7434FF),

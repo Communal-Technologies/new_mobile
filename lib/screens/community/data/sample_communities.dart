@@ -10,6 +10,7 @@ class Community {
     required this.membershipLabel,
     required this.initials,
     this.isFeatured = false,
+    this.isVerified = false,
   });
 
   final String id;
@@ -20,6 +21,7 @@ class Community {
   final String membershipLabel;
   final String initials;
   final bool isFeatured;
+  final bool isVerified;
 
   String get sinceLabel => DateFormat('MMM yyyy').format(since);
   String get membersLabel => '$membersCount members';
@@ -36,6 +38,7 @@ class SampleCommunities {
       membershipLabel: 'Senior Member',
       initials: 'TLF',
       isFeatured: true,
+      isVerified: true,
     ),
     Community(
       id: 'mwa',
@@ -45,6 +48,7 @@ class SampleCommunities {
       role: 'Member',
       membershipLabel: 'Regular Member',
       initials: 'MWA',
+      isVerified: true,
     ),
     Community(
       id: 'mwa-admin',
@@ -54,6 +58,7 @@ class SampleCommunities {
       role: 'Admin',
       membershipLabel: 'Admin',
       initials: 'MWA',
+      isVerified: false,
     ),
   ];
 

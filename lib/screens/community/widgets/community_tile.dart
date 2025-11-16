@@ -56,16 +56,33 @@ class CommunityTile extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Expanded(
-                          child: Text(
-                            community.name,
-                            style: TextStyle(
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black,
-                            ),
+                        Flexible(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  community.name,
+                                  style: TextStyle(
+                                    fontSize: 16.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.black,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (_isVerified(community)) ...[
+                                hSpace(6),
+                                Icon(
+                                  Icons.verified,
+                                  size: 18.sp,
+                                  color: const Color(0xFF4CAF50),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
+                        const Spacer(),
                         if (isActive)
                           Icon(
                             Icons.check_circle,
@@ -150,6 +167,14 @@ class CommunityTile extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  bool _isVerified(Community community) {
+    try {
+      return community.isVerified;
+    } catch (e) {
+      return false;
+    }
   }
 
   Widget _buildAvatar(

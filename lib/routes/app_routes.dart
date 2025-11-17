@@ -58,6 +58,7 @@ import 'package:communal_mobile/screens/account/faq_screen.dart';
 import 'package:communal_mobile/screens/account/notification_settings_screen.dart';
 import 'package:communal_mobile/screens/account/delete_account_screen.dart';
 import 'package:communal_mobile/screens/account/delete_account_confirmation_screen.dart';
+import 'package:communal_mobile/screens/account/delete_account_feedback_screen.dart';
 // import 'package:communal_mobile/core/features/wallet/screens/pages/wallet_page.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -375,6 +376,11 @@ final GoRouter appRouter = GoRouter(
       path: '/delete-account-confirmation',
       name: 'delete-account-confirmation',
       builder: (context, state) => const DeleteAccountConfirmationScreen(),
+    ),
+    GoRoute(
+      path: '/delete-account-feedback',
+      name: 'delete-account-feedback',
+      builder: (context, state) => const DeleteAccountFeedbackScreen(),
     ),
     GoRoute(
       path: '/obligation-detail',

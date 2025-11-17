@@ -214,14 +214,8 @@ class _DeleteAccountFeedbackScreenState
 
   void _submitFeedback(BuildContext context) {
     // TODO: Submit feedback to backend
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Feedback submitted. Processing account deletion...'),
-        backgroundColor: Colors.green,
-      ),
-    );
-    // Navigate to next screen or complete deletion
-    // context.pushNamed('delete-account-success');
+    // Navigate to PIN verification screen
+    context.pushNamed('delete-account-pin');
   }
 }
 

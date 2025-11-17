@@ -76,26 +76,44 @@ class _DeleteAccountFinalConfirmationScreenState
           centerTitle: true,
         ),
         body: SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  vSpace(32),
-                  _buildHeader(),
-                  vSpace(32),
-                  const FinalWarningBox(),
-                  vSpace(24),
-                  _buildDeleteInputSection(),
-                  vSpace(24),
-                  const CancelDeletionBox(),
-                  vSpace(32),
-                  _buildDeleteButton(),
-                  vSpace(32),
-                ],
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        vSpace(32),
+                        _buildHeader(),
+                        vSpace(32),
+                        const FinalWarningBox(),
+                        vSpace(24),
+                        _buildDeleteInputSection(),
+                        vSpace(24),
+                        const CancelDeletionBox(),
+                        vSpace(32),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-            ),
+              Container(
+                padding: EdgeInsets.all(16.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: _buildDeleteButton(),
+              ),
+            ],
           ),
         ),
       ),
@@ -197,18 +215,32 @@ class _DeleteAccountFinalConfirmationScreenState
       width: double.infinity,
       child: ElevatedButton(
         onPressed: _canDelete ? _handleDeleteAccount : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _canDelete
-              ? const Color(0xFFFFB3BA) // Light pink
-              : Colors.grey.shade300,
-          foregroundColor: Colors.white,
-          padding: EdgeInsets.symmetric(vertical: 16.h),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.r),
+        style: ButtonStyle(
+          backgroundColor: MaterialStateProperty.resolveWith<Color>(
+            (Set<MaterialState> states) {
+              if (states.contains(MaterialState.disabled)) {
+                return Colors.grey.shade300;
+              }
+              return const Color(0xFFFFB3BA); // Light pink when enabled
+            },
           ),
-          elevation: 0,
-          disabledBackgroundColor: Colors.grey.shade300,
-          disabledForegroundColor: Colors.grey.shade600,
+          foregroundColor: MaterialStateProperty.resolveWith<Color>(
+            (Set<MaterialState> states) {
+              if (states.contains(MaterialState.disabled)) {
+                return Colors.grey.shade600;
+              }
+              return Colors.white;
+            },
+          ),
+          padding: MaterialStateProperty.all(
+            EdgeInsets.symmetric(vertical: 16.h),
+          ),
+          shape: MaterialStateProperty.all(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+          ),
+          elevation: MaterialStateProperty.all(0),
         ),
         child: Text(
           'Delete my Account permanently',

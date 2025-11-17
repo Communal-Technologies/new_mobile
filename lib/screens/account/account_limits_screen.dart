@@ -146,11 +146,13 @@ class AccountLimitsScreen extends StatelessWidget {
   }
 
   Widget _buildRewardText() {
-    return Text(
-      'Upgrade to Get your reward 🎁',
-      style: TextStyle(
-        fontSize: 13.sp,
-        color: Colors.grey.shade600,
+    return Center(
+      child: Text(
+        'Upgrade to Get your reward 🎁',
+        style: TextStyle(
+          fontSize: 13.sp,
+          color: Colors.grey.shade600,
+        ),
       ),
     );
   }

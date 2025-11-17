@@ -47,9 +47,7 @@ class AccountManagementSection extends StatelessWidget {
           title: 'Account Limits',
           description: 'View your transaction limits',
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Account Limits')),
-            );
+            context.pushNamed('account-limits');
           },
         ),
         SettingItem(
@@ -57,9 +55,7 @@ class AccountManagementSection extends StatelessWidget {
           title: 'Invite and Earn',
           description: 'Invite friends and earn up to ₦5,000 Bonus',
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Invite and Earn')),
-            );
+            context.pushNamed('invite-and-earn');
           },
         ),
       ],

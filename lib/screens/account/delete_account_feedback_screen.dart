@@ -179,27 +179,42 @@ class _DeleteAccountFeedbackScreenState
   }
 
   Widget _buildContinueButton(BuildContext context) {
+    final isEnabled = _selectedReason != null;
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: _selectedReason != null
+        onPressed: isEnabled
             ? () {
                 // TODO: Submit feedback and proceed with deletion
                 _submitFeedback(context);
               }
             : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _selectedReason != null
-              ? const Color(0xFFFFB3BA) // Light pink
-              : Colors.grey.shade300,
-          foregroundColor: Colors.white,
-          padding: EdgeInsets.symmetric(vertical: 16.h),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.r),
+        style: ButtonStyle(
+          backgroundColor: MaterialStateProperty.resolveWith<Color>(
+            (Set<MaterialState> states) {
+              if (states.contains(MaterialState.disabled)) {
+                return Colors.grey.shade300;
+              }
+              return const Color(0xFFFFB3BA); // Light pink when enabled
+            },
           ),
-          elevation: 0,
-          disabledBackgroundColor: Colors.grey.shade300,
-          disabledForegroundColor: Colors.grey.shade600,
+          foregroundColor: MaterialStateProperty.resolveWith<Color>(
+            (Set<MaterialState> states) {
+              if (states.contains(MaterialState.disabled)) {
+                return Colors.grey.shade600;
+              }
+              return Colors.white;
+            },
+          ),
+          padding: MaterialStateProperty.all(
+            EdgeInsets.symmetric(vertical: 16.h),
+          ),
+          shape: MaterialStateProperty.all(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+          ),
+          elevation: MaterialStateProperty.all(0),
         ),
         child: Text(
           'Verify and Continue',

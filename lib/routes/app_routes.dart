@@ -56,6 +56,7 @@ import 'package:communal_mobile/screens/account/community_settings_screen.dart';
 import 'package:communal_mobile/screens/account/help_support_screen.dart';
 import 'package:communal_mobile/screens/account/faq_screen.dart';
 import 'package:communal_mobile/screens/account/notification_settings_screen.dart';
+import 'package:communal_mobile/screens/account/delete_account_screen.dart';
 // import 'package:communal_mobile/core/features/wallet/screens/pages/wallet_page.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -363,6 +364,11 @@ final GoRouter appRouter = GoRouter(
       path: '/notification-settings',
       name: 'notification-settings',
       builder: (context, state) => const NotificationSettingsScreen(),
+    ),
+    GoRoute(
+      path: '/delete-account',
+      name: 'delete-account',
+      builder: (context, state) => const DeleteAccountScreen(),
     ),
     GoRoute(
       path: '/obligation-detail',

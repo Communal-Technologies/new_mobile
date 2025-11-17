@@ -60,14 +60,7 @@ class DeleteAccountScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              DeleteAccountActionButtons(
-                onFreezeAccount: () {
-                  context.pushNamed('freeze-account');
-                },
-                onDeleteAccount: () {
-                  _showDeleteConfirmationDialog(context);
-                },
-              ),
+              const DeleteAccountActionButtons(),
             ],
           ),
         ),
@@ -75,36 +68,6 @@ class DeleteAccountScreen extends StatelessWidget {
     );
   }
 
-  void _showDeleteConfirmationDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Final Confirmation'),
-        content: const Text(
-          'Are you absolutely sure you want to delete your account? This action cannot be reversed.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: Implement account deletion
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Account deletion initiated')),
-              );
-            },
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _DataLossSection extends StatelessWidget {

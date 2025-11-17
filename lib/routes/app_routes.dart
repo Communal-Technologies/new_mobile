@@ -45,6 +45,14 @@ import 'package:communal_mobile/screens/loans/loan_application_step3_screen.dart
 import 'package:communal_mobile/screens/loans/loan_application_success_screen.dart';
 import 'package:communal_mobile/screens/loans/data/sample_guarantors.dart';
 import 'package:communal_mobile/screens/account/account_settings_screen.dart';
+import 'package:communal_mobile/screens/account/my_profile_screen.dart';
+import 'package:communal_mobile/screens/account/freeze_account_screen.dart';
+import 'package:communal_mobile/screens/account/freeze_account_pin_screen.dart';
+import 'package:communal_mobile/screens/account/freeze_account_success_screen.dart';
+import 'package:communal_mobile/screens/account/edit_profile_screen.dart';
+import 'package:communal_mobile/screens/account/invite_and_earn_screen.dart';
+import 'package:communal_mobile/screens/account/account_limits_screen.dart';
+import 'package:communal_mobile/screens/account/community_settings_screen.dart';
 // import 'package:communal_mobile/core/features/wallet/screens/pages/wallet_page.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -293,6 +301,50 @@ final GoRouter appRouter = GoRouter(
       path: '/account-settings',
       name: 'account-settings',
       builder: (context, state) => const AccountSettingsScreen(),
+    ),
+    GoRoute(
+      path: '/my-profile',
+      name: 'my-profile',
+      builder: (context, state) => const MyProfileScreen(),
+    ),
+    GoRoute(
+      path: '/freeze-account',
+      name: 'freeze-account',
+      builder: (context, state) => const FreezeAccountScreen(),
+    ),
+    GoRoute(
+      path: '/freeze-account-pin',
+      name: 'freeze-account-pin',
+      builder: (context, state) => const FreezeAccountPinScreen(),
+    ),
+    GoRoute(
+      path: '/freeze-account-success',
+      name: 'freeze-account-success',
+      builder: (context, state) => const FreezeAccountSuccessScreen(),
+    ),
+    GoRoute(
+      path: '/edit-profile',
+      name: 'edit-profile',
+      builder: (context, state) {
+        final extra = state.extra;
+        final isAddressOnly = extra is Map && extra['isAddressOnly'] == true;
+        return EditProfileScreen(isAddressOnly: isAddressOnly);
+      },
+    ),
+    GoRoute(
+      path: '/invite-and-earn',
+      name: 'invite-and-earn',
+      builder: (context, state) => const InviteAndEarnScreen(),
+    ),
+    GoRoute(
+      path: '/account-limits',
+      name: 'account-limits',
+      builder: (context, state) => const AccountLimitsScreen(),
+    ),
+    GoRoute(
+      path: '/community-settings',
+      name: 'community-settings',
+      builder: (context, state) => const CommunitySettingsScreen(),
     ),
     GoRoute(
       path: '/obligation-detail',

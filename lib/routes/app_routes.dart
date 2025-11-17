@@ -53,6 +53,9 @@ import 'package:communal_mobile/screens/account/edit_profile_screen.dart';
 import 'package:communal_mobile/screens/account/invite_and_earn_screen.dart';
 import 'package:communal_mobile/screens/account/account_limits_screen.dart';
 import 'package:communal_mobile/screens/account/community_settings_screen.dart';
+import 'package:communal_mobile/screens/account/help_support_screen.dart';
+import 'package:communal_mobile/screens/account/faq_screen.dart';
+import 'package:communal_mobile/screens/account/notification_settings_screen.dart';
 // import 'package:communal_mobile/core/features/wallet/screens/pages/wallet_page.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -345,6 +348,21 @@ final GoRouter appRouter = GoRouter(
       path: '/community-settings',
       name: 'community-settings',
       builder: (context, state) => const CommunitySettingsScreen(),
+    ),
+    GoRoute(
+      path: '/help-support',
+      name: 'help-support',
+      builder: (context, state) => const HelpSupportScreen(),
+    ),
+    GoRoute(
+      path: '/faq',
+      name: 'faq',
+      builder: (context, state) => const FaqScreen(),
+    ),
+    GoRoute(
+      path: '/notification-settings',
+      name: 'notification-settings',
+      builder: (context, state) => const NotificationSettingsScreen(),
     ),
     GoRoute(
       path: '/obligation-detail',

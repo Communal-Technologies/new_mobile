@@ -40,10 +40,11 @@ class _FaqScreenState extends State<FaqScreen> {
         statusBarBrightness: Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: Colors.grey.shade900,
+        backgroundColor: Colors.grey.shade50,
         appBar: AppBar(
-          backgroundColor: Colors.grey.shade200,
+          backgroundColor: Colors.white,
           elevation: 0,
+          systemOverlayStyle: SystemUiOverlayStyle.dark,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.black),
             onPressed: () => context.pop(),
@@ -210,7 +211,7 @@ class _FaqScreenState extends State<FaqScreen> {
 
   Widget _buildCategoryTabs() {
     return Container(
-      color: Colors.grey.shade900,
+      color: Colors.white,
       padding: EdgeInsets.symmetric(vertical: 12.h),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -245,7 +246,7 @@ class _FaqScreenState extends State<FaqScreen> {
           style: TextStyle(
             fontSize: 15.sp,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            color: isSelected ? const Color(0xFF7434FF) : Colors.grey.shade400,
+            color: isSelected ? const Color(0xFF7434FF) : Colors.grey.shade600,
           ),
         ),
       ),
@@ -261,7 +262,7 @@ class _FaqScreenState extends State<FaqScreen> {
           borderRadius: BorderRadius.circular(12.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.shade800,
+              color: Colors.grey.shade200,
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),

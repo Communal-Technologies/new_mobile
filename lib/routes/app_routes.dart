@@ -372,6 +372,11 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const DeleteAccountScreen(),
     ),
     GoRoute(
+      path: '/delete-account-confirmation',
+      name: 'delete-account-confirmation',
+      builder: (context, state) => const DeleteAccountConfirmationScreen(),
+    ),
+    GoRoute(
       path: '/obligation-detail',
       name: 'obligation-detail',
       builder: (context, state) {

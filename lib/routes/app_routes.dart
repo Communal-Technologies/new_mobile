@@ -57,6 +57,7 @@ import 'package:communal_mobile/screens/account/help_support_screen.dart';
 import 'package:communal_mobile/screens/account/faq_screen.dart';
 import 'package:communal_mobile/screens/account/notification_settings_screen.dart';
 import 'package:communal_mobile/screens/account/delete_account_screen.dart';
+import 'package:communal_mobile/screens/account/delete_account_confirmation_screen.dart';
 // import 'package:communal_mobile/core/features/wallet/screens/pages/wallet_page.dart';
 
 final GoRouter appRouter = GoRouter(

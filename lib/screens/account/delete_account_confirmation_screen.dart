@@ -204,39 +204,7 @@ class _DeleteAccountConfirmationScreenState
   }
 
   void _showFinalConfirmationDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Final Confirmation'),
-        content: const Text(
-          'This is your last chance to cancel. Your account will be permanently deleted and cannot be recovered.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: Implement final account deletion
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Account deletion process initiated'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-              // Navigate back or to a success screen
-              context.pop();
-            },
-            child: const Text(
-              'Delete Account',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
-    );
+    context.pushNamed('delete-account-feedback');
   }
 }
 

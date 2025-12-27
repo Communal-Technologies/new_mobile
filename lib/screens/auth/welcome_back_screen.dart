@@ -1,22 +1,39 @@
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/constants/images.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
+import 'package:communal_mobile/core/widgets/numeric_keypad.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/utils/biometric_service.dart';
+import 'package:communal_mobile/data/repositories/auth_repository.dart';
+import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/data/models/user_model.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:communal_mobile/cubits/security/security_cubit.dart';
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_event.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 enum SignInMethod { pin, fingerprint, password }
 
 class WelcomeBackScreen extends StatefulWidget {
   const WelcomeBackScreen({
     super.key,
-    required this.phoneNumber,
+    this.phoneNumber = '',
     this.method = SignInMethod.pin,
+    this.isAppLock = false, // If true, this is for app lock (no back button, no forgot password)
   });
 
   final String phoneNumber;
   final SignInMethod method;
+  final bool isAppLock;
 
   @override
   State<WelcomeBackScreen> createState() => _WelcomeBackScreenState();
@@ -24,14 +41,47 @@ class WelcomeBackScreen extends StatefulWidget {
 
 class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
   final _pinController = TextEditingController();
-  String _pin = '';
+  final LocalAuthentication _localAuth = LocalAuthentication();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  late final AuthRepository _authRepository;
+  String _password = '';
+  bool _isPasswordVisible = false; // Hide password by default (show dots)
+  String? _passwordError; // Error message for password
   bool _isBiometricAvailable = false;
   String _biometricName = 'Fingerprint';
+  bool _isAuthenticating = false;
+  UserModel? _user;
+  SignInMethod _currentMethod = SignInMethod.pin; // Track current method
+  bool _handlingErrorLocally = false; // Track if we're handling error locally (to prevent duplicate snackbars)
+  String? _lastProcessedError; // Track last processed error message to prevent duplicates
 
   @override
   void initState() {
     super.initState();
+    _currentMethod = widget.method;
+    _authRepository = getIt<AuthRepository>();
+    _loadUserInfo();
     _checkBiometricAvailability();
+  }
+
+  Future<void> _loadUserInfo() async {
+    try {
+      final token = await _secureStorage.read(key: 'token');
+      if (token != null) {
+        final user = await _authRepository.getUserInfo(token);
+        if (mounted && user != null) {
+          setState(() {
+            _user = user;
+          });
+          // Re-check biometric availability after user is loaded
+          // to see if user has security pin set
+          _checkBiometricAvailability();
+        }
+      }
+    } catch (e) {
+      // Failed to load user info, continue without it
+      print('Failed to load user info: $e');
+    }
   }
 
   Future<void> _checkBiometricAvailability() async {
@@ -43,6 +93,54 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
         _isBiometricAvailable = isAvailable;
         _biometricName = biometricName;
       });
+      
+      // Only auto-attempt biometric if:
+      // 1. Biometric is available on device
+      // 2. User has security pin set (hasSecurityPin from backend)
+      if (isAvailable && _user?.hasSecurityPin == true) {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            _attemptBiometricAuth();
+          }
+        });
+      }
+    }
+  }
+
+  Future<void> _attemptBiometricAuth() async {
+    if (!_isBiometricAvailable || _isAuthenticating) return;
+    
+    setState(() {
+      _isAuthenticating = true;
+    });
+
+    try {
+      final authenticated = await _localAuth.authenticate(
+        localizedReason: 'Authenticate to sign in',
+        options: const AuthenticationOptions(
+          biometricOnly: true,
+          stickyAuth: true,
+        ),
+      );
+
+      if (authenticated && mounted) {
+        // Biometric authentication successful
+        if (widget.isAppLock) {
+          // Unlock the app
+          context.read<SecurityCubit>().unlockApp();
+        } else {
+          // Navigate to home (login flow)
+          context.go('/home');
+        }
+      } else {
+        setState(() {
+          _isAuthenticating = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isAuthenticating = false;
+      });
     }
   }
 
@@ -52,62 +150,296 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
     super.dispose();
   }
 
-  String get _maskedPhone {
-    if (widget.phoneNumber.length >= 11) {
-      final prefix = widget.phoneNumber.substring(0, 7);
-      final suffix = widget.phoneNumber.substring(widget.phoneNumber.length - 4);
-      return '$prefix****$suffix';
+  /// Get masked login (email or phone) for display
+  String _getMaskedLogin() {
+    if (_user?.login == null || _user!.login.isEmpty) {
+      return widget.phoneNumber.isNotEmpty 
+          ? _maskString(widget.phoneNumber)
+          : '****';
     }
-    return widget.phoneNumber;
+    
+    final login = _user!.login;
+    return _maskString(login);
   }
 
+  /// Show logout confirmation dialog
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Log Out'),
+        content: const Text('Are you sure you want to log out? This will clear all your data.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              // Clear all data and logout (onboarding flag is preserved in secure storage)
+              context.read<AuthBloc>().add(LogoutRequested());
+              
+              // Clear SharedPreferences (onboarding flag is in secure storage, so it's safe)
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.clear();
+              
+              // Navigate to welcome screen
+              if (mounted) {
+                context.go('/welcome');
+              }
+            },
+            child: const Text('Log Out', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Mask email or phone number with asterisks
+  String _maskString(String input) {
+    if (input.isEmpty) return '****';
+    
+    // Check if it's an email
+    if (input.contains('@')) {
+      final parts = input.split('@');
+      if (parts.length == 2) {
+        final username = parts[0];
+        final domain = parts[1];
+        // Show first 2 chars and last char of username, mask the rest
+        if (username.length <= 3) {
+          return '${'*' * username.length}@$domain';
+        }
+        final masked = '${username.substring(0, 2)}${'*' * (username.length - 3)}${username.substring(username.length - 1)}@$domain';
+        return masked;
+      }
+    }
+    
+    // It's a phone number
+    // Show first 3 digits and last 4 digits, mask the rest
+    if (input.length <= 7) {
+      return '${'*' * input.length}';
+    }
+    final start = input.substring(0, 3);
+    final end = input.substring(input.length - 4);
+    final middle = '*' * (input.length - 7);
+    return '$start$middle$end';
+  }
+
+
   void _onNumberTap(String number) {
-    if (_pin.length < 6) {
+    if (_password.length < 6) {
       setState(() {
-        _pin += number;
-        _pinController.text = _pin;
+        _password += number;
+        _pinController.text = _password;
+        _passwordError = null; // Clear error when user starts typing
       });
 
-      if (_pin.length == 6) {
+      if (_password.length == 6) {
         _signIn();
       }
     }
   }
 
   void _onBackspace() {
-    if (_pin.isNotEmpty) {
+    if (_password.isNotEmpty) {
       setState(() {
-        _pin = _pin.substring(0, _pin.length - 1);
-        _pinController.text = _pin;
+        _password = _password.substring(0, _password.length - 1);
+        _pinController.text = _password;
+        _passwordError = null; // Clear error when user starts typing
       });
     }
   }
 
-  void _signIn() {
-    // TODO: Implement actual sign in
-    context.go('/home');
+  Future<void> _signIn() async {
+    if (_isAuthenticating) return;
+    
+    setState(() {
+      _isAuthenticating = true;
+    });
+
+    // Get stored login info and authenticate with password
+    // For now, dispatch login event - you'll need to get the login from storage
+    // Verify password and unlock/navigate
+    if (widget.isAppLock) {
+      // For app lock, verify password hash
+      final storedHash = await _secureStorage.read(key: 'password_hash');
+      
+      if (storedHash == null || storedHash.isEmpty) {
+        // No password hash stored, need to verify with backend
+        // Get stored login and verify with backend
+        final storedLogin = await _secureStorage.read(key: 'login');
+        if (storedLogin != null && storedLogin.isNotEmpty) {
+          // Verify with backend
+          context.read<AuthBloc>().add(LoginRequested(
+            login: storedLogin,
+            password: _password,
+          ));
+          // BlocListener will handle the response
+          return;
+        } else {
+          // No login stored, show error
+          setState(() {
+            _isAuthenticating = false;
+            _passwordError = 'Unable to verify password. Please log in again.';
+          });
+          return;
+        }
+      }
+      
+      final passwordHash = sha256.convert(utf8.encode(_password)).toString();
+      
+      if (storedHash == passwordHash) {
+        // Password correct, unlock app
+        context.read<SecurityCubit>().unlockApp();
+        setState(() {
+          _isAuthenticating = false;
+          _password = '';
+          _pinController.clear();
+        });
+      } else {
+        // Show error - incorrect password
+        _handlingErrorLocally = true;
+        setState(() {
+          _isAuthenticating = false;
+          _password = ''; // Clear password on incorrect entry
+          _pinController.clear(); // Clear controller
+          _passwordError = 'Incorrect password';
+        });
+        // Reset flag after a delay
+        Future.delayed(const Duration(milliseconds: 500), () {
+          _handlingErrorLocally = false;
+        });
+      }
+    } else {
+      // For login flow, verify password with backend
+      try {
+        // Get stored login from secure storage
+        final storedLogin = await _secureStorage.read(key: 'login');
+        final login = storedLogin ?? widget.phoneNumber;
+        
+        if (login.isEmpty) {
+          // No login stored, show error
+          setState(() {
+            _isAuthenticating = false;
+            _passwordError = 'Unable to verify password. Please log in again.';
+          });
+          return;
+        }
+        
+        // Dispatch login event to verify password
+        // BlocListener will handle the response (success or failure)
+        context.read<AuthBloc>().add(LoginRequested(
+          login: login,
+          password: _password,
+        ));
+      } catch (e) {
+        setState(() {
+          _isAuthenticating = false;
+          _passwordError = 'Error: ${e.toString()}';
+        });
+      }
+    }
   }
 
   void _switchMethod(SignInMethod method) {
-    context.pushReplacement('/welcome-back', extra: {
-      'phone': widget.phoneNumber,
-      'method': method == SignInMethod.pin
-          ? 'pin'
-          : method == SignInMethod.fingerprint
-              ? 'fingerprint'
-              : 'password',
+    setState(() {
+      // Clear password when switching methods
+      _password = '';
+      _pinController.clear();
+      _isPasswordVisible = false;
+      _currentMethod = method;
     });
+    
+    // If switching to biometric and user has it configured, attempt it
+    if (method == SignInMethod.fingerprint && 
+        _isBiometricAvailable && 
+        _user?.hasSecurityPin == true) {
+      // Trigger biometric authentication after a short delay
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          _attemptBiometricAuth();
+        }
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
+    return BlocListener<AuthBloc, AuthState>(
+      listenWhen: (previous, current) {
+        // Only listen to AuthAuthenticated or AuthFailure states
+        // Prevent duplicate processing by checking if we've already handled this error
+        if (current is AuthAuthenticated) {
+          _lastProcessedError = null; // Clear error tracking on success
+          return true;
+        } else if (current is AuthFailure) {
+          // Only process if this is a different error message
+          if (_lastProcessedError != current.error) {
+            _lastProcessedError = current.error;
+            return true;
+          }
+          return false; // Already processed this error
+        }
+        return false;
+      },
+      listener: (context, state) {
+        // Handle authentication responses
+        if (state is AuthAuthenticated) {
+          // Authentication successful
+          setState(() {
+            _isAuthenticating = false;
+            _password = '';
+            _pinController.clear();
+            _passwordError = null; // Clear any errors
+          });
+          
+          if (widget.isAppLock) {
+            // Unlock the app
+            context.read<SecurityCubit>().unlockApp();
+          } else {
+            // Navigate to home (login flow)
+            context.go('/home');
+          }
+        } else if (state is AuthFailure) {
+          // Authentication failed, show error inline (no snackbar)
+          if (!_handlingErrorLocally) {
+            setState(() {
+              _isAuthenticating = false;
+              _password = ''; // Clear password on incorrect entry
+              _pinController.clear(); // Clear controller
+              _passwordError = state.error;
+            });
+          } else {
+            // Error already shown locally, just reset state
+            setState(() {
+              _isAuthenticating = false;
+              _password = ''; // Clear password even if handled locally
+              _pinController.clear();
+            });
+          }
+        }
+      },
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark.copyWith(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark, // Dark icons for light background
+        statusBarBrightness: Brightness.light, // Light status bar for iOS
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: widget.isAppLock
+            ? null // No app bar for app lock
+            : AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+                systemOverlayStyle: SystemUiOverlayStyle.dark.copyWith(
+                  statusBarColor: Colors.transparent,
+                  statusBarIconBrightness: Brightness.dark,
+                  statusBarBrightness: Brightness.light,
+                ),
         leading: Row(
           children: [
             IconButton(
@@ -123,7 +455,8 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
           padding: EdgeInsets.symmetric(horizontal: 24.w),
           child: Column(
             children: [
-              vSpace(10),
+              // Add extra top spacing when app bar is hidden (app lock mode)
+              vSpace(widget.isAppLock ? 40 : 10),
 
               // Logo
               Center(
@@ -137,17 +470,67 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
 
               // Profile picture
               Center(
-                child: Container(
+                child: _user?.avatar != null && _user!.avatar!.isNotEmpty
+                    ? Container(
                   width: 80.w,
                   height: 80.w,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Colors.grey.shade200,
-                    image: const DecorationImage(
-                      image: AssetImage('assets/images/demo_user.png'),
+                        ),
+                        child: ClipOval(
+                          child: Image.network(
+                            _user!.avatar!,
+                            width: 80.w,
+                            height: 80.w,
                       fit: BoxFit.cover,
-                    ),
-                  ),
+                            errorBuilder: (context, error, stackTrace) {
+                              // If network image fails, show standard icon
+                              return Container(
+                                width: 80.w,
+                                height: 80.w,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.grey.shade300,
+                                ),
+                                child: Icon(
+                                  Icons.person,
+                                  size: 40.sp,
+                                  color: Colors.grey.shade600,
+                                ),
+                              );
+                            },
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                width: 80.w,
+                                height: 80.w,
+                                color: Colors.grey.shade200,
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes != null
+                                        ? loadingProgress.cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                        : null,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      )
+                    : Container(
+                        width: 80.w,
+                        height: 80.w,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.grey.shade300,
+                        ),
+                        child: Icon(
+                          Icons.person,
+                          size: 40.sp,
+                          color: Colors.grey.shade600,
+                        ),
                 ),
               ),
 
@@ -167,10 +550,10 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
 
               vSpace(6),
 
-              // Phone number
+              // Email/Phone number (masked)
               Center(
                 child: Text(
-                  _maskedPhone,
+                  _getMaskedLogin(),
                   style: TextStyle(
                     fontSize: 14.sp,
                     color: theme.primaryColor,
@@ -182,13 +565,17 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
               vSpace(32),
 
               // Content based on sign-in method
-              if (widget.method == SignInMethod.fingerprint && _isBiometricAvailable) ...[
+              // Only show biometric if:
+              // 1. Device supports biometric
+              // 2. User has security pin configured (hasSecurityPin from backend)
+              // 3. Current method is fingerprint
+              if (_currentMethod == SignInMethod.fingerprint && 
+                  _isBiometricAvailable && 
+                  _user?.hasSecurityPin == true) ...[
                 _buildFingerprintContent(theme),
-              ] else if (widget.method == SignInMethod.pin) ...[
-                _buildPinContent(theme),
-              ] else if (widget.method == SignInMethod.fingerprint && !_isBiometricAvailable) ...[
-                // If fingerprint was selected but not available, fallback to PIN
-                _buildPinContent(theme),
+              ] else ...[
+                // Show password entry (PIN/Password)
+                _buildPasswordContent(theme),
               ],
 
               vSpace(40),
@@ -206,7 +593,8 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                   ),
                   TextButton(
                     onPressed: () {
-                      context.go('/welcome');
+                      // Show confirmation dialog before logging out
+                      _showLogoutDialog(context);
                     },
                     style: TextButton.styleFrom(
                       padding: EdgeInsets.zero,
@@ -229,6 +617,8 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
             ],
           ),
         ),
+          ),
+        ),
       ),
     );
   }
@@ -248,10 +638,8 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
         // Sign in with fingerprint button
         AppElevatedButton(
           title: 'Sign in with $_biometricName',
-          onPressed: () {
-            // TODO: Implement fingerprint auth
-            _signIn();
-          },
+          onPressed: _isAuthenticating ? null : _attemptBiometricAuth,
+          isLoading: _isAuthenticating,
         ),
 
         vSpace(16),
@@ -266,44 +654,117 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
     );
   }
 
-  Widget _buildPinContent(ThemeData theme) {
+  Widget _buildPasswordContent(ThemeData theme) {
     return Column(
       children: [
-        // PIN input field
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: Colors.grey.shade300,
-              width: 1.5,
-            ),
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-          child: Row(
+        // Password input field (6 digits - always visible)
+        Row(
             mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
             children: List.generate(6, (index) {
-              final hasValue = index < _pin.length;
-              return Container(
-                width: 16.w,
-                height: 16.w,
-                margin: EdgeInsets.symmetric(horizontal: 8.w),
+            final hasValue = index < _password.length;
+            final hasError = _passwordError != null;
+            return Flexible(
+              child: GestureDetector(
+                onTap: () {
+                  // Toggle visibility when tapping on a circle
+                  setState(() {
+                    _isPasswordVisible = !_isPasswordVisible;
+                  });
+                },
+                child: Container(
+                  width: 40.w,
+                  height: 40.w,
+                  margin: EdgeInsets.symmetric(horizontal: 3.w),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: hasValue ? theme.primaryColor : Colors.grey.shade300,
+                    color: hasValue 
+                        ? (hasError ? Colors.red : theme.primaryColor)
+                        : Colors.grey.shade200,
+                    border: Border.all(
+                      color: hasError 
+                          ? Colors.red 
+                          : (hasValue ? theme.primaryColor : Colors.grey.shade300),
+                      width: hasError ? 2 : 1.5,
+                    ),
+                  ),
+                  child: hasValue
+                      ? Center(
+                          child: _isPasswordVisible
+                              ? Text(
+                                  _password[index],
+                                  style: TextStyle(
+                                    fontSize: 18.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Container(
+                                  width: 12.w,
+                                  height: 12.w,
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                        )
+                      : null,
+                ),
                 ),
               );
             }),
-          ),
         ),
+
+        // Error message below password circles
+        if (_passwordError != null) ...[
+          vSpace(12),
+          Text(
+            _passwordError!,
+            style: TextStyle(
+              fontSize: 14.sp,
+              color: Colors.red,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
 
         vSpace(12),
 
-        // Forgot password link
+        // Forgot password link (only show if not app lock)
+        if (!widget.isAppLock)
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
-            onPressed: () {
-              context.push('/forgot-password');
+              onPressed: () async {
+                // Get the user's login (email or phone)
+                // Try multiple sources to ensure we get the login
+                final storedLogin = await _secureStorage.read(key: 'login');
+                String? login = storedLogin;
+                
+                // If no stored login, try user model
+                if (login == null || login.isEmpty) {
+                  login = _user?.login;
+                }
+                
+                // If still no login, try widget phoneNumber
+                if (login == null || login.isEmpty) {
+                  login = widget.phoneNumber;
+                }
+                
+                print('🔵 FORGOT PASSWORD - storedLogin: $storedLogin');
+                print('🔵 FORGOT PASSWORD - _user?.login: ${_user?.login}');
+                print('🔵 FORGOT PASSWORD - widget.phoneNumber: ${widget.phoneNumber}');
+                print('🔵 FORGOT PASSWORD - final login: $login');
+                
+                // Navigate with login if available
+                final Map<String, dynamic> extra = {};
+                if (login.isNotEmpty) {
+                  extra['preFilledContact'] = login;
+                }
+                
+                print('🔵 FORGOT PASSWORD - Navigating with extra: $extra');
+                context.push('/forgot-password', extra: extra);
             },
             style: TextButton.styleFrom(
               padding: EdgeInsets.zero,
@@ -324,123 +785,23 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
         vSpace(24),
 
         // Numeric keypad
-        _buildNumericKeypad(theme),
+        NumericKeypad(
+          onNumberTap: _onNumberTap,
+          onBackspace: _onBackspace,
+        ),
 
         vSpace(20),
 
-        // Alternative: Fingerprint (only show if available)
-        if (_isBiometricAvailable)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              InkWell(
-                onTap: () => _switchMethod(SignInMethod.fingerprint),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.fingerprint,
-                      color: theme.primaryColor,
-                      size: 24.sp,
-                    ),
-                    hSpace(8),
-                    Text(
-                      'Use $_biometricName Instead',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: theme.primaryColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+        // Alternative: Biometric (only show if available AND user has it configured)
+        if (_isBiometricAvailable && _user?.hasSecurityPin == true)
+          AppSecondaryButton(
+            title: 'Use $_biometricName',
+            isDark: false,
+            onPressed: () => _switchMethod(SignInMethod.fingerprint),
           ),
       ],
     );
   }
 
-  Widget _buildNumericKeypad(ThemeData theme) {
-    return Column(
-      children: [
-        // Row 1: 1, 2, 3
-        _buildKeypadRow(['1', '2', '3'], theme),
-        vSpace(12),
-        // Row 2: 4, 5, 6
-        _buildKeypadRow(['4', '5', '6'], theme),
-        vSpace(12),
-        // Row 3: 7, 8, 9
-        _buildKeypadRow(['7', '8', '9'], theme),
-        vSpace(12),
-        // Row 4: empty, 0, Backspace
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            SizedBox(width: 70.w, height: 70.w), // Empty space
-            _buildKeypadButton(
-              label: '0',
-              onTap: () => _onNumberTap('0'),
-              theme: theme,
-            ),
-            _buildKeypadButton(
-              icon: Icons.backspace_outlined,
-              onTap: _onBackspace,
-              theme: theme,
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildKeypadRow(List<String> numbers, ThemeData theme) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: numbers
-          .map((number) => _buildKeypadButton(
-                label: number,
-                onTap: () => _onNumberTap(number),
-                theme: theme,
-              ))
-          .toList(),
-    );
-  }
-
-  Widget _buildKeypadButton({
-    String? label,
-    IconData? icon,
-    required VoidCallback onTap,
-    required ThemeData theme,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(50.r),
-      child: Container(
-        width: 70.w,
-        height: 70.w,
-        decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(50.r),
-        ),
-        child: Center(
-          child: icon != null
-              ? Icon(
-                  icon,
-                  size: 24.sp,
-                  color: Colors.black87,
-                )
-              : Text(
-                  label!,
-                  style: TextStyle(
-                    fontSize: 24.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                ),
-        ),
-      ),
-    );
-  }
 }
 

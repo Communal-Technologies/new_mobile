@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:communal_mobile/core/constants/images.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/screens/onboarding/widgets/indicator.dart';
@@ -42,9 +42,10 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
   }
 
   void _completeOnboarding() async {
-    // Persist onboarding complete flag
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('first_time', false);
+    // Persist onboarding complete flag in secure storage (app-level setting, not user data)
+    // This will persist through logout but be cleared on app uninstall
+    const secureStorage = FlutterSecureStorage();
+    await secureStorage.write(key: 'onboarding_completed', value: 'true');
 
     if (!mounted) return;
     context.goNamed('welcome');

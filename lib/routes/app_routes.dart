@@ -102,15 +102,19 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final extra = state.extra as Map<String, dynamic>?;
         final phone = extra?['phone'] ?? '';
-        final method = extra?['method'] ?? 'pin';
+        // Default to fingerprint if method not specified (biometric is default)
+        final method = extra?['method'] ?? 'fingerprint';
+        // If isAppLock is true, hide back button (for logged-in but unauthorized users)
+        final isAppLock = extra?['isAppLock'] == true;
 
         return WelcomeBackScreen(
           phoneNumber: phone,
-          method: method == 'pin'
-              ? SignInMethod.pin
-              : method == 'fingerprint'
+          method: method == 'fingerprint'
               ? SignInMethod.fingerprint
+              : method == 'pin'
+              ? SignInMethod.pin
               : SignInMethod.password,
+          isAppLock: isAppLock,
         );
       },
     ),
@@ -119,7 +123,15 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/forgot-password',
       name: 'forgot-password',
-      builder: (context, state) => const ForgotPasswordScreen(),
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        final preFilledContact = extra?['preFilledContact'] as String?;
+        print('🔵 ROUTE - forgot-password - extra: $extra');
+        print('🔵 ROUTE - forgot-password - preFilledContact: $preFilledContact');
+        return ForgotPasswordScreen(
+          preFilledContact: preFilledContact,
+        );
+      },
     ),
     GoRoute(
       path: '/verify-reset',
@@ -128,14 +140,30 @@ final GoRouter appRouter = GoRouter(
         final extra = state.extra as Map<String, dynamic>?;
         final contact = extra?['contact'] ?? '';
         final isEmail = extra?['isEmail'] ?? true;
+        final isInitialSetup = extra?['isInitialSetup'] ?? false;
+        final isForgotPassword = extra?['isForgotPassword'] ?? false;
+        final userId = extra?['userId']?.toString();
 
-        return VerifyResetScreen(contact: contact, isEmail: isEmail);
+        return VerifyResetScreen(
+          contact: contact,
+          isEmail: isEmail,
+          isInitialSetup: isInitialSetup,
+          isForgotPassword: isForgotPassword,
+          userId: userId,
+        );
       },
     ),
     GoRoute(
       path: '/reset-password',
       name: 'reset-password',
-      builder: (context, state) => const ResetPasswordScreen(),
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        return ResetPasswordScreen(
+          userId: extra?['userId']?.toString(),
+          contact: extra?['contact']?.toString(),
+          isInitialSetup: extra?['isInitialSetup'] == true,
+        );
+      },
     ),
     GoRoute(
       path: '/password-reset-success',

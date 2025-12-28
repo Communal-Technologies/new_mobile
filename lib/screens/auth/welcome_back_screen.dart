@@ -6,7 +6,6 @@ import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/numeric_keypad.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/loader_overlay.dart';
-import 'package:flutter/foundation.dart';
 import 'package:communal_mobile/core/utils/biometric_service.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/injection.dart';
@@ -20,6 +19,7 @@ import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:communal_mobile/routes/app_routes.dart';
 
 enum SignInMethod { pin, fingerprint, password }
 
@@ -55,6 +55,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
   bool _handlingErrorLocally = false; // Track if we're handling error locally (to prevent duplicate snackbars)
   String? _lastProcessedError; // Track last processed error message to prevent duplicates
   bool _waitingForBackendValidation = false; // CRITICAL: Track if we're waiting for backend password validation
+  bool _isLoadingUserInfo = false; // Track if user info is currently being loaded to prevent duplicate calls
 
   @override
   void initState() {
@@ -63,6 +64,8 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
     _authRepository = getIt<AuthRepository>();
     _waitingForBackendValidation = false; // Always start with false - no pending validation
     _isAuthenticating = false; // Always start with false
+    
+    // CRITICAL: Load user info immediately (async, won't cause rebuild if data is same)
     _loadUserInfo();
     _checkBiometricAvailability();
     
@@ -70,35 +73,42 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
     // This prevents unlocking with cached AuthAuthenticated state
     if (widget.isAppLock) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        final authState = context.read<AuthBloc>().state;
-        if (authState is AuthAuthenticated) {
-          debugPrint('📊   ⚠️ App is locked but AuthBloc is in AuthAuthenticated state');
-          debugPrint('📊   ⚠️ This should not happen - token should be deleted when app locks');
-          debugPrint('📊   ⚠️ This AuthAuthenticated state will be IGNORED - PIN must be validated');
-          // CRITICAL: Reset all authentication flags to ensure any AuthAuthenticated state is ignored
-          // The listener will only accept AuthAuthenticated if _waitingForBackendValidation is true
-          // which is only set when user actually enters PIN and we dispatch LoginRequested
-          if (mounted) {
-            setState(() {
-              _waitingForBackendValidation = false;
-              _isAuthenticating = false;
-            });
-            debugPrint('📊   ✅ Reset authentication flags - any existing AuthAuthenticated will be ignored');
-          }
-        } else {
-          // Ensure flags are reset even if not authenticated
-          if (mounted) {
-            setState(() {
-              _waitingForBackendValidation = false;
-              _isAuthenticating = false;
-            });
-          }
+        if (!mounted) return;
+
+        final securityCubit = context.read<SecurityCubit>();
+        
+        // CRITICAL: If app is already unlocked, don't show lock screen
+        // This prevents showing lock screen after successful unlock
+        if (securityCubit.state != SecurityState.locked) {
+          return;
+        }
+        
+        // Only call setState if flags actually need to change
+        final needsReset = _waitingForBackendValidation || _isAuthenticating;
+        if (needsReset) {
+          setState(() {
+            _waitingForBackendValidation = false;
+            _isAuthenticating = false;
+          });
+        }
+        
+        // CRITICAL: Reload user info after checking auth state to ensure it's loaded
+        // This ensures user data is present even if screen is rebuilt
+        // Only reload if user data is not already loaded
+        if (_user == null) {
+          _loadUserInfo();
         }
       });
     }
   }
 
   Future<void> _loadUserInfo() async {
+    // Prevent duplicate calls
+    if (_isLoadingUserInfo) {
+      return;
+    }
+    
+    _isLoadingUserInfo = true;
     try {
       // Try to load user info from token first
       final token = await _secureStorage.read(key: 'token');
@@ -114,16 +124,20 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
             // to see if user has security pin set
             _checkBiometricAvailability();
           }
+          _isLoadingUserInfo = false;
           return; // Successfully loaded from token
         }
       }
       
       // If no token (app is locked), try to get login from secure storage
       // and create a minimal user object for display
+      // CRITICAL: Always load from secure storage if _user is null or login is empty
+      // This ensures user data is preserved even after rebuilds (e.g., after wrong PIN)
       final storedLogin = await _secureStorage.read(key: 'login');
       if (mounted && storedLogin != null && storedLogin.isNotEmpty) {
-        // Only update state if login actually changed to prevent unnecessary rebuilds
-        if (_user?.login != storedLogin) {
+        // Always update if _user is null or login is different
+        // This ensures user data is preserved after rebuilds
+        if (_user == null || _user!.login != storedLogin || _user!.login.isEmpty) {
           // Create a minimal user object with just the login for display
           setState(() {
             _user = UserModel(
@@ -134,10 +148,13 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
             );
           });
         }
+      } else if (mounted && _user == null) {
+        // If no login in storage and _user is null, log a warning
       }
     } catch (e) {
       // Failed to load user info, continue without it
-      debugPrint('Failed to load user info: $e');
+    } finally {
+      _isLoadingUserInfo = false;
     }
   }
 
@@ -157,9 +174,11 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
       // Only auto-attempt biometric if:
       // 1. Biometric is available on device
       // 2. User has security pin set (hasSecurityPin from backend)
-      if (isAvailable && _user?.hasSecurityPin == true) {
+      // 3. We're not already authenticating
+      // 4. This is app lock (not fresh login)
+      if (isAvailable && _user?.hasSecurityPin == true && !_isAuthenticating && widget.isAppLock) {
         Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) {
+          if (mounted && !_isAuthenticating) {
             _attemptBiometricAuth();
           }
         });
@@ -211,15 +230,23 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
   }
 
   /// Get masked login (email or phone) for display
+  /// CRITICAL: This method should always return a masked login, even if _user is null
+  /// It will try multiple sources: _user.login, widget.phoneNumber, secure storage
   String _getMaskedLogin() {
-    if (_user?.login == null || _user!.login.isEmpty) {
-      return widget.phoneNumber.isNotEmpty 
-          ? _maskString(widget.phoneNumber)
-          : '****';
+    // First, try _user.login
+    if (_user?.login != null && _user!.login.isNotEmpty) {
+      return _maskString(_user!.login);
     }
     
-    final login = _user!.login;
-    return _maskString(login);
+    // Second, try widget.phoneNumber
+    if (widget.phoneNumber.isNotEmpty) {
+      return _maskString(widget.phoneNumber);
+    }
+    
+    // Third, try to get from secure storage synchronously (if already loaded)
+    // Note: We can't do async here, so we'll rely on _loadUserInfo() to set _user
+    // But as a last resort, return a placeholder
+    return '****';
   }
 
   /// Show logout confirmation dialog
@@ -238,17 +265,40 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
             onPressed: () async {
               Navigator.of(context).pop();
               
-              // CRITICAL: Dispatch logout to clear authentication state
-              // SecurityWrapper will handle navigation when AuthUnauthenticated is emitted
+              // CRITICAL: Do NOT unlock SecurityCubit - just clear data and navigate
+              // Unlocking would cause SecurityWrapper to rebuild and show dashboard
+              // We want to navigate to welcome screen, not unlock the app
+              
+              // Step 1: Clear all data first
+              try {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.clear();
+                await _secureStorage.delete(key: 'token');
+                await _secureStorage.delete(key: 'login');
+              } catch (e) {
+                // Continue even if clearing fails
+              }
+              
+              // Step 2: Dispatch logout (this will emit AuthUnauthenticated)
               context.read<AuthBloc>().add(LogoutRequested());
               
-              // Clear SharedPreferences (onboarding flag is in secure storage, so it's safe)
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.clear();
-              
-              // Note: Navigation will be handled by SecurityWrapper when it sees AuthUnauthenticated
-              // We don't navigate here because the locked screen doesn't have GoRouter context
-              debugPrint('📊   🚪 Logout dispatched - SecurityWrapper will handle navigation');
+              // Step 3: Navigate using global appRouter
+              // Use a short delay to ensure AuthBloc state is updated
+              await Future.delayed(const Duration(milliseconds: 200));
+              try {
+                // Use global appRouter directly - works even when app is locked
+                appRouter.go('/welcome');
+              } catch (e) {
+                // Retry after delay if first attempt fails
+                await Future.delayed(const Duration(milliseconds: 200));
+                try {
+                  appRouter.go('/welcome');
+                } catch (e2) {
+                  // If navigation still fails, try one more time
+                  await Future.delayed(const Duration(milliseconds: 200));
+                  appRouter.go('/welcome');
+                }
+              }
             },
             child: const Text('Log Out', style: TextStyle(color: Colors.red)),
           ),
@@ -341,11 +391,6 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
       // This applies to BOTH scenarios:
       // 1. Idle timeout lock: Token is kept, but PIN must still be validated with backend
       // 2. Other locks: Token is deleted, PIN must be validated and new token issued
-      debugPrint('📊 [${DateTime.now().millisecondsSinceEpoch}] 🔐 SENDING PASSWORD TO BACKEND FOR VALIDATION');
-      debugPrint('📊   Login: $login');
-      debugPrint('📊   Password length: ${_password.length}');
-      debugPrint('📊   isAppLock: ${widget.isAppLock}');
-      debugPrint('📊   Setting _waitingForBackendValidation = true');
       
       // CRITICAL: Set flag BEFORE dispatching to prevent race conditions
       // Also store the password we're sending so we can verify the response matches
@@ -360,7 +405,6 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
         password: _password,
       ));
       
-      debugPrint('📊   LoginRequested dispatched, waiting for backend response...');
     } catch (e) {
       setState(() {
         _isAuthenticating = false;
@@ -394,16 +438,11 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    debugPrint('📊 [${timestamp}] WELCOME BACK SCREEN - build() called');
-    debugPrint('📊   isAppLock: ${widget.isAppLock}');
-    debugPrint('📊   Current AuthBloc state: ${context.read<AuthBloc>().state.runtimeType}');
 
     return BlocListener<SecurityCubit, SecurityState>(
       listenWhen: (previous, current) {
         // Only listen when app unlocks (for fresh login navigation)
         if (!widget.isAppLock && previous == SecurityState.locked && current == SecurityState.unlocked) {
-          debugPrint('📊   ✅ SecurityCubit unlocked - will navigate to /home');
           return true;
         }
         return false;
@@ -411,14 +450,11 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
       listener: (context, state) {
         // For fresh login (not app lock), navigate to home when SecurityCubit unlocks
         if (!widget.isAppLock && state == SecurityState.unlocked) {
-          debugPrint('📊   🏠 SecurityCubit unlocked - navigating to /home (fresh login)');
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
               try {
                 context.go('/home');
-                debugPrint('📊   ✅ Navigated to /home successfully');
               } catch (e) {
-                debugPrint('📊   ⚠️ Navigation error: $e');
               }
             }
           });
@@ -426,11 +462,6 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
       },
       child: BlocListener<AuthBloc, AuthState>(
         listenWhen: (previous, current) {
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        debugPrint('📊 [${timestamp}] WELCOME BACK SCREEN - listenWhen called');
-        debugPrint('📊   Previous: ${previous.runtimeType}, Current: ${current.runtimeType}');
-        debugPrint('📊   _waitingForBackendValidation: $_waitingForBackendValidation');
-        
         // CRITICAL: Only listen to AuthAuthenticated if ALL conditions are met:
         // 1. We're waiting for backend validation (_waitingForBackendValidation = true)
         // 2. Previous state was AuthLoading (we just sent a login request)
@@ -441,41 +472,25 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                           previous is AuthLoading && 
                           _isAuthenticating;
           if (isValid) {
-            debugPrint('📊   ✅ listenWhen returning TRUE for AuthAuthenticated (from backend validation)');
-            debugPrint('📊   ✅ All validation checks passed: _waitingForBackendValidation=$_waitingForBackendValidation, previous=AuthLoading, _isAuthenticating=$_isAuthenticating');
             _lastProcessedError = null; // Clear error tracking on success
             return true;
           } else {
-            debugPrint('📊   ⚠️ listenWhen returning FALSE for AuthAuthenticated (not from password validation)');
-            debugPrint('📊   ⚠️ _waitingForBackendValidation: $_waitingForBackendValidation');
-            debugPrint('📊   ⚠️ Previous was AuthLoading: ${previous is AuthLoading}');
-            debugPrint('📊   ⚠️ _isAuthenticating: $_isAuthenticating');
-            debugPrint('📊   ⚠️ This AuthAuthenticated is IGNORED - not from current login attempt');
             return false; // Ignore - this AuthAuthenticated is from cached token, not password validation
           }
         } else if (current is AuthFailure) {
           // Only process if we're waiting for validation AND previous was AuthLoading
           if (_waitingForBackendValidation && previous is AuthLoading) {
             if (_lastProcessedError != current.error) {
-              debugPrint('📊   ❌ listenWhen returning TRUE for AuthFailure (backend rejected password)');
               _lastProcessedError = current.error;
               return true;
             }
-            debugPrint('📊   ⏭️ listenWhen returning FALSE (already processed this error)');
             return false; // Already processed this error
           }
-          debugPrint('📊   ⏭️ listenWhen returning FALSE (not waiting for validation or not from current attempt)');
           return false;
         }
-        debugPrint('📊   ⏭️ listenWhen returning FALSE (not AuthAuthenticated or AuthFailure)');
         return false;
       },
       listener: (context, state) {
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        debugPrint('📊 [${timestamp}] WELCOME BACK SCREEN - AuthBloc listener triggered');
-        debugPrint('📊   State type: ${state.runtimeType}');
-        debugPrint('📊   isAppLock: ${widget.isAppLock}');
-        
         // Handle authentication responses
         if (state is AuthAuthenticated) {
           // CRITICAL SECURITY CHECK: Only unlock if ALL conditions are met:
@@ -484,16 +499,11 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
           // 3. For app lock: app must be locked (user is unlocking)
           // This prevents unlocking from cached tokens or other sources
           if (!_waitingForBackendValidation) {
-            debugPrint('📊   ⚠️⚠️⚠️ SECURITY BREACH PREVENTED: AuthAuthenticated received but NOT waiting for backend validation');
-            debugPrint('📊   ⚠️⚠️⚠️ This AuthAuthenticated is from cached token or app start - IGNORING');
-            debugPrint('📊   ⚠️⚠️⚠️ App will NOT unlock - password must be validated by backend');
             return; // Don't unlock - this is from cached token, not password validation
           }
           
           // CRITICAL: Double-check that we're actually authenticating (not from stale state)
           if (!_isAuthenticating) {
-            debugPrint('📊   ⚠️⚠️⚠️ SECURITY BREACH PREVENTED: AuthAuthenticated received but _isAuthenticating is false');
-            debugPrint('📊   ⚠️⚠️⚠️ This AuthAuthenticated is from stale state - IGNORING');
             _waitingForBackendValidation = false;
             return;
           }
@@ -503,14 +513,11 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
           if (widget.isAppLock) {
             final securityCubit = context.read<SecurityCubit>();
             if (securityCubit.state != SecurityState.locked) {
-              debugPrint('📊   ⚠️⚠️⚠️ SECURITY: App is not locked but received AuthAuthenticated - ignoring');
               _waitingForBackendValidation = false;
               return;
             }
           }
           
-          debugPrint('📊   ✅ AUTHENTICATION SUCCESSFUL - Backend validated password');
-          debugPrint('📊   ✅ All security checks passed - unlocking app now');
           _waitingForBackendValidation = false; // Clear the flag IMMEDIATELY to prevent race conditions
           
           // Authentication successful - backend validated the password
@@ -524,50 +531,39 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
           // CRITICAL: Always unlock SecurityCubit IMMEDIATELY and SYNCHRONOUSLY
           // This must happen before any navigation or SecurityWrapper rebuild
           final securityCubit = context.read<SecurityCubit>();
-          debugPrint('📊   SecurityCubit state before unlock: ${securityCubit.state}');
           
           // CRITICAL: Always unlock SecurityCubit if it's locked (for both app lock and fresh login)
           // This prevents SecurityWrapper from showing lock screen after navigation
           if (securityCubit.state == SecurityState.locked) {
-            debugPrint('📊   🔓 Unlocking app IMMEDIATELY (${widget.isAppLock ? "app lock" : "fresh login"})');
             securityCubit.unlockApp();
-            debugPrint('📊   SecurityCubit state after unlock: ${securityCubit.state}');
             
             // CRITICAL: Verify unlock succeeded
             if (securityCubit.state != SecurityState.unlocked) {
-              debugPrint('📊   ⚠️⚠️⚠️ CRITICAL: SecurityCubit still locked after unlockApp()! Forcing unlock again');
               securityCubit.unlockApp();
             }
           } else {
-            debugPrint('📊   ✅ SecurityCubit is already unlocked');
           }
           
           // Record activity immediately to prevent idle timeout from locking again
           securityCubit.recordActivity();
-          debugPrint('📊   ✅ Recorded activity to prevent immediate re-lock');
           
           // CRITICAL: Navigate immediately after unlock
           // For fresh login (isAppLock=false), navigate directly
           // For app lock (isAppLock=true), SecurityWrapper will handle showing dashboard
           if (!widget.isAppLock) {
             // Fresh login - navigate immediately without waiting for multiple frames
-            debugPrint('📊   🏠 Navigating to /home immediately (fresh login)');
             // Use a single frame callback to ensure context is ready
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
                 try {
                   context.go('/home');
-                  debugPrint('📊   ✅ Navigated to /home successfully');
                 } catch (e) {
-                  debugPrint('📊   ⚠️ Navigation error: $e - retrying...');
                   // Retry after a very short delay if first attempt fails
                   Future.delayed(const Duration(milliseconds: 50), () {
                     if (mounted) {
                       try {
                         context.go('/home');
-                        debugPrint('📊   ✅ Navigated to /home on retry');
                       } catch (e2) {
-                        debugPrint('📊   ❌ Navigation failed on retry: $e2');
                       }
                     }
                   });
@@ -576,48 +572,40 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
             });
           } else {
             // App lock - SecurityWrapper will show dashboard when it sees unlocked state
-            debugPrint('📊   ✅ App unlocked - SecurityWrapper will show dashboard');
           }
         } else if (state is AuthFailure) {
           // Authentication failed - backend rejected the password
-          debugPrint('📊   ❌ AUTHENTICATION FAILED - Backend rejected password');
-          debugPrint('📊   ❌ Error: ${state.error}');
-          debugPrint('📊   ❌ App will remain LOCKED');
           _waitingForBackendValidation = false; // Clear the flag
           
-          // CRITICAL: Ensure app stays locked - ALWAYS lock, even if already locked
-          final securityCubit = context.read<SecurityCubit>();
-          debugPrint('📊   🔒 SecurityCubit state BEFORE lock: ${securityCubit.state}');
-          
-          // CRITICAL: If app is not locked, lock it immediately
-          if (securityCubit.state != SecurityState.locked) {
-            debugPrint('📊   ⚠️⚠️⚠️ CRITICAL: App is NOT locked after wrong PIN - locking NOW');
-            securityCubit.lockApp(); // ALWAYS call lockApp() to ensure it's locked
-            debugPrint('📊   🔒 SecurityCubit state AFTER lock: ${securityCubit.state}');
+          // CRITICAL: Handle differently for app lock vs fresh login
+          if (widget.isAppLock) {
+            // App lock scenario - ensure app stays locked
+            final securityCubit = context.read<SecurityCubit>();
+            
+            // CRITICAL: If app is not locked, lock it immediately
+            if (securityCubit.state != SecurityState.locked) {
+              securityCubit.lockApp(); // ALWAYS call lockApp() to ensure it's locked
+            }
+            
+            // CRITICAL: Verify it's actually locked
+            if (securityCubit.state != SecurityState.locked) {
+              // Try again
+              securityCubit.lockApp();
+            }
           } else {
-            debugPrint('📊   ✅ App is already locked - good');
+            // Fresh login scenario - DO NOT lock the app
+            // Just show the error and stay on the same screen
+            // Locking the app would cause SecurityWrapper to rebuild and show lock screen,
+            // which would lose the error state and user data
           }
           
-          // CRITICAL: Verify it's actually locked
-          if (securityCubit.state != SecurityState.locked) {
-            debugPrint('📊   ⚠️⚠️⚠️ CRITICAL: SecurityCubit is NOT locked after lockApp() call!');
-            debugPrint('📊   ⚠️⚠️⚠️ Current state: ${securityCubit.state}');
-            // Try again
-            securityCubit.lockApp();
-            debugPrint('📊   🔒 SecurityCubit state after second lock: ${securityCubit.state}');
-          } else {
-            debugPrint('📊   ✅ SecurityCubit is confirmed LOCKED');
-          }
-          
-          // CRITICAL: Ensure we're not navigating anywhere
-          debugPrint('📊   🚫 Wrong PIN entered - app MUST stay locked');
-          
+          // CRITICAL: Show error message - this works for both app lock and fresh login
           if (!_handlingErrorLocally) {
             setState(() {
               _isAuthenticating = false;
               _password = ''; // Clear password on incorrect entry
               _pinController.clear(); // Clear controller
-              _passwordError = state.error;
+              _passwordError = state.error; // Show backend error message
             });
           } else {
             // Error already shown locally, just reset state
@@ -628,8 +616,12 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
             });
           }
           
-          // CRITICAL: Do NOT navigate - stay on lock screen
-          debugPrint('📊   🚫 Staying on lock screen - NOT navigating');
+          // CRITICAL: Always reload user info after AuthFailure to ensure email is preserved
+          // This prevents the email from disappearing when screen rebuilds after wrong PIN
+          // Reload even if _user exists, as it might have been cleared during rebuild
+          _loadUserInfo();
+          
+          // CRITICAL: Do NOT navigate - stay on current screen
         }
       },
       child: AnnotatedRegion<SystemUiOverlayStyle>(
@@ -970,10 +962,6 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                   login = widget.phoneNumber;
                 }
                 
-                debugPrint('🔵 FORGOT PASSWORD - storedLogin: $storedLogin');
-                debugPrint('🔵 FORGOT PASSWORD - _user?.login: ${_user?.login}');
-                debugPrint('🔵 FORGOT PASSWORD - widget.phoneNumber: ${widget.phoneNumber}');
-                debugPrint('🔵 FORGOT PASSWORD - final login: $login');
                 
                 // Navigate with login if available
                 final Map<String, dynamic> extra = {};
@@ -981,7 +969,6 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                   extra['preFilledContact'] = login;
                 }
                 
-                debugPrint('🔵 FORGOT PASSWORD - Navigating with extra: $extra');
                 context.push('/forgot-password', extra: extra);
             },
             style: TextButton.styleFrom(

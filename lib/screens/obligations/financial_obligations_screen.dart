@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
+import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
 import 'package:communal_mobile/screens/obligations/widgets/obligation_card.dart';
@@ -23,6 +24,7 @@ class _FinancialObligationsScreenState
 
   String _selectedCategory = 'Equity';
   int _currentNavIndex = 1;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void dispose() {
@@ -41,7 +43,11 @@ class _FinancialObligationsScreenState
         statusBarBrightness: Brightness.light,
       ),
       child: Scaffold(
+        key: _scaffoldKey,
         backgroundColor: Colors.grey.shade50,
+        drawer: const CooperativeSidebar(),
+        drawerEdgeDragWidth: 50.w,
+        drawerScrimColor: Colors.black.withValues(alpha: 0.4),
         body: SafeArea(
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
@@ -95,9 +101,7 @@ class _FinancialObligationsScreenState
         _roundedIcon(
           icon: Icons.menu,
           onTap: () {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('Open menu')));
+            _scaffoldKey.currentState?.openDrawer();
           },
         ),
         Expanded(

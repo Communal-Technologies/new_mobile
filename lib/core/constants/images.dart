@@ -13,6 +13,7 @@ class Images {
   static const String welcomeBg = 'assets/images/welcome_bg.jpg';
   static const String apple = 'assets/images/apple.png';
   static const String google = 'assets/images/google.png';
+  static const String loader = 'assets/images/loader.gif';
   static const String verifySuccess = 'assets/images/verify_success.png';
   static const String clappingHands = 'assets/images/clapping_hands.png';
   static const String community = 'assets/images/community.png';

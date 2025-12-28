@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
+import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/screens/loans/data/sample_loans.dart';
 import 'package:communal_mobile/screens/loans/widgets/active_loan_card.dart';
@@ -18,6 +19,7 @@ class LoansScreen extends StatefulWidget {
 
 class _LoansScreenState extends State<LoansScreen> {
   int _currentNavIndex = 3;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +30,11 @@ class _LoansScreenState extends State<LoansScreen> {
         statusBarBrightness: Brightness.light,
       ),
       child: Scaffold(
+        key: _scaffoldKey,
         backgroundColor: Colors.white,
+        drawer: const CooperativeSidebar(),
+        drawerEdgeDragWidth: 50.w,
+        drawerScrimColor: Colors.black.withValues(alpha: 0.4),
         body: SafeArea(
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
@@ -81,9 +87,7 @@ class _LoansScreenState extends State<LoansScreen> {
         IconButton(
           icon: const Icon(Icons.menu, color: Colors.black),
           onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Open menu')),
-            );
+            _scaffoldKey.currentState?.openDrawer();
           },
         ),
         Expanded(

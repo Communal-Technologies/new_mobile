@@ -6,16 +6,26 @@ import 'package:communal_mobile/core/widgets/otp_input_field.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_event.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
 
 class VerifyResetScreen extends StatefulWidget {
   const VerifyResetScreen({
     super.key,
     required this.contact,
     this.isEmail = true,
+    this.isInitialSetup = false,
+    this.isForgotPassword = false,
+    this.userId,
   });
 
   final String contact;
   final bool isEmail;
+  final bool isInitialSetup;
+  final bool isForgotPassword;
+  final String? userId;
 
   @override
   State<VerifyResetScreen> createState() => _VerifyResetScreenState();
@@ -25,6 +35,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
   String _code = '';
   int _resendTimer = 34;
   Timer? _timer;
+  bool _isVerifying = false;
 
   @override
   void initState() {
@@ -85,9 +96,47 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
 
   void _verifyCode() {
     if (_code.length == 6) {
-      // TODO: Verify code with backend
+      // Dismiss keyboard
+      FocusScope.of(context).unfocus();
+      
+      setState(() {
+        _isVerifying = true;
+      });
+
+      // For forgot password flow, accept dummy code "123456" and skip backend verification
+      if (widget.isForgotPassword) {
+        // Accept dummy code for now (since mail isn't implemented)
+        if (_code == '123456') {
       // Navigate to reset password screen
-      context.push('/reset-password');
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (mounted) {
+              context.push('/reset-password', extra: {
+                'contact': widget.contact,
+                'isEmail': widget.isEmail,
+              });
+            }
+          });
+        } else {
+          setState(() {
+            _isVerifying = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Invalid code. Use 123456 for testing.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } else {
+        // Normal OTP verification for initial setup
+        context.read<AuthBloc>().add(VerifyOtpRequested(
+              contact: widget.contact,
+              otp: _code,
+              isEmail: widget.isEmail,
+              isInitialSetup: widget.isInitialSetup,
+              userId: widget.userId,
+            ));
+      }
     }
   }
 
@@ -139,7 +188,9 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
 
               // Instruction
               Center(
-                child: RichText(
+                child: Column(
+                  children: [
+                    RichText(
                   textAlign: TextAlign.center,
                   text: TextSpan(
                     style: TextStyle(
@@ -162,6 +213,28 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                       ),
                     ],
                   ),
+                    ),
+                    // Show dummy code hint for forgot password flow
+                    if (widget.isForgotPassword) ...[
+                      vSpace(12),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(8.r),
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: Text(
+                          'Use dummy code: 123456',
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: Colors.orange.shade800,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
 
@@ -223,9 +296,43 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
               vSpace(32),
 
               // Continue button
-              AppElevatedButton(
+              BlocConsumer<AuthBloc, AuthState>(
+                listener: (context, state) {
+                  if (state is VerifyOtpSuccess) {
+                    setState(() {
+                      _isVerifying = false;
+                    });
+                    // Navigate to reset password screen
+                    context.push('/reset-password', extra: {
+                      'userId': state.userId,
+                      'contact': state.contact,
+                      'isInitialSetup': widget.isInitialSetup,
+                    });
+                  } else if (state is AuthFailure) {
+                    setState(() {
+                      _isVerifying = false;
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          state.error,
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
+                builder: (context, state) {
+                  // Only show loading when user has clicked the button
+                  // _isVerifying is set to true only when user clicks
+                  final isLoading = _isVerifying;
+                  return AppElevatedButton(
                 title: 'Continue',
-                onPressed: _code.length == 6 ? _verifyCode : null,
+                    onPressed: (_code.length == 6 && !isLoading) ? _verifyCode : null,
+                    isLoading: isLoading,
+                  );
+                },
               ),
 
               vSpace(40),

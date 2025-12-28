@@ -1,47 +1,130 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/constants/images.dart';
+import 'package:communal_mobile/core/widgets/phone_input_field.dart';
 import 'package:communal_mobile/core/widgets/custom_text_field.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/core/widgets/loader_overlay.dart';
 import 'package:go_router/go_router.dart';
 
+enum LoginType { phone, email }
+
 class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key});
+  const ForgotPasswordScreen({
+    super.key,
+    this.preFilledContact,
+  });
+
+  final String? preFilledContact;
 
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  final _emailOrPhoneController = TextEditingController();
-  String? _error;
+  final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
+  String? _phoneError;
+  String? _emailError;
+  LoginType _loginType = LoginType.phone;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    print('🔵 FORGOT PASSWORD SCREEN - preFilledContact: ${widget.preFilledContact}');
+    // Pre-fill contact if provided
+    if (widget.preFilledContact != null && widget.preFilledContact!.isNotEmpty) {
+      final contact = widget.preFilledContact!;
+      print('🔵 FORGOT PASSWORD SCREEN - Processing contact: $contact');
+      if (contact.contains('@')) {
+        // It's an email
+        _loginType = LoginType.email;
+        _emailController.text = contact;
+        print('🔵 FORGOT PASSWORD SCREEN - Set as email: $contact');
+      } else {
+        // It's a phone number (remove +234 if present)
+        _loginType = LoginType.phone;
+        final phone = contact.replaceFirst('+234', '');
+        _phoneController.text = phone;
+        print('🔵 FORGOT PASSWORD SCREEN - Set as phone: $phone (from $contact)');
+      }
+    } else {
+      print('🔵 FORGOT PASSWORD SCREEN - No preFilledContact provided');
+    }
+  }
 
   @override
   void dispose() {
-    _emailOrPhoneController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
     super.dispose();
+  }
+
+  void _toggleLoginType() {
+    setState(() {
+      _loginType = _loginType == LoginType.phone ? LoginType.email : LoginType.phone;
+      _phoneError = null;
+      _emailError = null;
+    });
   }
 
   void _sendCode() {
     setState(() {
-      _error = null;
+      _phoneError = null;
+      _emailError = null;
+      _isLoading = true;
     });
 
-    if (_emailOrPhoneController.text.isEmpty) {
-      setState(() {
-        _error = 'Email or phone number is required';
-      });
-      return;
+    String contact;
+    bool isEmail;
+
+    if (_loginType == LoginType.phone) {
+      if (_phoneController.text.isEmpty) {
+        setState(() {
+          _phoneError = 'Phone number is required';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      if (_phoneController.text.length != 11) {
+        setState(() {
+          _phoneError = 'Phone number must be 11 digits';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      contact = '+234${_phoneController.text}';
+      isEmail = false;
+    } else {
+      if (_emailController.text.isEmpty) {
+        setState(() {
+          _emailError = 'Email is required';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      if (!_emailController.text.contains('@')) {
+        setState(() {
+          _emailError = 'Please enter a valid email address';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      contact = _emailController.text;
+      isEmail = true;
     }
 
-    // Determine if email or phone
-    final isEmail = _emailOrPhoneController.text.contains('@');
-
-    // Navigate to verification
+    // Navigate to verification (dummy OTP for now)
     context.push('/verify-reset', extra: {
-      'contact': _emailOrPhoneController.text,
+      'contact': contact,
       'isEmail': isEmail,
+      'isForgotPassword': true,
     });
   }
 
@@ -57,7 +140,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           onPressed: () => context.pop(),
         ),
       ),
-      body: SafeArea(
+      body: Stack(
+        children: [
+          SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(horizontal: 24.w),
           child: Column(
@@ -91,57 +176,94 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
               // Instructions
               Center(
-                child: Column(
-                  children: [
-                    Text(
-                      'Enter your email address or phone number',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    Text(
-                      'to reset your password',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  _loginType == LoginType.phone
+                      ? 'Enter your phone number to reset your password'
+                      : 'Enter your email address to reset your password',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    color: Colors.grey.shade600,
+                  ),
                 ),
-              ),
-
-              vSpace(40),
-
-              // Email or phone input
-              CustomTextField(
-                controller: _emailOrPhoneController,
-                hintText: 'Email address or Phone',
-                errorText: _error,
-                keyboardType: TextInputType.emailAddress,
-                onChanged: (_) {
-                  if (_error != null) {
-                    setState(() {
-                      _error = null;
-                    });
-                  }
-                },
               ),
 
               vSpace(32),
 
+              // Phone or Email input
+              if (_loginType == LoginType.phone)
+                PhoneInputField(
+                  controller: _phoneController,
+                  errorText: _phoneError,
+                  onChanged: (_) {
+                    if (_phoneError != null) {
+                      setState(() {
+                        _phoneError = null;
+                      });
+                    }
+                  },
+                  onCountryTap: () {
+                    // TODO: Implement country selector
+                  },
+                )
+              else
+                CustomTextField(
+                  controller: _emailController,
+                  hintText: 'Enter your email',
+                  keyboardType: TextInputType.emailAddress,
+                  errorText: _emailError,
+                  onChanged: (_) {
+                    if (_emailError != null) {
+                      setState(() {
+                        _emailError = null;
+                      });
+                    }
+                  },
+                ),
+
+              vSpace(12),
+
+              // Toggle link
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: _toggleLoginType,
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    _loginType == LoginType.phone
+                        ? 'Use email instead'
+                        : 'Use phone number instead',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      color: Theme.of(context).primaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+
+              vSpace(12),
+
               // Send code button
               AppElevatedButton(
                 title: 'Send Code',
-                onPressed: _sendCode,
+                onPressed: _isLoading ? null : _sendCode,
+                isLoading: _isLoading,
               ),
 
               vSpace(24),
             ],
           ),
         ),
+      ),
+          // Loader overlay when loading
+          if (_isLoading)
+            const LoaderOverlay(),
+        ],
       ),
     );
   }

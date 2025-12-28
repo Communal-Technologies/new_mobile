@@ -4,11 +4,18 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'apptext.dart';
 
 class AppElevatedButton extends StatelessWidget {
-  const AppElevatedButton({super.key, this.onPressed, this.title, this.child});
+  const AppElevatedButton({
+    super.key,
+    this.onPressed,
+    this.title,
+    this.child,
+    this.isLoading = false,
+  });
 
   final void Function()? onPressed;
   final String? title;
   final Widget? child;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -17,19 +24,35 @@ class AppElevatedButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: 50.h,
+      child: AbsorbPointer(
+        absorbing: isLoading,
+        child: Opacity(
+          opacity: isLoading ? 0.7 : 1.0,
       child: ElevatedButton(
-        onPressed: onPressed,
+            onPressed: isLoading ? () {} : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: theme.primaryColor,
           foregroundColor: Colors.white,
+              disabledBackgroundColor: theme.primaryColor,
+              disabledForegroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25.r),
           ),
           padding: EdgeInsets.symmetric(vertical: 14.h),
         ),
-        child:
-            child ??
+        child: isLoading
+            ? Center(
+                child: SizedBox(
+                  width: 24.w,
+                  height: 24.w,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+              )
+            : (child ??
             Text(
               title ?? "",
               style: TextStyle(
@@ -37,6 +60,8 @@ class AppElevatedButton extends StatelessWidget {
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.5,
+                  ),
+                )),
               ),
             ),
       ),

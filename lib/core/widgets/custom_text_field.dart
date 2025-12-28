@@ -124,11 +124,14 @@ class CustomTextField extends StatelessWidget {
         ),
         if (hasError) ...[
           SizedBox(height: 4.h),
-          Text(
-            errorText!,
-            style: TextStyle(
-              color: Colors.red,
-              fontSize: 12.sp,
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              errorText!,
+              style: TextStyle(
+                color: Colors.red,
+                fontSize: 12.sp,
+              ),
             ),
           ),
         ],

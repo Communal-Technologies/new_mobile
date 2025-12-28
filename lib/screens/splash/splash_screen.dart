@@ -8,6 +8,7 @@ import 'package:communal_mobile/cubits/splash/splash_cubit.dart';
 import 'package:communal_mobile/cubits/splash/splash_state.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/core/widgets/connectivity_listener.dart';
 import 'package:go_router/go_router.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -42,15 +43,21 @@ class _SplashScreenState extends State<SplashScreen>
 
     _animationController.repeat();
 
-    // Navigate to welcome screen after 5 seconds (failsafe)
-    _navigationTimer = Timer(const Duration(seconds: 5), () {
+    // Navigate to welcome screen after 10 seconds (failsafe - increased to allow token verification)
+    _navigationTimer = Timer(const Duration(seconds: 10), () {
       if (mounted) {
-        context.go('/welcome');
+        // Only navigate if we haven't already navigated (check if still on splash)
+        final currentRoute = GoRouterState.of(context).uri.path;
+        if (currentRoute == '/') {
+          print('⚠️ SPLASH - Failsafe timer fired, navigating to /welcome');
+          context.go('/welcome');
+        }
       }
     });
 
     // Try to initialize app (but don't block navigation)
     context.read<SplashCubit>().initApp().catchError((error) {
+      print('❌ SPLASH - Error in initApp: $error');
       // Ignore errors - timer will handle navigation
     });
   }
@@ -63,21 +70,33 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _handleState(BuildContext context, SplashState state) {
+    print('🔵 SPLASH - State received: ${state.runtimeType}');
+    
     if (state is SplashNoInternet) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("No Internet Connection")));
-      // Let timer navigate to welcome after 30 seconds
+      // ConnectivityListener will handle showing the persistent snackbar
+      // The NetworkInterceptor will wait for connectivity before making API calls
+      // Don't navigate yet - wait for connectivity to be restored
+      print('🔵 SPLASH - No internet, waiting...');
     } else if (state is SplashFirstTimeUser) {
+      print('🔵 SPLASH - First time user, navigating to /onboarding');
       _navigationTimer?.cancel();
       context.go('/onboarding');
     } else if (state is SplashLoggedOut) {
+      print('🔵 SPLASH - Logged out, navigating to /welcome');
       _navigationTimer?.cancel();
       context.go('/welcome');
     } else if (state is SplashLoggedIn) {
+      print('🔵 SPLASH - Logged in, navigating to /welcome-back');
       _navigationTimer?.cancel();
-      context.go('/home');
+      // Navigate to welcome-back screen for password/biometric authentication
+      // User is logged in but unauthorized, so hide back button
+      context.go('/welcome-back', extra: {
+        'phone': '', // Not needed for app lock flow
+        'method': 'fingerprint', // Default to biometric
+        'isAppLock': true, // Hide back button for logged-in but unauthorized users
+      });
     } else if (state is SplashError) {
+      print('❌ SPLASH - Error: ${state.message}');
       // Show error but let timer continue to navigate
       ScaffoldMessenger.of(
         context,
@@ -98,7 +117,9 @@ class _SplashScreenState extends State<SplashScreen>
       ),
       child: Scaffold(
         backgroundColor: primaryColor,
-        body: BlocListener<SplashCubit, SplashState>(
+        body: ConnectivityListener(
+          persistentOfflineSnackbar: true,
+          child: BlocListener<SplashCubit, SplashState>(
           listener: _handleState,
             child: Stack(
               children: [
@@ -151,6 +172,7 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
               ),
               ],
+            ),
             ),
           ),
       ),

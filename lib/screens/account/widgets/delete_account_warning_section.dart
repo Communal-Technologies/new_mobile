@@ -22,7 +22,7 @@ class DeleteAccountWarningSection extends StatelessWidget {
             ),
           ),
           child: Icon(
-            Icons.delete_outline,
+            Icons.delete,
             color: Colors.red,
             size: 50.sp,
           ),

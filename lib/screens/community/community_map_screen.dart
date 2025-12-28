@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
 import 'package:communal_mobile/core/widgets/bottomsheet_handlebar.dart';
+import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_locations.dart';
 
@@ -26,6 +27,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
   String? _selectedCommunityId;
   int _currentIndex = 2;
   bool _isSheetExpanded = false;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   static const double _collapsedSheetSize = 0.34;
   static const double _expandedSheetSize = 0.82;
@@ -114,7 +116,11 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
           );
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: Colors.white,
+      drawer: const CooperativeSidebar(),
+      drawerEdgeDragWidth: 50.w,
+      drawerScrimColor: Colors.black.withValues(alpha: 0.4),
       body: Stack(
         children: [
           _buildMap(markers),
@@ -225,9 +231,9 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
           children: [
             _roundIconButton(
               icon: Icons.menu,
-              onTap: () => ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Menu coming soon'))),
+              onTap: () {
+                _scaffoldKey.currentState?.openDrawer();
+              },
             ),
             Expanded(
               child: Text(

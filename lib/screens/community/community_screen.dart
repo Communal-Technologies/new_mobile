@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
+import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/screens/community/data/sample_communities.dart';
 import 'package:communal_mobile/screens/community/widgets/community_tile.dart';
@@ -21,6 +22,7 @@ class CommunityScreen extends StatefulWidget {
 class _CommunityScreenState extends State<CommunityScreen> {
   int _currentIndex = 2;
   late String _activeCommunityId;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -39,7 +41,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
         statusBarBrightness: Brightness.light,
       ),
       child: Scaffold(
+        key: _scaffoldKey,
         backgroundColor: const Color(0xFFF2F2F5),
+        drawer: const CooperativeSidebar(),
+        drawerEdgeDragWidth: 50.w,
+        drawerScrimColor: Colors.black.withValues(alpha: 0.4),
         body: SafeArea(
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
@@ -131,9 +137,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
         IconButton(
           icon: const Icon(Icons.menu, color: Colors.black),
           onPressed: () {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('Open menu')));
+            _scaffoldKey.currentState?.openDrawer();
           },
         ),
         Expanded(

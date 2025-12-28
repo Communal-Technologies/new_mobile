@@ -15,6 +15,7 @@ class ProfileInformationScreen extends StatefulWidget {
 
 class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
   final _firstNameController = TextEditingController();
+  final _middleNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -39,6 +40,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
   @override
   void dispose() {
     _firstNameController.dispose();
+    _middleNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
@@ -253,6 +255,12 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                       controller: _firstNameController,
                       hintText: 'First name',
                       errorText: _firstNameError,
+                      onChanged: (_) => _clearErrors(),
+                    ),
+                    vSpace(16),
+                    CustomTextField(
+                      controller: _middleNameController,
+                      hintText: 'Middle name (optional)',
                       onChanged: (_) => _clearErrors(),
                     ),
                     vSpace(16),

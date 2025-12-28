@@ -9,7 +9,13 @@ import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/cubits/splash/splash_cubit.dart';
 import 'package:communal_mobile/cubits/settings/settings_cubit.dart';
+import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
+import 'package:communal_mobile/cubits/security/security_cubit.dart';
+import 'package:communal_mobile/core/widgets/connectivity_listener.dart';
+import 'package:communal_mobile/core/widgets/security_wrapper.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,13 +35,14 @@ void main() async {
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
-  ]).then(
+  ]  ).then(
     (_) => runApp(
       MultiBlocProvider(
         providers: [
           BlocProvider(create: (_) => getIt<AuthBloc>()..add(AppStarted())),
           BlocProvider(create: (_) => getIt<SplashCubit>()..initApp()),
           BlocProvider(create: (_) => getIt<SettingsCubit>()),
+          BlocProvider(create: (_) => getIt<ConnectivityCubit>()),
         ],
         child: const MyApp(),
       ),
@@ -52,19 +59,39 @@ class MyApp extends StatelessWidget {
       designSize: const Size(430, 932),
       splitScreenMode: true,
       builder: (context, _) {
-        return MultiBlocProvider(
-          providers: [
-            BlocProvider<AuthBloc>(
-              create: (_) => getIt<AuthBloc>()..add(AppStarted()),
-            ),
-          ],
-          child: MaterialApp.router(
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.light,
-            darkTheme: AppTheme.dark,
-            themeMode: ThemeMode.system,
-            routerConfig: appRouter,
-          ),
+        return FutureBuilder<SharedPreferences>(
+          future: SharedPreferences.getInstance(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const MaterialApp(
+                home: Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                ),
+              );
+            }
+            
+            return MultiBlocProvider(
+              providers: [
+                BlocProvider<AuthBloc>(
+                  create: (_) => getIt<AuthBloc>()..add(AppStarted()),
+                ),
+                BlocProvider<SecurityCubit>(
+                  create: (_) => SecurityCubit(snapshot.data!, const FlutterSecureStorage()),
+                ),
+              ],
+              child: ConnectivityListener(
+                child: SecurityWrapper(
+                  child: MaterialApp.router(
+                    debugShowCheckedModeBanner: false,
+                    theme: AppTheme.light,
+                    darkTheme: AppTheme.dark,
+                    themeMode: ThemeMode.system,
+                    routerConfig: appRouter,
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );

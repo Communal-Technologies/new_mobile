@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
+import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/screens/account/widgets/profile_card.dart';
 import 'package:communal_mobile/screens/account/widgets/security_banner.dart';
@@ -21,6 +22,7 @@ class AccountSettingsScreen extends StatefulWidget {
 
 class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   int _currentNavIndex = 4;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext context) {
@@ -31,16 +33,18 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
         statusBarBrightness: Brightness.light,
       ),
       child: Scaffold(
+        key: _scaffoldKey,
         backgroundColor: Colors.grey.shade50,
+        drawer: const CooperativeSidebar(),
+        drawerEdgeDragWidth: 50.w,
+        drawerScrimColor: Colors.black.withValues(alpha: 0.4),
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.menu, color: Colors.black),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Open menu')),
-              );
+              _scaffoldKey.currentState?.openDrawer();
             },
           ),
           title: Text(

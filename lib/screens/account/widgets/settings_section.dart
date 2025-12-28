@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/screens/account/widgets/setting_item.dart';
 
@@ -28,9 +29,7 @@ class SettingsSection extends StatelessWidget {
           title: 'Community Settings',
           description: 'Manage cooperative preferences',
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Community Settings')),
-            );
+            context.pushNamed('community-settings');
           },
         ),
         SettingItem(
@@ -48,9 +47,7 @@ class SettingsSection extends StatelessWidget {
           title: 'Notification Settings',
           description: 'Push notifications and alerts',
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Notification Settings')),
-            );
+            context.pushNamed('notification-settings');
           },
         ),
         _PreferenceItem(),

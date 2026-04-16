@@ -44,9 +44,9 @@ class SecurityCubit extends Cubit<SecurityState> {
     
     if (_backgroundTime != null) {
       final duration = DateTime.now().difference(_backgroundTime!);
-      // If app was in background for more than 30 seconds, lock it
+      // If app was in background for more than 30 seconds, require PIN again but keep the session token
       if (duration.inSeconds > 30) {
-        lockApp();
+        lockApp(isIdleTimeout: true);
       } else {
         // Just remove blur and reset activity time
         _backgroundTime = null;
@@ -79,9 +79,11 @@ class SecurityCubit extends Cubit<SecurityState> {
     }
   }
 
-  /// Called when app is closed
+  /// Called when the process is about to detach (swipe away / restart).
+  /// Use the same policy as idle lock: keep the auth token so the next launch can go
+  /// straight to PIN / welcome-back instead of treating the user as logged out.
   void onAppDetached() {
-    lockApp();
+    lockApp(isIdleTimeout: true);
   }
 
   /// Lock the app (requires re-authentication)
@@ -188,10 +190,11 @@ class SecurityCubit extends Cubit<SecurityState> {
       return;
     }
     
-    // Prevent immediate re-lock after unlock (give at least 10 seconds grace period)
+    // CRITICAL: Prevent immediate re-lock after unlock (give at least 30 seconds grace period)
+    // This ensures the app doesn't lock immediately after user successfully enters PIN
     if (_lastUnlockTime != null) {
       final timeSinceUnlock = DateTime.now().difference(_lastUnlockTime!);
-      if (timeSinceUnlock.inSeconds < 10) {
+      if (timeSinceUnlock.inSeconds < 30) {
         debugPrint('📊   Skipping idle check - just unlocked ${timeSinceUnlock.inSeconds}s ago (grace period)');
         return;
       }

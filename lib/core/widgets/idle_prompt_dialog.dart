@@ -35,7 +35,7 @@ class IdlePromptDialog extends StatelessWidget {
             ),
             vSpace(8),
             Text(
-              'You\'ve been idle for a while. Tap "I\'m here" to continue.',
+              'You\'ve been idle for a while. Tap Stay to continue, or Leave to lock the app.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14.sp,
@@ -44,10 +44,20 @@ class IdlePromptDialog extends StatelessWidget {
             ),
             vSpace(24),
             AppElevatedButton(
-              title: 'I\'m here',
+              title: 'Stay',
               onPressed: () {
                 context.read<SecurityCubit>().resetIdle();
                 Navigator.of(context).pop();
+              },
+            ),
+            vSpace(12),
+            AppSecondaryButton(
+              title: 'Leave',
+              isDark: false,
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Same as idle timeout: keep session token, require PIN again.
+                context.read<SecurityCubit>().lockApp(isIdleTimeout: true);
               },
             ),
           ],

@@ -154,10 +154,27 @@ class AuthRepository {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = response.data;
+        String? nextStep;
+        bool? otpSent;
+        String? otpDeliveryMessage;
+        if (data is Map<String, dynamic>) {
+          nextStep = data['next_step']?.toString();
+          final od = data['otp_delivery'];
+          if (data['password'] != 1 && od is Map) {
+            otpSent = od['sent'] == true;
+            if (od['sent'] != true && od['message'] != null) {
+              otpDeliveryMessage = od['message'].toString();
+            }
+          }
+        }
         return {
           'hasPassword': response.data['password'] == 1,
           'userId': response.data['login']['id'].toString(),
           'login': login,
+          'nextStep': nextStep,
+          'otpSent': otpSent,
+          'otpDeliveryMessage': otpDeliveryMessage,
         };
       }
     } on DioException catch (e) {
@@ -176,11 +193,70 @@ class AuthRepository {
     return null;
   }
 
-  Future<bool> verifyOtp(String contact, String otp, bool isEmail) async {
+  /// Verifies OTP. [contact] is the same login string as check-login (email or E.164 phone);
+  /// the backend picks SMS vs email from the credential shape.
+  Future<bool> verifyOtp(String contact, String otp) async {
     try {
-      // For now, accept any OTP as mentioned by user
-      // TODO: Implement actual OTP verification when backend is ready
-      return true;
+      final body = <String, dynamic>{
+        'login': contact.trim(),
+        'otp': otp,
+        'purpose': 'verification',
+      };
+
+      final response = await dioClient.post(
+        '/otp/verify',
+        data: body,
+        requireAuth: false,
+      );
+
+      if (response.statusCode == 200 && response.data is Map) {
+        final map = response.data as Map<String, dynamic>;
+        return map['success'] == true;
+      }
+      return false;
+    } on DioException catch (e) {
+      if (e.response != null) {
+        final data = e.response?.data;
+        final msg = data is Map
+            ? (data['message']?.toString() ?? 'Invalid or expired code')
+            : 'Invalid or expired code';
+        throw Exception(msg);
+      }
+      rethrow;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Request OTP: backend resolves **SMS** vs **email** from [contact] and calls **notificationsvc**
+  /// (`/notifications/sms` or `/notifications/email/otp`) when enabled.
+  Future<bool> requestOtp(String contact) async {
+    try {
+      final body = <String, dynamic>{
+        'login': contact.trim(),
+        'purpose': 'verification',
+      };
+
+      final response = await dioClient.post(
+        '/otp/send',
+        data: body,
+        requireAuth: false,
+      );
+
+      if (response.statusCode == 200 && response.data is Map) {
+        final map = response.data as Map<String, dynamic>;
+        return map['success'] == true;
+      }
+      return false;
+    } on DioException catch (e) {
+      if (e.response != null) {
+        final data = e.response?.data;
+        final msg = data is Map
+            ? (data['message']?.toString() ?? 'Unable to send verification code')
+            : 'Unable to send verification code';
+        throw Exception(msg);
+      }
+      rethrow;
     } catch (e) {
       rethrow;
     }
@@ -358,7 +434,51 @@ class AuthRepository {
     }
   }
 
-  Future<bool> resetPassword(String login, String newPassword) async {
+  Future<void> requestPasswordReset(String login) async {
+    try {
+      final response = await dioClient.post(
+        '/generate-password-reset-link',
+        data: {'login': login},
+        requireAuth: false,
+      );
+      if (response.statusCode != 200) {
+        throw Exception('Unable to send reset code');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        final data = e.response?.data;
+        final msg = data is Map
+            ? (data['message']?.toString() ?? 'Unable to send reset code')
+            : 'Unable to send reset code';
+        throw Exception(msg);
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> verifyPasswordResetPin(String login, String pin) async {
+    try {
+      final response = await dioClient.post(
+        '/verify-password-reset-pin',
+        data: {'login': login, 'pin': pin},
+        requireAuth: false,
+      );
+      if (response.statusCode != 200) {
+        throw Exception('Invalid verification code');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        final data = e.response?.data;
+        final msg = data is Map
+            ? (data['message']?.toString() ?? 'Invalid verification code')
+            : 'Invalid verification code';
+        throw Exception(msg);
+      }
+      rethrow;
+    }
+  }
+
+  Future<bool> resetPassword(String login, String newPassword, String pin) async {
     try {
       developer.log('=== RESET PASSWORD REQUEST ===', name: 'AuthRepository');
       developer.log('Login: $login', name: 'AuthRepository');
@@ -376,6 +496,7 @@ class AuthRepository {
         '/reset-password',
         data: {
           'login': login,
+          'pin': pin,
           'new_password': newPassword,
           'platform': _platform, // Indicate this is from mobile app
         },

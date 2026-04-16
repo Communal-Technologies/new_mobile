@@ -9,6 +9,7 @@ import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/theme/colors.dart';
 import 'package:communal_mobile/routes/app_routes.dart';
+import 'package:communal_mobile/core/navigation/root_navigator_key.dart';
 
 /// Wrapper widget that handles app security (lock, blur, idle detection)
 class SecurityWrapper extends StatefulWidget {
@@ -36,6 +37,12 @@ class _SecurityWrapperState extends State<SecurityWrapper>
   
   // Cache the locked screen widget to prevent unnecessary rebuilds
   Widget? _cachedLockedScreen;
+
+  /// Prevents stacking multiple idle dialogs if the cubit re-emits before dismiss.
+  bool _idlePromptDialogOpen = false;
+  
+  // Key for widget.child to force rebuild when unlocking
+  int _childKey = 0;
   
   @override
   void initState() {
@@ -129,22 +136,40 @@ class _SecurityWrapperState extends State<SecurityWrapper>
     context.read<SecurityCubit>().recordActivity();
   }
 
+  /// Idle detection only runs when authenticated; taps must reset the timer on every screen.
+  /// Early `return widget.child` paths previously skipped this wrapper, so idle fired using
+  /// stale activity from app start or pre-login.
+  Widget _wrapDashboardWithIdleTracking(Widget child) {
+    return GestureDetector(
+      key: const ValueKey('unlocked_screen'),
+      onTap: () {
+        final securityCubit = context.read<SecurityCubit>();
+        if (securityCubit.state != SecurityState.locked) {
+          _handleUserInteraction();
+        }
+      },
+      onPanDown: (_) {
+        final securityCubit = context.read<SecurityCubit>();
+        if (securityCubit.state != SecurityState.locked) {
+          _handleUserInteraction();
+        }
+      },
+      behavior: HitTestBehavior.translucent,
+      child: child,
+    );
+  }
+
   void _logState(String action) {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    // Logging disabled - can be enabled for debugging
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
-      listenWhen: (previous, current) {
-        // CRITICAL: Do NOT listen for AuthAuthenticated here
-        // The unlock should ONLY happen in WelcomeBackScreen when user successfully enters PIN/password
-        // This prevents unlocking when a cached token causes AuthAuthenticated to be emitted
-        // (e.g., when user enters wrong password but there's still a valid token in storage)
-        return false;
-      },
+      listenWhen: (previous, current) =>
+          current is AuthAuthenticated && previous is! AuthAuthenticated,
       listener: (context, state) {
-        // Listener disabled - unlock only happens in WelcomeBackScreen after successful PIN/password entry
+        context.read<SecurityCubit>().recordActivity();
       },
       child: BlocBuilder<AuthBloc, AuthState>(
         buildWhen: (previous, current) {
@@ -155,6 +180,9 @@ class _SecurityWrapperState extends State<SecurityWrapper>
             if (previous is AuthFailure && current is AuthFailure) {
               return previous.error != current.error;
             }
+            if (previous is AuthVerifyingCredentials && current is AuthVerifyingCredentials) {
+              return previous.attemptId != current.attemptId;
+            }
             // Same state type and same content - no rebuild needed
             // CRITICAL: Don't rebuild for CheckLoginSuccess, AuthLoading, etc. if they're the same
             return false;
@@ -164,7 +192,7 @@ class _SecurityWrapperState extends State<SecurityWrapper>
           // Only rebuild for meaningful transitions (AuthAuthenticated, AuthUnauthenticated, AuthFailure)
           if (previous is! AuthAuthenticated && previous is! AuthUnauthenticated && previous is! AuthFailure &&
               current is! AuthAuthenticated && current is! AuthUnauthenticated && current is! AuthFailure) {
-            // Both are intermediate states (CheckLoginSuccess, AuthLoading, etc.) - don't rebuild
+            // Both are intermediate states (CheckLoginSuccess, AuthLoading, AuthVerifyingCredentials, etc.) - don't rebuild
             return false;
           }
           return true;
@@ -281,7 +309,12 @@ class _SecurityWrapperState extends State<SecurityWrapper>
               // Fall through to SecurityCubit builder
             } else {
               // Don't reset _shouldLockOnNextAuth here - keep it for when user becomes authenticated
-              return widget.child;
+              // Never return widget.child while PIN is verifying: that strips the SecurityCubit subtree,
+              // disposes WelcomeBack's BlocListener, and the next AuthFailure/AuthAuthenticated can be
+              // missed or mishandled (cold start keeps SecurityCubit unlocked until first PIN).
+              if (authState is! AuthVerifyingCredentials) {
+                return widget.child;
+              }
             }
           }
         
@@ -328,80 +361,88 @@ class _SecurityWrapperState extends State<SecurityWrapper>
               // User is unlocking the app after it was locked (idle timeout, app pause, etc.)
             }
           } else {
-            // Other auth states (AuthLoading, etc.) - just continue to show lock screen
+            // Other auth states (AuthLoading, AuthVerifyingCredentials, etc.) - just continue to show lock screen
           }
         }
         // CRITICAL: If app is UNLOCKED, check if we should lock
         else if (securityCubit.state == SecurityState.unlocked) {
-          // Always update _lastUnlockTime FIRST to prevent race conditions
-          _lastUnlockTime = DateTime.now();
-          final recentlyUnlocked = _lastUnlockTime != null && 
-              DateTime.now().difference(_lastUnlockTime!).inSeconds < 15; // 15 second grace period
-          
-          // CRITICAL LOGIC - SIMPLIFIED:
-          // 1. If user just unlocked OR fresh login → DON'T lock
-          // 2. If app was resumed/detached → LOCK
-          // 3. Otherwise → DON'T lock
-          
-          // CRITICAL: Check for fresh login FIRST - if app is unlocked and we see AuthAuthenticated
-          // for the first time AND app is not locked, it means user just logged in (not app start with token)
-          // App start with token would have locked the app first, so we wouldn't see unlocked state
-          // ALSO: If user just unlocked via PIN, don't lock again
-          if (_userJustUnlocked || recentlyUnlocked || _isFreshLogin) {
-            // User just unlocked OR fresh login - don't lock again
-            _hasInitializedLock = true;
-            _shouldLockOnNextAuth = false;
-            _userJustUnlocked = false; // Clear the flag
-            // CRITICAL: DON'T clear _isFreshLogin immediately - keep it for a few seconds
-            // to handle race condition where SecurityCubit builder runs while still locked
-            // The flag will be cleared after the timestamp expires (5 seconds)
-            // _isFreshLogin = false; // DON'T clear immediately - let timestamp handle it
-            if (!_hasSeenAuthBefore) {
-              _hasSeenAuthBefore = true;
-            }
-            _logState('JUST UNLOCKED OR FRESH LOGIN - preventing re-lock');
-          } else if (!_hasSeenAuthBefore) {
-            // First time seeing AuthAuthenticated
-            _hasSeenAuthBefore = true;
-            
-            // CRITICAL: If app is unlocked and we haven't seen auth before AND app wasn't resumed,
-            // this is a FRESH LOGIN - user just logged in, DON'T lock
-            if (!_shouldLockOnNextAuth) {
+          // Only AuthAuthenticated should drive idle/resume lock policy here. PIN verification uses
+          // AuthVerifyingCredentials while SecurityCubit is still unlocked (splash → welcome-back);
+          // running this block for that state incorrectly sets fresh-login flags.
+          if (authState is AuthAuthenticated) {
+            // Always update _lastUnlockTime FIRST to prevent race conditions
+            _lastUnlockTime = DateTime.now();
+            final recentlyUnlocked = _lastUnlockTime != null &&
+                DateTime.now().difference(_lastUnlockTime!).inSeconds < 15; // 15 second grace period
+
+            // CRITICAL LOGIC - SIMPLIFIED:
+            // 1. If user just unlocked OR fresh login → DON'T lock
+            // 2. If app was resumed/detached → LOCK
+            // 3. Otherwise → DON'T lock
+
+            // CRITICAL: Check for fresh login FIRST - if app is unlocked and we see AuthAuthenticated
+            // for the first time AND app is not locked, it means user just logged in (not app start with token)
+            // App start with token would have locked the app first, so we wouldn't see unlocked state
+            // ALSO: If user just unlocked via PIN, don't lock again
+            if (_userJustUnlocked || recentlyUnlocked || _isFreshLogin) {
+              // User just unlocked OR fresh login - don't lock again
               _hasInitializedLock = true;
               _shouldLockOnNextAuth = false;
-              _lastUnlockTime = DateTime.now();
-              _isFreshLogin = true; // Mark as fresh login
-              _logState('FRESH LOGIN - NO LOCK');
-              // DO NOT lock - user just logged in
-            } else if (_shouldLockOnNextAuth) {
-              // First time seeing AuthAuthenticated BUT app was resumed/detached - lock it
+              _userJustUnlocked = false; // Clear the flag
+              // CRITICAL: DON'T clear _isFreshLogin immediately - keep it for a few seconds
+              // to handle race condition where SecurityCubit builder runs while still locked
+              // The flag will be cleared after the timestamp expires (5 seconds)
+              // _isFreshLogin = false; // DON'T clear immediately - let timestamp handle it
+              if (!_hasSeenAuthBefore) {
+                _hasSeenAuthBefore = true;
+              }
+              _logState('JUST UNLOCKED OR FRESH LOGIN - preventing re-lock');
+            } else if (!_hasSeenAuthBefore) {
+              // First time seeing AuthAuthenticated
+              _hasSeenAuthBefore = true;
+
+              // CRITICAL: If app is unlocked and we haven't seen auth before AND app wasn't resumed,
+              // this is a FRESH LOGIN - user just logged in, DON'T lock
+              if (!_shouldLockOnNextAuth) {
+                _hasInitializedLock = true;
+                _shouldLockOnNextAuth = false;
+                _lastUnlockTime = DateTime.now();
+                _isFreshLogin = true; // Mark as fresh login
+                _logState('FRESH LOGIN - NO LOCK');
+                // DO NOT lock - user just logged in
+              } else if (_shouldLockOnNextAuth) {
+                // First time seeing AuthAuthenticated BUT app was resumed/detached - lock it
+                _hasInitializedLock = true;
+                _shouldLockOnNextAuth = false;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && securityCubit.state == SecurityState.unlocked) {
+                    securityCubit.lockApp(isIdleTimeout: true);
+                  }
+                });
+              }
+            } else if (_shouldLockOnNextAuth && !_hasInitializedLock) {
+              // App was resumed/detached and we haven't locked yet
               _hasInitializedLock = true;
               _shouldLockOnNextAuth = false;
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (mounted && securityCubit.state == SecurityState.unlocked) {
-                  securityCubit.lockApp();
+                  securityCubit.lockApp(isIdleTimeout: true);
                 }
               });
+            } else {
+              // Already handled or no need to lock
+              _logState('SKIPPING LOCK');
             }
-          } else if (_shouldLockOnNextAuth && !_hasInitializedLock) {
-            // App was resumed/detached and we haven't locked yet
-            _hasInitializedLock = true;
-            _shouldLockOnNextAuth = false;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted && securityCubit.state == SecurityState.unlocked) {
-                securityCubit.lockApp();
-              }
-            });
-          } else {
-            // Already handled or no need to lock
-            _logState('SKIPPING LOCK');
           }
         }
         
         // User is authenticated, apply security features
         return BlocListener<SecurityCubit, SecurityState>(
+          listenWhen: (previous, current) =>
+              (current == SecurityState.idlePrompt &&
+                  previous != SecurityState.idlePrompt) ||
+              current == SecurityState.unlocked,
           listener: (context, state) {
-            final timestamp = DateTime.now().millisecondsSinceEpoch;
             _logState('LISTENER - SecurityState changed');
             
             // CRITICAL: When app is unlocked by user (after entering PIN), this means:
@@ -433,30 +474,102 @@ class _SecurityWrapperState extends State<SecurityWrapper>
               }
               // Clear cached locked screen since app is now unlocked
               _cachedLockedScreen = null;
+              _childKey++; // Force rebuild by changing key
               _logState('LISTENER - After PIN validation and unlock');
-            }
-            
-            // Show idle prompt dialog when needed
-            if (state == SecurityState.idlePrompt && mounted) {
-              // Use Navigator.of(context, rootNavigator: true) to ensure dialog shows
-              // even if there's no MaterialApp ancestor yet
+              
+              // CRITICAL: Force a rebuild by calling setState immediately
+              // This ensures SecurityWrapper rebuilds even if BlocBuilder doesn't
+              if (mounted) {
+                setState(() {
+                  // Force rebuild of SecurityWrapper
+                });
+              }
+              
+              // CRITICAL: Force a rebuild by scheduling a frame
+              // Sometimes the BlocBuilder doesn't rebuild immediately after state change
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted && context.mounted) {
-                  // Check if we have a valid MaterialApp context
-                  final navigator = Navigator.maybeOf(context, rootNavigator: true);
-                  if (navigator != null) {
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (_) => const IdlePromptDialog(),
-                    );
+                if (mounted) {
+                  // Force rebuild by reading the state again and triggering a rebuild
+                  final securityCubit = context.read<SecurityCubit>();
+                  if (securityCubit.state == SecurityState.unlocked) {
+                    debugPrint('📊   🔓 SECURITY WRAPPER LISTENER - Forcing rebuild after unlock');
+                    // Clear cache and force setState again
+                    _cachedLockedScreen = null;
+                    _childKey++;
+                    if (mounted) {
+                      setState(() {
+                        // Force rebuild again
+                      });
+                    }
+                    // Emit state again to ensure BlocBuilder rebuilds
+                    securityCubit.unlockApp(); // This will emit unlocked state again
                   }
                 }
               });
             }
+            
+            // Idle prompt: [SecurityWrapper] sits above [MaterialApp.router], so
+            // Navigator.maybeOf(securityWrapperContext) is null — use [rootNavigatorKey].
+            if (state == SecurityState.idlePrompt && mounted) {
+              if (_idlePromptDialogOpen) return;
+              _idlePromptDialogOpen = true;
+              final securityCubit = context.read<SecurityCubit>();
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                final navContext = rootNavigatorKey.currentContext;
+                if (!mounted || navContext == null || !navContext.mounted) {
+                  _idlePromptDialogOpen = false;
+                  return;
+                }
+                showDialog<void>(
+                  context: navContext,
+                  barrierDismissible: false,
+                  builder: (_) => BlocProvider.value(
+                    value: securityCubit,
+                    child: const IdlePromptDialog(),
+                  ),
+                ).whenComplete(() {
+                  _idlePromptDialogOpen = false;
+                });
+              });
+            }
           },
-          child: BlocBuilder<SecurityCubit, SecurityState>(
-            buildWhen: (previous, current) {
+          child: BlocListener<SecurityCubit, SecurityState>(
+            listenWhen: (previous, current) {
+              // Listen when app becomes unlocked to force rebuild
+              return previous == SecurityState.locked && current == SecurityState.unlocked;
+            },
+            listener: (context, state) {
+              // CRITICAL: When app becomes unlocked, force SecurityWrapper to rebuild
+              // This ensures the dashboard is shown even if BlocBuilder doesn't rebuild
+              if (state == SecurityState.unlocked && mounted) {
+                debugPrint('📊   🔓 SECURITY WRAPPER LISTENER - App unlocked, forcing rebuild');
+                _cachedLockedScreen = null;
+                _childKey++;
+                setState(() {
+                  // Force rebuild of SecurityWrapper
+                });
+              }
+            },
+            child: BlocBuilder<SecurityCubit, SecurityState>(
+              buildWhen: (previous, current) {
+              // CRITICAL: Always rebuild when transitioning to unlocked OR when already unlocked
+              // This ensures dashboard is shown immediately after correct PIN
+              // Even if state was already unlocked (re-emitted), we need to rebuild to show dashboard
+              if (current == SecurityState.unlocked) {
+                debugPrint('📊   🔓 SECURITY WRAPPER buildWhen - State is unlocked, ALWAYS rebuilding');
+                debugPrint('📊   🔓 Previous: $previous, Current: $current');
+                // CRITICAL: Always rebuild when unlocked, even if previous was also unlocked
+                // This ensures the MaterialApp is replaced with widget.child
+                return true;
+              }
+              
+              // CRITICAL: Also rebuild when transitioning from locked to unlocked
+              // This is the most important transition - must rebuild to show dashboard
+              if (previous == SecurityState.locked && current == SecurityState.unlocked) {
+                debugPrint('📊   🔓 SECURITY WRAPPER buildWhen - locked → unlocked, FORCING rebuild');
+                return true;
+              }
+              
               // Only rebuild when state actually changes
               // This prevents unnecessary rebuilds that cause WelcomeBackScreen to rebuild
               if (previous == current) {
@@ -473,7 +586,15 @@ class _SecurityWrapperState extends State<SecurityWrapper>
                   _freshLoginTimestamp = DateTime.now();
                 }
                 // Always rebuild when unlocking (important state change)
+                // This is critical for showing dashboard after correct PIN
+                debugPrint('📊   🔓 SECURITY WRAPPER buildWhen - locked → unlocked, rebuilding');
                 return true;
+              }
+              
+              // CRITICAL: If already locked and staying locked, don't rebuild
+              // This prevents flickering when wrong PIN is entered (lockApp() called but already locked)
+              if (previous == SecurityState.locked && current == SecurityState.locked) {
+                return false; // Still locked - no rebuild needed, prevents flicker
               }
               
               // Only rebuild for meaningful state changes (locked, unlocked, blurred)
@@ -482,6 +603,7 @@ class _SecurityWrapperState extends State<SecurityWrapper>
                 SecurityState.locked,
                 SecurityState.unlocked,
                 SecurityState.blurred,
+                SecurityState.idlePrompt,
               ];
               
               final previousIsMeaningful = meaningfulStates.contains(previous);
@@ -489,7 +611,6 @@ class _SecurityWrapperState extends State<SecurityWrapper>
               
               // Only rebuild if transitioning between meaningful states
               if (previousIsMeaningful || currentIsMeaningful) {
-                final timestamp = DateTime.now().millisecondsSinceEpoch;
                 _logState('BUILDER buildWhen');
                 return true;
               }
@@ -498,21 +619,83 @@ class _SecurityWrapperState extends State<SecurityWrapper>
               return false;
             },
             builder: (context, state) {
-              final timestamp = DateTime.now().millisecondsSinceEpoch;
               _logState('BUILDER building');
+              debugPrint('📊   🔓 SECURITY WRAPPER BUILDER - State parameter: $state');
               
-              // CRITICAL: Check actual SecurityCubit state first - if unlocked, show dashboard immediately
-              // This prevents showing lock screen after a successful unlock
+              // CRITICAL: Check actual SecurityCubit state FIRST (most reliable)
+              // This handles edge cases where state parameter hasn't updated yet
               final securityCubit = context.read<SecurityCubit>();
               final actualState = securityCubit.state;
+              debugPrint('📊   🔓 SECURITY WRAPPER BUILDER - Actual state: $actualState');
+              debugPrint('📊   🔓 SECURITY WRAPPER BUILDER - Cached lock screen: ${_cachedLockedScreen != null ? "EXISTS" : "NULL"}');
+              debugPrint('📊   🔓 SECURITY WRAPPER BUILDER - Child key: $_childKey');
               
-              if (actualState != SecurityState.locked) {
-                // App is not actually locked - show dashboard
-                return widget.child;
+              // CRITICAL: If actual state is unlocked, show dashboard IMMEDIATELY
+              // This is the most reliable check - reads directly from SecurityCubit
+              // This MUST be checked first to handle app lock unlock scenario
+              if (actualState == SecurityState.unlocked) {
+                // Clear cache immediately
+                if (_cachedLockedScreen != null) {
+                  _cachedLockedScreen = null;
+                  debugPrint('📊   🔓 SECURITY WRAPPER BUILDER - Cleared cached lock screen');
+                }
+                _childKey++; // Force rebuild by changing key
+                debugPrint('📊   🔓 SECURITY WRAPPER BUILDER - Actual state is unlocked, showing dashboard');
+                debugPrint('📊   🔓 Returning widget.child directly with key: $_childKey');
+                // Return widget.child directly - no wrapper needed
+                return _wrapDashboardWithIdleTracking(widget.child);
+              }
+              
+              // Fallback: Check state parameter (should match actualState, but check both)
+              if (state == SecurityState.unlocked) {
+                // App is unlocked - show dashboard immediately
+                // CRITICAL: Clear cached lock screen to ensure MaterialApp is removed
+                if (_cachedLockedScreen != null) {
+                  _cachedLockedScreen = null;
+                }
+                _childKey++; // Force rebuild by changing key
+                debugPrint('📊   🔓 SECURITY WRAPPER BUILDER - State parameter is unlocked, showing dashboard');
+                debugPrint('📊   🔓 Returning widget.child directly with key: $_childKey');
+                // Return widget.child directly
+                return _wrapDashboardWithIdleTracking(widget.child);
+              }
+              
+              // CRITICAL: Double-check if we're in a weird state where state says locked but actual is unlocked
+              // This can happen if BlocBuilder didn't rebuild properly
+              if (state == SecurityState.locked && actualState == SecurityState.unlocked) {
+                debugPrint('📊   ⚠️ SECURITY WRAPPER BUILDER - State mismatch! Parameter says locked but actual is unlocked');
+                debugPrint('📊   🔓 Showing dashboard anyway (actual state takes precedence)');
+                // CRITICAL: Clear cached lock screen to ensure MaterialApp is removed
+                if (_cachedLockedScreen != null) {
+                  _cachedLockedScreen = null;
+                }
+                _childKey++; // Force rebuild by changing key
+                debugPrint('📊   🔓 Returning widget.child directly with key: $_childKey');
+                // Return widget.child directly
+                return _wrapDashboardWithIdleTracking(widget.child);
+              }
+              
+              // CRITICAL: Before checking if locked, verify actual state again
+              // Sometimes the state parameter is stale but actualState is current
+              if (actualState == SecurityState.unlocked) {
+                // App is actually unlocked - show dashboard immediately
+                _cachedLockedScreen = null;
+                _childKey++;
+                debugPrint('📊   🔓 SECURITY WRAPPER BUILDER - Re-check: Actual state is unlocked, showing dashboard');
+                return _wrapDashboardWithIdleTracking(widget.child);
               }
               
               // App is locked - check if this is a fresh login that just completed
               if (state == SecurityState.locked) {
+                // CRITICAL: Double-check actual state one more time before showing lock screen
+                final doubleCheckState = securityCubit.state;
+                if (doubleCheckState == SecurityState.unlocked) {
+                  _cachedLockedScreen = null;
+                  _childKey++;
+                  debugPrint('📊   🔓 SECURITY WRAPPER BUILDER - Double-check: State is unlocked, showing dashboard');
+                  return _wrapDashboardWithIdleTracking(widget.child);
+                }
+                
                 final authState = context.read<AuthBloc>().state;
                 
                 // CRITICAL: Check if this is a recently completed fresh login (within last 5 seconds)
@@ -531,7 +714,8 @@ class _SecurityWrapperState extends State<SecurityWrapper>
                   securityCubit.recordActivity();
                   // Clear cached lock screen since we're showing dashboard
                   _cachedLockedScreen = null;
-                  return widget.child;
+                  _childKey++;
+                  return _wrapDashboardWithIdleTracking(widget.child);
                 }
                 
                 // App is locked and not a fresh login - show lock screen
@@ -552,8 +736,7 @@ class _SecurityWrapperState extends State<SecurityWrapper>
                           key: const ValueKey('locked_material_app'),
                           debugShowCheckedModeBanner: false,
                           theme: AppTheme.light,
-                          darkTheme: AppTheme.dark,
-                          themeMode: ThemeMode.system,
+                          themeMode: ThemeMode.light,
                           home: RepaintBoundary(
                             child: WelcomeBackScreen(
                               key: const ValueKey('welcome_back_screen_locked'),
@@ -567,6 +750,18 @@ class _SecurityWrapperState extends State<SecurityWrapper>
                     ),
                   );
                 } else {
+                }
+                
+                // CRITICAL: Final check before returning lock screen
+                // Sometimes the state parameter is stale but actualState is current
+                final finalCheckState = securityCubit.state;
+                debugPrint('📊   🔓 SECURITY WRAPPER BUILDER - Final check state: $finalCheckState');
+                if (finalCheckState == SecurityState.unlocked) {
+                  _cachedLockedScreen = null;
+                  _childKey++;
+                  debugPrint('📊   🔓 SECURITY WRAPPER BUILDER - Final check: State is unlocked, showing dashboard');
+                  debugPrint('📊   🔓 Returning widget.child directly with key: $_childKey');
+                  return _wrapDashboardWithIdleTracking(widget.child);
                 }
                 
                 return _cachedLockedScreen!;
@@ -593,28 +788,11 @@ class _SecurityWrapperState extends State<SecurityWrapper>
               // Normal unlocked state - wrap child to detect interactions
               // Only wrap with GestureDetector if app is NOT locked
               // When locked, the lock screen handles its own interactions
-              return GestureDetector(
-                key: const ValueKey('unlocked_screen'),
-                onTap: () {
-                  // Only record activity if app is not locked
-                  final securityCubit = context.read<SecurityCubit>();
-                  if (securityCubit.state != SecurityState.locked) {
-                    _handleUserInteraction();
-                  }
-                },
-                onPanDown: (_) {
-                  // Only record activity if app is not locked
-                  final securityCubit = context.read<SecurityCubit>();
-                  if (securityCubit.state != SecurityState.locked) {
-                    _handleUserInteraction();
-                  }
-                },
-                behavior: HitTestBehavior.translucent,
-                child: widget.child,
-              );
+              return _wrapDashboardWithIdleTracking(widget.child);
             },
           ),
-        );
+        ),
+      );
         },
       ),
     );

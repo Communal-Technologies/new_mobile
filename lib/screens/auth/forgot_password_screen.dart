@@ -6,7 +6,10 @@ import 'package:communal_mobile/core/widgets/custom_text_field.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/loader_overlay.dart';
+import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:go_router/go_router.dart';
+import 'package:communal_mobile/data/repositories/auth_repository.dart';
+import 'package:communal_mobile/injection.dart';
 
 enum LoginType { phone, email }
 
@@ -70,7 +73,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     });
   }
 
-  void _sendCode() {
+  Future<void> _sendCode() async {
     setState(() {
       _phoneError = null;
       _emailError = null;
@@ -116,33 +119,47 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         return;
       }
 
-      contact = _emailController.text;
+      contact = _emailController.text.trim();
       isEmail = true;
     }
 
-    // Navigate to verification (dummy OTP for now)
-    context.push('/verify-reset', extra: {
-      'contact': contact,
-      'isEmail': isEmail,
-      'isForgotPassword': true,
-    });
+    try {
+      await getIt<AuthRepository>().requestPasswordReset(contact);
+      if (!mounted) return;
+      context.push('/verify-reset', extra: {
+        'contact': contact,
+        'isEmail': isEmail,
+        'isForgotPassword': true,
+      });
+    } catch (e) {
+      if (!mounted) return;
+      final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : e.toString();
+      AppToast.error(message);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => context.pop(),
-        ),
-      ),
-      body: Stack(
-        children: [
-          SafeArea(
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Scaffold(
+          backgroundColor: Colors.white,
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.black),
+              onPressed: _isLoading ? null : () => context.pop(),
+            ),
+          ),
+          body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(horizontal: 24.w),
           child: Column(
@@ -260,11 +277,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
         ),
       ),
-          // Loader overlay when loading
-          if (_isLoading)
-            const LoaderOverlay(),
-        ],
-      ),
+        ),
+        if (_isLoading)
+          Positioned.fill(
+            child: const LoaderOverlay(),
+          ),
+      ],
     );
   }
 }

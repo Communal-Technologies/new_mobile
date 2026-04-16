@@ -15,11 +15,14 @@ class ResetPasswordScreen extends StatefulWidget {
     super.key,
     this.userId,
     this.contact,
+    this.pin,
     this.isInitialSetup = false,
   });
 
   final String? userId;
   final String? contact;
+  /// 6-digit code from email/SMS (required when resetting an existing password).
+  final String? pin;
   final bool isInitialSetup;
 
   @override
@@ -185,12 +188,21 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             userId: widget.userId!,
             password: _newPassword,
             confirmPassword: _confirmPassword,
+            contact: widget.contact,
           ));
     } else {
       // Regular password reset flow - call API to reset password
       if (widget.contact == null || widget.contact!.isEmpty) {
         setState(() {
           _passwordError = 'Contact information is required';
+          _isSubmitting = false;
+          _hasSubmitted = false;
+        });
+        return;
+      }
+      if (widget.pin == null || widget.pin!.length != 6) {
+        setState(() {
+          _passwordError = 'Verification code is required. Go back and verify your code.';
           _isSubmitting = false;
           _hasSubmitted = false;
         });
@@ -206,6 +218,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       context.read<AuthBloc>().add(ResetPasswordRequested(
             login: widget.contact!,
             newPassword: _newPassword,
+            pin: widget.pin!,
           ));
     }
   }
@@ -271,19 +284,20 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         }
       },
       builder: (context, state) {
-        return Scaffold(
-          backgroundColor: Colors.white,
-          appBar: AppBar(
-            backgroundColor: Colors.white,
-            elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.black),
-              onPressed: () => context.pop(),
-            ),
-          ),
-          body: Stack(
-            children: [
-              SafeArea(
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            Scaffold(
+              backgroundColor: Colors.white,
+              appBar: AppBar(
+                backgroundColor: Colors.white,
+                elevation: 0,
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.black),
+                  onPressed: _isSubmitting ? null : () => context.pop(),
+                ),
+              ),
+              body: SafeArea(
                 child: SingleChildScrollView(
                   padding: EdgeInsets.symmetric(horizontal: 24.w),
                   child: Column(
@@ -442,11 +456,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   ),
                 ),
               ),
-              // Loader overlay when submitting
-              if (_isSubmitting)
-                const LoaderOverlay(),
-            ],
-          ),
+            ),
+            if (_isSubmitting)
+              Positioned.fill(
+                child: const LoaderOverlay(),
+              ),
+          ],
         );
       },
     );

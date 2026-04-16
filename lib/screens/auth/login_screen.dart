@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/constants/images.dart';
+import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/phone_input_field.dart';
 import 'package:communal_mobile/core/widgets/custom_text_field.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
@@ -232,15 +233,20 @@ class _LoginScreenState extends State<LoginScreen> {
                         'isEmail': _loginType == LoginType.email,
                       });
                     } else {
-                      // User doesn't have password, navigate to OTP screen
+                      // User doesn't have password — backend sends OTP on login-checker; go verify.
                       final login = _loginType == LoginType.phone
                           ? '+234${_phoneController.text}'
                           : _emailController.text;
+                      final msg = state.otpDeliveryMessage;
+                      if (msg != null && msg.isNotEmpty) {
+                        AppToast.error(msg);
+                      }
                       context.push('/verify-reset', extra: {
                         'contact': login,
                         'isEmail': _loginType == LoginType.email,
                         'isInitialSetup': true,
                         'userId': state.userId,
+                        'skipInitialOtpRequest': state.otpSent == true,
                       });
                     }
                   } else if (state is AuthFailure) {

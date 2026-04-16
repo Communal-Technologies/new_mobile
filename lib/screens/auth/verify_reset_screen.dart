@@ -2,10 +2,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/constants/images.dart';
+import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/otp_input_field.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:go_router/go_router.dart';
+import 'package:communal_mobile/data/repositories/auth_repository.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
@@ -19,6 +22,8 @@ class VerifyResetScreen extends StatefulWidget {
     this.isInitialSetup = false,
     this.isForgotPassword = false,
     this.userId,
+    /// When true, login-checker already sent the OTP — do not call `/otp/send` on open.
+    this.skipInitialOtpRequest = false,
   });
 
   final String contact;
@@ -26,21 +31,50 @@ class VerifyResetScreen extends StatefulWidget {
   final bool isInitialSetup;
   final bool isForgotPassword;
   final String? userId;
+  final bool skipInitialOtpRequest;
 
   @override
   State<VerifyResetScreen> createState() => _VerifyResetScreenState();
 }
 
 class _VerifyResetScreenState extends State<VerifyResetScreen> {
+  static const int _otpLength = 6;
+
+  /// Bumps to rebuild [OtpInputField] and clear digits after a failed attempt.
+  int _otpFieldKey = 0;
+
   String _code = '';
   int _resendTimer = 34;
   Timer? _timer;
   bool _isVerifying = false;
+  bool _isResending = false;
 
   @override
   void initState() {
     super.initState();
     _startTimer();
+    if (!widget.isForgotPassword && !widget.skipInitialOtpRequest) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _sendInitialOtp());
+    }
+  }
+
+  Future<void> _sendInitialOtp() async {
+    try {
+      final ok = await getIt<AuthRepository>().requestOtp(widget.contact);
+      if (!mounted) {
+        return;
+      }
+      if (!ok) {
+        AppToast.error('Could not send verification code. Try again.');
+      }
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      final message =
+          e is Exception ? e.toString().replaceFirst('Exception: ', '') : e.toString();
+      AppToast.error(message);
+    }
   }
 
   @override
@@ -50,6 +84,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
   }
 
   void _startTimer() {
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_resendTimer > 0) {
         setState(() {
@@ -61,12 +96,58 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
     });
   }
 
-  void _resendCode() {
+  Future<void> _resendCode() async {
+    if (_isResending) {
+      return;
+    }
     setState(() {
-      _resendTimer = 34;
+      _isResending = true;
     });
-    _startTimer();
-    // TODO: Implement actual resend logic
+    try {
+      if (widget.isForgotPassword) {
+        try {
+          await getIt<AuthRepository>().requestPasswordReset(widget.contact);
+          if (!mounted) {
+            return;
+          }
+          AppToast.success('A new code has been sent.');
+        } catch (e) {
+          if (!mounted) {
+            return;
+          }
+          final message =
+              e is Exception ? e.toString().replaceFirst('Exception: ', '') : e.toString();
+          AppToast.error(message);
+        }
+      } else {
+        try {
+          final ok = await getIt<AuthRepository>().requestOtp(widget.contact);
+          if (!mounted) {
+            return;
+          }
+          if (ok) {
+            AppToast.success('A new code has been sent.');
+          } else {
+            AppToast.error('Could not resend code. Try again.');
+          }
+        } catch (e) {
+          if (!mounted) {
+            return;
+          }
+          final message =
+              e is Exception ? e.toString().replaceFirst('Exception: ', '') : e.toString();
+          AppToast.error(message);
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isResending = false;
+          _resendTimer = 34;
+        });
+        _startTimer();
+      }
+    }
   }
 
   String get _maskedContact {
@@ -94,49 +175,43 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
     }
   }
 
-  void _verifyCode() {
-    if (_code.length == 6) {
-      // Dismiss keyboard
-      FocusScope.of(context).unfocus();
-      
-      setState(() {
-        _isVerifying = true;
-      });
+  Future<void> _verifyCode() async {
+    if (_code.length != _otpLength) {
+      return;
+    }
+    FocusScope.of(context).unfocus();
 
-      // For forgot password flow, accept dummy code "123456" and skip backend verification
-      if (widget.isForgotPassword) {
-        // Accept dummy code for now (since mail isn't implemented)
-        if (_code == '123456') {
-      // Navigate to reset password screen
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (mounted) {
-              context.push('/reset-password', extra: {
-                'contact': widget.contact,
-                'isEmail': widget.isEmail,
-              });
-            }
-          });
-        } else {
-          setState(() {
-            _isVerifying = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Invalid code. Use 123456 for testing.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      } else {
-        // Normal OTP verification for initial setup
-        context.read<AuthBloc>().add(VerifyOtpRequested(
-              contact: widget.contact,
-              otp: _code,
-              isEmail: widget.isEmail,
-              isInitialSetup: widget.isInitialSetup,
-              userId: widget.userId,
-            ));
+    setState(() {
+      _isVerifying = true;
+    });
+
+    if (widget.isForgotPassword) {
+      try {
+        await getIt<AuthRepository>().verifyPasswordResetPin(widget.contact, _code);
+        if (!mounted) return;
+        context.push('/reset-password', extra: {
+          'contact': widget.contact,
+          'isEmail': widget.isEmail,
+          'pin': _code,
+        });
+      } catch (e) {
+        if (!mounted) return;
+        final message =
+            e is Exception ? e.toString().replaceFirst('Exception: ', '') : e.toString();
+        AppToast.error(message);
+        setState(() {
+          _isVerifying = false;
+          _code = '';
+          _otpFieldKey++;
+        });
       }
+    } else {
+      context.read<AuthBloc>().add(VerifyOtpRequested(
+            contact: widget.contact,
+            otp: _code,
+            isInitialSetup: widget.isInitialSetup,
+            userId: widget.userId,
+          ));
     }
   }
 
@@ -214,26 +289,6 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                     ],
                   ),
                     ),
-                    // Show dummy code hint for forgot password flow
-                    if (widget.isForgotPassword) ...[
-                      vSpace(12),
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
-                          borderRadius: BorderRadius.circular(8.r),
-                          border: Border.all(color: Colors.orange.shade200),
-                        ),
-                        child: Text(
-                          'Use dummy code: 123456',
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            color: Colors.orange.shade800,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -242,7 +297,8 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
 
               // OTP Input
               OtpInputField(
-                length: 6,
+                key: ValueKey<int>(_otpFieldKey),
+                length: _otpLength,
                 onChanged: (code) {
                   setState(() {
                     _code = code;
@@ -262,35 +318,57 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                           color: Colors.grey.shade600,
                         ),
                       )
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Didn\'t receive the code?',
-                            style: TextStyle(
-                              fontSize: 14.sp,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          hSpace(4),
-                          TextButton(
-                            onPressed: _resendCode,
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: Text(
-                              'Resend',
-                              style: TextStyle(
-                                fontSize: 14.sp,
-                                color: theme.primaryColor,
-                                fontWeight: FontWeight.w600,
+                    : _isResending
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 18.w,
+                                height: 18.w,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: theme.primaryColor,
+                                ),
                               ),
-                            ),
+                              hSpace(8),
+                              Text(
+                                'Sending code…',
+                                style: TextStyle(
+                                  fontSize: 14.sp,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          )
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Didn\'t receive the code?',
+                                style: TextStyle(
+                                  fontSize: 14.sp,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                              hSpace(4),
+                              TextButton(
+                                onPressed: _resendCode,
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: Text(
+                                  'Resend',
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
+                                    color: theme.primaryColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
               ),
 
               vSpace(32),
@@ -309,18 +387,12 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                       'isInitialSetup': widget.isInitialSetup,
                     });
                   } else if (state is AuthFailure) {
+                    AppToast.error(state.error);
                     setState(() {
                       _isVerifying = false;
+                      _code = '';
+                      _otpFieldKey++;
                     });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          state.error,
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
                   }
                 },
                 builder: (context, state) {
@@ -329,7 +401,9 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                   final isLoading = _isVerifying;
                   return AppElevatedButton(
                 title: 'Continue',
-                    onPressed: (_code.length == 6 && !isLoading) ? _verifyCode : null,
+                    onPressed: (_code.length == _otpLength && !isLoading)
+                        ? () => _verifyCode()
+                        : null,
                     isLoading: isLoading,
                   );
                 },

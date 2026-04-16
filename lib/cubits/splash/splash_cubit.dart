@@ -49,8 +49,7 @@ class SplashCubit extends Cubit<SplashState> {
         }
       }
 
-      // Check if onboarding has been completed (stored in secure storage, persists through logout)
-      const secureStorage = FlutterSecureStorage();
+      // Check if onboarding has been completed (same storage instance as the rest of the app)
       final onboardingCompleted = await secureStorage.read(key: 'onboarding_completed');
       final isFirstTime = onboardingCompleted != 'true'; // First time if onboarding not completed
       print('🔵 SPLASH - isFirstTime: $isFirstTime (onboarding_completed: $onboardingCompleted)');

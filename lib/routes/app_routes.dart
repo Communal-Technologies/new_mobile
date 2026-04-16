@@ -1,5 +1,6 @@
-// import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
+import 'package:communal_mobile/core/navigation/root_navigator_key.dart';
 
 import 'package:communal_mobile/screens/splash/splash_screen.dart';
 import 'package:communal_mobile/screens/onboarding/onboarding_screen.dart';
@@ -65,6 +66,7 @@ import 'package:communal_mobile/screens/account/delete_account_success_screen.da
 // import 'package:communal_mobile/core/features/wallet/screens/pages/wallet_page.dart';
 
 final GoRouter appRouter = GoRouter(
+  navigatorKey: rootNavigatorKey,
   initialLocation: '/',
   routes: [
     GoRoute(
@@ -143,6 +145,7 @@ final GoRouter appRouter = GoRouter(
         final isInitialSetup = extra?['isInitialSetup'] ?? false;
         final isForgotPassword = extra?['isForgotPassword'] ?? false;
         final userId = extra?['userId']?.toString();
+        final skipInitialOtpRequest = extra?['skipInitialOtpRequest'] == true;
 
         return VerifyResetScreen(
           contact: contact,
@@ -150,6 +153,7 @@ final GoRouter appRouter = GoRouter(
           isInitialSetup: isInitialSetup,
           isForgotPassword: isForgotPassword,
           userId: userId,
+          skipInitialOtpRequest: skipInitialOtpRequest,
         );
       },
     ),
@@ -161,6 +165,7 @@ final GoRouter appRouter = GoRouter(
         return ResetPasswordScreen(
           userId: extra?['userId']?.toString(),
           contact: extra?['contact']?.toString(),
+          pin: extra?['pin']?.toString(),
           isInitialSetup: extra?['isInitialSetup'] == true,
         );
       },

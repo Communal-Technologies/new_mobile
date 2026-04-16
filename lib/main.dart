@@ -16,6 +16,7 @@ import 'package:communal_mobile/core/widgets/security_wrapper.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:toastification/toastification.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,7 +27,8 @@ void main() async {
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
+      // Light app surfaces need dark status bar icons by default.
+      statusBarIconBrightness: Brightness.dark,
       statusBarBrightness: Brightness.light,
     ),
   );
@@ -39,7 +41,6 @@ void main() async {
     (_) => runApp(
       MultiBlocProvider(
         providers: [
-          BlocProvider(create: (_) => getIt<AuthBloc>()..add(AppStarted())),
           BlocProvider(create: (_) => getIt<SplashCubit>()..initApp()),
           BlocProvider(create: (_) => getIt<SettingsCubit>()),
           BlocProvider(create: (_) => getIt<ConnectivityCubit>()),
@@ -79,15 +80,19 @@ class MyApp extends StatelessWidget {
                   create: (_) => SecurityCubit(snapshot.data!, const FlutterSecureStorage()),
                 ),
               ],
-              child: ConnectivityListener(
-                child: SecurityWrapper(
-                  child: MaterialApp.router(
-                    debugShowCheckedModeBanner: false,
-                    theme: AppTheme.light,
-                    darkTheme: AppTheme.dark,
-                    themeMode: ThemeMode.system,
-                    routerConfig: appRouter,
-                  ),
+              child: SecurityWrapper(
+                child: MaterialApp.router(
+                  debugShowCheckedModeBanner: false,
+                  theme: AppTheme.light,
+                  themeMode: ThemeMode.light,
+                  routerConfig: appRouter,
+                  builder: (context, child) {
+                    return ToastificationWrapper(
+                      child: ConnectivityListener(
+                        child: child ?? const SizedBox.shrink(),
+                      ),
+                    );
+                  },
                 ),
               ),
             );

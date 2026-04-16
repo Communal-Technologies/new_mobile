@@ -35,46 +35,49 @@ class CheckLoginRequested extends AuthEvent {
 class VerifyOtpRequested extends AuthEvent {
   final String contact;
   final String otp;
-  final bool isEmail;
   final bool isInitialSetup;
   final String? userId;
 
   const VerifyOtpRequested({
     required this.contact,
     required this.otp,
-    this.isEmail = true,
     this.isInitialSetup = false,
     this.userId,
   });
 
   @override
-  List<Object?> get props => [contact, otp, isEmail, isInitialSetup, userId];
+  List<Object?> get props => [contact, otp, isInitialSetup, userId];
 }
 
 class CreatePasswordRequested extends AuthEvent {
   final String userId;
   final String password;
   final String confirmPassword;
+  /// Email or phone used during OTP / login-checker (stored for lock screen + PIN unlock).
+  final String? contact;
 
   const CreatePasswordRequested({
     required this.userId,
     required this.password,
     required this.confirmPassword,
+    this.contact,
   });
 
   @override
-  List<Object?> get props => [userId, password, confirmPassword];
+  List<Object?> get props => [userId, password, confirmPassword, contact];
 }
 
 class ResetPasswordRequested extends AuthEvent {
   final String login;
   final String newPassword;
+  final String pin;
 
   const ResetPasswordRequested({
     required this.login,
     required this.newPassword,
+    required this.pin,
   });
 
   @override
-  List<Object?> get props => [login, newPassword];
+  List<Object?> get props => [login, newPassword, pin];
 }

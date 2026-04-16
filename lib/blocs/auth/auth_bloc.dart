@@ -17,6 +17,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   // This prevents AppStarted from unlocking with a cached token after password failure
   bool _hasRecentFailedLogin = false;
 
+  /// Increments on each [LoginRequested] so [AuthVerifyingCredentials] is always unique.
+  int _credentialVerifyAttemptId = 0;
+
+  /// Increments on each successful [LoginRequested] so [AuthAuthenticated] is never == prior AppStarted.
+  int _loginSessionGeneration = 0;
+
   AuthBloc({required this.authRepository, required this.secureStorage})
     : super(AuthInitial()) {
     on<AppStarted>(_onAppStarted);
@@ -74,8 +80,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           final timestamp2 = DateTime.now().millisecondsSinceEpoch;
           debugPrint('📊 [${timestamp2}] 🔐 AUTH BLOC - Emitting AuthAuthenticated (from AppStarted)');
           debugPrint('📊   ✅ Token validated with backend - user authenticated');
-          debugPrint('📊   User ID: ${user.id}, Login: ${user.login}');
-          emit(AuthAuthenticated(userId: user.id, login: user.login));
+          final storedLogin = (await secureStorage.read(key: 'login'))?.trim() ?? '';
+          final sessionLogin =
+              storedLogin.isNotEmpty ? storedLogin : user.login.trim();
+          debugPrint('📊   User ID: ${user.id}, Session login: $sessionLogin');
+          emit(AuthAuthenticated(
+            userId: user.id,
+            login: sessionLogin,
+            sessionGeneration: 0,
+          ));
         } else {
           debugPrint('📊   ❌ Token exists but getUserInfo returned null - token invalid');
           // Token exists but is invalid - clear it
@@ -106,7 +119,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     debugPrint('📊 [${timestamp}] 🔐 AUTH BLOC - LoginRequested received');
     debugPrint('📊   Login: ${event.login}');
     debugPrint('📊   Sending password to backend for validation...');
-    emit(AuthLoading());
+    emit(AuthVerifyingCredentials(++_credentialVerifyAttemptId));
 
     try {
       final loginResponse = await authRepository.login(
@@ -135,7 +148,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         _hasRecentFailedLogin = false;
         debugPrint('📊   ✅ Cleared _hasRecentFailedLogin flag - password validated successfully');
         
-        emit(AuthAuthenticated(userId: user.id, login: user.login));
+        emit(AuthAuthenticated(
+          userId: user.id,
+          login: event.login.trim(),
+          sessionGeneration: ++_loginSessionGeneration,
+        ));
         } else {
           debugPrint('📊   ⚠️ Login successful but could not fetch user info');
           emit(AuthUnauthenticated());
@@ -148,12 +165,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final errorMsg = _extractErrorMessage(e);
       debugPrint('📊   ❌ Backend rejected password: $errorMsg');
       debugPrint('📊   ❌ Login failed - password validation failed');
-      // CRITICAL: Clear the cached token when login fails
-      // This prevents the app from unlocking using an old cached token
-      // IMPORTANT: Keep login - user needs it to unlock the app with PIN
-      await secureStorage.delete(key: 'token');
+      
+      // CRITICAL: Check if token exists - if it does, this is app lock scenario
+      // For app lock: Keep token so app shows lock screen on restart (not welcome screen)
+      // For fresh login: Token doesn't exist yet, so no need to delete
+      final existingToken = await secureStorage.read(key: 'token');
+      final hasExistingToken = existingToken != null && existingToken.isNotEmpty;
+      
+      if (hasExistingToken) {
+        // App lock scenario - token exists, user entered wrong PIN
+        // CRITICAL: DO NOT delete token - keep it so app shows lock screen on restart
+        // This matches first login behavior where wrong password doesn't delete anything
+        debugPrint('📊   🔒 App lock scenario - KEEPING token (wrong PIN entered)');
+        debugPrint('📊   🔒 Token preserved so app will show lock screen on restart');
+      } else {
+        // Fresh login scenario - no token exists
+        // No token to delete, just mark failed login
+        debugPrint('📊   🔐 Fresh login scenario - no token to delete');
+      }
+      
+      // IMPORTANT: Always keep login - user needs it to unlock the app with PIN
       // DO NOT delete login - user needs it to unlock with PIN
-      debugPrint('📊   🗑️ Cleared cached token after failed login (login preserved for unlock)');
       
       // CRITICAL: Mark that we had a failed login
       // This prevents AppStarted from unlocking with a cached token
@@ -192,7 +224,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     if (token != null) {
       final user = await authRepository.getUserInfo(token);
       if (user != null) {
-        emit(AuthAuthenticated(userId: user.id, login: user.login));
+        final storedLogin = (await secureStorage.read(key: 'login'))?.trim() ?? '';
+        final sessionLogin =
+            storedLogin.isNotEmpty ? storedLogin : user.login.trim();
+        emit(AuthAuthenticated(
+          userId: user.id,
+          login: sessionLogin,
+          sessionGeneration: 0,
+        ));
       } else {
         emit(AuthUnauthenticated());
       }
@@ -215,6 +254,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           hasPassword: result['hasPassword'] as bool,
           userId: result['userId'] as String,
           login: result['login'] as String,
+          nextStep: result['nextStep'] as String?,
+          otpSent: result['otpSent'] as bool?,
+          otpDeliveryMessage: result['otpDeliveryMessage'] as String?,
         ));
       } else {
         emit(const AuthFailure('User not found'));
@@ -234,7 +276,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final isValid = await authRepository.verifyOtp(
         event.contact,
         event.otp,
-        event.isEmail,
       );
 
       if (isValid) {
@@ -319,17 +360,37 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         try {
           final user = await authRepository.getUserInfo(token);
           if (user != null) {
+            // Prefer OTP / login-checker contact (email or phone as user used); API user.login favors email.
+            final fromContact = event.contact?.trim() ?? '';
+            final loginToStore = fromContact.isNotEmpty
+                ? fromContact
+                : (user.login.trim().isNotEmpty ? user.login.trim() : '');
+            if (loginToStore.isNotEmpty) {
+              await secureStorage.write(key: 'login', value: loginToStore);
+            }
             debugPrint('✅ BLOC: User info fetched, emitting success');
             emit(CreatePasswordSuccess(token: token));
-            emit(AuthAuthenticated(userId: user.id, login: user.login));
+            emit(AuthAuthenticated(
+              userId: user.id,
+              login: loginToStore.isNotEmpty ? loginToStore : user.login.trim(),
+              sessionGeneration: ++_loginSessionGeneration,
+            ));
           } else {
             debugPrint('⚠️ BLOC: User info is null, but password was set');
+            final fallbackLogin = event.contact?.trim() ?? '';
+            if (fallbackLogin.isNotEmpty) {
+              await secureStorage.write(key: 'login', value: fallbackLogin);
+            }
             // Password was set, but couldn't get user info - still success
             emit(CreatePasswordSuccess(token: token));
           }
         } catch (userInfoError) {
           debugPrint('❌ BLOC: Error fetching user info: $userInfoError');
           debugPrint('❌ BLOC: Error type: ${userInfoError.runtimeType}');
+          final fallbackLogin = event.contact?.trim() ?? '';
+          if (fallbackLogin.isNotEmpty) {
+            await secureStorage.write(key: 'login', value: fallbackLogin);
+          }
           // Password was set successfully, but user info fetch failed
           // Still emit success since password creation worked
           emit(CreatePasswordSuccess(token: token));
@@ -370,6 +431,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final success = await authRepository.resetPassword(
         event.login,
         event.newPassword,
+        event.pin,
       );
 
       debugPrint('🔵 BLOC: Reset password API returned: $success');
@@ -394,7 +456,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           if (user != null) {
             debugPrint('✅ BLOC: User authenticated after password reset');
             emit(ResetPasswordSuccess());
-            emit(AuthAuthenticated(userId: user.id, login: user.login));
+            emit(AuthAuthenticated(
+              userId: user.id,
+              login: event.login.trim(),
+              sessionGeneration: ++_loginSessionGeneration,
+            ));
           } else {
             emit(ResetPasswordSuccess());
             emit(AuthUnauthenticated());

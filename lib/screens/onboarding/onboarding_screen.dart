@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:communal_mobile/core/constants/images.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -53,71 +54,78 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: onboardingData.length,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentIndex = index;
-                });
-              },
-              itemBuilder: (context, index) {
-                return OnboardingPage(
-                  index: index,
-                  text: onboardingData[index]['text']!,
-                  image: onboardingData[index]['image']!,
-                );
-              },
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark.copyWith(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        body: Column(
+          children: [
+            Expanded(
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: onboardingData.length,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentIndex = index;
+                  });
+                },
+                itemBuilder: (context, index) {
+                  return OnboardingPage(
+                    index: index,
+                    text: onboardingData[index]['text']!,
+                    image: onboardingData[index]['image']!,
+                  );
+                },
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                vSpace(10),
-                OnboardingIndicator(
-                  currentIndex: _currentIndex,
-                  total: onboardingData.length,
-                ),
-                vSpace(20),
-                _currentIndex != onboardingData.length - 1
-                    ? Row(
-                        children: [
-                          Expanded(
-                            child: AppElevatedButton(
-                              title: 'Skip',
-                              onPressed: _onSkip,
-                            ),
-                          ),
-                          hSpace(10),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: _onNextPressed,
-                              style: ButtonStyle(
-                                backgroundColor: WidgetStateProperty.all<Color>(
-                                  Theme.of(context).primaryColor,
-                                ),
-                                foregroundColor: WidgetStateProperty.all<Color>(
-                                  Colors.white,
-                                ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  vSpace(10),
+                  OnboardingIndicator(
+                    currentIndex: _currentIndex,
+                    total: onboardingData.length,
+                  ),
+                  vSpace(20),
+                  _currentIndex != onboardingData.length - 1
+                      ? Row(
+                          children: [
+                            Expanded(
+                              child: AppElevatedButton(
+                                title: 'Skip',
+                                onPressed: _onSkip,
                               ),
-                              child: const Text('Next'),
                             ),
-                          ),
-                        ],
-                      )
-                    : AppElevatedButton(
-                        title: "Let's Go",
-                        onPressed: _onNextPressed,
-                      ),
-              ],
+                            hSpace(10),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: _onNextPressed,
+                                style: ButtonStyle(
+                                  backgroundColor: WidgetStateProperty.all<Color>(
+                                    Theme.of(context).primaryColor,
+                                  ),
+                                  foregroundColor: WidgetStateProperty.all<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                                child: const Text('Next'),
+                              ),
+                            ),
+                          ],
+                        )
+                      : AppElevatedButton(
+                          title: "Let's Go",
+                          onPressed: _onNextPressed,
+                        ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

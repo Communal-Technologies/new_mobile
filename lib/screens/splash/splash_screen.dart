@@ -9,6 +9,7 @@ import 'package:communal_mobile/cubits/splash/splash_state.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/connectivity_listener.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -43,16 +44,34 @@ class _SplashScreenState extends State<SplashScreen>
 
     _animationController.repeat();
 
-    // Navigate to welcome screen after 10 seconds (failsafe - increased to allow token verification)
-    _navigationTimer = Timer(const Duration(seconds: 10), () {
-      if (mounted) {
-        // Only navigate if we haven't already navigated (check if still on splash)
-        final currentRoute = GoRouterState.of(context).uri.path;
-        if (currentRoute == '/') {
-          print('⚠️ SPLASH - Failsafe timer fired, navigating to /welcome');
-          context.go('/welcome');
-        }
+    // Failsafe: if initApp is slow or never navigates, still leave splash using the same
+    // rules as SplashCubit (token → welcome-back for PIN, not logged-out welcome).
+    _navigationTimer = Timer(const Duration(seconds: 10), () async {
+      if (!mounted) return;
+      if (GoRouterState.of(context).uri.path != '/') return;
+
+      const storage = FlutterSecureStorage();
+      final onboarding = await storage.read(key: 'onboarding_completed');
+      final token = await storage.read(key: 'token');
+      if (!mounted) return;
+
+      final isFirstTime = onboarding != 'true';
+      if (isFirstTime) {
+        print('⚠️ SPLASH - Failsafe → /onboarding');
+        context.go('/onboarding');
+        return;
       }
+      if (token != null && token.isNotEmpty) {
+        print('⚠️ SPLASH - Failsafe → /welcome-back (token present)');
+        context.go('/welcome-back', extra: {
+          'phone': '',
+          'method': 'fingerprint',
+          'isAppLock': true,
+        });
+        return;
+      }
+      print('⚠️ SPLASH - Failsafe → /welcome (no token)');
+      context.go('/welcome');
     });
 
     // Try to initialize app (but don't block navigation)

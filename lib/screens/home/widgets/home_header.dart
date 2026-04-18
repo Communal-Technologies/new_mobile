@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/screens/home/widgets/cooperative_header_badge.dart';
 import 'package:go_router/go_router.dart';
 
 class HomeHeader extends StatelessWidget {
@@ -29,10 +30,8 @@ class HomeHeader extends StatelessWidget {
 
         final displayName = user?.name.isNotEmpty == true ? user!.name : 'Member';
         final roleLabel = user?.roleLabel ?? 'Member';
-        final coopLine1 = user?.cooperativeId ?? '—';
-        final coopLine2 = user?.ledgerNumber ?? '';
-
         final subtitle = user != null && user.login.isNotEmpty
+
             ? user.login
             : 'Welcome back';
 
@@ -69,41 +68,7 @@ class HomeHeader extends StatelessWidget {
                   ),
                 ),
               ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(6.r),
-                  border: Border.all(color: Colors.grey.shade200, width: 1),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      coopLine1,
-                      style: TextStyle(
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.w700,
-                        color: theme.primaryColor,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (coopLine2.isNotEmpty)
-                      Text(
-                        coopLine2,
-                        style: TextStyle(
-                          fontSize: 9.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                  ],
-                ),
-              ),
+              CooperativeHeaderBadge(user: user, theme: theme),
               hSpace(12),
               Expanded(
                 child: Column(

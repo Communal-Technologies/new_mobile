@@ -55,54 +55,70 @@ class _OtpInputFieldState extends State<OtpInputField> {
     return _controllers.map((c) => c.text).join();
   }
 
-  void _onChanged(int index, String value, String previousValue) {
-    if (value.length == 1 && index < widget.length - 1) {
-      // Move to next field when a digit is entered
-      _focusNodes[index + 1].requestFocus();
-    } else if (value.isEmpty && previousValue.isEmpty && index > 0) {
-      // Move to previous field when backspace is pressed on already empty field
-      _focusNodes[index - 1].requestFocus();
-    }
-
+  void _emitCode() {
     final code = _getCode();
     widget.onChanged(code);
-
     if (code.length == widget.length) {
       widget.onCompleted?.call(code);
     }
   }
 
+  /// Clipboard / autofill: multiple digits at once — fill boxes from the start.
+  void _applyPastedDigits(String raw) {
+    final digits = raw.replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) return;
+
+    final take = digits.length > widget.length
+        ? digits.substring(0, widget.length)
+        : digits;
+
+    for (var i = 0; i < widget.length; i++) {
+      final ch = i < take.length ? take[i] : '';
+      _controllers[i].text = ch;
+      _previousValues[i] = ch;
+    }
+
+    if (take.length >= widget.length) {
+      _focusNodes[widget.length - 1].unfocus();
+    } else {
+      _focusNodes[take.length].requestFocus();
+    }
+
+    _emitCode();
+  }
+
+  void _onChanged(int index, String value, String previousValue) {
+    if (value.length == 1 && index < widget.length - 1) {
+      _focusNodes[index + 1].requestFocus();
+    } else if (value.isEmpty && previousValue.isEmpty && index > 0) {
+      _focusNodes[index - 1].requestFocus();
+    }
+    _emitCode();
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: List.generate(widget.length, (index) {
-        final hasValue = _controllers[index].text.isNotEmpty;
+    return AutofillGroup(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: List.generate(widget.length, (index) {
+          final hasValue = _controllers[index].text.isNotEmpty;
 
-        return SizedBox(
-          width: 48.w,
-          height: 56.h,
-          child: RawKeyboardListener(
-            focusNode: FocusNode(),
-            onKey: (RawKeyEvent event) {
-              if (event is RawKeyDownEvent) {
-                if (event.logicalKey == LogicalKeyboardKey.backspace) {
-                  if (_controllers[index].text.isEmpty && index > 0) {
-                    // Move to previous field when backspace is pressed on empty field
-                    _focusNodes[index - 1].requestFocus();
-                  }
-                }
-              }
-            },
+          return SizedBox(
+            width: 48.w,
+            height: 56.h,
             child: TextField(
               controller: _controllers[index],
               focusNode: _focusNodes[index],
               textAlign: TextAlign.center,
               keyboardType: TextInputType.number,
-              maxLength: 1,
+              autofillHints: index == 0
+                  ? const [AutofillHints.oneTimeCode]
+                  : null,
+              // No per-cell maxLength — paste must deliver all digits to one field;
+              // we split in onChanged.
               style: TextStyle(
                 fontSize: 24.sp,
                 fontWeight: FontWeight.w600,
@@ -117,14 +133,16 @@ class _OtpInputFieldState extends State<OtpInputField> {
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12.r),
                   borderSide: BorderSide(
-                    color: hasValue ? theme.primaryColor : Colors.grey.shade300,
+                    color:
+                        hasValue ? theme.primaryColor : Colors.grey.shade300,
                     width: 1.5,
                   ),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12.r),
                   borderSide: BorderSide(
-                    color: hasValue ? theme.primaryColor : Colors.grey.shade300,
+                    color:
+                        hasValue ? theme.primaryColor : Colors.grey.shade300,
                     width: 1.5,
                   ),
                 ),
@@ -137,15 +155,39 @@ class _OtpInputFieldState extends State<OtpInputField> {
                 ),
               ),
               onChanged: (value) {
+                final digitsOnly = value.replaceAll(RegExp(r'\D'), '');
+
+                if (digitsOnly.length > 1) {
+                  // Paste (or OS autofill) delivered multiple digits into this cell.
+                  setState(() {
+                    _applyPastedDigits(digitsOnly);
+                  });
+                  return;
+                }
+
                 final previousValue = _previousValues[index];
+                if (digitsOnly.length == 1 &&
+                    value.isNotEmpty &&
+                    _controllers[index].text != digitsOnly) {
+                  _controllers[index].text = digitsOnly;
+                  _controllers[index].selection = TextSelection.collapsed(
+                    offset: digitsOnly.length,
+                  );
+                }
+
                 setState(() {
-                  _previousValues[index] = value;
+                  _previousValues[index] =
+                      digitsOnly.isNotEmpty ? digitsOnly : '';
                 });
-                _onChanged(index, value, previousValue);
+
+                _onChanged(
+                  index,
+                  digitsOnly.isNotEmpty ? digitsOnly : '',
+                  previousValue,
+                );
               },
               onTap: () {
                 if (_controllers[index].text.isEmpty) {
-                  // Find the first empty field and focus it
                   for (int i = 0; i < widget.length; i++) {
                     if (_controllers[i].text.isEmpty) {
                       _focusNodes[i].requestFocus();
@@ -160,10 +202,9 @@ class _OtpInputFieldState extends State<OtpInputField> {
                 }
               },
             ),
-          ),
-        );
-      }),
+          );
+        }),
+      ),
     );
   }
 }
-

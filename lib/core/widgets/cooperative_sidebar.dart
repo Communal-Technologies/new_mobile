@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 
 class CooperativeSidebar extends StatefulWidget {
@@ -52,112 +55,140 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                               ),
                             ],
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Header with X button
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Current Cooperative',
-                                    style: TextStyle(
-                                      fontSize: 18.sp,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.grey.shade800,
-                                    ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: () => Navigator.pop(context),
-                                    child: Icon(
-                                      Icons.close,
-                                      color: Colors.grey.shade700,
-                                      size: 22.sp,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                          child: BlocBuilder<AuthBloc, AuthState>(
+                            buildWhen: (prev, next) {
+                              final pu =
+                                  prev is AuthAuthenticated ? prev.user : null;
+                              final nu =
+                                  next is AuthAuthenticated ? next.user : null;
+                              return pu != nu;
+                            },
+                            builder: (context, authState) {
+                              final user = authState is AuthAuthenticated
+                                  ? authState.user
+                                  : null;
+                              final coopId = user?.cooperativeId ?? '—';
+                              final ledger = user?.ledgerNumber ?? '';
+                              final name = user?.name.isNotEmpty == true
+                                  ? user!.name
+                                  : (user?.login ?? 'Member');
+                              final role = user?.roleLabel ?? 'Member';
 
-                              vSpace(8),
-
-                              // Cooperative Info
-                              Row(
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Logo - White rounded rectangle
-                                  Container(
-                                    width: 44.w,
-                                    height: 44.w,
-                                    padding: EdgeInsets.all(5.w),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(8.r),
-                                      border: Border.all(
-                                        color: Colors.grey.shade300,
-                                        width: 1,
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Current Cooperative',
+                                        style: TextStyle(
+                                          fontSize: 18.sp,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey.shade800,
+                                        ),
                                       ),
-                                    ),
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          'ExxonMobil',
-                                          style: TextStyle(
-                                            fontSize: 7.5.sp,
-                                            fontWeight: FontWeight.w700,
-                                            color: Colors.red,
-                                            height: 1.0,
+                                      GestureDetector(
+                                        onTap: () => Navigator.pop(context),
+                                        child: Icon(
+                                          Icons.close,
+                                          color: Colors.grey.shade700,
+                                          size: 22.sp,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  vSpace(8),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 44.w,
+                                        height: 44.w,
+                                        padding: EdgeInsets.all(5.w),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(8.r),
+                                          border: Border.all(
+                                            color: Colors.grey.shade300,
+                                            width: 1,
                                           ),
                                         ),
-                                        SizedBox(height: 1.h),
-                                        Text(
-                                          'Bullion Crib',
-                                          style: TextStyle(
-                                            fontSize: 6.sp,
-                                            fontWeight: FontWeight.w600,
-                                            color: Color(0xFF1976D2),
-                                            height: 1.0,
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              coopId,
+                                              style: TextStyle(
+                                                fontSize: 7.sp,
+                                                fontWeight: FontWeight.w700,
+                                                color: theme.primaryColor,
+                                                height: 1.0,
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              textAlign: TextAlign.center,
+                                            ),
+                                            if (ledger.isNotEmpty) ...[
+                                              SizedBox(height: 1.h),
+                                              Text(
+                                                ledger,
+                                                style: TextStyle(
+                                                  fontSize: 5.5.sp,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.grey.shade700,
+                                                  height: 1.0,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                      hSpace(14),
+                                      Expanded(
+                                        child: Padding(
+                                          padding: EdgeInsets.only(right: 20.w),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                name,
+                                                style: TextStyle(
+                                                  fontSize: 15.sp,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: Colors.black,
+                                                ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              vSpace(2),
+                                              Text(
+                                                role,
+                                                style: TextStyle(
+                                                  fontSize: 13.sp,
+                                                  color: Colors.grey.shade700,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                  ),
-                                  hSpace(14),
-                                  Expanded(
-                                    child: Padding(
-                                      padding: EdgeInsets.only(right: 20.w),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Exxon Bullion Crib',
-                                            style: TextStyle(
-                                              fontSize: 15.sp,
-                                              fontWeight: FontWeight.w700,
-                                              color: Colors.black,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          vSpace(2),
-                                          Text(
-                                            'Member',
-                                            style: TextStyle(
-                                              fontSize: 13.sp,
-                                              color: Colors.grey.shade700,
-                                            ),
-                                          ),
-                                        ],
                                       ),
-                                    ),
-                                  ),
-                                  Icon(
-                                    Icons.more_vert,
-                                    color: Colors.grey.shade600,
-                                    size: 22.sp,
+                                      Icon(
+                                        Icons.more_vert,
+                                        color: Colors.grey.shade600,
+                                        size: 22.sp,
+                                      ),
+                                    ],
                                   ),
                                 ],
-                              ),
-                            ],
+                              );
+                            },
                           ),
                         ),
 

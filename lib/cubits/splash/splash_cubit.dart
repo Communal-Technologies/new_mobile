@@ -8,7 +8,8 @@ import 'package:communal_mobile/cubits/settings/settings_cubit.dart';
 import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
 import 'package:communal_mobile/data/models/settings_model.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
-import 'package:dio/dio.dart' show DioException;
+import 'package:communal_mobile/data/repositories/regions_repository.dart';
+import 'package:dio/dio.dart' show DioException, DioExceptionType;
 import 'splash_state.dart';
 
 class SplashCubit extends Cubit<SplashState> {
@@ -18,6 +19,7 @@ class SplashCubit extends Cubit<SplashState> {
   final SettingsCubit settingsCubit;
   final ConnectivityCubit connectivityCubit;
   final AuthRepository authRepository;
+  final RegionsRepository regionsRepository;
 
   SplashCubit(
     this.prefs,
@@ -26,106 +28,142 @@ class SplashCubit extends Cubit<SplashState> {
     this.settingsCubit,
     this.connectivityCubit,
     this.authRepository,
+    this.regionsRepository,
   ) : super(SplashInitial());
 
+  /// Cold start: wait for network (if needed), load settings + regions, then route.
+  /// Does not navigate on API failures — emits [SplashError] with a clear message instead.
   Future<void> initApp() async {
     emit(SplashLoading());
 
     try {
-      // Wait for connectivity if offline (NetworkInterceptor will handle this for API calls)
-      // But we still check here for initial state
-      if (!connectivityCubit.isConnected) {
-        final connectivity = await Connectivity().checkConnectivity();
-        final hasConnection = connectivity.any(
-          (result) => result == ConnectivityResult.mobile ||
-              result == ConnectivityResult.wifi ||
-              result == ConnectivityResult.ethernet,
-        );
+      await _waitForNetworkIfNeeded();
 
-        if (!hasConnection) {
-          emit(SplashNoInternet());
-          // Wait for connection to be restored
-          await connectivityCubit.waitForConnection();
-        }
+      final onboardingCompleted =
+          await secureStorage.read(key: 'onboarding_completed');
+      final isFirstTime = onboardingCompleted != 'true';
+      final token = await secureStorage.read(key: 'token');
+
+      final settingsMap = await _loadSystemSettingsOrEmitError();
+      if (settingsMap == null) return;
+
+      final regionsOk = await _loadRegionsOrEmitError();
+      if (!regionsOk) return;
+
+      if (isFirstTime) {
+        emit(SplashFirstTimeUser());
+        return;
       }
 
-      // Check if onboarding has been completed (same storage instance as the rest of the app)
-      final onboardingCompleted = await secureStorage.read(key: 'onboarding_completed');
-      final isFirstTime = onboardingCompleted != 'true'; // First time if onboarding not completed
-      print('🔵 SPLASH - isFirstTime: $isFirstTime (onboarding_completed: $onboardingCompleted)');
-      
-      // Check secure storage for token (same as AuthBloc uses)
-      final token = await secureStorage.read(key: 'token');
-      print('🔵 SPLASH - Token exists: ${token != null && token.isNotEmpty}');
+      if (token == null || token.isEmpty) {
+        emit(SplashLoggedOut());
+        return;
+      }
 
-      // NetworkInterceptor will wait for connectivity if offline
+      await _verifyTokenAndEmit(token, settingsMap);
+    } catch (e, stackTrace) {
+      // ignore: avoid_print
+      print('SPLASH - Top-level error: $e\n$stackTrace');
+      emit(SplashError('Something went wrong. Please try again.'));
+    }
+  }
+
+  Future<void> _waitForNetworkIfNeeded() async {
+    if (connectivityCubit.isConnected) return;
+
+    final connectivity = await Connectivity().checkConnectivity();
+    final hasConnection = connectivity.any(
+      (result) =>
+          result == ConnectivityResult.mobile ||
+          result == ConnectivityResult.wifi ||
+          result == ConnectivityResult.ethernet,
+    );
+
+    if (!hasConnection) {
+      emit(SplashNoInternet());
+      await connectivityCubit.waitForConnection();
+      emit(SplashLoading());
+    }
+  }
+
+  Future<Map<String, dynamic>?> _loadSystemSettingsOrEmitError() async {
+    try {
       final response = await dioClient.get(AppConstants.configUri);
-      final settings = response.data;
-      final settingsResponse = SettingsResponse.fromJson(settings);
+      final raw = response.data;
+      if (raw is! Map) {
+        emit(SplashError('Invalid response from server. Please try again.'));
+        return null;
+      }
+      final settingsResponse =
+          SettingsResponse.fromJson(Map<String, dynamic>.from(raw));
       final settingsMap = settingsResponse.asMap();
       settingsCubit.setSettings(settingsMap);
-      
-      // Priority: 1. First time user -> onboarding, 2. Has valid token -> welcome-back, 3. No token -> welcome
-      if (isFirstTime) {
-        print('🔵 SPLASH - Emitting SplashFirstTimeUser');
-        emit(SplashFirstTimeUser());
-      } else if (token != null && token.isNotEmpty) {
-        // Token exists, verify it's valid
-        // Verify token is valid by fetching user info (same as AuthBloc does)
-        print('🔵 SPLASH - Verifying token by fetching user info...');
-        try {
-          final user = await authRepository.getUserInfo(token);
-          if (user != null) {
-            // Token is valid, user is authenticated
-            print('🔵 SPLASH - User verified, emitting SplashLoggedIn');
-            emit(SplashLoggedIn(settingsMap));
-          } else {
-            // Token exists but is invalid
-            print('🔵 SPLASH - User is null, emitting SplashLoggedOut');
-            emit(SplashLoggedOut());
-          }
-        } on DioException catch (e) {
-          // Check if it's an authentication error (401/403)
-          final statusCode = e.response?.statusCode;
-          print('🔵 SPLASH - DioException verifying token: $statusCode - ${e.message}');
-          if (statusCode == 401 || statusCode == 403) {
-            // Token is invalid or expired
-            print('🔵 SPLASH - Authentication failed, emitting SplashLoggedOut');
-            emit(SplashLoggedOut());
-          } else {
-            // Network or other error - assume token is valid but network issue
-            // Still navigate to home since we have a token
-            print('🔵 SPLASH - Network error but token exists, emitting SplashLoggedIn');
-            emit(SplashLoggedIn(settingsMap));
-          }
-        } catch (e) {
-          // Other errors - assume token is valid but couldn't verify
-          // Still navigate to welcome-back so user can authenticate
-          print('🔵 SPLASH - Error verifying token (non-auth): $e');
-          print('🔵 SPLASH - Token exists but could not verify, emitting SplashLoggedIn');
-          emit(SplashLoggedIn(settingsMap));
-        }
+      return settingsMap;
+    } on DioException catch (e) {
+      emit(SplashError(_dioErrorMessage(e)));
+      return null;
+    } catch (_) {
+      emit(SplashError('Could not load app settings. Please try again.'));
+      return null;
+    }
+  }
+
+  Future<bool> _loadRegionsOrEmitError() async {
+    try {
+      await regionsRepository.fetchRegions(forceRefresh: true);
+      return true;
+    } on DioException catch (e) {
+      emit(SplashError(_dioErrorMessage(e)));
+      return false;
+    } catch (_) {
+      emit(SplashError('Could not load regions. Please try again.'));
+      return false;
+    }
+  }
+
+  Future<void> _verifyTokenAndEmit(
+    String token,
+    Map<String, dynamic> settingsMap,
+  ) async {
+    try {
+      final user = await authRepository.getUserInfo(token);
+      if (user != null) {
+        emit(SplashLoggedIn(settingsMap));
       } else {
-        // No token, user is logged out
-        print('🔵 SPLASH - No token, emitting SplashLoggedOut');
         emit(SplashLoggedOut());
       }
-    } catch (e) {
-      print('❌ SPLASH - Top-level error: $e');
-      // On error, check if we have a token - if yes, try to navigate to welcome-back
-      // If no token, show error
-      try {
-        final token = await secureStorage.read(key: 'token');
-        if (token != null && token.isNotEmpty) {
-          print('🔵 SPLASH - Error occurred but token exists, emitting SplashLoggedIn');
-          emit(SplashLoggedIn({})); // Empty settings map on error
-        } else {
-          emit(SplashError("Something went wrong: ${e.toString()}"));
-        }
-      } catch (storageError) {
-        print('❌ SPLASH - Error reading token from storage: $storageError');
-        emit(SplashError("Something went wrong: ${e.toString()}"));
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      if (statusCode == 401 || statusCode == 403) {
+        emit(SplashLoggedOut());
+      } else {
+        emit(SplashError(_dioErrorMessage(e)));
       }
+    } catch (_) {
+      emit(
+        SplashError(
+          'Could not verify your session. Check your connection and try again.',
+        ),
+      );
+    }
+  }
+
+  String _dioErrorMessage(DioException e) {
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        return 'Request timed out. Check your connection and try again.';
+      case DioExceptionType.connectionError:
+        return 'No internet connection. Check your network and try again.';
+      case DioExceptionType.badResponse:
+        final code = e.response?.statusCode;
+        if (code != null) {
+          return 'Server error ($code). Please try again later.';
+        }
+        return 'Could not reach the server. Please try again.';
+      default:
+        return 'Something went wrong. Please try again.';
     }
   }
 }

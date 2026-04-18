@@ -93,10 +93,10 @@ class SecurityCubit extends Cubit<SecurityState> {
   void lockApp({bool isIdleTimeout = false}) {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final stackTrace = StackTrace.current;
-    debugPrint('📊 [${timestamp}] 🔒 SECURITY CUBIT - lockApp() CALLED');
+    debugPrint('📊 [$timestamp] 🔒 SECURITY CUBIT - lockApp() CALLED');
     debugPrint('📊   Current state before lock: $state');
     debugPrint('📊   isIdleTimeout: $isIdleTimeout');
-    debugPrint('📊   Instance hash: ${hashCode}');
+    debugPrint('📊   Instance hash: $hashCode');
     debugPrint('📊   Stack trace: ${stackTrace.toString().split('\n').take(5).join('\n')}');
     
     // CRITICAL: Only delete token when app locks due to reasons OTHER than idle timeout
@@ -136,9 +136,9 @@ class SecurityCubit extends Cubit<SecurityState> {
   void unlockApp() {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final stackTrace = StackTrace.current;
-    debugPrint('📊 [${timestamp}] 🔓 SECURITY CUBIT - unlockApp() CALLED');
+    debugPrint('📊 [$timestamp] 🔓 SECURITY CUBIT - unlockApp() CALLED');
     debugPrint('📊   Current state before unlock: $state');
-    debugPrint('📊   Instance hash: ${hashCode}');
+    debugPrint('📊   Instance hash: $hashCode');
     debugPrint('📊   Stack trace: ${stackTrace.toString().split('\n').take(5).join('\n')}');
     
     // CRITICAL: Reset activity time to NOW to prevent immediate re-lock from idle detection

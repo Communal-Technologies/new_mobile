@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/models/user_model.dart';
 
 class CooperativeSidebar extends StatefulWidget {
   const CooperativeSidebar({super.key});
@@ -67,7 +68,7 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                               final user = authState is AuthAuthenticated
                                   ? authState.user
                                   : null;
-                              final coopId = user?.cooperativeId ?? '—';
+                              final coopLabel = user?.cooperativeDisplayName ?? '—';
                               final ledger = user?.ledgerNumber ?? '';
                               final name = user?.name.isNotEmpty == true
                                   ? user!.name
@@ -115,38 +116,11 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                                             width: 1,
                                           ),
                                         ),
-                                        child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              coopId,
-                                              style: TextStyle(
-                                                fontSize: 7.sp,
-                                                fontWeight: FontWeight.w700,
-                                                color: theme.primaryColor,
-                                                height: 1.0,
-                                              ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                              textAlign: TextAlign.center,
-                                            ),
-                                            if (ledger.isNotEmpty) ...[
-                                              SizedBox(height: 1.h),
-                                              Text(
-                                                ledger,
-                                                style: TextStyle(
-                                                  fontSize: 5.5.sp,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.grey.shade700,
-                                                  height: 1.0,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                textAlign: TextAlign.center,
-                                              ),
-                                            ],
-                                          ],
+                                        child: _cooperativeListThumb(
+                                          user: user,
+                                          theme: theme,
+                                          coopLabel: coopLabel,
+                                          ledger: ledger,
                                         ),
                                       ),
                                       hSpace(14),
@@ -256,6 +230,81 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                 ),
             ],
           ),
+    );
+  }
+
+  /// Matches home header: logo when URL is valid, else compact id + ledger text.
+  Widget _cooperativeListThumb({
+    required UserModel? user,
+    required ThemeData theme,
+    required String coopLabel,
+    required String ledger,
+  }) {
+    final logo = user?.cooperativeLogoUrl?.trim();
+    final useNet = logo != null &&
+        logo.isNotEmpty &&
+        (logo.startsWith('http://') || logo.startsWith('https://'));
+
+    if (useNet) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(6.r),
+        child: Image.network(
+          logo,
+          width: double.infinity,
+          height: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _cooperativeThumbText(
+            theme: theme,
+            coopLabel: coopLabel,
+            ledger: ledger,
+          ),
+        ),
+      );
+    }
+
+    return _cooperativeThumbText(
+      theme: theme,
+      coopLabel: coopLabel,
+      ledger: ledger,
+    );
+  }
+
+  Widget _cooperativeThumbText({
+    required ThemeData theme,
+    required String coopLabel,
+    required String ledger,
+  }) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          coopLabel,
+          style: TextStyle(
+            fontSize: 7.sp,
+            fontWeight: FontWeight.w700,
+            color: theme.primaryColor,
+            height: 1.0,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+        ),
+        if (ledger.isNotEmpty) ...[
+          SizedBox(height: 1.h),
+          Text(
+            ledger,
+            style: TextStyle(
+              fontSize: 5.5.sp,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade700,
+              height: 1.0,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ],
     );
   }
 

@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:communal_mobile/data/models/user_model.dart';
 
 abstract class AuthState extends Equatable {
   const AuthState();
@@ -25,6 +26,9 @@ class AuthAuthenticated extends AuthState {
   final String userId;
   final String login;
 
+  /// From [AuthRepository.getUserInfo] — used for home header, drawer, profile shortcuts.
+  final UserModel user;
+
   /// Bumps on each successful [LoginRequested] so [Bloc.emit] is not dropped when
   /// [userId]/[login] match the prior [AppStarted] session (Equatable).
   final int sessionGeneration;
@@ -32,11 +36,12 @@ class AuthAuthenticated extends AuthState {
   const AuthAuthenticated({
     required this.userId,
     required this.login,
+    required this.user,
     this.sessionGeneration = 0,
   });
 
   @override
-  List<Object?> get props => [userId, login, sessionGeneration];
+  List<Object?> get props => [userId, login, user, sessionGeneration];
 }
 
 class AuthUnauthenticated extends AuthState {}

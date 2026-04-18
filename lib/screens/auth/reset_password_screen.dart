@@ -60,7 +60,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     // It's a phone number
     // Show first 3 digits and last 4 digits, mask the rest
     if (contact.length <= 7) {
-      return '${'*' * contact.length}';
+      return '*' * contact.length;
     }
     final start = contact.substring(0, 3);
     final end = contact.substring(contact.length - 4);

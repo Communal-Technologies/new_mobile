@@ -75,7 +75,7 @@ class CommunityToggleSettingItem extends StatelessWidget {
           Switch(
             value: value,
             onChanged: enabled ? onChanged : null,
-            activeColor: const Color(0xFF7434FF),
+            activeThumbColor: const Color(0xFF7434FF),
           ),
         ],
       ),

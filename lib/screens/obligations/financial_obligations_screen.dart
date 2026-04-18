@@ -23,7 +23,7 @@ class _FinancialObligationsScreenState
   final List<String> _categories = ['Equity', 'Patronage', 'Custom', 'Fine'];
 
   String _selectedCategory = 'Equity';
-  int _currentNavIndex = 1;
+  final int _currentNavIndex = 1;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override

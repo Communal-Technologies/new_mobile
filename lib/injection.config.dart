@@ -27,6 +27,9 @@ import 'package:communal_mobile/data/datasources/remote/dio/network_interceptor.
     as _i126;
 import 'package:communal_mobile/data/repositories/auth_repository.dart'
     as _i493;
+import 'package:communal_mobile/data/repositories/kyc_repository.dart' as _i419;
+import 'package:communal_mobile/data/repositories/locations_repository.dart'
+    as _i210;
 import 'package:communal_mobile/data/repositories/regions_repository.dart'
     as _i835;
 import 'package:dio/dio.dart' as _i361;
@@ -82,6 +85,12 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i835.RegionsRepository>(
       () => repositoryModule.provideRegionsRepository(gh<_i750.DioClient>()),
+    );
+    gh.lazySingleton<_i210.LocationsRepository>(
+      () => repositoryModule.provideLocationsRepository(gh<_i750.DioClient>()),
+    );
+    gh.lazySingleton<_i419.KycRepository>(
+      () => repositoryModule.provideKycRepository(gh<_i750.DioClient>()),
     );
     gh.lazySingleton<_i739.SplashCubit>(
       () => cubitModule.provideSplashCubit(

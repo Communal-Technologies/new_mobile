@@ -1,5 +1,5 @@
-// dart format width=80
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// dart format width=80
 
 // **************************************************************************
 // InjectableConfigGenerator
@@ -27,6 +27,8 @@ import 'package:communal_mobile/data/datasources/remote/dio/network_interceptor.
     as _i126;
 import 'package:communal_mobile/data/repositories/auth_repository.dart'
     as _i493;
+import 'package:communal_mobile/data/repositories/regions_repository.dart'
+    as _i835;
 import 'package:dio/dio.dart' as _i361;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart' as _i558;
 import 'package:get_it/get_it.dart' as _i174;
@@ -59,11 +61,14 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i354.LoggingInterceptor>(
       () => networkModule.loggingInterceptor(),
     );
-    gh.lazySingleton<_i723.SecurityCubit>(
-      () => cubitModule.provideSecurityCubit(gh<_i460.SharedPreferences>(), gh<_i558.FlutterSecureStorage>()),
-    );
     gh.lazySingleton<_i126.NetworkInterceptor>(
       () => networkModule.networkInterceptor(gh<_i751.ConnectivityCubit>()),
+    );
+    gh.lazySingleton<_i723.SecurityCubit>(
+      () => cubitModule.provideSecurityCubit(
+        gh<_i460.SharedPreferences>(),
+        gh<_i558.FlutterSecureStorage>(),
+      ),
     );
     gh.lazySingleton<_i750.DioClient>(
       () => networkModule.dioClient(
@@ -75,11 +80,8 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i493.AuthRepository>(
       () => repositoryModule.provideAuthRepository(gh<_i750.DioClient>()),
     );
-    gh.factory<_i789.AuthBloc>(
-      () => _i789.AuthBloc(
-        authRepository: gh<_i493.AuthRepository>(),
-        secureStorage: gh<_i558.FlutterSecureStorage>(),
-      ),
+    gh.lazySingleton<_i835.RegionsRepository>(
+      () => repositoryModule.provideRegionsRepository(gh<_i750.DioClient>()),
     );
     gh.lazySingleton<_i739.SplashCubit>(
       () => cubitModule.provideSplashCubit(
@@ -89,6 +91,13 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i587.SettingsCubit>(),
         gh<_i751.ConnectivityCubit>(),
         gh<_i493.AuthRepository>(),
+        gh<_i835.RegionsRepository>(),
+      ),
+    );
+    gh.factory<_i789.AuthBloc>(
+      () => _i789.AuthBloc(
+        authRepository: gh<_i493.AuthRepository>(),
+        secureStorage: gh<_i558.FlutterSecureStorage>(),
       ),
     );
     return this;

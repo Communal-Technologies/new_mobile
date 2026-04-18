@@ -394,7 +394,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
     // It's a phone number
     // Show first 3 digits and last 4 digits, mask the rest
     if (input.length <= 7) {
-      return '${'*' * input.length}';
+      return '*' * input.length;
     }
     final start = input.substring(0, 3);
     final end = input.substring(input.length - 4);

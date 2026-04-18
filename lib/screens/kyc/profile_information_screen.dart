@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/widgets/custom_text_field.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
+import 'package:communal_mobile/core/widgets/phone_input_field.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/models/region_model.dart';
+import 'package:communal_mobile/data/repositories/regions_repository.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 
 class ProfileInformationScreen extends StatefulWidget {
   const ProfileInformationScreen({super.key});
@@ -36,6 +41,33 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
 
   String? _selectedState;
   String? _selectedCountry;
+  List<RegionModel> _regions = RegionModel.offlineFallback;
+  bool _regionsLoading = true;
+  PhoneNumber? _phoneNumber;
+  bool _phoneValid = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRegions();
+  }
+
+  Future<void> _loadRegions() async {
+    try {
+      final list = await getIt<RegionsRepository>().fetchRegions();
+      if (!mounted) return;
+      setState(() {
+        _regions = list.isNotEmpty ? list : RegionModel.offlineFallback;
+        _regionsLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _regions = RegionModel.offlineFallback;
+        _regionsLoading = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -95,9 +127,9 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
       isValid = false;
     }
 
-    if (_phoneController.text.isEmpty) {
+    if (_phoneNumber == null || !_phoneValid) {
       setState(() {
-        _phoneError = 'Phone number is required';
+        _phoneError = 'Enter a valid phone number';
       });
       isValid = false;
     }
@@ -130,7 +162,8 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
       isValid = false;
     }
 
-    if (_selectedCountry == null) {
+    if (_selectedCountry == null ||
+        !_regions.any((r) => r.name == _selectedCountry)) {
       setState(() {
         _countryError = 'Please select a country';
       });
@@ -279,13 +312,34 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                       onChanged: (_) => _clearErrors(),
                     ),
                     vSpace(16),
-                    CustomTextField(
-                      controller: _phoneController,
-                      hintText: 'Phone Number',
-                      keyboardType: TextInputType.phone,
-                      errorText: _phoneError,
-                      onChanged: (_) => _clearErrors(),
+                    Text(
+                      'Phone number',
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey.shade700,
+                      ),
                     ),
+                    vSpace(8),
+                    _regionsLoading
+                        ? SizedBox(
+                            height: 52.h,
+                            child: const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          )
+                        : PhoneInputField(
+                            controller: _phoneController,
+                            regions: _regions,
+                            errorText: _phoneError,
+                            onChanged: () => _clearErrors(),
+                            onPhoneNumberChanged: (phone, valid) {
+                              setState(() {
+                                _phoneNumber = phone;
+                                _phoneValid = valid;
+                              });
+                            },
+                          ),
 
                     vSpace(32),
 
@@ -357,7 +411,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                           child: _buildDropdown(
                             label: 'Country',
                             value: _selectedCountry,
-                            items: ['Nigeria', 'Ghana', 'Kenya', 'South Africa'],
+                            items: _regions.map((r) => r.name).toList(),
                             onChanged: (value) {
                               setState(() {
                                 _selectedCountry = value;

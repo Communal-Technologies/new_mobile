@@ -7,7 +7,10 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:go_router/go_router.dart';
 
 class BankInformationScreen extends StatefulWidget {
-  const BankInformationScreen({super.key});
+  const BankInformationScreen({super.key, this.anchorCustomerId});
+
+  /// From KYC step 1 (`POST /compliance/register/{id}`) — required for tier upgrades.
+  final String? anchorCustomerId;
 
   @override
   State<BankInformationScreen> createState() => _BankInformationScreenState();
@@ -90,13 +93,19 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
     return isValid;
   }
 
+  Map<String, dynamic> _kycExtra() {
+    final id = widget.anchorCustomerId;
+    if (id == null || id.isEmpty) return {};
+    return <String, dynamic>{'anchorCustomerId': id};
+  }
+
   void _skip() {
-    context.push('/kyc/proof-of-identity');
+    context.push('/kyc/proof-of-identity', extra: _kycExtra());
   }
 
   void _continue() {
     if (_validateForm()) {
-      context.push('/kyc/proof-of-identity');
+      context.push('/kyc/proof-of-identity', extra: _kycExtra());
     }
   }
 

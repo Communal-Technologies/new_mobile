@@ -179,31 +179,31 @@ class _DeleteAccountConfirmationScreenState
                 }
               : null,
           style: ButtonStyle(
-            backgroundColor: MaterialStateProperty.resolveWith<Color>(
-              (Set<MaterialState> states) {
-                if (states.contains(MaterialState.disabled)) {
+            backgroundColor: WidgetStateProperty.resolveWith<Color>(
+              (Set<WidgetState> states) {
+                if (states.contains(WidgetState.disabled)) {
                   return Colors.grey.shade300;
                 }
                 return const Color(0xFFFFB3BA); // Light pink when enabled
               },
             ),
-            foregroundColor: MaterialStateProperty.resolveWith<Color>(
-              (Set<MaterialState> states) {
-                if (states.contains(MaterialState.disabled)) {
+            foregroundColor: WidgetStateProperty.resolveWith<Color>(
+              (Set<WidgetState> states) {
+                if (states.contains(WidgetState.disabled)) {
                   return Colors.grey.shade600;
                 }
                 return Colors.white;
               },
             ),
-            padding: MaterialStateProperty.all(
+            padding: WidgetStateProperty.all(
               EdgeInsets.symmetric(vertical: 16.h),
             ),
-            shape: MaterialStateProperty.all(
+            shape: WidgetStateProperty.all(
               RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12.r),
               ),
             ),
-            elevation: MaterialStateProperty.all(0),
+            elevation: WidgetStateProperty.all(0),
           ),
           child: Text(
             'I understand, Delete my Account',

@@ -41,7 +41,7 @@ void main() async {
     (_) => runApp(
       MultiBlocProvider(
         providers: [
-          BlocProvider(create: (_) => getIt<SplashCubit>()..initApp()),
+          BlocProvider(create: (_) => getIt<SplashCubit>()),
           BlocProvider(create: (_) => getIt<SettingsCubit>()),
           BlocProvider(create: (_) => getIt<ConnectivityCubit>()),
         ],

@@ -65,6 +65,16 @@ import 'package:communal_mobile/screens/account/delete_account_final_confirmatio
 import 'package:communal_mobile/screens/account/delete_account_success_screen.dart';
 // import 'package:communal_mobile/core/features/wallet/screens/pages/wallet_page.dart';
 
+String? _kycAnchorCustomerId(Object? extra) {
+  if (extra is Map) {
+    final v = extra['anchorCustomerId'];
+    if (v != null && v.toString().trim().isNotEmpty) {
+      return v.toString().trim();
+    }
+  }
+  return null;
+}
+
 final GoRouter appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
   initialLocation: '/',
@@ -218,7 +228,9 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/kyc/bank-info',
       name: 'kyc-bank-info',
-      builder: (context, state) => const BankInformationScreen(),
+      builder: (context, state) => BankInformationScreen(
+        anchorCustomerId: _kycAnchorCustomerId(state.extra),
+      ),
     ),
     GoRoute(
       path: '/kyc/proof-of-identity',

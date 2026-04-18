@@ -145,7 +145,7 @@ class CommunityDetailScreen extends StatelessWidget {
               ),
               _buildHeaderMeta(
                 icon: Icons.place_outlined,
-                label: '${location.distanceLabel}',
+                label: location.distanceLabel,
               ),
               _buildHeaderMeta(
                 icon: Icons.star,
@@ -214,8 +214,8 @@ class CommunityDetailScreen extends StatelessWidget {
   Widget _buildStatsCard() {
     final stats = detail.stats;
     final items = [
-      ('${stats.totalLoans}', 'Total Loans Given'),
-      ('${stats.totalSavings}', 'Total Savings'),
+      ((stats.totalLoans), 'Total Loans Given'),
+      ((stats.totalSavings), 'Total Savings'),
       (stats.monthlyContribution, 'Contribution'),
       (stats.activeLoans, 'Active Loans'),
       (stats.defaultRate, 'Default Rate'),

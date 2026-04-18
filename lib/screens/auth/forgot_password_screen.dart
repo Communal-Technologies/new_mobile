@@ -8,8 +8,12 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/loader_overlay.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:go_router/go_router.dart';
+import 'package:communal_mobile/core/utils/phone_login_format.dart';
+import 'package:communal_mobile/data/models/region_model.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
+import 'package:communal_mobile/data/repositories/regions_repository.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 
 enum LoginType { phone, email }
 
@@ -32,29 +36,54 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   String? _emailError;
   LoginType _loginType = LoginType.phone;
   bool _isLoading = false;
+  List<RegionModel> _regions = RegionModel.offlineFallback;
+  bool _regionsLoading = true;
+  PhoneNumber? _initialPhone;
+  PhoneNumber? _phoneNumber;
+  bool _phoneValid = false;
 
   @override
   void initState() {
     super.initState();
-    print('🔵 FORGOT PASSWORD SCREEN - preFilledContact: ${widget.preFilledContact}');
-    // Pre-fill contact if provided
-    if (widget.preFilledContact != null && widget.preFilledContact!.isNotEmpty) {
-      final contact = widget.preFilledContact!;
-      print('🔵 FORGOT PASSWORD SCREEN - Processing contact: $contact');
-      if (contact.contains('@')) {
-        // It's an email
-        _loginType = LoginType.email;
-        _emailController.text = contact;
-        print('🔵 FORGOT PASSWORD SCREEN - Set as email: $contact');
+    _bootstrap();
+  }
+
+  Future<void> _bootstrap() async {
+    await _loadRegions();
+    if (!mounted) return;
+    final pre = widget.preFilledContact;
+    if (pre != null && pre.isNotEmpty) {
+      if (pre.contains('@')) {
+        setState(() {
+          _loginType = LoginType.email;
+          _emailController.text = pre;
+        });
       } else {
-        // It's a phone number (remove +234 if present)
-        _loginType = LoginType.phone;
-        final phone = contact.replaceFirst('+234', '');
-        _phoneController.text = phone;
-        print('🔵 FORGOT PASSWORD SCREEN - Set as phone: $phone (from $contact)');
+        final isos = _regions.map((r) => r.countryIso).toList();
+        final pn = await PhoneLoginFormat.phoneNumberForPrefill(pre, isos);
+        if (!mounted) return;
+        setState(() {
+          _loginType = LoginType.phone;
+          _initialPhone = pn;
+        });
       }
-    } else {
-      print('🔵 FORGOT PASSWORD SCREEN - No preFilledContact provided');
+    }
+  }
+
+  Future<void> _loadRegions() async {
+    try {
+      final list = await getIt<RegionsRepository>().fetchRegions();
+      if (!mounted) return;
+      setState(() {
+        _regions = list.isNotEmpty ? list : RegionModel.offlineFallback;
+        _regionsLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _regions = RegionModel.offlineFallback;
+        _regionsLoading = false;
+      });
     }
   }
 
@@ -84,23 +113,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     bool isEmail;
 
     if (_loginType == LoginType.phone) {
-      if (_phoneController.text.isEmpty) {
+      if (_phoneNumber == null || !_phoneValid) {
         setState(() {
-          _phoneError = 'Phone number is required';
+          _phoneError = 'Enter a valid phone number';
           _isLoading = false;
         });
         return;
       }
 
-      if (_phoneController.text.length != 11) {
-        setState(() {
-          _phoneError = 'Phone number must be 11 digits';
-          _isLoading = false;
-        });
-        return;
-      }
-
-      contact = '+234${_phoneController.text}';
+      contact = PhoneLoginFormat.apiLoginFromPhoneNumber(_phoneNumber!);
       isEmail = false;
     } else {
       if (_emailController.text.isEmpty) {
@@ -209,20 +230,36 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
               // Phone or Email input
               if (_loginType == LoginType.phone)
-                PhoneInputField(
-                  controller: _phoneController,
-                  errorText: _phoneError,
-                  onChanged: (_) {
-                    if (_phoneError != null) {
-                      setState(() {
-                        _phoneError = null;
-                      });
-                    }
-                  },
-                  onCountryTap: () {
-                    // TODO: Implement country selector
-                  },
-                )
+                _regionsLoading
+                    ? Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24.h),
+                        child: Center(
+                          child: SizedBox(
+                            width: 28.w,
+                            height: 28.w,
+                            child: const CircularProgressIndicator(),
+                          ),
+                        ),
+                      )
+                    : PhoneInputField(
+                        controller: _phoneController,
+                        regions: _regions,
+                        initialValue: _initialPhone,
+                        errorText: _phoneError,
+                        onChanged: () {
+                          if (_phoneError != null) {
+                            setState(() {
+                              _phoneError = null;
+                            });
+                          }
+                        },
+                        onPhoneNumberChanged: (phone, valid) {
+                          setState(() {
+                            _phoneNumber = phone;
+                            _phoneValid = valid;
+                          });
+                        },
+                      )
               else
                 CustomTextField(
                   controller: _emailController,

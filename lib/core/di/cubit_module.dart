@@ -3,6 +3,7 @@ import 'package:communal_mobile/cubits/settings/settings_cubit.dart';
 import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
 import 'package:communal_mobile/cubits/security/security_cubit.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
+import 'package:communal_mobile/data/repositories/regions_repository.dart';
 import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -18,8 +19,17 @@ abstract class CubitModule {
     SettingsCubit settingsCubit,
     ConnectivityCubit connectivityCubit,
     AuthRepository authRepository,
+    RegionsRepository regionsRepository,
   ) =>
-      SplashCubit(prefs, secureStorage, dioClient, settingsCubit, connectivityCubit, authRepository);
+      SplashCubit(
+        prefs,
+        secureStorage,
+        dioClient,
+        settingsCubit,
+        connectivityCubit,
+        authRepository,
+        regionsRepository,
+      );
 
   @lazySingleton
   SettingsCubit get settingsCubit => SettingsCubit();

@@ -6,6 +6,11 @@ import 'package:communal_mobile/core/widgets/phone_input_field.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:go_router/go_router.dart';
+import 'package:communal_mobile/core/utils/phone_login_format.dart';
+import 'package:communal_mobile/data/models/region_model.dart';
+import 'package:communal_mobile/data/repositories/regions_repository.dart';
+import 'package:communal_mobile/injection.dart';
+import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -18,6 +23,33 @@ class _SignupScreenState extends State<SignupScreen> {
   final _phoneController = TextEditingController();
   bool _agreedToTerms = false;
   String? _phoneError;
+  List<RegionModel> _regions = RegionModel.offlineFallback;
+  bool _regionsLoading = true;
+  PhoneNumber? _phoneNumber;
+  bool _phoneValid = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRegions();
+  }
+
+  Future<void> _loadRegions() async {
+    try {
+      final list = await getIt<RegionsRepository>().fetchRegions();
+      if (!mounted) return;
+      setState(() {
+        _regions = list.isNotEmpty ? list : RegionModel.offlineFallback;
+        _regionsLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _regions = RegionModel.offlineFallback;
+        _regionsLoading = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -31,16 +63,9 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     // Validation
-    if (_phoneController.text.isEmpty) {
+    if (_phoneNumber == null || !_phoneValid) {
       setState(() {
-        _phoneError = 'Phone number is required';
-      });
-      return;
-    }
-
-    if (_phoneController.text.length != 11) {
-      setState(() {
-        _phoneError = 'Phone number must be 11 digits';
+        _phoneError = 'Enter a valid phone number';
       });
       return;
     }
@@ -60,7 +85,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
     // Navigate to OTP verification
     context.push('/verify-phone', extra: {
-      'phone': '+234${_phoneController.text}',
+      'phone': PhoneLoginFormat.apiLoginFromPhoneNumber(_phoneNumber!),
       'method': 'sms',
     });
   }
@@ -127,20 +152,35 @@ class _SignupScreenState extends State<SignupScreen> {
               vSpace(32),
 
               // Phone input
-              PhoneInputField(
-                controller: _phoneController,
-                errorText: _phoneError,
-                onChanged: (_) {
-                  if (_phoneError != null) {
-                    setState(() {
-                      _phoneError = null;
-                    });
-                  }
-                },
-                onCountryTap: () {
-                  // TODO: Implement country selector
-                },
-              ),
+              _regionsLoading
+                  ? Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24.h),
+                      child: Center(
+                        child: SizedBox(
+                          width: 28.w,
+                          height: 28.w,
+                          child: const CircularProgressIndicator(),
+                        ),
+                      ),
+                    )
+                  : PhoneInputField(
+                      controller: _phoneController,
+                      regions: _regions,
+                      errorText: _phoneError,
+                      onChanged: () {
+                        if (_phoneError != null) {
+                          setState(() {
+                            _phoneError = null;
+                          });
+                        }
+                      },
+                      onPhoneNumberChanged: (phone, valid) {
+                        setState(() {
+                          _phoneNumber = phone;
+                          _phoneValid = valid;
+                        });
+                      },
+                    ),
 
               vSpace(24),
 

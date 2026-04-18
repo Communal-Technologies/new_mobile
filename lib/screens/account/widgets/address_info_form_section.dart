@@ -120,26 +120,17 @@ class _FormTextField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
   final String? Function(String?)? validator;
-  final bool readOnly;
-  final VoidCallback? onTap;
-  final TextInputType? keyboardType;
 
   const _FormTextField({
     required this.controller,
     required this.label,
     this.validator,
-    this.readOnly = false,
-    this.onTap,
-    this.keyboardType,
   });
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
       controller: controller,
-      readOnly: readOnly,
-      onTap: onTap,
-      keyboardType: keyboardType,
       validator: validator,
       decoration: InputDecoration(
         labelText: label,

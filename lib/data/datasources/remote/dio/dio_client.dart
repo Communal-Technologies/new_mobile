@@ -62,6 +62,7 @@ class DioClient {
     Map<String, dynamic>? queryParameters,
     CancelToken? cancelToken,
     ProgressCallback? onReceiveProgress,
+    bool requireAuth = true,
   }) async {
     _logRequest('GET', uri, queryParameters);
     try {
@@ -70,6 +71,15 @@ class DioClient {
         queryParameters: queryParameters,
         cancelToken: cancelToken,
         onReceiveProgress: onReceiveProgress,
+        options: requireAuth
+            ? null
+            : Options(
+                headers: {
+                  HttpHeaders.contentTypeHeader:
+                      'application/json; charset=UTF-8',
+                  'X-localization': AppConstants.defaultLanguage,
+                },
+              ),
       );
     } on SocketException {
       throw const SocketException('No Internet connection');

@@ -802,7 +802,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
 }
 
 class JoinCommunityBottomSheet extends StatefulWidget {
-  const JoinCommunityBottomSheet({required this.community});
+  const JoinCommunityBottomSheet({super.key, required this.community});
 
   final CommunityLocation community;
 

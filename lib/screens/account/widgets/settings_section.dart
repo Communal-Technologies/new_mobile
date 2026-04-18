@@ -116,7 +116,7 @@ class _PreferenceItemState extends State<_PreferenceItem> {
                 _isDarkMode = value;
               });
             },
-            activeColor: const Color(0xFF7434FF),
+            activeThumbColor: const Color(0xFF7434FF),
           ),
         ],
       ),

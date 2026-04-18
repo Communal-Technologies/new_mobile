@@ -50,7 +50,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onAppStarted(AppStarted event, Emitter<AuthState> emit) async {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    debugPrint('📊 [${timestamp}] 🔐 AUTH BLOC - AppStarted event received');
+    debugPrint('📊 [$timestamp] 🔐 AUTH BLOC - AppStarted event received');
     debugPrint('📊   _hasRecentFailedLogin: $_hasRecentFailedLogin');
     
     // CRITICAL: If we just had a failed login, don't unlock with cached token
@@ -78,7 +78,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         final user = await authRepository.getUserInfo(token);
         if (user != null) {
           final timestamp2 = DateTime.now().millisecondsSinceEpoch;
-          debugPrint('📊 [${timestamp2}] 🔐 AUTH BLOC - Emitting AuthAuthenticated (from AppStarted)');
+          debugPrint('📊 [$timestamp2] 🔐 AUTH BLOC - Emitting AuthAuthenticated (from AppStarted)');
           debugPrint('📊   ✅ Token validated with backend - user authenticated');
           final storedLogin = (await secureStorage.read(key: 'login'))?.trim() ?? '';
           final sessionLogin =
@@ -87,6 +87,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           emit(AuthAuthenticated(
             userId: user.id,
             login: sessionLogin,
+            user: user,
             sessionGeneration: 0,
           ));
         } else {
@@ -116,7 +117,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    debugPrint('📊 [${timestamp}] 🔐 AUTH BLOC - LoginRequested received');
+    debugPrint('📊 [$timestamp] 🔐 AUTH BLOC - LoginRequested received');
     debugPrint('📊   Login: ${event.login}');
     debugPrint('📊   Sending password to backend for validation...');
     emit(AuthVerifyingCredentials(++_credentialVerifyAttemptId));
@@ -139,7 +140,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       if (user != null) {
         final timestamp2 = DateTime.now().millisecondsSinceEpoch;
-        debugPrint('📊 [${timestamp2}] 🔐 AUTH BLOC - Emitting AuthAuthenticated (from LoginRequested)');
+        debugPrint('📊 [$timestamp2] 🔐 AUTH BLOC - Emitting AuthAuthenticated (from LoginRequested)');
         debugPrint('📊   ✅ Password validated by backend - user authenticated');
         debugPrint('📊   ✅ Backend returned 200 OK - password is correct');
         debugPrint('📊   User ID: ${user.id}, Login: ${user.login}');
@@ -151,6 +152,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthAuthenticated(
           userId: user.id,
           login: event.login.trim(),
+          user: user,
           sessionGeneration: ++_loginSessionGeneration,
         ));
         } else {
@@ -230,6 +232,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthAuthenticated(
           userId: user.id,
           login: sessionLogin,
+          user: user,
           sessionGeneration: 0,
         ));
       } else {
@@ -373,6 +376,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             emit(AuthAuthenticated(
               userId: user.id,
               login: loginToStore.isNotEmpty ? loginToStore : user.login.trim(),
+              user: user,
               sessionGeneration: ++_loginSessionGeneration,
             ));
           } else {
@@ -459,6 +463,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             emit(AuthAuthenticated(
               userId: user.id,
               login: event.login.trim(),
+              user: user,
               sessionGeneration: ++_loginSessionGeneration,
             ));
           } else {

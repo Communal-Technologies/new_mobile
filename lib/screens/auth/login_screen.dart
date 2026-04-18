@@ -7,7 +7,12 @@ import 'package:communal_mobile/core/widgets/custom_text_field.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:go_router/go_router.dart';
+import 'package:communal_mobile/core/utils/phone_login_format.dart';
+import 'package:communal_mobile/data/models/region_model.dart';
+import 'package:communal_mobile/data/repositories/regions_repository.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
@@ -28,6 +33,33 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _emailError;
   LoginType _loginType = LoginType.phone;
   bool _isLoading = false;
+  List<RegionModel> _regions = RegionModel.offlineFallback;
+  bool _regionsLoading = true;
+  PhoneNumber? _phoneNumber;
+  bool _phoneValid = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRegions();
+  }
+
+  Future<void> _loadRegions() async {
+    try {
+      final list = await getIt<RegionsRepository>().fetchRegions();
+      if (!mounted) return;
+      setState(() {
+        _regions = list.isNotEmpty ? list : RegionModel.offlineFallback;
+        _regionsLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _regions = RegionModel.offlineFallback;
+        _regionsLoading = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -51,21 +83,16 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     if (_loginType == LoginType.phone) {
-      if (_phoneController.text.isEmpty) {
+      if (_phoneNumber == null || !_phoneValid) {
         setState(() {
-          _phoneError = 'Phone number is required';
+          _phoneError = 'Enter a valid phone number';
         });
         return;
       }
 
-      if (_phoneController.text.length != 11) {
-        setState(() {
-          _phoneError = 'Phone number must be 11 digits';
-        });
-        return;
-      }
-
-      _checkLoginAndProceed('+234${_phoneController.text}');
+      _checkLoginAndProceed(
+        PhoneLoginFormat.apiLoginFromPhoneNumber(_phoneNumber!),
+      );
     } else {
       if (_emailController.text.isEmpty) {
         setState(() {
@@ -159,20 +186,35 @@ class _LoginScreenState extends State<LoginScreen> {
 
               // Phone or Email input
               if (_loginType == LoginType.phone)
-                PhoneInputField(
-                  controller: _phoneController,
-                  errorText: _phoneError,
-                  onChanged: (_) {
-                    if (_phoneError != null) {
-                      setState(() {
-                        _phoneError = null;
-                      });
-                    }
-                  },
-                  onCountryTap: () {
-                    // TODO: Implement country selector
-                  },
-                )
+                _regionsLoading
+                    ? Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24.h),
+                        child: Center(
+                          child: SizedBox(
+                            width: 28.w,
+                            height: 28.w,
+                            child: const CircularProgressIndicator(),
+                          ),
+                        ),
+                      )
+                    : PhoneInputField(
+                        controller: _phoneController,
+                        regions: _regions,
+                        errorText: _phoneError,
+                        onChanged: () {
+                          if (_phoneError != null) {
+                            setState(() {
+                              _phoneError = null;
+                            });
+                          }
+                        },
+                        onPhoneNumberChanged: (phone, valid) {
+                          setState(() {
+                            _phoneNumber = phone;
+                            _phoneValid = valid;
+                          });
+                        },
+                      )
               else
                 CustomTextField(
                   controller: _emailController,
@@ -226,7 +268,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     if (state.hasPassword) {
                       // User has password, navigate to welcome back screen
                       final login = _loginType == LoginType.phone
-                          ? '+234${_phoneController.text}'
+                          ? PhoneLoginFormat.apiLoginFromPhoneNumber(
+                              _phoneNumber!,
+                            )
                           : _emailController.text;
                       context.push('/welcome-back', extra: {
                         'phone': login,
@@ -235,7 +279,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     } else {
                       // User doesn't have password — backend sends OTP on login-checker; go verify.
                       final login = _loginType == LoginType.phone
-                          ? '+234${_phoneController.text}'
+                          ? PhoneLoginFormat.apiLoginFromPhoneNumber(
+                              _phoneNumber!,
+                            )
                           : _emailController.text;
                       final msg = state.otpDeliveryMessage;
                       if (msg != null && msg.isNotEmpty) {

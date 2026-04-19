@@ -13,6 +13,9 @@ class PhoneInputField extends StatefulWidget {
     this.errorText,
     this.onChanged,
     this.onPhoneNumberChanged,
+    this.focusNode,
+    this.keyboardAction,
+    this.onFieldSubmitted,
   });
 
   final TextEditingController controller;
@@ -21,6 +24,9 @@ class PhoneInputField extends StatefulWidget {
   final String? errorText;
   final VoidCallback? onChanged;
   final void Function(PhoneNumber phone, bool isValid)? onPhoneNumberChanged;
+  final FocusNode? focusNode;
+  final TextInputAction? keyboardAction;
+  final void Function(String value)? onFieldSubmitted;
 
   static PhoneNumber seedFromRegions(List<RegionModel> regions) {
     if (regions.isEmpty) {
@@ -61,7 +67,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
             ),
             child: Text(
               'Allowed countries could not be loaded. Check your connection and try again.',
-              style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade800),
+              style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade800),
             ),
           ),
         ],
@@ -111,6 +117,9 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
             autoValidateMode: AutovalidateMode.onUserInteraction,
             initialValue: initial,
             textFieldController: widget.controller,
+            focusNode: widget.focusNode,
+            keyboardAction: widget.keyboardAction,
+            onFieldSubmitted: widget.onFieldSubmitted,
             formatInput: true,
             hintText: 'Phone number',
             maxLength: 15,
@@ -122,7 +131,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
               hintText: 'Phone number',
               hintStyle: TextStyle(
                 color: Colors.grey.shade400,
-                fontSize: 16.sp,
+                fontSize: 18.sp,
               ),
               border: InputBorder.none,
               isDense: true,
@@ -138,11 +147,11 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
               ),
             ),
             selectorTextStyle: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 18.sp,
               color: Colors.black87,
             ),
             textStyle: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 18.sp,
               color: Colors.black,
             ),
           ),
@@ -155,7 +164,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
               widget.errorText!,
               style: TextStyle(
                 color: Colors.red,
-                fontSize: 12.sp,
+                fontSize: 15.sp,
               ),
             ),
           ),

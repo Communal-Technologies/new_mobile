@@ -1,13 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import 'package:communal_mobile/core/utils/currency_formatter.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/models/tier_limits_model.dart';
 
+/// Summary of the member's Communal KYC tier and limits (amounts from API in kobo).
 class KycCurrentTierCard extends StatelessWidget {
-  const KycCurrentTierCard({super.key});
+  const KycCurrentTierCard({
+    super.key,
+    required this.current,
+    this.nextTierKey,
+    this.onContinueVerification,
+  });
+
+  final TierCurrent current;
+  final String? nextTierKey;
+  final VoidCallback? onContinueVerification;
 
   @override
   Widget build(BuildContext context) {
+    final title = current.displayTierTitle;
+    final showUpgrade = nextTierKey != null && onContinueVerification != null;
+    final showCurrentBadge =
+        current.tierKey == 'tier_1' || current.tierKey == 'tier_2';
+
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w),
       padding: EdgeInsets.all(20.w),
@@ -24,29 +41,32 @@ class KycCurrentTierCard extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    'Tier 3',
+                    title,
                     style: TextStyle(
                       fontSize: 28.sp,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
                   ),
-                  hSpace(12),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF5A1FE6), // Slightly darker purple
-                      borderRadius: BorderRadius.circular(20.r),
-                    ),
-                    child: Text(
-                      'Current',
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                  if (showCurrentBadge) ...[
+                    hSpace(12),
+                    Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF5A1FE6),
+                        borderRadius: BorderRadius.circular(20.r),
+                      ),
+                      child: Text(
+                        'Current',
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
               Column(
@@ -65,9 +85,9 @@ class KycCurrentTierCard extends StatelessWidget {
                   ),
                   vSpace(4),
                   Text(
-                    'Tier',
+                    'Status',
                     style: TextStyle(
-                      fontSize: 11.sp,
+                      fontSize: 13.sp,
                       color: Colors.white.withOpacity(0.9),
                     ),
                   ),
@@ -75,26 +95,69 @@ class KycCurrentTierCard extends StatelessWidget {
               ),
             ],
           ),
-          vSpace(24),
-          _buildLimitRow(
-            label: 'Daily Transaction Limit',
-            value: '₦5,000,000',
+          vSpace(8),
+          Text(
+            current.label,
+            style: TextStyle(
+              fontSize: 15.sp,
+              color: Colors.white.withOpacity(0.9),
+            ),
           ),
-          vSpace(16),
-          _buildLimitRow(
-            label: 'Maximum Balance',
-            value: '₦10,000,000',
-          ),
-          vSpace(24),
-          _buildVerificationStatus(
-            label: 'NIN',
-            value: '**** *** 2217',
-            isVerified: true,
-          ),
-          vSpace(12),
-          _buildBvnVerificationButton(context),
-          vSpace(16),
-          _buildKycDetailsButton(context),
+          vSpace(20),
+          if (current.isPreVerificationTier) ...[
+            Text(
+              'You are not on a verification tier yet. Complete profile and bank '
+              'verification to get your account number and Tier 1 limits.',
+              style: TextStyle(
+                fontSize: 16.sp,
+                height: 1.35,
+                color: Colors.white.withOpacity(0.92),
+              ),
+            ),
+          ] else ...[
+            _buildLimitRow(
+              label: 'Daily transaction limit',
+              value: CurrencyFormatter.formatNairaFromKobo(
+                current.dailyTransactionLimitKobo,
+              ),
+            ),
+            vSpace(16),
+            _buildLimitRow(
+              label: 'Maximum balance',
+              value: CurrencyFormatter.formatNairaFromKobo(
+                current.maxBalanceKobo,
+              ),
+            ),
+          ],
+          if (showUpgrade) ...[
+            vSpace(20),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: onContinueVerification,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: BorderSide(
+                    color: Colors.white.withOpacity(0.35),
+                    width: 1.5,
+                  ),
+                  padding: EdgeInsets.symmetric(vertical: 12.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
+                ),
+                child: Text(
+                  nextTierKey == 'tier_2'
+                      ? 'Continue to Tier 2 verification'
+                      : 'Continue verification',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -110,15 +173,15 @@ class KycCurrentTierCard extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 13.sp,
-            color: Colors.white.withOpacity(0.8),
+            fontSize: 15.sp,
+            color: Colors.white.withOpacity(0.82),
           ),
         ),
         vSpace(4),
         Text(
           value,
           style: TextStyle(
-            fontSize: 20.sp,
+            fontSize: 22.sp,
             fontWeight: FontWeight.w700,
             color: Colors.white,
           ),
@@ -126,106 +189,4 @@ class KycCurrentTierCard extends StatelessWidget {
       ],
     );
   }
-
-  Widget _buildVerificationStatus({
-    required String label,
-    required String value,
-    required bool isVerified,
-  }) {
-    return Row(
-      children: [
-        Icon(
-          Icons.check_circle,
-          color: Colors.green.shade300,
-          size: 20.sp,
-        ),
-        hSpace(8),
-        Text(
-          '$label $value',
-          style: TextStyle(
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBvnVerificationButton(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton(
-        onPressed: () {
-          // TODO: Navigate to BVN verification
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('BVN verification coming soon')),
-          );
-        },
-        style: OutlinedButton.styleFrom(
-          foregroundColor: Colors.white,
-          side: BorderSide(
-            color: Colors.white.withOpacity(0.3),
-            width: 1.5,
-          ),
-          padding: EdgeInsets.symmetric(vertical: 12.h),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.r),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'BVN',
-              style: TextStyle(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            hSpace(4),
-            Text(
-              'Verify BVN',
-              style: TextStyle(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            hSpace(4),
-            Icon(Icons.arrow_forward, size: 16.sp),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildKycDetailsButton(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        // TODO: Show KYC details bottom sheet or navigate
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('KYC details')),
-        );
-      },
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'KYC Details',
-            style: TextStyle(
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-          Icon(
-            Icons.keyboard_arrow_down,
-            color: Colors.white,
-            size: 20.sp,
-          ),
-        ],
-      ),
-    );
-  }
 }
-

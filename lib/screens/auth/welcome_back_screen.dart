@@ -503,7 +503,23 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return BlocListener<SecurityCubit, SecurityState>(
+    return BlocListener<AuthBloc, AuthState>(
+      listenWhen: (previous, current) =>
+          current is AuthUnauthenticated || current is AuthInitial,
+      listener: (context, state) {
+        if (!mounted) {
+          return;
+        }
+        if (_waitingForBackendValidation || _isAuthenticating) {
+          setState(() {
+            _waitingForBackendValidation = false;
+            _isAuthenticating = false;
+            _password = '';
+            _pinController.clear();
+          });
+        }
+      },
+      child: BlocListener<SecurityCubit, SecurityState>(
       listenWhen: (previous, current) {
         // Only listen when app unlocks (for fresh login navigation)
         if (!widget.isAppLock && previous == SecurityState.locked && current == SecurityState.unlocked) {
@@ -738,11 +754,15 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
           builder: (context, securityState) {
             // Rebuild when AuthBloc hits verifying / result so loader appears even if the first
             // setState frame is skipped before the bloc processes LoginRequested.
-            final _ = context.watch<AuthBloc>().state;
-            // PIN API in flight, or biometric / PIN while security lock UI is showing.
-            final shouldShowLoader = _waitingForBackendValidation ||
-                (_isAuthenticating &&
-                    securityState == SecurityState.locked);
+            final authState = context.watch<AuthBloc>().state;
+            // [LoginRequested] emits [AuthVerifyingCredentials], not [AuthAuthenticated].
+            // Treat both as an active session so the PIN loader stays visible during the API call.
+            final hasAuthSession = authState is AuthAuthenticated ||
+                authState is AuthVerifyingCredentials;
+            final shouldShowLoader = hasAuthSession &&
+                (_waitingForBackendValidation ||
+                    (_isAuthenticating &&
+                        securityState == SecurityState.locked));
             
             return Stack(
             fit: StackFit.expand,
@@ -936,23 +956,24 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
             ],
           ),
         ),
-          ),
-        ),
-          // Loader overlay when authenticating AND app is still locked
-          // CRITICAL: Hide loader immediately when app becomes unlocked
-          if (shouldShowLoader)
-            Positioned.fill(
-              child: const LoaderOverlay(),
-            ),
-        ],
-      );
+      ),
+    ),
+              // Loader overlay when authenticating AND app is still locked
+              // CRITICAL: Hide loader immediately when app becomes unlocked
+              if (shouldShowLoader)
+                Positioned.fill(
+                  child: const LoaderOverlay(),
+                ),
+            ],
+          );
           },
         ),
-        ),
       ),
-      ),
-    );
-  }
+    ),
+  ),
+  ),
+);
+ }
 
   Widget _buildFingerprintContent(ThemeData theme) {
     return Column(

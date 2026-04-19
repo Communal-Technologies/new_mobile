@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/cubits/settings/settings_cubit.dart';
-import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
 import 'package:communal_mobile/data/models/settings_model.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/data/repositories/regions_repository.dart';
@@ -17,7 +16,6 @@ class SplashCubit extends Cubit<SplashState> {
   final FlutterSecureStorage secureStorage;
   final DioClient dioClient;
   final SettingsCubit settingsCubit;
-  final ConnectivityCubit connectivityCubit;
   final AuthRepository authRepository;
   final RegionsRepository regionsRepository;
 
@@ -26,7 +24,6 @@ class SplashCubit extends Cubit<SplashState> {
     this.secureStorage,
     this.dioClient,
     this.settingsCubit,
-    this.connectivityCubit,
     this.authRepository,
     this.regionsRepository,
   ) : super(SplashInitial());
@@ -38,6 +35,8 @@ class SplashCubit extends Cubit<SplashState> {
 
     try {
       await _waitForNetworkIfNeeded();
+      // Clear [SplashNoInternet] so the UI shows loading while settings/regions run.
+      emit(SplashLoading());
 
       final onboardingCompleted =
           await secureStorage.read(key: 'onboarding_completed');
@@ -68,21 +67,33 @@ class SplashCubit extends Cubit<SplashState> {
     }
   }
 
+  /// Blocks until the OS reports Wi‑Fi, mobile data, or ethernet.
+  ///
+  /// Uses [Connectivity] directly so we are not fooled by [ConnectivityCubit]
+  /// being briefly out of sync, and we do not continue while the device still
+  /// reports [ConnectivityResult.none].
+  ///
+  /// Stays on [SplashNoInternet] until connectivity returns — no navigation.
   Future<void> _waitForNetworkIfNeeded() async {
-    if (connectivityCubit.isConnected) return;
+    bool hasTransport(List<ConnectivityResult> results) {
+      return results.any(
+        (result) =>
+            result == ConnectivityResult.mobile ||
+            result == ConnectivityResult.wifi ||
+            result == ConnectivityResult.ethernet,
+      );
+    }
 
-    final connectivity = await Connectivity().checkConnectivity();
-    final hasConnection = connectivity.any(
-      (result) =>
-          result == ConnectivityResult.mobile ||
-          result == ConnectivityResult.wifi ||
-          result == ConnectivityResult.ethernet,
-    );
+    var results = await Connectivity().checkConnectivity();
+    if (hasTransport(results)) return;
 
-    if (!hasConnection) {
+    emit(SplashNoInternet());
+
+    await for (final next in Connectivity().onConnectivityChanged) {
+      if (hasTransport(next)) {
+        return;
+      }
       emit(SplashNoInternet());
-      await connectivityCubit.waitForConnection();
-      emit(SplashLoading());
     }
   }
 

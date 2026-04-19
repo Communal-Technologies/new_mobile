@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:communal_mobile/data/models/tier_limits_model.dart';
 
 class UserModel extends Equatable {
   final String id;
@@ -25,6 +26,12 @@ class UserModel extends Equatable {
   /// Profile `country` when stored as a 2-letter ISO code (e.g. NG).
   final String? countryIso;
 
+  /// From `profile.tier` on `get-loggedin-user` (e.g. tier_0, tier_1, tier_2).
+  final String? communalTier;
+
+  /// Member KYC tier limits + catalog from `tier_limits` on `get-loggedin-user`.
+  final TierLimitsSnapshot? tierLimits;
+
   const UserModel({
     required this.id,
     required this.name,
@@ -42,6 +49,8 @@ class UserModel extends Equatable {
     this.email,
     this.phone,
     this.countryIso,
+    this.communalTier,
+    this.tierLimits,
   });
 
   String get roleLabel {
@@ -56,6 +65,13 @@ class UserModel extends Equatable {
     final id = cooperativeId?.trim();
     if (id != null && id.isNotEmpty) return id;
     return '—';
+  }
+
+  /// True when the profile is linked to a cooperative (id and/or name from API).
+  bool get hasCooperativeMembership {
+    final id = cooperativeId?.trim();
+    final n = cooperativeName?.trim();
+    return (id != null && id.isNotEmpty) || (n != null && n.isNotEmpty);
   }
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -107,6 +123,17 @@ class UserModel extends Equatable {
     final fn = profile?['first_name']?.toString().trim();
     final mn = profile?['middle_name']?.toString().trim();
     final ln = profile?['last_name']?.toString().trim();
+
+    String? communalTierVal;
+    final rawTier = profile?['tier']?.toString().trim();
+    if (rawTier != null && rawTier.isNotEmpty) {
+      communalTierVal = rawTier;
+    }
+
+    final tierLimitsRaw = json['tier_limits'];
+    final tierLimitsParsed = tierLimitsRaw is Map
+        ? TierLimitsSnapshot.fromJson(Map<String, dynamic>.from(tierLimitsRaw))
+        : null;
 
     String? profileCountryIso;
     final rawCountry = profile?['country']?.toString().trim();
@@ -161,6 +188,8 @@ class UserModel extends Equatable {
       email: emailVal != null && emailVal.isNotEmpty ? emailVal : null,
       phone: phoneVal != null && phoneVal.isNotEmpty ? phoneVal : null,
       countryIso: profileCountryIso,
+      communalTier: communalTierVal,
+      tierLimits: tierLimitsParsed,
     );
   }
 
@@ -182,6 +211,7 @@ class UserModel extends Equatable {
       'email': email,
       'phone': phone,
       'country_iso': countryIso,
+      'communal_tier': communalTier,
     };
   }
 
@@ -203,5 +233,7 @@ class UserModel extends Equatable {
         email,
         phone,
         countryIso,
+        communalTier,
+        tierLimits,
       ];
 }

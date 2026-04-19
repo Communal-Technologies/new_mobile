@@ -10,6 +10,16 @@ import 'package:communal_mobile/core/theme/colors.dart';
 import 'package:communal_mobile/routes/app_routes.dart';
 import 'package:communal_mobile/core/navigation/root_navigator_key.dart';
 
+/// True while the initial splash is active — do not override routing (e.g. to /welcome).
+bool _isOnSplashRoute() {
+  try {
+    final path = appRouter.state.uri.path;
+    return path == '/' || path.isEmpty;
+  } catch (_) {
+    return false;
+  }
+}
+
 /// Wrapper widget that handles app security (lock, blur, idle detection)
 class SecurityWrapper extends StatefulWidget {
   final Widget child;
@@ -154,16 +164,6 @@ class _SecurityWrapperState extends State<SecurityWrapper>
     return false;
   }
 
-  String _currentRouterPath() {
-    try {
-      final s = appRouter.state;
-      if (s.uri.path.isNotEmpty) return s.uri.path;
-      return s.matchedLocation;
-    } catch (_) {
-      return '';
-    }
-  }
-
   void _startIdleDetection() {
     // Check for idle timeout every 10 seconds
     Future.delayed(const Duration(seconds: 10), () {
@@ -300,6 +300,12 @@ class _SecurityWrapperState extends State<SecurityWrapper>
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (mounted) {
                       try {
+                        // SplashCubit owns cold-start routing (offline, onboarding, welcome).
+                        // [AppStarted] often finishes before splash and emits [AuthUnauthenticated]
+                        // when the token check fails offline — do not steal the router.
+                        if (_isOnSplashRoute()) {
+                          return;
+                        }
                         appRouter.go('/welcome');
                       } catch (e) {
                       }

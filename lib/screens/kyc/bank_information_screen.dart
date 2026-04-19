@@ -1,7 +1,13 @@
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/widgets/custom_text_field.dart';
+import 'package:communal_mobile/core/widgets/kyc_idle_suppressor.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +25,20 @@ class BankInformationScreen extends StatefulWidget {
 class _BankInformationScreenState extends State<BankInformationScreen> {
   final _bvnController = TextEditingController();
 
+  /// From route [extra] or [KycProgressStorage] after app restart.
+  String? _resolvedAnchor;
+
+  String? _effectiveAnchor() {
+    final auth = context.read<AuthBloc>().state;
+    final fromRoute = widget.anchorCustomerId?.trim();
+    if (fromRoute != null && fromRoute.isNotEmpty) return fromRoute;
+    if (auth is AuthAuthenticated) {
+      return _resolvedAnchor ??
+          getIt<KycProgressStorage>().getAnchor(auth.userId);
+    }
+    return _resolvedAnchor;
+  }
+
   String? _bvnError;
   String? _dayError;
   String? _monthError;
@@ -29,6 +49,29 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
   String? _selectedMonth;
   String? _selectedYear;
   String? _selectedGender;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncAnchorFromStorage());
+  }
+
+  void _syncAnchorFromStorage() {
+    final auth = context.read<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) return;
+    final fromRoute = widget.anchorCustomerId?.trim();
+    final fromDisk = getIt<KycProgressStorage>().getAnchor(auth.userId);
+    final id = (fromRoute != null && fromRoute.isNotEmpty) ? fromRoute : fromDisk;
+    if (!mounted) return;
+    setState(() => _resolvedAnchor = id);
+    if (fromRoute != null && fromRoute.isNotEmpty) {
+      getIt<KycProgressStorage>().ensureAnchorSynced(
+        auth.userId,
+        fromRoute,
+        minResumeStep: 1,
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -94,26 +137,53 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
   }
 
   Map<String, dynamic> _kycExtra() {
-    final id = widget.anchorCustomerId;
+    final id = _effectiveAnchor();
     if (id == null || id.isEmpty) return {};
     return <String, dynamic>{'anchorCustomerId': id};
   }
 
-  void _skip() {
+  Future<void> _markBankStepAndGo() async {
+    final auth = context.read<AuthBloc>().state;
+    if (auth is AuthAuthenticated) {
+      await getIt<KycProgressStorage>().markBankStepDone(auth.userId);
+    }
+    if (!mounted) return;
     context.push('/kyc/proof-of-identity', extra: _kycExtra());
   }
 
-  void _continue() {
-    if (_validateForm()) {
-      context.push('/kyc/proof-of-identity', extra: _kycExtra());
+  void _skip() {
+    final id = _effectiveAnchor();
+    if (id == null || id.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Missing customer id. Complete profile verification first.'),
+        ),
+      );
+      return;
     }
+    _markBankStepAndGo();
+  }
+
+  void _continue() {
+    if (!_validateForm()) return;
+    final id = _effectiveAnchor();
+    if (id == null || id.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Missing customer id. Complete profile verification first.'),
+        ),
+      );
+      return;
+    }
+    _markBankStepAndGo();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
+    return KycIdleSuppressor(
+      child: Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -126,7 +196,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
         title: Text(
           'Bank Information',
           style: TextStyle(
-            fontSize: 20.sp,
+            fontSize: 22.sp,
             fontWeight: FontWeight.w700,
             color: Colors.black,
           ),
@@ -146,7 +216,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                     child: Text(
                       'Secure your account',
                       style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: 17.sp,
                         color: Colors.grey.shade600,
                       ),
                     ),
@@ -159,7 +229,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                       Text(
                         'Bank Information',
                         style: TextStyle(
-                          fontSize: 12.sp,
+                          fontSize: 17.sp,
                           color: theme.primaryColor,
                           fontWeight: FontWeight.w600,
                         ),
@@ -167,7 +237,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                       Text(
                         'Step 2 of 3',
                         style: TextStyle(
-                          fontSize: 12.sp,
+                          fontSize: 17.sp,
                           color: theme.primaryColor,
                           fontWeight: FontWeight.w600,
                         ),
@@ -200,7 +270,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                     Text(
                       'Connect your BVN',
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 20.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.black,
                       ),
@@ -210,12 +280,17 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                       controller: _bvnController,
                       hintText: 'Enter your 11 digit BVN',
                       keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
                       maxLength: 11,
                       inputFormatters: [
                         FilteringTextInputFormatter.digitsOnly,
                       ],
                       errorText: _bvnError,
                       onChanged: (_) => _clearErrors(),
+                      onFieldSubmitted: (_) {
+                        if (!mounted) return;
+                        FocusManager.instance.primaryFocus?.unfocus();
+                      },
                     ),
 
                     vSpace(32),
@@ -224,7 +299,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                     Text(
                       'Date of Birth',
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 20.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.black,
                       ),
@@ -301,7 +376,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                     Text(
                       'Gender',
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 20.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.black,
                       ),
@@ -362,6 +437,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -378,7 +454,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          height: 48.h,
+          height: 52.h,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12.r),
             border: Border.all(
@@ -390,19 +466,23 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
             child: DropdownButton<String>(
               value: value,
               isExpanded: true,
-              menuMaxHeight: 250.h,
+              menuMaxHeight: 280.h,
               dropdownColor: Colors.white,
+              style: TextStyle(
+                fontSize: 18.sp,
+                color: Colors.black87,
+              ),
               hint: Text(
                 label,
                 style: TextStyle(
                   color: Colors.grey.shade400,
-                  fontSize: 14.sp,
+                  fontSize: 18.sp,
                 ),
               ),
               icon: Icon(
                 Icons.keyboard_arrow_down,
                 color: Colors.grey.shade600,
-                size: 20.sp,
+                size: 22.sp,
               ),
               padding: EdgeInsets.symmetric(horizontal: 12.w),
               borderRadius: BorderRadius.circular(12.r),
@@ -412,7 +492,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                   child: Text(
                     item,
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 18.sp,
                       color: Colors.black87,
                     ),
                   ),
@@ -428,7 +508,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
             errorText,
             style: TextStyle(
               color: Colors.red,
-              fontSize: 12.sp,
+              fontSize: 15.sp,
             ),
           ),
         ],

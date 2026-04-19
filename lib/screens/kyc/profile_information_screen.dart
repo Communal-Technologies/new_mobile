@@ -2,12 +2,14 @@ import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/custom_text_field.dart';
+import 'package:communal_mobile/core/widgets/kyc_idle_suppressor.dart';
 import 'package:communal_mobile/core/widgets/phone_input_field.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/lga_model.dart';
 import 'package:communal_mobile/data/models/region_model.dart';
 import 'package:communal_mobile/data/models/state_model.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
+import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
 import 'package:communal_mobile/data/repositories/kyc_repository.dart';
 import 'package:communal_mobile/data/repositories/locations_repository.dart';
 import 'package:communal_mobile/data/repositories/regions_repository.dart';
@@ -36,6 +38,16 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
   final _address2Controller = TextEditingController();
   final _cityController = TextEditingController();
   final _postalCodeController = TextEditingController();
+
+  final _firstNameFocus = FocusNode();
+  final _middleNameFocus = FocusNode();
+  final _lastNameFocus = FocusNode();
+  final _emailFocus = FocusNode();
+  final _phoneFocus = FocusNode();
+  final _address1Focus = FocusNode();
+  final _address2Focus = FocusNode();
+  final _cityFocus = FocusNode();
+  final _postalCodeFocus = FocusNode();
 
   String? _firstNameError;
   String? _lastNameError;
@@ -123,6 +135,40 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
   }
 
   Future<void> _bootstrap() async {
+    final authEarly = context.read<AuthBloc>().state;
+    if (authEarly is AuthAuthenticated) {
+      final storage = getIt<KycProgressStorage>();
+      final step = storage.getResumeStep(authEarly.userId);
+      final anchor = storage.getAnchor(authEarly.userId);
+      if (anchor != null && anchor.isNotEmpty) {
+        final extra = <String, dynamic>{'anchorCustomerId': anchor};
+        if (step >= 3) {
+          if (!mounted) return;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            context.go('/kyc/verifying', extra: extra);
+          });
+          return;
+        }
+        if (step >= 2) {
+          if (!mounted) return;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            context.go('/kyc/proof-of-identity', extra: extra);
+          });
+          return;
+        }
+        if (step >= 1) {
+          if (!mounted) return;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            context.go('/kyc/bank-info', extra: extra);
+          });
+          return;
+        }
+      }
+    }
+
     final regionsRepo = getIt<RegionsRepository>();
     final locRepo = getIt<LocationsRepository>();
 
@@ -297,6 +343,15 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
     _address2Controller.dispose();
     _cityController.dispose();
     _postalCodeController.dispose();
+    _firstNameFocus.dispose();
+    _middleNameFocus.dispose();
+    _lastNameFocus.dispose();
+    _emailFocus.dispose();
+    _phoneFocus.dispose();
+    _address1Focus.dispose();
+    _address2Focus.dispose();
+    _cityFocus.dispose();
+    _postalCodeFocus.dispose();
     super.dispose();
   }
 
@@ -449,6 +504,10 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
         userId: authState.userId,
         body: body,
       );
+      await getIt<KycProgressStorage>().saveAfterProfileRegistered(
+        authState.userId,
+        customerId,
+      );
       if (!mounted) return;
       setState(() => _submitting = false);
       context.push(
@@ -468,7 +527,8 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
+    return KycIdleSuppressor(
+      child: Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -481,7 +541,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
         title: Text(
           'Profile Information',
           style: TextStyle(
-            fontSize: 20.sp,
+            fontSize: 22.sp,
             fontWeight: FontWeight.w700,
             color: Colors.black,
           ),
@@ -500,7 +560,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                     child: Text(
                       'Tell us about yourself',
                       style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: 17.sp,
                         color: Colors.grey.shade600,
                       ),
                     ),
@@ -512,7 +572,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                       Text(
                         'Profile Information',
                         style: TextStyle(
-                          fontSize: 12.sp,
+                          fontSize: 17.sp,
                           color: theme.primaryColor,
                           fontWeight: FontWeight.w600,
                         ),
@@ -520,7 +580,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                       Text(
                         'Step 1 of 3',
                         style: TextStyle(
-                          fontSize: 12.sp,
+                          fontSize: 17.sp,
                           color: theme.primaryColor,
                           fontWeight: FontWeight.w600,
                         ),
@@ -548,7 +608,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                     Text(
                       'Personal Information',
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 20.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.black,
                       ),
@@ -556,36 +616,60 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                     vSpace(16),
                     CustomTextField(
                       controller: _firstNameController,
+                      focusNode: _firstNameFocus,
                       hintText: 'First name',
+                      textInputAction: TextInputAction.next,
                       errorText: _firstNameError,
                       onChanged: (_) => _clearErrors(),
+                      onFieldSubmitted: (_) {
+                        if (!mounted) return;
+                        FocusScope.of(context).requestFocus(_middleNameFocus);
+                      },
                     ),
                     vSpace(16),
                     CustomTextField(
                       controller: _middleNameController,
+                      focusNode: _middleNameFocus,
                       hintText: 'Middle name (optional)',
+                      textInputAction: TextInputAction.next,
                       onChanged: (_) => _clearErrors(),
+                      onFieldSubmitted: (_) {
+                        if (!mounted) return;
+                        FocusScope.of(context).requestFocus(_lastNameFocus);
+                      },
                     ),
                     vSpace(16),
                     CustomTextField(
                       controller: _lastNameController,
+                      focusNode: _lastNameFocus,
                       hintText: 'Last name',
+                      textInputAction: TextInputAction.next,
                       errorText: _lastNameError,
                       onChanged: (_) => _clearErrors(),
+                      onFieldSubmitted: (_) {
+                        if (!mounted) return;
+                        FocusScope.of(context).requestFocus(_emailFocus);
+                      },
                     ),
                     vSpace(16),
                     CustomTextField(
                       controller: _emailController,
+                      focusNode: _emailFocus,
                       hintText: 'Email address',
                       keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
                       errorText: _emailError,
                       onChanged: (_) => _clearErrors(),
+                      onFieldSubmitted: (_) {
+                        if (!mounted) return;
+                        FocusScope.of(context).requestFocus(_phoneFocus);
+                      },
                     ),
                     vSpace(16),
                     Text(
                       'Phone number',
                       style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w500,
                         color: Colors.grey.shade700,
                       ),
@@ -593,7 +677,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                     vSpace(8),
                     _regionsLoading
                         ? SizedBox(
-                            height: 52.h,
+                            height: 54.h,
                             child: const Center(
                               child: CircularProgressIndicator(),
                             ),
@@ -602,8 +686,14 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                             controller: _phoneController,
                             regions: _regions,
                             initialValue: _phoneInitial,
+                            focusNode: _phoneFocus,
+                            keyboardAction: TextInputAction.next,
                             errorText: _phoneError,
                             onChanged: () => _clearErrors(),
+                            onFieldSubmitted: (_) {
+                              if (!mounted) return;
+                              FocusScope.of(context).requestFocus(_address1Focus);
+                            },
                             onPhoneNumberChanged: (phone, valid) {
                               setState(() {
                                 _phoneNumber = phone;
@@ -615,7 +705,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                     Text(
                       'Address Information',
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 20.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.black,
                       ),
@@ -623,14 +713,26 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                     vSpace(16),
                     CustomTextField(
                       controller: _address1Controller,
+                      focusNode: _address1Focus,
                       hintText: 'Address Line 1',
+                      textInputAction: TextInputAction.next,
                       errorText: _address1Error,
                       onChanged: (_) => _clearErrors(),
+                      onFieldSubmitted: (_) {
+                        if (!mounted) return;
+                        FocusScope.of(context).requestFocus(_address2Focus);
+                      },
                     ),
                     vSpace(16),
                     CustomTextField(
                       controller: _address2Controller,
+                      focusNode: _address2Focus,
                       hintText: 'Address Line 2 (optional)',
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) {
+                        if (!mounted) return;
+                        FocusScope.of(context).requestFocus(_cityFocus);
+                      },
                     ),
                     vSpace(16),
                     Row(
@@ -638,19 +740,31 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                         Expanded(
                           child: CustomTextField(
                             controller: _cityController,
+                            focusNode: _cityFocus,
                             hintText: 'City',
+                            textInputAction: TextInputAction.next,
                             errorText: _cityError,
                             onChanged: (_) => _clearErrors(),
+                            onFieldSubmitted: (_) {
+                              if (!mounted) return;
+                              FocusScope.of(context).requestFocus(_postalCodeFocus);
+                            },
                           ),
                         ),
                         hSpace(12),
                         Expanded(
                           child: CustomTextField(
                             controller: _postalCodeController,
+                            focusNode: _postalCodeFocus,
                             hintText: 'Postal code',
                             keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.done,
                             errorText: _postalCodeError,
                             onChanged: (_) => _clearErrors(),
+                            onFieldSubmitted: (_) {
+                              if (!mounted) return;
+                              FocusManager.instance.primaryFocus?.unfocus();
+                            },
                           ),
                         ),
                       ],
@@ -709,7 +823,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                         _submitError!,
                         style: TextStyle(
                           color: Colors.red.shade700,
-                          fontSize: 13.sp,
+                          fontSize: 16.sp,
                         ),
                       ),
                     ],
@@ -740,6 +854,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -759,7 +874,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          height: 48.h,
+          height: 52.h,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12.r),
             border: Border.all(
@@ -778,7 +893,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                           loadingHint,
                           style: TextStyle(
                             color: Colors.grey.shade600,
-                            fontSize: 14.sp,
+                            fontSize: 18.sp,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -799,19 +914,23 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                   child: DropdownButton<String>(
                     value: value,
                     isExpanded: true,
-                    menuMaxHeight: 250.h,
+                    menuMaxHeight: 280.h,
                     dropdownColor: Colors.white,
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      color: Colors.black87,
+                    ),
                     hint: Text(
                       label,
                       style: TextStyle(
                         color: Colors.grey.shade400,
-                        fontSize: 14.sp,
+                        fontSize: 18.sp,
                       ),
                     ),
                     icon: Icon(
                       Icons.keyboard_arrow_down,
                       color: Colors.grey.shade600,
-                      size: 20.sp,
+                      size: 22.sp,
                     ),
                     padding: EdgeInsets.symmetric(horizontal: 12.w),
                     borderRadius: BorderRadius.circular(12.r),
@@ -821,7 +940,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                         child: Text(
                           item,
                           style: TextStyle(
-                            fontSize: 14.sp,
+                            fontSize: 18.sp,
                             color: Colors.black87,
                           ),
                         ),
@@ -837,7 +956,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
             errorText,
             style: TextStyle(
               color: Colors.red,
-              fontSize: 12.sp,
+              fontSize: 15.sp,
             ),
           ),
         ],

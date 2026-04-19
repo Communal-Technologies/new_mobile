@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:communal_mobile/core/widgets/kyc_idle_suppressor.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:go_router/go_router.dart';
 
@@ -67,13 +68,14 @@ class _VerifyingIdentityScreenState extends State<VerifyingIdentityScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
-      ),
-      child: Scaffold(
+    return KycIdleSuppressor(
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.light.copyWith(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+        ),
+        child: Scaffold(
         backgroundColor: theme.primaryColor,
         body: Stack(
           children: [
@@ -165,6 +167,7 @@ class _VerifyingIdentityScreenState extends State<VerifyingIdentityScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 

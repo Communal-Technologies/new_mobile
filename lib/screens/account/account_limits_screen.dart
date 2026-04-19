@@ -1,14 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/navigation/kyc_resume.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/models/tier_limits_model.dart';
 import 'package:communal_mobile/screens/account/widgets/kyc_current_tier_card.dart';
 import 'package:communal_mobile/screens/account/widgets/kyc_tier_info_card.dart';
 
 class AccountLimitsScreen extends StatelessWidget {
   const AccountLimitsScreen({super.key});
+
+  static List<String> _requirementsFor(String tierKey) {
+    switch (tierKey) {
+      case 'tier_1':
+        // Tier 1 is BVN + profile/bank details. The Communal account number is
+        // issued automatically when that flow completes — not a separate KYC step.
+        return [
+          'Complete profile and bank details',
+          'BVN verification',
+        ];
+      case 'tier_2':
+        return [
+          'Government-issued ID (NIN, passport, driver\'s license, etc.)',
+        ];
+      default:
+        return [];
+    }
+  }
+
+  static int _tierNum(String tierKey) {
+    switch (tierKey) {
+      case 'tier_1':
+        return 1;
+      case 'tier_2':
+        return 2;
+      default:
+        return 0;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,58 +62,88 @@ class AccountLimitsScreen extends StatelessWidget {
             onPressed: () => context.pop(),
           ),
           title: Text(
-            'KYC Levels',
+            'Account limits',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 20.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
           ),
           centerTitle: true,
         ),
-        body: SingleChildScrollView(
-          child: Column(
-            children: [
-              vSpace(16),
-              const KycCurrentTierCard(),
-              vSpace(24),
-              _buildKycBenefitSection(),
-              vSpace(16),
-              const KycTierInfoCard(
-                tier: 1,
-                dailyLimit: 50000,
-                maxBalance: 300000,
-                requirements: ['Verify BVN or NIN'],
-              ),
-              vSpace(12),
-              const KycTierInfoCard(
-                tier: 2,
-                dailyLimit: 200000,
-                maxBalance: 1000000,
-                requirements: [
-                  'Verify BVN and NIN',
-                  'Link bank account',
+        body: BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, state) {
+            if (state is! AuthAuthenticated) {
+              return Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24.w),
+                  child: Text(
+                    'Sign in to view your account limits and verification status.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade700),
+                  ),
+                ),
+              );
+            }
+
+            final u = state.user;
+            final tl = u.tierLimits ??
+                TierLimitsSnapshot(
+                  catalog: const [],
+                  current: TierCurrent.fallback(),
+                );
+
+            final catalog = List<TierCatalogEntry>.from(tl.catalog)
+              ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+            final nextKey = tl.nextTierKey;
+            final onResume =
+                nextKey != null ? () => pushKycResumeRoute(context) : null;
+
+            return SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  vSpace(16),
+                  KycCurrentTierCard(
+                    current: tl.current,
+                    nextTierKey: nextKey,
+                    onContinueVerification: onResume,
+                  ),
+                  vSpace(24),
+                  _buildKycBenefitSection(),
+                  vSpace(16),
+                  if (catalog.isEmpty)
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16.w),
+                      child: Text(
+                        'Tier limits will appear here after your profile syncs with the server.',
+                        style: TextStyle(
+                          fontSize: 15.sp,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    )
+                  else
+                    ...catalog.map((e) {
+                      final n = _tierNum(e.tierKey);
+                      if (n == 0) return const SizedBox.shrink();
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: 12.h),
+                        child: KycTierInfoCard(
+                          tier: n,
+                          dailyLimitKobo: e.dailyTransactionLimitKobo,
+                          maxBalanceKobo: e.maxBalanceKobo,
+                          requirements: _requirementsFor(e.tierKey),
+                          isCurrent: e.tierKey == tl.current.tierKey,
+                        ),
+                      );
+                    }),
+                  vSpace(32),
                 ],
               ),
-              vSpace(12),
-              const KycTierInfoCard(
-                tier: 3,
-                dailyLimit: 5000000,
-                maxBalance: 10000000,
-                requirements: [
-                  'Complete Tier 2',
-                  'Upload valid ID',
-                  'Address verification',
-                ],
-                isCurrent: true,
-              ),
-              vSpace(24),
-              _buildUpgradeButton(context),
-              vSpace(16),
-              _buildRewardText(),
-              vSpace(32),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
@@ -92,18 +156,19 @@ class AccountLimitsScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'KYC Level Benefit',
+            'Verification levels',
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 16.sp,
               fontWeight: FontWeight.w600,
               color: Colors.grey.shade700,
             ),
           ),
           vSpace(4),
           Text(
-            'The higher the level, the higher the transaction limit',
+            'Higher verification unlocks higher daily transaction and balance limits.',
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: 15.sp,
+              height: 1.4,
               color: Colors.grey.shade600,
             ),
           ),
@@ -111,50 +176,4 @@ class AccountLimitsScreen extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildUpgradeButton(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: () {
-            // TODO: Navigate to verification/upgrade flow
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Upgrade flow coming soon')),
-            );
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF7434FF),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(vertical: 16.h),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            elevation: 0,
-          ),
-          child: Text(
-            'Verify to Upgrade',
-            style: TextStyle(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRewardText() {
-    return Center(
-      child: Text(
-        'Upgrade to Get your reward 🎁',
-        style: TextStyle(
-          fontSize: 13.sp,
-          color: Colors.grey.shade600,
-        ),
-      ),
-    );
-  }
 }
-

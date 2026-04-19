@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:communal_mobile/core/navigation/kyc_resume.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:go_router/go_router.dart';
 
@@ -96,10 +97,7 @@ class AccountSuccessScreen extends StatelessWidget {
                     width: double.infinity,
                     height: 56.h,
                     child: ElevatedButton(
-                      onPressed: () {
-                        // Navigate to KYC profile information
-                        context.push('/kyc/profile-info');
-                      },
+                      onPressed: () => pushKycResumeRoute(context),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: theme.primaryColor,

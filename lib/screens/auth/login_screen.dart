@@ -260,6 +260,12 @@ class _LoginScreenState extends State<LoginScreen> {
               // Sign in button
               BlocConsumer<AuthBloc, AuthState>(
                 listener: (context, state) {
+                  if (state is AuthUnauthenticated || state is AuthInitial) {
+                    if (_isLoading) {
+                      setState(() => _isLoading = false);
+                    }
+                    return;
+                  }
                   if (state is CheckLoginSuccess) {
                     setState(() {
                       _isLoading = false;

@@ -104,7 +104,6 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i558.FlutterSecureStorage>(),
         gh<_i750.DioClient>(),
         gh<_i587.SettingsCubit>(),
-        gh<_i751.ConnectivityCubit>(),
         gh<_i493.AuthRepository>(),
         gh<_i835.RegionsRepository>(),
       ),

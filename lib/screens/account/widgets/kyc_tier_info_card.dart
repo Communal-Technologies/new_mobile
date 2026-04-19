@@ -8,20 +8,21 @@ class KycTierInfoCard extends StatelessWidget {
   const KycTierInfoCard({
     super.key,
     required this.tier,
-    required this.dailyLimit,
-    required this.maxBalance,
+    required this.dailyLimitKobo,
+    required this.maxBalanceKobo,
     required this.requirements,
     this.isCurrent = false,
   });
 
   final int tier;
-  final int dailyLimit;
-  final int maxBalance;
+  /// Amounts from API in kobo (1 NGN = 100 kobo).
+  final int dailyLimitKobo;
+  final int maxBalanceKobo;
   final List<String> requirements;
   final bool isCurrent;
 
-  String _formatCurrency(int amount) {
-    return CurrencyFormatter.formatNaira(amount);
+  String _formatFromKobo(int kobo) {
+    return CurrencyFormatter.formatNairaFromKobo(kobo);
   }
 
   @override
@@ -49,7 +50,7 @@ class KycTierInfoCard extends StatelessWidget {
               Text(
                 'Tier $tier',
                 style: TextStyle(
-                  fontSize: 18.sp,
+                  fontSize: 20.sp,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF0F1D40),
                 ),
@@ -64,7 +65,7 @@ class KycTierInfoCard extends StatelessWidget {
                   child: Text(
                     'Current',
                     style: TextStyle(
-                      fontSize: 11.sp,
+                      fontSize: 13.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
@@ -75,18 +76,18 @@ class KycTierInfoCard extends StatelessWidget {
           vSpace(16),
           _buildLimitItem(
             label: 'Daily Transaction Limit',
-            value: _formatCurrency(dailyLimit),
+            value: _formatFromKobo(dailyLimitKobo),
           ),
           vSpace(12),
           _buildLimitItem(
             label: 'Maximum Balance',
-            value: _formatCurrency(maxBalance),
+            value: _formatFromKobo(maxBalanceKobo),
           ),
           vSpace(16),
           Text(
             'Requirements:',
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: 15.sp,
               fontWeight: FontWeight.w600,
               color: Colors.grey.shade700,
             ),
@@ -108,14 +109,14 @@ class KycTierInfoCard extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 13.sp,
+            fontSize: 15.sp,
             color: Colors.grey.shade600,
           ),
         ),
         Text(
           value,
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF7434FF),
           ),
@@ -131,7 +132,7 @@ class KycTierInfoCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            margin: EdgeInsets.only(top: 6.h, right: 8.w),
+            margin: EdgeInsets.only(top: 7.h, right: 8.w),
             width: 4.w,
             height: 4.w,
             decoration: BoxDecoration(
@@ -143,7 +144,8 @@ class KycTierInfoCard extends StatelessWidget {
             child: Text(
               requirement,
               style: TextStyle(
-                fontSize: 13.sp,
+                fontSize: 15.sp,
+                height: 1.35,
                 color: Colors.grey.shade600,
               ),
             ),

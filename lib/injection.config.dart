@@ -25,6 +25,7 @@ import 'package:communal_mobile/data/datasources/remote/dio/logging_interceptor.
     as _i354;
 import 'package:communal_mobile/data/datasources/remote/dio/network_interceptor.dart'
     as _i126;
+import 'package:communal_mobile/data/local/kyc_progress_storage.dart' as _i798;
 import 'package:communal_mobile/data/repositories/auth_repository.dart'
     as _i493;
 import 'package:communal_mobile/data/repositories/kyc_repository.dart' as _i419;
@@ -71,6 +72,11 @@ extension GetItInjectableX on _i174.GetIt {
       () => cubitModule.provideSecurityCubit(
         gh<_i460.SharedPreferences>(),
         gh<_i558.FlutterSecureStorage>(),
+      ),
+    );
+    gh.lazySingleton<_i798.KycProgressStorage>(
+      () => repositoryModule.provideKycProgressStorage(
+        gh<_i460.SharedPreferences>(),
       ),
     );
     gh.lazySingleton<_i750.DioClient>(

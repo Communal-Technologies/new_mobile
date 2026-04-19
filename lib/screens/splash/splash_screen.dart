@@ -79,37 +79,65 @@ class _SplashScreenState extends State<SplashScreen>
       ),
       child: Scaffold(
         backgroundColor: primaryColor,
-        body: ConnectivityListener(
-          persistentOfflineSnackbar: true,
-          child: BlocConsumer<SplashCubit, SplashState>(
-            listenWhen: (prev, next) =>
-                next is SplashFirstTimeUser ||
-                next is SplashLoggedOut ||
-                next is SplashLoggedIn,
-            listener: _onSplashStateForNavigation,
-            builder: (context, state) {
-              final showBlockingError = state is SplashError;
-              final errorMessage =
-                  showBlockingError ? state.message : '';
-              final waitingOffline = state is SplashNoInternet;
+        body: BlocBuilder<SplashCubit, SplashState>(
+          buildWhen: (prev, next) =>
+              (prev is SplashNoInternet) != (next is SplashNoInternet),
+          builder: (context, state) {
+            final onOfflineSplash = state is SplashNoInternet;
+            return ConnectivityListener(
+              showOfflineSnackbar: !onOfflineSplash,
+              persistentOfflineSnackbar: !onOfflineSplash,
+              child: BlocConsumer<SplashCubit, SplashState>(
+                listenWhen: (prev, next) =>
+                    next is SplashFirstTimeUser ||
+                    next is SplashLoggedOut ||
+                    next is SplashLoggedIn,
+                listener: _onSplashStateForNavigation,
+                builder: (context, state) {
+                  final showBlockingError = state is SplashError;
+                  final waitingOffline = state is SplashNoInternet;
 
-              return Stack(
+                  return Stack(
                 children: [
                   _buildSplashContent(primaryColor),
                   if (waitingOffline)
-                    Positioned(
-                      left: 24.w,
-                      right: 24.w,
-                      bottom: 48.h,
-                      child: Material(
-                        color: Colors.transparent,
-                        child: Text(
-                          'No internet connection. Connect to Wi‑Fi or mobile data to continue.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.95),
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w500,
+                    Positioned.fill(
+                      child: Container(
+                        color: primaryColor.withValues(alpha: 0.97),
+                        child: SafeArea(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 28.w),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.wifi_off_outlined,
+                                  size: 88.sp,
+                                  color: Colors.white,
+                                ),
+                                vSpace(24),
+                                Text(
+                                  'No internet connection',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 26.sp,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                vSpace(16),
+                                Text(
+                                  'When your connection is restored, the app will '
+                                  'continue automatically.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.92),
+                                    fontSize: 17.sp,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -126,27 +154,29 @@ class _SplashScreenState extends State<SplashScreen>
                               children: [
                                 Icon(
                                   Icons.cloud_off_outlined,
-                                  size: 56.sp,
+                                  size: 88.sp,
                                   color: Colors.white,
                                 ),
-                                vSpace(20),
+                                vSpace(24),
                                 Text(
                                   'We couldn\'t reach Communal',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 20.sp,
+                                    fontSize: 26.sp,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                                vSpace(12),
+                                vSpace(16),
                                 Text(
-                                  errorMessage,
+                                  'Communal’s servers couldn’t be reached. '
+                                  'Your phone may still be online — this is usually a temporary '
+                                  'server or routing issue. Please try again in a moment.',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.9),
-                                    fontSize: 14.sp,
-                                    height: 1.35,
+                                    color: Colors.white.withValues(alpha: 0.92),
+                                    fontSize: 17.sp,
+                                    height: 1.4,
                                   ),
                                 ),
                                 vSpace(28),
@@ -172,8 +202,10 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                 ],
               );
-            },
-          ),
+                },
+              ),
+            );
+          },
         ),
       ),
     );

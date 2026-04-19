@@ -28,54 +28,41 @@ class SecurityCubit extends Cubit<SecurityState> {
     debugPrint('📊   Initialized _lastActivityTime to: $_lastActivityTime');
   }
 
-  /// Called when app goes to background
+  /// Obscure content when the app is actually backgrounded ([AppLifecycleState.paused] / [hidden]).
+  ///
+  /// Not tied to [AppLifecycleState.inactive] — that also runs for the notification shade.
+  /// Multiple [paused]/[hidden] events in one transition share one [_backgroundTime] marker.
   void onAppPaused() {
-    _backgroundTime = DateTime.now();
+    // Already showing the PIN lock — stay locked. Emitting [blurred] would make
+    // SecurityWrapper stack [widget.child] + blur instead of the lock surface.
+    if (state == SecurityState.locked) {
+      return;
+    }
+    _backgroundTime ??= DateTime.now();
     emit(SecurityState.blurred);
   }
 
-  /// Called when app comes to foreground
+  /// After [onAppPaused] (real background), every return to foreground requires PIN.
+  ///
+  /// Invoked from [AppLifecycleState.resumed] when not already locked. [lockApp] with
+  /// [isIdleTimeout]: true keeps the session token and uses the PIN / welcome-back flow.
   void onAppResumed() {
-    // CRITICAL: If app is locked, do NOT unlock it - user must enter PIN
     if (state == SecurityState.locked) {
       debugPrint('📊   App resumed but is locked - NOT unlocking (user must enter PIN)');
       return;
     }
     
-    if (_backgroundTime != null) {
-      final duration = DateTime.now().difference(_backgroundTime!);
-      // If app was in background for more than 30 seconds, require PIN again but keep the session token
-      if (duration.inSeconds > 30) {
-        lockApp(isIdleTimeout: true);
-      } else {
-        // Just remove blur and reset activity time
-        _backgroundTime = null;
-        final now = DateTime.now();
-        _lastActivityTime = now; // Reset activity time when resuming
-        _lastUnlockTime = now; // Track unlock time to prevent immediate re-lock
-        _isIdlePromptShown = false;
-        emit(SecurityState.unlocked);
-      }
-    } else {
-      // App resumed but wasn't in background (e.g., status bar interaction)
-      // Only unlock if app is not already locked
-      // If app is blurred, just remove blur
-      if (state == SecurityState.blurred) {
-        _backgroundTime = null;
-        final now = DateTime.now();
-        _lastActivityTime = now;
-        _lastUnlockTime = now;
-        _isIdlePromptShown = false;
-        emit(SecurityState.unlocked);
-      } else if (state == SecurityState.unlocked) {
-        // Already unlocked, just reset activity time
-        final now = DateTime.now();
-        _lastActivityTime = now;
-        _lastUnlockTime = now;
-        _isIdlePromptShown = false;
-        // Don't emit - already unlocked
-      }
-      // If state is locked, do nothing - user must enter PIN
+    if (_backgroundTime != null || state == SecurityState.blurred) {
+      _backgroundTime = null;
+      lockApp(isIdleTimeout: true);
+      return;
+    }
+
+    if (state == SecurityState.unlocked) {
+      final now = DateTime.now();
+      _lastActivityTime = now;
+      _lastUnlockTime = now;
+      _isIdlePromptShown = false;
     }
   }
 

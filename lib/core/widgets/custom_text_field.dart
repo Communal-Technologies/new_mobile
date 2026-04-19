@@ -13,6 +13,8 @@ class CustomTextField extends StatelessWidget {
     this.obscureText = false,
     this.keyboardType,
     this.textInputAction,
+    this.focusNode,
+    this.onFieldSubmitted,
     this.validator,
     this.onChanged,
     this.errorText,
@@ -29,6 +31,8 @@ class CustomTextField extends StatelessWidget {
   final bool obscureText;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
+  final FocusNode? focusNode;
+  final void Function(String value)? onFieldSubmitted;
   final String? Function(String?)? validator;
   final void Function(String)? onChanged;
   final String? errorText;
@@ -47,7 +51,7 @@ class CustomTextField extends StatelessWidget {
           Text(
             labelText!,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 18.sp,
               fontWeight: FontWeight.w500,
               color: Colors.black87,
             ),
@@ -56,30 +60,32 @@ class CustomTextField extends StatelessWidget {
         ],
         TextFormField(
           controller: controller,
+          focusNode: focusNode,
           obscureText: obscureText,
           keyboardType: keyboardType,
           textInputAction: textInputAction,
+          onFieldSubmitted: onFieldSubmitted,
           enabled: enabled,
           maxLength: maxLength,
           inputFormatters: inputFormatters,
           onChanged: onChanged,
           style: TextStyle(
-            fontSize: 14.sp,
+            fontSize: 18.sp,
             color: Colors.black,
           ),
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: TextStyle(
               color: Colors.grey.shade400,
-              fontSize: 14.sp,
+              fontSize: 17.sp,
             ),
             prefixIcon: prefixIcon,
             suffixIcon: suffixIcon,
             filled: true,
             fillColor: Colors.white,
             contentPadding: EdgeInsets.symmetric(
-              horizontal: 12.w,
-              vertical: 12.h,
+              horizontal: 14.w,
+              vertical: 14.h,
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
@@ -130,7 +136,7 @@ class CustomTextField extends StatelessWidget {
               errorText!,
               style: TextStyle(
                 color: Colors.red,
-                fontSize: 12.sp,
+                fontSize: 15.sp,
               ),
             ),
           ),

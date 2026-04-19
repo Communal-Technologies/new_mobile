@@ -17,7 +17,6 @@ abstract class CubitModule {
     FlutterSecureStorage secureStorage,
     DioClient dioClient,
     SettingsCubit settingsCubit,
-    ConnectivityCubit connectivityCubit,
     AuthRepository authRepository,
     RegionsRepository regionsRepository,
   ) =>
@@ -26,7 +25,6 @@ abstract class CubitModule {
         secureStorage,
         dioClient,
         settingsCubit,
-        connectivityCubit,
         authRepository,
         regionsRepository,
       );

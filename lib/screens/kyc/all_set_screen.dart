@@ -1,7 +1,13 @@
 import 'dart:ui';
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:communal_mobile/core/widgets/kyc_idle_suppressor.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:go_router/go_router.dart';
 
@@ -12,13 +18,14 @@ class AllSetScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
-      ),
-      child: Scaffold(
+    return KycIdleSuppressor(
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.light.copyWith(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+        ),
+        child: Scaffold(
         backgroundColor: theme.primaryColor,
         body: Stack(
           children: [
@@ -102,8 +109,12 @@ class AllSetScreen extends StatelessWidget {
                       width: double.infinity,
                       height: 56.h,
                       child: ElevatedButton(
-                        onPressed: () {
-                          context.go('/home');
+                        onPressed: () async {
+                          final auth = context.read<AuthBloc>().state;
+                          if (auth is AuthAuthenticated) {
+                            await getIt<KycProgressStorage>().clear(auth.userId);
+                          }
+                          if (context.mounted) context.go('/home');
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
@@ -131,6 +142,7 @@ class AllSetScreen extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 

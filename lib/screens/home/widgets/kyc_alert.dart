@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:communal_mobile/core/navigation/kyc_resume.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
-import 'package:go_router/go_router.dart';
 
 class KycAlert extends StatelessWidget {
   const KycAlert({super.key});
@@ -64,9 +64,7 @@ class KycAlert extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: ElevatedButton(
-              onPressed: () {
-                context.push('/kyc/profile-info');
-              },
+              onPressed: () => pushKycResumeRoute(context),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
                 elevation: 0,

@@ -158,7 +158,7 @@ class _FaqScreenState extends State<FaqScreen> {
                         FaqQuestion(
                           question: 'What are the transaction limits?',
                           answer:
-                              'Transaction limits depend on your account tier. Tier 1: ₦50,000 daily, Tier 2: ₦200,000 daily, Tier 3: ₦5,000,000 daily.',
+                              'Limits depend on your verification tier (Tier 1 after BVN and account number, Tier 2 after ID verification). Exact amounts are shown under Account > Account limits and may be updated by Communal.',
                         ),
                         FaqQuestion(
                           question: 'Are there transaction fees?',

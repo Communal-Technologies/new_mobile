@@ -1,13 +1,22 @@
 import 'dart:ui';
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/widgets/custom_text_field.dart';
+import 'package:communal_mobile/core/widgets/kyc_idle_suppressor.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:go_router/go_router.dart';
 
 class ProofOfIdentityScreen extends StatefulWidget {
-  const ProofOfIdentityScreen({super.key});
+  const ProofOfIdentityScreen({super.key, this.anchorCustomerId});
+
+  /// From route [extra] or recovered from [KycProgressStorage] on resume.
+  final String? anchorCustomerId;
 
   @override
   State<ProofOfIdentityScreen> createState() => _ProofOfIdentityScreenState();
@@ -15,6 +24,19 @@ class ProofOfIdentityScreen extends StatefulWidget {
 
 class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
   final _idNumberController = TextEditingController();
+
+  String? _resolvedAnchor;
+
+  String? _effectiveAnchor() {
+    final fromRoute = widget.anchorCustomerId?.trim();
+    if (fromRoute != null && fromRoute.isNotEmpty) return fromRoute;
+    final auth = context.read<AuthBloc>().state;
+    if (auth is AuthAuthenticated) {
+      return _resolvedAnchor ??
+          getIt<KycProgressStorage>().getAnchor(auth.userId);
+    }
+    return _resolvedAnchor;
+  }
 
   String? _idTypeError;
   String? _idNumberError;
@@ -28,6 +50,29 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
   String? _selectedMonth;
   String? _selectedYear;
   String? _uploadedDocument;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncAnchorFromStorage());
+  }
+
+  void _syncAnchorFromStorage() {
+    final auth = context.read<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) return;
+    final fromRoute = widget.anchorCustomerId?.trim();
+    final fromDisk = getIt<KycProgressStorage>().getAnchor(auth.userId);
+    final id = (fromRoute != null && fromRoute.isNotEmpty) ? fromRoute : fromDisk;
+    if (!mounted) return;
+    setState(() => _resolvedAnchor = id);
+    if (fromRoute != null && fromRoute.isNotEmpty) {
+      getIt<KycProgressStorage>().ensureAnchorSynced(
+        auth.userId,
+        fromRoute,
+        minResumeStep: 2,
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -99,10 +144,28 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
     context.go('/home');
   }
 
-  void _completeSetup() {
-    if (_validateForm()) {
-      context.push('/kyc/verifying');
+  Future<void> _completeSetup() async {
+    if (!_validateForm()) return;
+    final id = _effectiveAnchor();
+    if (id == null || id.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Missing customer id. Complete earlier KYC steps first.',
+          ),
+        ),
+      );
+      return;
     }
+    final auth = context.read<AuthBloc>().state;
+    if (auth is AuthAuthenticated) {
+      await getIt<KycProgressStorage>().markProofStepDone(auth.userId);
+    }
+    if (!mounted) return;
+    context.push(
+      '/kyc/verifying',
+      extra: <String, dynamic>{'anchorCustomerId': id},
+    );
   }
 
   void _uploadDocument() {
@@ -117,7 +180,8 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
+    return KycIdleSuppressor(
+      child: Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -130,7 +194,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
         title: Text(
           'Proof of Identity',
           style: TextStyle(
-            fontSize: 20.sp,
+            fontSize: 22.sp,
             fontWeight: FontWeight.w700,
             color: Colors.black,
           ),
@@ -150,7 +214,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                     child: Text(
                       'Verify your identity',
                       style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: 17.sp,
                         color: Colors.grey.shade600,
                       ),
                     ),
@@ -163,7 +227,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                       Text(
                         'Proof of Identity',
                         style: TextStyle(
-                          fontSize: 12.sp,
+                          fontSize: 17.sp,
                           color: theme.primaryColor,
                           fontWeight: FontWeight.w600,
                         ),
@@ -171,7 +235,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                       Text(
                         'Step 3 of 3',
                         style: TextStyle(
-                          fontSize: 12.sp,
+                          fontSize: 17.sp,
                           color: theme.primaryColor,
                           fontWeight: FontWeight.w600,
                         ),
@@ -204,7 +268,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                     Text(
                       'Identity Document',
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 20.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.black,
                       ),
@@ -231,8 +295,13 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                     CustomTextField(
                       controller: _idNumberController,
                       hintText: 'Enter ID Number',
+                      textInputAction: TextInputAction.done,
                       errorText: _idNumberError,
                       onChanged: (_) => _clearErrors(),
+                      onFieldSubmitted: (_) {
+                        if (!mounted) return;
+                        FocusManager.instance.primaryFocus?.unfocus();
+                      },
                     ),
 
                     vSpace(32),
@@ -241,7 +310,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                     Text(
                       'Document Expiry Date',
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 20.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.black,
                       ),
@@ -333,7 +402,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                             Text(
                               _uploadedDocument ?? 'Upload ID',
                               style: TextStyle(
-                                fontSize: 16.sp,
+                                fontSize: 20.sp,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.black87,
                               ),
@@ -342,7 +411,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                             RichText(
                               text: TextSpan(
                                 style: TextStyle(
-                                  fontSize: 13.sp,
+                                  fontSize: 17.sp,
                                   color: Colors.grey.shade600,
                                 ),
                                 children: [
@@ -368,7 +437,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                         _documentError!,
                         style: TextStyle(
                           color: Colors.red,
-                          fontSize: 12.sp,
+                          fontSize: 15.sp,
                         ),
                       ),
                     ],
@@ -397,7 +466,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                             Text(
                               'Important Notice',
                               style: TextStyle(
-                                fontSize: 15.sp,
+                                fontSize: 17.sp,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.black,
                               ),
@@ -458,6 +527,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -470,7 +540,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
           Text(
             '• ',
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 17.sp,
               color: Colors.grey.shade700,
             ),
           ),
@@ -478,7 +548,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
             child: Text(
               text,
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 17.sp,
                 color: Colors.grey.shade700,
                 height: 1.4,
               ),
@@ -502,7 +572,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          height: 48.h,
+          height: 52.h,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12.r),
             border: Border.all(
@@ -514,19 +584,23 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
             child: DropdownButton<String>(
               value: value,
               isExpanded: true,
-              menuMaxHeight: 250.h,
+              menuMaxHeight: 280.h,
               dropdownColor: Colors.white,
+              style: TextStyle(
+                fontSize: 18.sp,
+                color: Colors.black87,
+              ),
               hint: Text(
                 label,
                 style: TextStyle(
                   color: Colors.grey.shade400,
-                  fontSize: 14.sp,
+                  fontSize: 18.sp,
                 ),
               ),
               icon: Icon(
                 Icons.keyboard_arrow_down,
                 color: Colors.grey.shade600,
-                size: 20.sp,
+                size: 22.sp,
               ),
               padding: EdgeInsets.symmetric(horizontal: 12.w),
               borderRadius: BorderRadius.circular(12.r),
@@ -536,7 +610,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                   child: Text(
                     item,
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 18.sp,
                       color: Colors.black87,
                     ),
                   ),
@@ -552,7 +626,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
             errorText,
             style: TextStyle(
               color: Colors.red,
-              fontSize: 12.sp,
+              fontSize: 15.sp,
             ),
           ),
         ],

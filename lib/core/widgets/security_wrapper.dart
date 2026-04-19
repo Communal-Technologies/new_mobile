@@ -47,6 +47,7 @@ class _SecurityWrapperState extends State<SecurityWrapper>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    appRouter.routeInformationProvider.addListener(_onRouteLocationChanged);
     
     // CRITICAL: Initialize flags to prevent locking on first login
     // _shouldLockOnNextAuth should only be set when app is resumed/detached
@@ -62,50 +63,104 @@ class _SecurityWrapperState extends State<SecurityWrapper>
 
   @override
   void dispose() {
+    appRouter.routeInformationProvider.removeListener(_onRouteLocationChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  /// When the user navigates into KYC, clear any idle prompt and refresh activity so
+  /// [checkIdleTimeout] does not fire while they work through long forms.
+  void _onRouteLocationChanged() {
+    if (!mounted) return;
+    if (!_isKycFlowActive()) return;
+    try {
+      final securityCubit = context.read<SecurityCubit>();
+      if (securityCubit.state == SecurityState.idlePrompt) {
+        securityCubit.resetIdle();
+      } else {
+        securityCubit.recordActivity();
+      }
+    } catch (_) {}
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final securityCubit = context.read<SecurityCubit>();
     final authState = context.read<AuthBloc>().state;
-    
-    // Only apply security features if user is authenticated
-    if (authState is! AuthAuthenticated) {
-      return; // Skip security if not logged in
-    }
-    
+
     switch (state) {
       case AppLifecycleState.paused:
-        // App went to background
+        // Only blur when a member session is active (same as before).
+        if (authState is! AuthAuthenticated) {
+          return;
+        }
         securityCubit.onAppPaused();
         break;
       case AppLifecycleState.resumed:
-        // App came to foreground
-        // CRITICAL: If app is currently locked, do NOT call onAppResumed() as it might unlock
-        // Only call onAppResumed() if app is not locked (e.g., was blurred)
-        if (securityCubit.state != SecurityState.locked) {
-          securityCubit.onAppResumed();
-        } else {
-          // Mark that we should lock on next authentication (if user unlocks and app goes to background again)
+        // Clear privacy blur when actually returning to the app ([paused]/[hidden] had run).
+        // Do not blur on [inactive] — that also runs for the notification shade / system sheets.
+        if (securityCubit.state == SecurityState.locked) {
           _hasInitializedLock = false;
           _shouldLockOnNextAuth = true;
+        } else {
+          securityCubit.onAppResumed();
         }
         break;
       case AppLifecycleState.detached:
-        // App is being closed - mark that we should lock on next authentication
+        if (authState is! AuthAuthenticated) {
+          return;
+        }
         _hasInitializedLock = false;
         _shouldLockOnNextAuth = true; // Lock when user becomes authenticated after detach
         securityCubit.onAppDetached();
         break;
       case AppLifecycleState.inactive:
-        // App is transitioning (e.g., incoming call)
+        // Intentionally no security action: this state also occurs when opening the notification
+        // shade, control center, etc. Blurring here looked like a lock and forced spurious PIN UX.
         break;
       case AppLifecycleState.hidden:
-        // App is hidden (iOS specific)
+        if (authState is! AuthAuthenticated) {
+          return;
+        }
         securityCubit.onAppPaused();
         break;
+    }
+  }
+
+  /// KYC flows can take several minutes; idle prompts / auto-lock would interrupt uploads and forms.
+  ///
+  /// Prefer [GoRouter.state] — [RouteInformationProvider.value] can lag or not match the
+  /// active match list, which caused idle prompts to fire on `/kyc/*` despite the exemption.
+  bool _isKycFlowActive() {
+    bool segmentIsKyc(String? p) {
+      if (p == null || p.isEmpty) return false;
+      return p.startsWith('/kyc') ||
+          p.startsWith('kyc/') ||
+          p.contains('/kyc/');
+    }
+
+    try {
+      final s = appRouter.state;
+      if (segmentIsKyc(s.uri.path)) return true;
+      if (segmentIsKyc(s.matchedLocation)) return true;
+      if (segmentIsKyc(s.fullPath)) return true;
+      final name = s.name;
+      if (name != null && name.startsWith('kyc-')) return true;
+      try {
+        final enginePath = appRouter.routeInformationProvider.value.uri.path;
+        if (segmentIsKyc(enginePath)) return true;
+      } catch (_) {}
+    } catch (_) {}
+    return false;
+  }
+
+  String _currentRouterPath() {
+    try {
+      final s = appRouter.state;
+      if (s.uri.path.isNotEmpty) return s.uri.path;
+      return s.matchedLocation;
+    } catch (_) {
+      return '';
     }
   }
 
@@ -120,9 +175,18 @@ class _SecurityWrapperState extends State<SecurityWrapper>
         // 1. User is authenticated
         // 2. App is NOT already locked (don't check if locked)
         // Note: Removed _hasInitializedLock check - idle detection should work as soon as user is authenticated
-        if (authState is AuthAuthenticated && 
+        if (authState is AuthAuthenticated &&
             securityCubit.state != SecurityState.locked) {
-          securityCubit.checkIdleTimeout();
+          if (_isKycFlowActive()) {
+            // Dismiss idle prompt if user navigated into KYC; keep activity fresh so timer doesn't fire on exit.
+            if (securityCubit.state == SecurityState.idlePrompt) {
+              securityCubit.resetIdle();
+            } else {
+              securityCubit.recordActivity();
+            }
+          } else {
+            securityCubit.checkIdleTimeout();
+          }
         } else {
         }
         _startIdleDetection(); // Continue checking
@@ -510,6 +574,10 @@ class _SecurityWrapperState extends State<SecurityWrapper>
             // Idle prompt: [SecurityWrapper] sits above [MaterialApp.router], so
             // Navigator.maybeOf(securityWrapperContext) is null — use [rootNavigatorKey].
             if (state == SecurityState.idlePrompt && mounted) {
+              if (_isKycFlowActive()) {
+                context.read<SecurityCubit>().resetIdle();
+                return;
+              }
               if (_idlePromptDialogOpen) return;
               _idlePromptDialogOpen = true;
               final securityCubit = context.read<SecurityCubit>();
@@ -766,18 +834,19 @@ class _SecurityWrapperState extends State<SecurityWrapper>
                 return _cachedLockedScreen!;
               }
 
-              // Show blur overlay if blurred
+              // Show blur overlay if blurred (real background: [paused] / [hidden] only).
               if (state == SecurityState.blurred) {
                 return Directionality(
                   textDirection: TextDirection.ltr,
                   child: Stack(
+                    fit: StackFit.expand,
                     children: [
                       widget.child,
-                      GestureDetector(
-                        onTap: () {
-                          context.read<SecurityCubit>().onAppResumed();
-                        },
-                        child: const BlurOverlay(),
+                      Positioned.fill(
+                        child: AbsorbPointer(
+                          absorbing: true,
+                          child: const BlurOverlay(),
+                        ),
                       ),
                     ],
                   ),

@@ -1,5 +1,11 @@
 /// Utility class for formatting currency values
 class CurrencyFormatter {
+  /// Whole naira from API kobo (1 NGN = 100 kobo).
+  static String formatNairaFromKobo(int kobo) {
+    final naira = (kobo / 100).round();
+    return formatNaira(naira);
+  }
+
   /// Formats an integer amount as Nigerian Naira with commas
   /// Example: 5000000 -> "₦5,000,000"
   static String formatNaira(int amount) {

@@ -50,64 +50,51 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onAppStarted(AppStarted event, Emitter<AuthState> emit) async {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    debugPrint('📊 [$timestamp] 🔐 AUTH BLOC - AppStarted event received');
-    debugPrint('📊   _hasRecentFailedLogin: $_hasRecentFailedLogin');
-    
-    // CRITICAL: If we just had a failed login, don't unlock with cached token
-    // User must enter password to unlock - no shortcuts
+    debugPrint('AUTH AppStarted ts=$timestamp failedLogin=$_hasRecentFailedLogin');
+
     if (_hasRecentFailedLogin) {
-      debugPrint('📊   ⚠️ Recent failed login detected - NOT unlocking with cached token');
-      debugPrint('📊   ⚠️ User must enter password to unlock');
-      // Clear the flag after a delay to allow for password entry
       Future.delayed(const Duration(seconds: 5), () {
         _hasRecentFailedLogin = false;
       });
       emit(AuthUnauthenticated());
       return;
     }
-    
+
     emit(AuthLoading());
 
-    final token = await secureStorage.read(key: 'token');
-    debugPrint('📊   Token exists: ${token != null}');
+    try {
+      final token = await secureStorage.read(key: 'token');
+      debugPrint('AUTH AppStarted tokenPresent=${token != null}');
 
-    if (token != null) {
-      // CRITICAL: Validate token with backend - don't trust cached token
-      // This ensures that if password was changed, old tokens are invalidated
-      try {
-        final user = await authRepository.getUserInfo(token);
-        if (user != null) {
-          final timestamp2 = DateTime.now().millisecondsSinceEpoch;
-          debugPrint('📊 [$timestamp2] 🔐 AUTH BLOC - Emitting AuthAuthenticated (from AppStarted)');
-          debugPrint('📊   ✅ Token validated with backend - user authenticated');
-          final storedLogin = (await secureStorage.read(key: 'login'))?.trim() ?? '';
-          final sessionLogin =
-              storedLogin.isNotEmpty ? storedLogin : user.login.trim();
-          debugPrint('📊   User ID: ${user.id}, Session login: $sessionLogin');
-          emit(AuthAuthenticated(
-            userId: user.id,
-            login: sessionLogin,
-            user: user,
-            sessionGeneration: 0,
-          ));
-        } else {
-          debugPrint('📊   ❌ Token exists but getUserInfo returned null - token invalid');
-          // Token exists but is invalid - clear it
-          // IMPORTANT: Keep login - user needs it to unlock the app
+      if (token != null) {
+        try {
+          final user = await authRepository.getUserInfo(token);
+          if (user != null) {
+            final storedLogin = (await secureStorage.read(key: 'login'))?.trim() ?? '';
+            final sessionLogin =
+                storedLogin.isNotEmpty ? storedLogin : user.login.trim();
+            emit(AuthAuthenticated(
+              userId: user.id,
+              login: sessionLogin,
+              user: user,
+              sessionGeneration: 0,
+            ));
+          } else {
+            await secureStorage.delete(key: 'token');
+            emit(AuthUnauthenticated());
+          }
+        } catch (e) {
           await secureStorage.delete(key: 'token');
-          // DO NOT delete login - user needs it to unlock with PIN
           emit(AuthUnauthenticated());
         }
-      } catch (e) {
-        debugPrint('📊   ❌ Token validation failed: $e');
-        // Token validation failed - clear it
-        // IMPORTANT: Keep login - user needs it to unlock the app
-        await secureStorage.delete(key: 'token');
-        // DO NOT delete login - user needs it to unlock with PIN
+      } else {
         emit(AuthUnauthenticated());
       }
-    } else {
-      debugPrint('📊   No token found - user not authenticated');
+    } catch (e, st) {
+      debugPrint('AUTH AppStarted error $e $st');
+      try {
+        await secureStorage.delete(key: 'token');
+      } catch (_) {}
       emit(AuthUnauthenticated());
     }
   }
@@ -116,10 +103,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     LoginRequested event,
     Emitter<AuthState> emit,
   ) async {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    debugPrint('📊 [$timestamp] 🔐 AUTH BLOC - LoginRequested received');
-    debugPrint('📊   Login: ${event.login}');
-    debugPrint('📊   Sending password to backend for validation...');
     emit(AuthVerifyingCredentials(++_credentialVerifyAttemptId));
 
     try {
@@ -129,75 +112,37 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
 
       if (loginResponse != null && loginResponse.token != null) {
-        debugPrint('📊   ✅ Backend accepted password - login successful');
-        debugPrint('📊   ✅ New token received from backend');
         await secureStorage.write(key: 'token', value: loginResponse.token!);
-        
-        // Store login for reference (password hash not stored for security)
         await secureStorage.write(key: 'login', value: event.login);
 
         final user = await authRepository.getUserInfo(loginResponse.token!);
 
-      if (user != null) {
-        final timestamp2 = DateTime.now().millisecondsSinceEpoch;
-        debugPrint('📊 [$timestamp2] 🔐 AUTH BLOC - Emitting AuthAuthenticated (from LoginRequested)');
-        debugPrint('📊   ✅ Password validated by backend - user authenticated');
-        debugPrint('📊   ✅ Backend returned 200 OK - password is correct');
-        debugPrint('📊   User ID: ${user.id}, Login: ${user.login}');
-        
-        // CRITICAL: Clear the failed login flag since password was validated successfully
-        _hasRecentFailedLogin = false;
-        debugPrint('📊   ✅ Cleared _hasRecentFailedLogin flag - password validated successfully');
-        
-        emit(AuthAuthenticated(
-          userId: user.id,
-          login: event.login.trim(),
-          user: user,
-          sessionGeneration: ++_loginSessionGeneration,
-        ));
+        if (user != null) {
+          _hasRecentFailedLogin = false;
+          emit(AuthAuthenticated(
+            userId: user.id,
+            login: event.login.trim(),
+            user: user,
+            sessionGeneration: ++_loginSessionGeneration,
+          ));
         } else {
-          debugPrint('📊   ⚠️ Login successful but could not fetch user info');
           emit(AuthUnauthenticated());
         }
       } else {
-        debugPrint('📊   ❌ Backend returned invalid login response');
         emit(const AuthFailure("Invalid login response"));
       }
     } catch (e) {
       final errorMsg = _extractErrorMessage(e);
-      debugPrint('📊   ❌ Backend rejected password: $errorMsg');
-      debugPrint('📊   ❌ Login failed - password validation failed');
-      
-      // CRITICAL: Check if token exists - if it does, this is app lock scenario
-      // For app lock: Keep token so app shows lock screen on restart (not welcome screen)
-      // For fresh login: Token doesn't exist yet, so no need to delete
       final existingToken = await secureStorage.read(key: 'token');
       final hasExistingToken = existingToken != null && existingToken.isNotEmpty;
-      
-      if (hasExistingToken) {
-        // App lock scenario - token exists, user entered wrong PIN
-        // CRITICAL: DO NOT delete token - keep it so app shows lock screen on restart
-        // This matches first login behavior where wrong password doesn't delete anything
-        debugPrint('📊   🔒 App lock scenario - KEEPING token (wrong PIN entered)');
-        debugPrint('📊   🔒 Token preserved so app will show lock screen on restart');
-      } else {
-        // Fresh login scenario - no token exists
-        // No token to delete, just mark failed login
-        debugPrint('📊   🔐 Fresh login scenario - no token to delete');
+      if (!hasExistingToken) {
+        debugPrint('AUTH LoginFailed fresh attempt (no prior token)');
       }
-      
-      // IMPORTANT: Always keep login - user needs it to unlock the app with PIN
-      // DO NOT delete login - user needs it to unlock with PIN
-      
-      // CRITICAL: Mark that we had a failed login
-      // This prevents AppStarted from unlocking with a cached token
       _hasRecentFailedLogin = true;
-      debugPrint('📊   🚫 Marked _hasRecentFailedLogin = true to prevent cached token unlock');
-      
-      debugPrint('📊   🚫 Emitting AuthFailure - app MUST stay locked');
       emit(AuthFailure(errorMsg));
     }
   }
+
 
   Future<void> _onLogoutRequested(
     LogoutRequested event,

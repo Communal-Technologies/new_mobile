@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:dio/dio.dart';
 
 @injectable
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
@@ -84,6 +85,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             emit(AuthUnauthenticated());
           }
         } catch (e) {
+          // Offline / transient network: do not clear token — splash will retry when online.
+          if (e is DioException &&
+              (e.type == DioExceptionType.connectionError ||
+                  e.type == DioExceptionType.connectionTimeout ||
+                  e.type == DioExceptionType.sendTimeout ||
+                  e.type == DioExceptionType.receiveTimeout)) {
+            emit(AuthUnauthenticated());
+            return;
+          }
           await secureStorage.delete(key: 'token');
           emit(AuthUnauthenticated());
         }

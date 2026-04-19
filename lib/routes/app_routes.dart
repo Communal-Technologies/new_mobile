@@ -235,7 +235,9 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/kyc/proof-of-identity',
       name: 'kyc-proof-of-identity',
-      builder: (context, state) => const ProofOfIdentityScreen(),
+      builder: (context, state) => ProofOfIdentityScreen(
+        anchorCustomerId: _kycAnchorCustomerId(state.extra),
+      ),
     ),
     GoRoute(
       path: '/kyc/verifying',

@@ -35,13 +35,13 @@ class CommunityActionItem extends StatelessWidget {
               width: 40.w,
               height: 40.w,
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
+                color: iconColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10.r),
               ),
               child: Icon(
                 icon,
                 color: iconColor,
-                size: 20.sp,
+                size: 22.sp,
               ),
             ),
             hSpace(16),
@@ -52,7 +52,7 @@ class CommunityActionItem extends StatelessWidget {
                   Text(
                     title,
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w600,
                       color: textColor,
                     ),
@@ -61,7 +61,7 @@ class CommunityActionItem extends StatelessWidget {
                   Text(
                     description,
                     style: TextStyle(
-                      fontSize: 13.sp,
+                      fontSize: 14.sp,
                       color: Colors.grey.shade600,
                     ),
                   ),
@@ -71,7 +71,7 @@ class CommunityActionItem extends StatelessWidget {
             Icon(
               Icons.chevron_right,
               color: Colors.grey.shade400,
-              size: 20.sp,
+              size: 22.sp,
             ),
           ],
         ),
@@ -79,4 +79,3 @@ class CommunityActionItem extends StatelessWidget {
     );
   }
 }
-

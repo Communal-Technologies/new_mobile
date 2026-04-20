@@ -17,7 +17,7 @@ class AccountManagementSection extends StatelessWidget {
           child: Text(
             'Account Management',
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 18.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F1D40),
             ),

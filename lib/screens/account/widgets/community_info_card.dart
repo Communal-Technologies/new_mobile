@@ -9,11 +9,19 @@ class CommunityInfoCard extends StatelessWidget {
     required this.communityName,
     required this.memberCount,
     required this.role,
+    this.logoUrl,
   });
 
   final String communityName;
   final int memberCount;
   final String role;
+  final String? logoUrl;
+
+  bool get _hasLogo {
+    final u = logoUrl?.trim();
+    if (u == null || u.isEmpty) return false;
+    return u.startsWith('http://') || u.startsWith('https://');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,17 +34,27 @@ class CommunityInfoCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 56.w,
-            height: 56.w,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            child: Icon(
-              Icons.people,
-              color: Colors.white,
-              size: 28.sp,
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12.r),
+            child: Container(
+              width: 56.w,
+              height: 56.w,
+              color: Colors.white.withValues(alpha: 0.2),
+              child: _hasLogo
+                  ? Image.network(
+                      logoUrl!.trim(),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Icon(
+                        Icons.people,
+                        color: Colors.white,
+                        size: 30.sp,
+                      ),
+                    )
+                  : Icon(
+                      Icons.people,
+                      color: Colors.white,
+                      size: 30.sp,
+                    ),
             ),
           ),
           hSpace(16),
@@ -47,7 +65,7 @@ class CommunityInfoCard extends StatelessWidget {
                 Text(
                   communityName,
                   style: TextStyle(
-                    fontSize: 18.sp,
+                    fontSize: 20.sp,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                   ),
@@ -56,8 +74,8 @@ class CommunityInfoCard extends StatelessWidget {
                 Text(
                   '$memberCount members • $role',
                   style: TextStyle(
-                    fontSize: 13.sp,
-                    color: Colors.white.withOpacity(0.9),
+                    fontSize: 15.sp,
+                    color: Colors.white.withValues(alpha: 0.9),
                   ),
                 ),
               ],
@@ -68,4 +86,3 @@ class CommunityInfoCard extends StatelessWidget {
     );
   }
 }
-

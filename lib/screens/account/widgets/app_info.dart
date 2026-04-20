@@ -12,15 +12,15 @@ class AppInfo extends StatelessWidget {
         Text(
           'Communal v2.1.0',
           style: TextStyle(
-            fontSize: 12.sp,
+            fontSize: 14.sp,
             color: Colors.grey.shade600,
           ),
         ),
         vSpace(8),
         Text(
-          '© 2025 All rights reserved',
+          '© 2026 All rights reserved',
           style: TextStyle(
-            fontSize: 12.sp,
+            fontSize: 14.sp,
             color: Colors.grey.shade600,
           ),
         ),

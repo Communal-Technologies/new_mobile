@@ -1,5 +1,6 @@
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
+import 'package:communal_mobile/data/repositories/community_settings_repository.dart';
 import 'package:communal_mobile/data/repositories/kyc_repository.dart';
 import 'package:communal_mobile/data/repositories/locations_repository.dart';
 import 'package:communal_mobile/data/repositories/regions_repository.dart';
@@ -24,6 +25,11 @@ abstract class RepositoryModule {
   @lazySingleton
   KycRepository provideKycRepository(DioClient dioClient) =>
       KycRepository(dioClient);
+
+  @lazySingleton
+  CommunitySettingsRepository provideCommunitySettingsRepository(
+          DioClient dioClient) =>
+      CommunitySettingsRepository(dioClient);
 
   @lazySingleton
   KycProgressStorage provideKycProgressStorage(SharedPreferences prefs) =>

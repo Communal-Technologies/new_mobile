@@ -8,7 +8,8 @@ import 'package:toastification/toastification.dart';
 class AppToast {
   AppToast._();
 
-  static const Duration _duration = Duration(seconds: 3);
+  static const Duration _successDuration = Duration(seconds: 4);
+  static const Duration _errorDuration = Duration(seconds: 9);
   static const Alignment _alignment = Alignment.topCenter;
 
   static const Color _successGreen = Color(0xFF22C55E);
@@ -18,7 +19,7 @@ class AppToast {
   static void success(String message) {
     toastification.showCustom(
       alignment: _alignment,
-      autoCloseDuration: _duration,
+      autoCloseDuration: _successDuration,
       builder: (context, holder) {
         return Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -76,10 +77,11 @@ class AppToast {
     );
   }
 
-  static void error(String message) {
+  /// Errors stay longer so users can read API / validation messages.
+  static void error(String message, {Duration? autoCloseDuration}) {
     toastification.showCustom(
       alignment: _alignment,
-      autoCloseDuration: _duration,
+      autoCloseDuration: autoCloseDuration ?? _errorDuration,
       builder: (context, holder) {
         return Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),

@@ -10,12 +10,15 @@ class AppElevatedButton extends StatelessWidget {
     this.title,
     this.child,
     this.isLoading = false,
+    this.loadingLabel,
   });
 
   final void Function()? onPressed;
   final String? title;
   final Widget? child;
   final bool isLoading;
+  /// Shown next to the spinner when [isLoading] is true (e.g. "Submitting…").
+  final String? loadingLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -42,15 +45,33 @@ class AppElevatedButton extends StatelessWidget {
           padding: EdgeInsets.symmetric(vertical: 14.h),
         ),
         child: isLoading
-            ? Center(
-                child: SizedBox(
-                  width: 24.w,
-                  height: 24.w,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 3,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ? Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 22.w,
+                    height: 22.w,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
                   ),
-                ),
+                  SizedBox(width: 12.w),
+                  Flexible(
+                    child: Text(
+                      loadingLabel ?? 'Please wait…',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ),
+                ],
               )
             : (child ??
             Text(

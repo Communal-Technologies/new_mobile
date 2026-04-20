@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-/// Opens the correct KYC screen for the current user using [KycProgressStorage].
+/// Opens the correct KYC screen for the current user — **first incomplete** step, not last visited.
 void pushKycResumeRoute(BuildContext context) {
   final auth = context.read<AuthBloc>().state;
   if (auth is! AuthAuthenticated) {
@@ -16,24 +16,27 @@ void pushKycResumeRoute(BuildContext context) {
 
   final userId = auth.userId;
   final storage = getIt<KycProgressStorage>();
-  final step = storage.getResumeStep(userId);
+  final dest = storage.resumeDestination(
+    userId,
+    communalTier: auth.user.communalTier,
+  );
   final anchor = storage.getAnchor(userId);
+  final extra = anchor != null && anchor.isNotEmpty
+      ? <String, dynamic>{'anchorCustomerId': anchor}
+      : <String, dynamic>{};
 
-  if (anchor != null && anchor.isNotEmpty) {
-    final extra = <String, dynamic>{'anchorCustomerId': anchor};
-    if (step >= 3) {
-      context.pushNamed('kyc-verifying', extra: extra);
+  switch (dest) {
+    case KycResumeDestination.profile:
+      context.pushNamed('kyc-profile-info');
       return;
-    }
-    if (step >= 2) {
-      context.pushNamed('kyc-proof-of-identity', extra: extra);
-      return;
-    }
-    if (step >= 1) {
+    case KycResumeDestination.bank:
       context.pushNamed('kyc-bank-info', extra: extra);
       return;
-    }
+    case KycResumeDestination.proof:
+      context.pushNamed('kyc-proof-of-identity', extra: extra);
+      return;
+    case KycResumeDestination.verifying:
+      context.pushNamed('kyc-verifying', extra: extra);
+      return;
   }
-
-  context.pushNamed('kyc-profile-info');
 }

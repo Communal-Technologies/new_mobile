@@ -32,6 +32,21 @@ class UserModel extends Equatable {
   /// Member KYC tier limits + catalog from `tier_limits` on `get-loggedin-user`.
   final TierLimitsSnapshot? tierLimits;
 
+  /// Wallet `account_balance` from `user.wallet` when eager-loaded (kobo).
+  final int walletBalanceKobo;
+
+  /// Wallet `account_number` (bank / virtual pay-in). Distinct from [ledgerNumber] on profile.
+  final String? walletAccountNumber;
+
+  /// Wallet `account_name` or `deposit_account_name` when present.
+  final String? walletAccountName;
+
+  /// Wallet `account_status`: `1` = active, `2` = frozen (see backend `Wallet`).
+  final String? walletAccountStatus;
+
+  /// Wallet `frozen_by`: member user id when self-frozen; otherwise admin/system id.
+  final String? walletFrozenBy;
+
   const UserModel({
     required this.id,
     required this.name,
@@ -51,6 +66,11 @@ class UserModel extends Equatable {
     this.countryIso,
     this.communalTier,
     this.tierLimits,
+    this.walletBalanceKobo = 0,
+    this.walletAccountNumber,
+    this.walletAccountName,
+    this.walletAccountStatus,
+    this.walletFrozenBy,
   });
 
   String get roleLabel {
@@ -72,6 +92,22 @@ class UserModel extends Equatable {
     final id = cooperativeId?.trim();
     final n = cooperativeName?.trim();
     return (id != null && id.isNotEmpty) || (n != null && n.isNotEmpty);
+  }
+
+  /// Wallet is frozen (`account_status` = 2).
+  bool get isWalletFrozen {
+    final s = walletAccountStatus?.trim();
+    if (s == null || s.isEmpty) return false;
+    return s == '2';
+  }
+
+  /// Frozen by the logged-in member (self-freeze). Admin/other freezes use another `frozen_by`.
+  bool get isWalletSelfFrozen {
+    if (!isWalletFrozen) return false;
+    final fb = walletFrozenBy?.trim();
+    final uid = id.trim();
+    if (fb == null || fb.isEmpty || uid.isEmpty) return false;
+    return fb == uid;
   }
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -163,6 +199,34 @@ class UserModel extends Equatable {
       return comma == -1 ? f : f.substring(0, comma).trim();
     }
 
+    int walletKobo = 0;
+    String? walletAcctNum;
+    String? walletAcctName;
+    String? walletAcctStatus;
+    String? walletFrozenByVal;
+    final walletRaw = userData['wallet'];
+    if (walletRaw is Map) {
+      final w = Map<String, dynamic>.from(walletRaw);
+      final bal = w['account_balance'] ?? w['balance'];
+      if (bal is int) {
+        walletKobo = bal;
+      } else if (bal != null) {
+        walletKobo = int.tryParse(bal.toString()) ?? 0;
+      }
+      String? nz(String? s) {
+        final t = s?.trim();
+        if (t == null || t.isEmpty) return null;
+        return t;
+      }
+
+      walletAcctNum = nz(w['account_number']?.toString()) ??
+          nz(w['deposit_account_number']?.toString());
+      walletAcctName = nz(w['account_name']?.toString()) ??
+          nz(w['deposit_account_name']?.toString());
+      walletAcctStatus = w['account_status']?.toString().trim();
+      walletFrozenByVal = w['frozen_by']?.toString().trim();
+    }
+
     return UserModel(
       id: userData['id']?.toString() ?? '',
       name: fullName.isNotEmpty ? fullName : fallbackName,
@@ -190,6 +254,11 @@ class UserModel extends Equatable {
       countryIso: profileCountryIso,
       communalTier: communalTierVal,
       tierLimits: tierLimitsParsed,
+      walletBalanceKobo: walletKobo,
+      walletAccountNumber: walletAcctNum,
+      walletAccountName: walletAcctName,
+      walletAccountStatus: walletAcctStatus,
+      walletFrozenBy: walletFrozenByVal,
     );
   }
 
@@ -212,6 +281,11 @@ class UserModel extends Equatable {
       'phone': phone,
       'country_iso': countryIso,
       'communal_tier': communalTier,
+      'wallet_balance_kobo': walletBalanceKobo,
+      'wallet_account_number': walletAccountNumber,
+      'wallet_account_name': walletAccountName,
+      'wallet_account_status': walletAccountStatus,
+      'wallet_frozen_by': walletFrozenBy,
     };
   }
 
@@ -235,5 +309,10 @@ class UserModel extends Equatable {
         countryIso,
         communalTier,
         tierLimits,
+        walletBalanceKobo,
+        walletAccountNumber,
+        walletAccountName,
+        walletAccountStatus,
+        walletFrozenBy,
       ];
 }

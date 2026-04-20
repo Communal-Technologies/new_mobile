@@ -63,6 +63,8 @@ class TierCatalogEntry extends Equatable {
   final int dailyTransactionLimitKobo;
   final int maxBalanceKobo;
   final int sortOrder;
+  /// Admin-configured verification lines (same as Risk / tier management).
+  final List<String> requirements;
 
   const TierCatalogEntry({
     required this.tierKey,
@@ -70,9 +72,18 @@ class TierCatalogEntry extends Equatable {
     required this.dailyTransactionLimitKobo,
     required this.maxBalanceKobo,
     this.sortOrder = 0,
+    this.requirements = const [],
   });
 
   factory TierCatalogEntry.fromJson(Map<String, dynamic> json) {
+    final reqRaw = json['requirements'];
+    final requirements = <String>[];
+    if (reqRaw is List) {
+      for (final e in reqRaw) {
+        final s = e?.toString().trim() ?? '';
+        if (s.isNotEmpty) requirements.add(s);
+      }
+    }
     return TierCatalogEntry(
       tierKey: json['tier_key']?.toString() ?? '',
       label: json['label']?.toString() ?? '',
@@ -82,12 +93,13 @@ class TierCatalogEntry extends Equatable {
       maxBalanceKobo:
           int.tryParse(json['max_balance_kobo']?.toString() ?? '') ?? 0,
       sortOrder: int.tryParse(json['sort_order']?.toString() ?? '') ?? 0,
+      requirements: requirements,
     );
   }
 
   @override
   List<Object?> get props =>
-      [tierKey, label, dailyTransactionLimitKobo, maxBalanceKobo, sortOrder];
+      [tierKey, label, dailyTransactionLimitKobo, maxBalanceKobo, sortOrder, requirements];
 }
 
 class TierCurrent extends Equatable {

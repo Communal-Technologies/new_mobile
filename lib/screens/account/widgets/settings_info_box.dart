@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:communal_mobile/core/widgets/space.dart';
 
+/// Footer notice: community settings are stored per cooperative and synced to your account.
 class SettingsInfoBox extends StatelessWidget {
   const SettingsInfoBox({super.key});
 
@@ -12,26 +13,41 @@ class SettingsInfoBox extends StatelessWidget {
       margin: EdgeInsets.symmetric(horizontal: 16.w),
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: const Color(0xFFE0F7FA), // Light teal
+        color: const Color(0xFFE0F7FA),
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            Icons.info,
-            color: const Color(0xFF00ACC1), // Teal
-            size: 24.sp,
+            Icons.info_outline,
+            color: const Color(0xFF00ACC1),
+            size: 26.sp,
           ),
           hSpace(12),
           Expanded(
-            child: Text(
-              'Settings Info\nThese settings apply only to this community. You can configure different settings for each cooperative you belong to.',
-              style: TextStyle(
-                fontSize: 13.sp,
-                color: Colors.grey.shade700,
-                height: 1.4,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Per-cooperative settings',
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F1D40),
+                  ),
+                ),
+                vSpace(6),
+                Text(
+                  'Each switch applies only to the cooperative selected above. '
+                  'Your choices are saved to your account and apply on this device when you are online.',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    color: Colors.grey.shade700,
+                    height: 1.45,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -39,4 +55,3 @@ class SettingsInfoBox extends StatelessWidget {
     );
   }
 }
-

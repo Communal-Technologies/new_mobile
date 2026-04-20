@@ -50,7 +50,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
           title: Text(
             'Account Settings',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 21.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),

@@ -29,6 +29,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AppStarted>(_onAppStarted);
     on<LoginRequested>(_onLoginRequested);
     on<LogoutRequested>(_onLogoutRequested);
+    on<AuthUserUpdated>(_onAuthUserUpdated);
     on<CheckAuthStatus>(_onCheckAuthStatus);
     on<CheckLoginRequested>(_onCheckLoginRequested);
     on<VerifyOtpRequested>(_onVerifyOtpRequested);
@@ -153,6 +154,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
+
+  void _onAuthUserUpdated(AuthUserUpdated event, Emitter<AuthState> emit) {
+    final s = state;
+    if (s is! AuthAuthenticated) return;
+    final u = event.user;
+    emit(AuthAuthenticated(
+      userId: u.id.isNotEmpty ? u.id : s.userId,
+      login: s.login,
+      user: u,
+      sessionGeneration: s.sessionGeneration + 1,
+    ));
+  }
 
   Future<void> _onLogoutRequested(
     LogoutRequested event,

@@ -1,6 +1,7 @@
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
+import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/custom_text_field.dart';
 import 'package:communal_mobile/core/widgets/kyc_idle_suppressor.dart';
 import 'package:communal_mobile/core/widgets/phone_input_field.dart';
@@ -59,7 +60,6 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
   String? _stateError;
   String? _lgaError;
   String? _countryError;
-  String? _submitError;
 
   List<RegionModel> _regions = RegionModel.offlineFallback;
   List<StateModel> _states = [];
@@ -86,6 +86,10 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
     var n = (p.phoneNumber ?? '').replaceAll(RegExp(r'\D'), '');
     if (n.startsWith('0')) {
       n = n.substring(1);
+    }
+    // Avoid +234234… when the national field already includes country code (paste / sync bug).
+    if (dial.isNotEmpty && n.startsWith(dial)) {
+      n = n.substring(dial.length);
     }
     if (dial.isEmpty) {
       return n;
@@ -138,32 +142,31 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
     final authEarly = context.read<AuthBloc>().state;
     if (authEarly is AuthAuthenticated) {
       final storage = getIt<KycProgressStorage>();
-      final step = storage.getResumeStep(authEarly.userId);
       final anchor = storage.getAnchor(authEarly.userId);
       if (anchor != null && anchor.isNotEmpty) {
+        final dest = storage.resumeDestination(
+          authEarly.userId,
+          communalTier: authEarly.user.communalTier,
+        );
         final extra = <String, dynamic>{'anchorCustomerId': anchor};
-        if (step >= 3) {
-          if (!mounted) return;
+        if (!mounted) return;
+        void goResume(void Function() go) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
-            context.go('/kyc/verifying', extra: extra);
+            go();
           });
+        }
+
+        if (dest == KycResumeDestination.bank) {
+          goResume(() => context.go('/kyc/bank-info', extra: extra));
           return;
         }
-        if (step >= 2) {
-          if (!mounted) return;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            context.go('/kyc/proof-of-identity', extra: extra);
-          });
+        if (dest == KycResumeDestination.proof) {
+          goResume(() => context.go('/kyc/proof-of-identity', extra: extra));
           return;
         }
-        if (step >= 1) {
-          if (!mounted) return;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            context.go('/kyc/bank-info', extra: extra);
-          });
+        if (dest == KycResumeDestination.verifying) {
+          goResume(() => context.go('/kyc/verifying', extra: extra));
           return;
         }
       }
@@ -264,7 +267,6 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
     setState(() {
       _selectedCountryName = countryName;
       _countryError = null;
-      _submitError = null;
     });
 
     await _loadStatesForCountry(reg.countryIso, getIt<LocationsRepository>());
@@ -301,7 +303,6 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
       _lgas = [];
       _stateError = null;
       _lgaError = null;
-      _submitError = null;
     });
 
     if (stateId == null) return;
@@ -328,7 +329,6 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
     setState(() {
       _selectedLgaName = name;
       _lgaError = null;
-      _submitError = null;
     });
   }
 
@@ -367,73 +367,77 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
       _stateError = null;
       _lgaError = null;
       _countryError = null;
-      _submitError = null;
     });
   }
 
-  bool _validateForm() {
+  /// Returns `null` if valid, otherwise the first validation message (toast + inline hints).
+  String? _validateFormError() {
     _clearErrors();
-    var isValid = true;
+    String? firstToast;
+
+    void note(String message) {
+      firstToast ??= message;
+    }
 
     if (_firstNameController.text.trim().isEmpty) {
       setState(() => _firstNameError = 'First name is required');
-      isValid = false;
+      note('First name is required');
     }
 
     if (_lastNameController.text.trim().isEmpty) {
       setState(() => _lastNameError = 'Last name is required');
-      isValid = false;
+      note('Last name is required');
     }
 
     if (_emailController.text.trim().isEmpty) {
       setState(() => _emailError = 'Email is required');
-      isValid = false;
+      note('Email is required');
     } else if (!_isValidEmail(_emailController.text.trim())) {
       setState(() => _emailError = 'Enter a valid email address');
-      isValid = false;
+      note('Enter a valid email address');
     }
 
     if (_phoneNumber == null || !_phoneValid) {
       setState(() => _phoneError = 'Enter a valid phone number');
-      isValid = false;
+      note('Enter a valid phone number');
     }
 
     if (_address1Controller.text.trim().isEmpty) {
       setState(() => _address1Error = 'Address line 1 is required');
-      isValid = false;
+      note('Address line 1 is required');
     }
 
     if (_cityController.text.trim().isEmpty) {
       setState(() => _cityError = 'City is required');
-      isValid = false;
+      note('City is required');
     }
 
     final postal = _digitsOnlyPostal(_postalCodeController.text);
     if (postal.isEmpty) {
       setState(() => _postalCodeError = 'Postal code is required');
-      isValid = false;
+      note('Postal code is required');
     } else if (postal.length < 4 || postal.length > 6) {
       setState(() => _postalCodeError = 'Postal code must be 4–6 digits');
-      isValid = false;
+      note('Postal code must be 4–6 digits');
     }
 
     if (_selectedStateId == null) {
       setState(() => _stateError = 'Please select a state');
-      isValid = false;
+      note('Please select a state');
     }
 
     if (_selectedLgaName == null || _selectedLgaName!.isEmpty) {
       setState(() => _lgaError = 'Please select an LGA');
-      isValid = false;
+      note('Please select an LGA');
     }
 
     if (_selectedCountryName == null ||
         !_regions.any((r) => r.name == _selectedCountryName)) {
       setState(() => _countryError = 'Please select a country');
-      isValid = false;
+      note('Please select a country');
     }
 
-    return isValid;
+    return firstToast;
   }
 
   bool _isValidEmail(String email) {
@@ -449,13 +453,15 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
   }
 
   Future<void> _continue() async {
-    if (!_validateForm()) return;
+    final validationError = _validateFormError();
+    if (validationError != null) {
+      AppToast.error(validationError);
+      return;
+    }
 
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) {
-      setState(() {
-        _submitError = 'You need to be signed in to continue verification.';
-      });
+      AppToast.error('You need to be signed in to continue verification.');
       return;
     }
 
@@ -496,7 +502,6 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
 
     setState(() {
       _submitting = true;
-      _submitError = null;
     });
 
     try {
@@ -518,8 +523,9 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _submitError = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
       });
+      final msg = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
+      AppToast.error(msg.isNotEmpty ? msg : 'Could not save. Please try again.');
     }
   }
 
@@ -817,16 +823,6 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                       isLoading: _lgasLoading,
                       loadingHint: 'Loading areas…',
                     ),
-                    if (_submitError != null) ...[
-                      vSpace(16),
-                      Text(
-                        _submitError!,
-                        style: TextStyle(
-                          color: Colors.red.shade700,
-                          fontSize: 16.sp,
-                        ),
-                      ),
-                    ],
                     vSpace(24),
                   ],
                 ),
@@ -844,12 +840,12 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                   ),
                 ],
               ),
-              child: _submitting
-                  ? const Center(child: CircularProgressIndicator())
-                  : AppElevatedButton(
-                      title: 'Continue',
-                      onPressed: _continue,
-                    ),
+              child: AppElevatedButton(
+                title: 'Continue',
+                onPressed: _continue,
+                isLoading: _submitting,
+                loadingLabel: 'Submitting…',
+              ),
             ),
           ],
         ),

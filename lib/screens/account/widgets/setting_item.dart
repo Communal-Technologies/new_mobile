@@ -38,7 +38,7 @@ class SettingItem extends StatelessWidget {
               child: Icon(
                 icon,
                 color: const Color(0xFF7434FF),
-                size: 20.sp,
+                size: 22.sp,
               ),
             ),
             hSpace(16),
@@ -49,7 +49,7 @@ class SettingItem extends StatelessWidget {
                   Text(
                     title,
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w600,
                       color: const Color(0xFF0F1D40),
                     ),
@@ -58,7 +58,7 @@ class SettingItem extends StatelessWidget {
                   Text(
                     description,
                     style: TextStyle(
-                      fontSize: 13.sp,
+                      fontSize: 14.sp,
                       color: Colors.grey.shade600,
                     ),
                   ),
@@ -71,7 +71,7 @@ class SettingItem extends StatelessWidget {
               Icon(
                 Icons.chevron_right,
                 color: Colors.grey.shade400,
-                size: 20.sp,
+                size: 22.sp,
               ),
           ],
         ),

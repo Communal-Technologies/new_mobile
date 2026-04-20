@@ -28,6 +28,8 @@ import 'package:communal_mobile/data/datasources/remote/dio/network_interceptor.
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart' as _i798;
 import 'package:communal_mobile/data/repositories/auth_repository.dart'
     as _i493;
+import 'package:communal_mobile/data/repositories/community_settings_repository.dart'
+    as _i662;
 import 'package:communal_mobile/data/repositories/kyc_repository.dart' as _i419;
 import 'package:communal_mobile/data/repositories/locations_repository.dart'
     as _i210;
@@ -97,6 +99,11 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i419.KycRepository>(
       () => repositoryModule.provideKycRepository(gh<_i750.DioClient>()),
+    );
+    gh.lazySingleton<_i662.CommunitySettingsRepository>(
+      () => repositoryModule.provideCommunitySettingsRepository(
+        gh<_i750.DioClient>(),
+      ),
     );
     gh.lazySingleton<_i739.SplashCubit>(
       () => cubitModule.provideSplashCubit(

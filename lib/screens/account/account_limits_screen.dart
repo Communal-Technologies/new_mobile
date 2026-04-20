@@ -15,11 +15,10 @@ import 'package:communal_mobile/screens/account/widgets/kyc_tier_info_card.dart'
 class AccountLimitsScreen extends StatelessWidget {
   const AccountLimitsScreen({super.key});
 
-  static List<String> _requirementsFor(String tierKey) {
+  /// Fallback if API omits `requirements` (older clients).
+  static List<String> _requirementsFallback(String tierKey) {
     switch (tierKey) {
       case 'tier_1':
-        // Tier 1 is BVN + profile/bank details. The Communal account number is
-        // issued automatically when that flow completes — not a separate KYC step.
         return [
           'Complete profile and bank details',
           'BVN verification',
@@ -34,14 +33,11 @@ class AccountLimitsScreen extends StatelessWidget {
   }
 
   static int _tierNum(String tierKey) {
-    switch (tierKey) {
-      case 'tier_1':
-        return 1;
-      case 'tier_2':
-        return 2;
-      default:
-        return 0;
+    final m = RegExp(r'^tier_(\d+)$').firstMatch(tierKey);
+    if (m != null) {
+      return int.tryParse(m.group(1)!) ?? 0;
     }
+    return 0;
   }
 
   @override
@@ -128,13 +124,16 @@ class AccountLimitsScreen extends StatelessWidget {
                     ...catalog.map((e) {
                       final n = _tierNum(e.tierKey);
                       if (n == 0) return const SizedBox.shrink();
+                      final req = e.requirements.isNotEmpty
+                          ? e.requirements
+                          : _requirementsFallback(e.tierKey);
                       return Padding(
                         padding: EdgeInsets.only(bottom: 12.h),
                         child: KycTierInfoCard(
                           tier: n,
                           dailyLimitKobo: e.dailyTransactionLimitKobo,
                           maxBalanceKobo: e.maxBalanceKobo,
-                          requirements: _requirementsFor(e.tierKey),
+                          requirements: req,
                           isCurrent: e.tierKey == tl.current.tierKey,
                         ),
                       );

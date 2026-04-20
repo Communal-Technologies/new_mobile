@@ -19,15 +19,33 @@ class ProfileCard extends StatefulWidget {
 class _ProfileCardState extends State<ProfileCard> {
   bool _isBalanceVisible = true;
 
-  String _tierChipLabel(UserModel u) {
+  /// Status only (e.g. "Not verified", "Tier 1") — not a second CTA beside [ _upgradeChipLabel ].
+  String _tierStatusChipLabel(UserModel u) {
     final tl = u.tierLimits?.current;
     if (tl != null) {
-      return tl.displayTierTitle;
+      if (tl.tierKey == 'tier_1' || tl.tierKey == 'tier_2') {
+        return tl.displayTierTitle;
+      }
+      final lab = tl.label.trim();
+      if (lab.isNotEmpty) return lab;
+      return 'Not verified';
     }
     final t = u.communalTier?.trim().toLowerCase();
     if (t == 'tier_1') return 'Tier 1';
     if (t == 'tier_2') return 'Tier 2';
-    return 'Verification';
+    return 'Not verified';
+  }
+
+  /// Action chip: "Verify" before Tier 1, "Upgrade" for Tier 1 → 2.
+  String _upgradeChipLabel(UserModel u) {
+    final tl = u.tierLimits?.current;
+    if (tl != null) {
+      if (tl.tierKey == 'tier_1') return 'Upgrade account';
+      return 'Verify account';
+    }
+    final t = u.communalTier?.trim().toLowerCase();
+    if (t == 'tier_1') return 'Upgrade account';
+    return 'Verify account';
   }
 
   @override
@@ -96,7 +114,7 @@ class _ProfileCardState extends State<ProfileCard> {
                               borderRadius: BorderRadius.circular(12.r),
                             ),
                             child: Text(
-                              _tierChipLabel(user),
+                              _tierStatusChipLabel(user),
                               style: TextStyle(
                                 fontSize: 14.sp,
                                 fontWeight: FontWeight.w600,
@@ -118,7 +136,7 @@ class _ProfileCardState extends State<ProfileCard> {
                                   borderRadius: BorderRadius.circular(12.r),
                                 ),
                                 child: Text(
-                                  'Upgrade account',
+                                  _upgradeChipLabel(user),
                                   style: TextStyle(
                                     fontSize: 14.sp,
                                     fontWeight: FontWeight.w600,

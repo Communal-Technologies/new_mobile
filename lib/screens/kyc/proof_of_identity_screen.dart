@@ -66,11 +66,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
     if (!mounted) return;
     setState(() => _resolvedAnchor = id);
     if (fromRoute != null && fromRoute.isNotEmpty) {
-      getIt<KycProgressStorage>().ensureAnchorSynced(
-        auth.userId,
-        fromRoute,
-        minResumeStep: 2,
-      );
+      getIt<KycProgressStorage>().ensureAnchorSynced(auth.userId, fromRoute);
     }
   }
 

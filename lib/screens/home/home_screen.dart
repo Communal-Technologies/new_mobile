@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
 import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/screens/home/widgets/home_account_card_section.dart';
+import 'package:communal_mobile/screens/home/widgets/home_account_frozen_card.dart';
 import 'package:communal_mobile/screens/home/widgets/home_header.dart';
 import 'package:communal_mobile/screens/home/widgets/kyc_alert.dart';
 import 'package:communal_mobile/screens/home/widgets/quick_actions_section.dart';
@@ -53,8 +58,45 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 vSpace(16),
 
-                // KYC Alert
-                const KycAlert(),
+                BlocBuilder<AuthBloc, AuthState>(
+                  buildWhen: (prev, next) {
+                    String? wan(AuthState s) =>
+                        s is AuthAuthenticated ? s.user.walletAccountNumber : null;
+                    return wan(prev) != wan(next) ||
+                        prev.runtimeType != next.runtimeType;
+                  },
+                  builder: (context, authState) {
+                    if (authState is AuthAuthenticated) {
+                      final u = authState.user;
+                      final hasWalletAccountNumber =
+                          u.walletAccountNumber != null &&
+                              u.walletAccountNumber!.trim().isNotEmpty;
+                      // Balance card only after wallet provisioning (KYC path); ledger alone is not enough.
+                      if (hasWalletAccountNumber) {
+                        return HomeAccountCardSection(user: u);
+                      }
+                    }
+                    return const KycAlert();
+                  },
+                ),
+
+                vSpace(16),
+
+                BlocBuilder<AuthBloc, AuthState>(
+                  buildWhen: (prev, next) {
+                    if (prev.runtimeType != next.runtimeType) return true;
+                    if (prev is AuthAuthenticated && next is AuthAuthenticated) {
+                      return prev.user != next.user;
+                    }
+                    return true;
+                  },
+                  builder: (context, authState) {
+                    if (authState is AuthAuthenticated) {
+                      return HomeAccountFrozenCard(user: authState.user);
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
 
                 vSpace(20),
 

@@ -131,9 +131,12 @@ class CommunityMembership {
 
   factory CommunityMembership.fromJson(Map<String, dynamic> json) {
     final settingsRaw = json['settings'];
-    final settingsMap = settingsRaw is Map
-        ? Map<String, dynamic>.from(settingsRaw as Map)
-        : <String, dynamic>{};
+    final Map<String, dynamic> settingsMap;
+    if (settingsRaw is Map) {
+      settingsMap = Map<String, dynamic>.from(settingsRaw);
+    } else {
+      settingsMap = <String, dynamic>{};
+    }
     final settings = settingsMap.isEmpty
         ? CommunityCooperativeSettings.defaults()
         : CommunityCooperativeSettings.fromJson(settingsMap);

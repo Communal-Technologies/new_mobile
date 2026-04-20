@@ -29,7 +29,7 @@ class SecurityBanner extends StatelessWidget {
                 Icon(
                   Icons.shield,
                   color: Colors.white,
-                  size: 20.sp,
+                  size: 22.sp,
                 ),
                 Positioned(
                   bottom: 2,
@@ -44,7 +44,7 @@ class SecurityBanner extends StatelessWidget {
                     child: Icon(
                       Icons.check,
                       color: Colors.white,
-                      size: 8.sp,
+                      size: 9.sp,
                     ),
                   ),
                 ),
@@ -94,7 +94,7 @@ class SecurityBanner extends StatelessWidget {
             child: Text(
               'Review',
               style: TextStyle(
-                fontSize: 13.sp,
+                fontSize: 14.sp,
                 fontWeight: FontWeight.w600,
               ),
             ),

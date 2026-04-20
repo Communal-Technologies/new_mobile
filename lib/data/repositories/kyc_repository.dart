@@ -28,6 +28,41 @@ class KycRepository {
     }
   }
 
+  /// Step 2 (BVN): backend waits for Anchor verification; returns Anchor JSON in `data` on success.
+  Future<Map<String, dynamic>?> upgradeToTier1({
+    required String anchorCustomerId,
+    required String bvn,
+    required String dateOfBirth,
+    required String gender,
+  }) async {
+    try {
+      final response = await _dioClient.post(
+        '/compliance/upgrade-to-tier1/$anchorCustomerId',
+        data: <String, dynamic>{
+          'bvn': bvn,
+          'date_of_birth': dateOfBirth,
+          'gender': gender,
+        },
+      );
+      final data = response.data;
+      if (data is Map &&
+          (data['status'] == true || data['status'] == 'true')) {
+        final inner = data['data'];
+        if (inner is Map) {
+          return Map<String, dynamic>.from(inner);
+        }
+        return null;
+      }
+      throw Exception(
+        data is Map
+            ? (data['message']?.toString() ?? 'BVN verification failed')
+            : 'BVN verification failed',
+      );
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
   String _messageFromDio(DioException e) {
     final data = e.response?.data;
     if (data is Map) {

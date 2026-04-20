@@ -41,7 +41,7 @@ class CommunityToggleSettingItem extends StatelessWidget {
               color: enabled
                   ? (value ? const Color(0xFF7434FF) : Colors.grey.shade600)
                   : Colors.grey.shade400,
-              size: 20.sp,
+              size: 22.sp,
             ),
           ),
           hSpace(16),
@@ -52,7 +52,7 @@ class CommunityToggleSettingItem extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w600,
                     color: enabled
                         ? const Color(0xFF0F1D40)
@@ -63,7 +63,7 @@ class CommunityToggleSettingItem extends StatelessWidget {
                 Text(
                   description,
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 14.sp,
                     color: enabled
                         ? Colors.grey.shade600
                         : Colors.grey.shade400,
@@ -82,4 +82,3 @@ class CommunityToggleSettingItem extends StatelessWidget {
     );
   }
 }
-

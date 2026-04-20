@@ -569,4 +569,35 @@ class AuthRepository {
       rethrow;
     }
   }
+
+  /// Submit unfreeze request (only valid when account was self-frozen). Backend:
+  /// `POST /members/account/request-unfreeze` with `{ reason }` (min 10 chars).
+  Future<void> requestAccountUnfreeze(String reason) async {
+    try {
+      final response = await dioClient.post(
+        '/members/account/request-unfreeze',
+        data: <String, dynamic>{'reason': reason},
+      );
+      final data = response.data;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (data is Map &&
+            (data['status'] == true || data['status'] == 'true')) {
+          return;
+        }
+        if (data is Map) {
+          final msg = data['message']?.toString();
+          if (msg != null && msg.isNotEmpty) throw Exception(msg);
+        }
+        return;
+      }
+      throw Exception('Request failed');
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map) {
+        final msg = data['message']?.toString();
+        if (msg != null && msg.isNotEmpty) throw Exception(msg);
+      }
+      throw Exception(e.message ?? 'Request failed');
+    }
+  }
 }

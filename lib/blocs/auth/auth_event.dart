@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:communal_mobile/data/models/user_model.dart';
 
 abstract class AuthEvent extends Equatable {
   const AuthEvent();
@@ -20,6 +21,16 @@ class LoginRequested extends AuthEvent {
 }
 
 class LogoutRequested extends AuthEvent {}
+
+/// Replace [AuthAuthenticated.user] after a server-side profile change (e.g. KYC tier / ledger).
+class AuthUserUpdated extends AuthEvent {
+  final UserModel user;
+
+  const AuthUserUpdated(this.user);
+
+  @override
+  List<Object?> get props => [user];
+}
 
 class CheckAuthStatus extends AuthEvent {}
 

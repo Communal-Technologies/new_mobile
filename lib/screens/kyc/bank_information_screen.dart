@@ -1,8 +1,12 @@
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
+import 'package:communal_mobile/data/repositories/auth_repository.dart';
+import 'package:communal_mobile/data/repositories/kyc_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -11,6 +15,25 @@ import 'package:communal_mobile/core/widgets/kyc_idle_suppressor.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:go_router/go_router.dart';
+
+const Map<String, String> _kycMonthToNum = {
+  'January': '01',
+  'February': '02',
+  'March': '03',
+  'April': '04',
+  'May': '05',
+  'June': '06',
+  'July': '07',
+  'August': '08',
+  'September': '09',
+  'October': '10',
+  'November': '11',
+  'December': '12',
+};
+
+final Map<String, String> _kycDayPadded = {
+  for (int i = 1; i <= 31; i++) '$i': i < 10 ? '0$i' : '$i',
+};
 
 class BankInformationScreen extends StatefulWidget {
   const BankInformationScreen({super.key, this.anchorCustomerId});
@@ -50,6 +73,8 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
   String? _selectedYear;
   String? _selectedGender;
 
+  bool _isSubmitting = false;
+
   @override
   void initState() {
     super.initState();
@@ -65,11 +90,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
     if (!mounted) return;
     setState(() => _resolvedAnchor = id);
     if (fromRoute != null && fromRoute.isNotEmpty) {
-      getIt<KycProgressStorage>().ensureAnchorSynced(
-        auth.userId,
-        fromRoute,
-        minResumeStep: 1,
-      );
+      getIt<KycProgressStorage>().ensureAnchorSynced(auth.userId, fromRoute);
     }
   }
 
@@ -151,7 +172,35 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
     context.push('/kyc/proof-of-identity', extra: _kycExtra());
   }
 
+  String _formatDobForApi() {
+    final m = _kycMonthToNum[_selectedMonth!]!;
+    final d = _kycDayPadded[_selectedDay!]!;
+    return '$_selectedYear-$m-$d';
+  }
+
+  String _genderForApi() => _selectedGender == 'Female' ? 'female' : 'male';
+
+  /// Deposit ledger can arrive shortly after Anchor via webhook; mirror legacy polling without blocking HTTP.
+  Future<void> _pollLedgerIfEmpty(String token) async {
+    for (var i = 0; i < 12; i++) {
+      if (!mounted) return;
+      await Future<void>.delayed(const Duration(seconds: 2));
+      if (!mounted) return;
+      try {
+        getIt<AuthRepository>().updateToken(token);
+        final user = await getIt<AuthRepository>().getUserInfo(token);
+        if (!mounted || user == null) continue;
+        final ledger = user.ledgerNumber?.trim();
+        if (ledger != null && ledger.isNotEmpty) {
+          context.read<AuthBloc>().add(AuthUserUpdated(user));
+          return;
+        }
+      } catch (_) {}
+    }
+  }
+
   void _skip() {
+    if (_isSubmitting) return;
     final id = _effectiveAnchor();
     if (id == null || id.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -161,10 +210,12 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
       );
       return;
     }
-    _markBankStepAndGo();
+    // Advance to proof UI only; do not mark bank tier-1 until Continue succeeds.
+    context.push('/kyc/proof-of-identity', extra: _kycExtra());
   }
 
-  void _continue() {
+  Future<void> _continue() async {
+    if (_isSubmitting) return;
     if (!_validateForm()) return;
     final id = _effectiveAnchor();
     if (id == null || id.isEmpty) {
@@ -175,7 +226,42 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
       );
       return;
     }
-    _markBankStepAndGo();
+
+    setState(() => _isSubmitting = true);
+    try {
+      await getIt<KycRepository>().upgradeToTier1(
+        anchorCustomerId: id,
+        bvn: _bvnController.text.trim(),
+        dateOfBirth: _formatDobForApi(),
+        gender: _genderForApi(),
+      );
+
+      try {
+        final token = await getIt<FlutterSecureStorage>().read(key: 'token');
+        if (token != null && mounted) {
+          getIt<AuthRepository>().updateToken(token);
+          final user = await getIt<AuthRepository>().getUserInfo(token);
+          if (mounted && user != null) {
+            context.read<AuthBloc>().add(AuthUserUpdated(user));
+            final ledger = user.ledgerNumber?.trim();
+            if (ledger == null || ledger.isEmpty) {
+              await _pollLedgerIfEmpty(token);
+            }
+          }
+        }
+      } catch (_) {}
+
+      if (!mounted) return;
+      await _markBankStepAndGo();
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg.isEmpty ? 'Request failed' : msg)),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -385,7 +471,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                     _buildDropdown(
                       label: 'Gender',
                       value: _selectedGender,
-                      items: ['Male', 'Female', 'Other'],
+                      items: const ['Male', 'Female'],
                       onChanged: (value) {
                         setState(() {
                           _selectedGender = value;
@@ -420,7 +506,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                     child: AppSecondaryButton(
                       title: 'Skip',
                       isDark: false,
-                      onPressed: _skip,
+                      onPressed: _isSubmitting ? null : _skip,
                     ),
                   ),
                   hSpace(16),
@@ -428,6 +514,8 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                     flex: 2,
                     child: AppElevatedButton(
                       title: 'Continue',
+                      isLoading: _isSubmitting,
+                      loadingLabel: 'Submitting…',
                       onPressed: _continue,
                     ),
                   ),

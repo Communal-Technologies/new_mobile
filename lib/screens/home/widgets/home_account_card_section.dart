@@ -154,7 +154,7 @@ class _FinanceTabsRow extends StatelessWidget {
                     children: [
                       Icon(
                         items[i].icon,
-                        size: 20.sp,
+                        size: 22.sp,
                         color: sel ? primary : Colors.grey.shade600,
                       ),
                       SizedBox(width: 6.w),
@@ -164,7 +164,7 @@ class _FinanceTabsRow extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 13.sp,
+                            fontSize: 16.sp,
                             fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
                             color: sel ? primary : Colors.grey.shade600,
                           ),
@@ -209,8 +209,9 @@ class _SavingsTabContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final balanceText =
-        CurrencyFormatter.formatNairaFromKobo(user.walletBalanceKobo);
+    final balanceText = CurrencyFormatter.formatNairaFromKoboWithDecimals(
+      user.walletBalanceKobo,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

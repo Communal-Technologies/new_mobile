@@ -29,6 +29,15 @@ class UserModel extends Equatable {
   /// From `profile.tier` on `get-loggedin-user` (e.g. tier_0, tier_1, tier_2).
   final String? communalTier;
 
+  /// From top-level `kyc.anchor_customer_id` on `get-loggedin-user`.
+  final String? kycAnchorCustomerId;
+  /// From top-level `kyc_progress.step_1_submitted`.
+  final bool kycStep1Submitted;
+  /// From top-level `kyc_progress.step_2_submitted`.
+  final bool kycStep2Submitted;
+  /// From top-level `kyc_progress.step_3_submitted`.
+  final bool kycStep3Submitted;
+
   /// Member KYC tier limits + catalog from `tier_limits` on `get-loggedin-user`.
   final TierLimitsSnapshot? tierLimits;
 
@@ -65,6 +74,10 @@ class UserModel extends Equatable {
     this.phone,
     this.countryIso,
     this.communalTier,
+    this.kycAnchorCustomerId,
+    this.kycStep1Submitted = false,
+    this.kycStep2Submitted = false,
+    this.kycStep3Submitted = false,
     this.tierLimits,
     this.walletBalanceKobo = 0,
     this.walletAccountNumber,
@@ -108,6 +121,20 @@ class UserModel extends Equatable {
     final uid = id.trim();
     if (fb == null || fb.isEmpty || uid.isEmpty) return false;
     return fb == uid;
+  }
+
+  /// True when a bank / virtual pay-in account number exists on the wallet.
+  bool get hasProvisionedWalletAccountNumber {
+    final n = walletAccountNumber?.trim();
+    return n != null && n.isNotEmpty;
+  }
+
+  /// Home banner: Communal tier is already Tier 1+ (e.g. BVN submitted) but the
+  /// virtual account number is not on the user yet — provisioning / webhooks pending.
+  bool get shouldShowHomeKycPendingWalletProvisioning {
+    if (hasProvisionedWalletAccountNumber) return false;
+    final t = communalTier?.trim().toLowerCase() ?? '';
+    return t == 'tier_1' || t == 'tier_2';
   }
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -164,6 +191,26 @@ class UserModel extends Equatable {
     final rawTier = profile?['tier']?.toString().trim();
     if (rawTier != null && rawTier.isNotEmpty) {
       communalTierVal = rawTier;
+    }
+
+    String? kycAnchorId;
+    bool kycStep1SubmittedVal = false;
+    bool kycStep2SubmittedVal = false;
+    bool kycStep3SubmittedVal = false;
+    final kycRaw = json['kyc'];
+    if (kycRaw is Map) {
+      final k = Map<String, dynamic>.from(kycRaw);
+      final aid = k['anchor_customer_id']?.toString().trim();
+      if (aid != null && aid.isNotEmpty) kycAnchorId = aid;
+    }
+    final kycProgressRaw = json['kyc_progress'];
+    if (kycProgressRaw is Map) {
+      final kp = Map<String, dynamic>.from(kycProgressRaw);
+      bool asBool(dynamic v) =>
+          v == true || v == 1 || v == '1' || v == 'true';
+      kycStep1SubmittedVal = asBool(kp['step_1_submitted']);
+      kycStep2SubmittedVal = asBool(kp['step_2_submitted']);
+      kycStep3SubmittedVal = asBool(kp['step_3_submitted']);
     }
 
     final tierLimitsRaw = json['tier_limits'];
@@ -253,6 +300,10 @@ class UserModel extends Equatable {
       phone: phoneVal != null && phoneVal.isNotEmpty ? phoneVal : null,
       countryIso: profileCountryIso,
       communalTier: communalTierVal,
+      kycAnchorCustomerId: kycAnchorId,
+      kycStep1Submitted: kycStep1SubmittedVal,
+      kycStep2Submitted: kycStep2SubmittedVal,
+      kycStep3Submitted: kycStep3SubmittedVal,
       tierLimits: tierLimitsParsed,
       walletBalanceKobo: walletKobo,
       walletAccountNumber: walletAcctNum,
@@ -281,6 +332,10 @@ class UserModel extends Equatable {
       'phone': phone,
       'country_iso': countryIso,
       'communal_tier': communalTier,
+      'kyc_anchor_customer_id': kycAnchorCustomerId,
+      'kyc_step_1_submitted': kycStep1Submitted,
+      'kyc_step_2_submitted': kycStep2Submitted,
+      'kyc_step_3_submitted': kycStep3Submitted,
       'wallet_balance_kobo': walletBalanceKobo,
       'wallet_account_number': walletAccountNumber,
       'wallet_account_name': walletAccountName,
@@ -308,6 +363,10 @@ class UserModel extends Equatable {
         phone,
         countryIso,
         communalTier,
+        kycAnchorCustomerId,
+        kycStep1Submitted,
+        kycStep2Submitted,
+        kycStep3Submitted,
         tierLimits,
         walletBalanceKobo,
         walletAccountNumber,

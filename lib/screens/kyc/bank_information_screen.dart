@@ -199,7 +199,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
     }
   }
 
-  void _skip() {
+  Future<void> _skip() async {
     if (_isSubmitting) return;
     final id = _effectiveAnchor();
     if (id == null || id.isEmpty) {
@@ -210,7 +210,11 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
       );
       return;
     }
-    // Advance to proof UI only; do not mark bank tier-1 until Continue succeeds.
+    final auth = context.read<AuthBloc>().state;
+    if (auth is AuthAuthenticated) {
+      await getIt<KycProgressStorage>().markBankStepDone(auth.userId);
+    }
+    if (!mounted) return;
     context.push('/kyc/proof-of-identity', extra: _kycExtra());
   }
 
@@ -267,6 +271,10 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final auth = context.read<AuthBloc>().state;
+    final hideBack = auth is AuthAuthenticated &&
+        (auth.user.kycStep1Submitted ||
+            getIt<KycProgressStorage>().getResumeStep(auth.userId) >= 1);
 
     return KycIdleSuppressor(
       child: Scaffold(
@@ -275,10 +283,13 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => context.pop(),
-        ),
+        automaticallyImplyLeading: false,
+        leading: hideBack
+            ? const SizedBox.shrink()
+            : IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.black),
+                onPressed: () => context.pop(),
+              ),
         title: Text(
           'Bank Information',
           style: TextStyle(

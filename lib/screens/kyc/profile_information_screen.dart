@@ -1,4 +1,5 @@
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
@@ -12,10 +13,12 @@ import 'package:communal_mobile/data/models/state_model.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
 import 'package:communal_mobile/data/repositories/kyc_repository.dart';
+import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/data/repositories/locations_repository.dart';
 import 'package:communal_mobile/data/repositories/regions_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -147,6 +150,9 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
         final dest = storage.resumeDestination(
           authEarly.userId,
           communalTier: authEarly.user.communalTier,
+          backendStep1Submitted: authEarly.user.kycStep1Submitted,
+          backendStep2Submitted: authEarly.user.kycStep2Submitted,
+          backendStep3Submitted: authEarly.user.kycStep3Submitted,
         );
         final extra = <String, dynamic>{'anchorCustomerId': anchor};
         if (!mounted) return;
@@ -513,6 +519,16 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
         authState.userId,
         customerId,
       );
+      try {
+        final token = await getIt<FlutterSecureStorage>().read(key: 'token');
+        if (token != null) {
+          getIt<AuthRepository>().updateToken(token);
+          final fresh = await getIt<AuthRepository>().getUserInfo(token);
+          if (fresh != null && mounted) {
+            context.read<AuthBloc>().add(AuthUserUpdated(fresh));
+          }
+        }
+      } catch (_) {}
       if (!mounted) return;
       setState(() => _submitting = false);
       context.push(

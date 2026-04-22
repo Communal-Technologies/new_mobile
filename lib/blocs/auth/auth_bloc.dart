@@ -2,7 +2,10 @@ import 'dart:developer' as developer;
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/app_logger.dart';
+import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
+import 'package:communal_mobile/data/models/user_model.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
@@ -30,6 +33,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LoginRequested>(_onLoginRequested);
     on<LogoutRequested>(_onLogoutRequested);
     on<AuthUserUpdated>(_onAuthUserUpdated);
+    on<AuthRefreshUserRequested>(_onAuthRefreshUserRequested);
     on<CheckAuthStatus>(_onCheckAuthStatus);
     on<CheckLoginRequested>(_onCheckLoginRequested);
     on<VerifyOtpRequested>(_onVerifyOtpRequested);
@@ -48,6 +52,34 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       return errorStr;
     }
     return error.toString();
+  }
+
+  Future<void> _hydrateKycResumeFromBackend(UserModel user) async {
+    final userId = user.id;
+    if (userId.trim().isEmpty) return;
+    final storage = getIt<KycProgressStorage>();
+    final anchor = user.kycAnchorCustomerId?.trim();
+    if (anchor != null && anchor.isNotEmpty && user.kycStep1Submitted) {
+      await storage.ensureAnchorSynced(userId, anchor);
+    }
+
+    // Backend is the source of truth across sessions/devices.
+    if (user.kycStep3Submitted) {
+      await storage.setResumeStep(userId, 3);
+      return;
+    }
+    if (user.kycStep2Submitted) {
+      await storage.setResumeStep(userId, 2);
+      return;
+    }
+    if (user.kycStep1Submitted) {
+      final current = storage.getResumeStep(userId);
+      // Keep local progress (e.g. user skipped bank → step 2) until the server records tier 1.
+      final next = current >= 2 ? current : 1;
+      await storage.setResumeStep(userId, next);
+      return;
+    }
+    await storage.setResumeStep(userId, 0);
   }
 
   Future<void> _onAppStarted(AppStarted event, Emitter<AuthState> emit) async {
@@ -72,6 +104,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         try {
           final user = await authRepository.getUserInfo(token);
           if (user != null) {
+            await _hydrateKycResumeFromBackend(user);
             final storedLogin = (await secureStorage.read(key: 'login'))?.trim() ?? '';
             final sessionLogin =
                 storedLogin.isNotEmpty ? storedLogin : user.login.trim();
@@ -129,6 +162,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         final user = await authRepository.getUserInfo(loginResponse.token!);
 
         if (user != null) {
+          await _hydrateKycResumeFromBackend(user);
           _hasRecentFailedLogin = false;
           emit(AuthAuthenticated(
             userId: user.id,
@@ -167,6 +201,30 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     ));
   }
 
+  Future<void> _onAuthRefreshUserRequested(
+    AuthRefreshUserRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    final s = state;
+    if (s is! AuthAuthenticated) return;
+    final token = await secureStorage.read(key: 'token');
+    if (token == null || token.isEmpty) return;
+    try {
+      final user = await authRepository.getUserInfo(token);
+      if (user != null) {
+        await _hydrateKycResumeFromBackend(user);
+        emit(AuthAuthenticated(
+          userId: user.id.isNotEmpty ? user.id : s.userId,
+          login: s.login,
+          user: user,
+          sessionGeneration: s.sessionGeneration + 1,
+        ));
+      }
+    } catch (_) {
+      // Silent: polling must not log the user out on transient errors.
+    }
+  }
+
   Future<void> _onLogoutRequested(
     LogoutRequested event,
     Emitter<AuthState> emit,
@@ -194,6 +252,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     if (token != null) {
       final user = await authRepository.getUserInfo(token);
       if (user != null) {
+        await _hydrateKycResumeFromBackend(user);
         final storedLogin = (await secureStorage.read(key: 'login'))?.trim() ?? '';
         final sessionLogin =
             storedLogin.isNotEmpty ? storedLogin : user.login.trim();

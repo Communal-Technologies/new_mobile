@@ -6,8 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Step values:
 /// - `0` — profile step not completed in this flow (or cleared).
 /// - `1` — profile/register API succeeded; [anchorCustomerId] is set; resume at bank.
-/// - `2` — bank tier-1 (BVN) **submitted successfully** via API; resume at proof of identity.
-///   Skipping bank does **not** set this — only a successful Continue on the bank screen.
+/// - `2` — past bank step: tier-1 (BVN) **submitted** via API **or** user **skipped** bank.
+///   Needed so proof is reachable and [resumeDestination] does not send users back to bank.
 /// - `3` — proof submitted locally; resume at verifying / later steps.
 ///
 /// [KycResumeDestination] is derived from the **first incomplete** step (not “last visited”).
@@ -36,21 +36,28 @@ class KycProgressStorage {
   /// See class doc. Defaults to `0`.
   int getResumeStep(String userId) => _prefs.getInt(_stepKey(userId)) ?? 0;
 
-  /// Where to open the KYC flow: first **incomplete** step, using [communalTier] when present
-  /// (`tier_0` ⇒ bank not done; `tier_1` / `tier_2` ⇒ bank done) and local [getResumeStep] for proof.
+  /// Where to open the KYC flow: first **incomplete** step. Uses backend flags when present;
+  /// otherwise [communalTier] plus local [getResumeStep] (e.g. skip bank sets step `2` while still `tier_0`).
   KycResumeDestination resumeDestination(
     String userId, {
     String? communalTier,
+    bool? backendStep1Submitted,
+    bool? backendStep2Submitted,
+    bool? backendStep3Submitted,
   }) {
     final anchor = getAnchor(userId);
-    if (anchor == null || anchor.isEmpty) {
+    final step = getResumeStep(userId);
+    final step1Done = (backendStep1Submitted == true) ||
+        ((anchor != null && anchor.isNotEmpty) || step >= 1);
+    if (!step1Done) {
       return KycResumeDestination.profile;
     }
-    final step = getResumeStep(userId);
-    if (!_bankTierComplete(communalTier, step)) {
+    final bankDone = backendStep2Submitted ?? _bankTierComplete(communalTier, step);
+    if (!bankDone) {
       return KycResumeDestination.bank;
     }
-    if (!_proofComplete(step)) {
+    final proofDone = backendStep3Submitted ?? _proofComplete(step);
+    if (!proofDone) {
       return KycResumeDestination.proof;
     }
     return KycResumeDestination.verifying;
@@ -59,7 +66,7 @@ class KycProgressStorage {
   static bool _bankTierComplete(String? communalTier, int resumeStep) {
     final t = communalTier?.trim().toLowerCase();
     if (t == 'tier_1' || t == 'tier_2') return true;
-    if (t == 'tier_0') return false;
+    // tier_0 or unknown: local step 2+ means Continue or Skip passed bank in the wizard.
     return resumeStep >= 2;
   }
 
@@ -76,7 +83,7 @@ class KycProgressStorage {
     await _prefs.setInt(_stepKey(userId), 1);
   }
 
-  /// After tier-1 BVN upgrade succeeds (Continue on bank screen). Not used when user skips bank.
+  /// After tier-1 BVN upgrade succeeds (Continue), or when the user **skips** bank (same step value).
   Future<void> markBankStepDone(String userId) async {
     await _prefs.setInt(_stepKey(userId), 2);
   }
@@ -84,6 +91,12 @@ class KycProgressStorage {
   /// After user submits proof-of-identity form (before verifying screen).
   Future<void> markProofStepDone(String userId) async {
     await _prefs.setInt(_stepKey(userId), 3);
+  }
+
+  /// Force local resume step to mirror backend truth.
+  Future<void> setResumeStep(String userId, int step) async {
+    final normalized = step < 0 ? 0 : (step > 3 ? 3 : step);
+    await _prefs.setInt(_stepKey(userId), normalized);
   }
 
   /// When KYC flow is finished (e.g. reached dashboard from All Set).
@@ -95,7 +108,7 @@ class KycProgressStorage {
   /// Persists [anchorCustomerId] when it arrives via navigation [extra] only.
   ///
   /// Does **not** change the resume step — that must only move via
-  /// [saveAfterProfileRegistered], [markBankStepDone], or [markProofStepDone].
+  /// [saveAfterProfileRegistered], [markBankStepDone] (including skip), or [markProofStepDone].
   /// (Previously bumping step here caused users who never finished bank to be
   /// sent to proof or verifying on the next launch.)
   Future<void> ensureAnchorSynced(String userId, String anchorCustomerId) async {

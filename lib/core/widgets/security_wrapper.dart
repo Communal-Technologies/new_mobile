@@ -510,9 +510,24 @@ class _SecurityWrapperState extends State<SecurityWrapper>
           listenWhen: (previous, current) =>
               (current == SecurityState.idlePrompt &&
                   previous != SecurityState.idlePrompt) ||
-              current == SecurityState.unlocked,
+              current == SecurityState.unlocked ||
+              (current == SecurityState.locked && previous != SecurityState.locked),
           listener: (context, state) {
             _logState('LISTENER - SecurityState changed');
+
+            // Auto-lock while "Are you still there?" is open: strip only that dialog route
+            // so a modal is not left over the PIN screen (and we never pop arbitrary pages).
+            if (state == SecurityState.locked) {
+              _idlePromptDialogOpen = false;
+              final nav = rootNavigatorKey.currentState;
+              if (nav != null) {
+                nav.popUntil(
+                  (route) =>
+                      route.settings.name != 'idle_prompt_dialog',
+                );
+              }
+              return;
+            }
             
             // CRITICAL: When app is unlocked by user (after entering PIN), this means:
             // 1. User entered PIN on welcome_back_screen
@@ -585,17 +600,20 @@ class _SecurityWrapperState extends State<SecurityWrapper>
                 return;
               }
               if (_idlePromptDialogOpen) return;
-              _idlePromptDialogOpen = true;
               final securityCubit = context.read<SecurityCubit>();
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 final navContext = rootNavigatorKey.currentContext;
                 if (!mounted || navContext == null || !navContext.mounted) {
-                  _idlePromptDialogOpen = false;
                   return;
                 }
+                if (securityCubit.state != SecurityState.idlePrompt) {
+                  return;
+                }
+                _idlePromptDialogOpen = true;
                 showDialog<void>(
                   context: navContext,
                   barrierDismissible: false,
+                  routeSettings: const RouteSettings(name: 'idle_prompt_dialog'),
                   builder: (_) => BlocProvider.value(
                     value: securityCubit,
                     child: const IdlePromptDialog(),

@@ -54,7 +54,9 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _syncAnchorFromStorage());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncAnchorFromStorage();
+    });
   }
 
   void _syncAnchorFromStorage() {
@@ -140,6 +142,24 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
     context.go('/home');
   }
 
+  /// Back from step 3: only step 2 (bank), never step 1 — use [GoRouter.go] so the stack is replaced.
+  void _goBackFromProof() {
+    final auth = context.read<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) {
+      context.pop();
+      return;
+    }
+    if (!auth.user.kycStep2Submitted) {
+      final id = _effectiveAnchor();
+      final extra = (id != null && id.isNotEmpty)
+          ? <String, dynamic>{'anchorCustomerId': id}
+          : <String, dynamic>{};
+      context.go('/kyc/bank-info', extra: extra);
+      return;
+    }
+    context.pop();
+  }
+
   Future<void> _completeSetup() async {
     if (!_validateForm()) return;
     final id = _effectiveAnchor();
@@ -175,6 +195,10 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final auth = context.read<AuthBloc>().state;
+    // Show back to step 2 only while step 2 is not submitted on the server (includes skip-to-proof).
+    final hideBack =
+        auth is AuthAuthenticated && auth.user.kycStep2Submitted;
 
     return KycIdleSuppressor(
       child: Scaffold(
@@ -183,10 +207,13 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => context.pop(),
-        ),
+        automaticallyImplyLeading: false,
+        leading: hideBack
+            ? const SizedBox.shrink()
+            : IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.black),
+                onPressed: _goBackFromProof,
+              ),
         title: Text(
           'Proof of Identity',
           style: TextStyle(

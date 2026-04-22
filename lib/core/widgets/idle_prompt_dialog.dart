@@ -20,7 +20,7 @@ class IdlePromptDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.timer_outlined,
+              Icons.touch_app_outlined,
               size: 48.sp,
               color: Theme.of(context).primaryColor,
             ),

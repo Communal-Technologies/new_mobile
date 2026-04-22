@@ -15,7 +15,8 @@ import 'package:communal_mobile/core/widgets/space.dart';
 class KycPendingApprovalCard extends StatefulWidget {
   const KycPendingApprovalCard({super.key});
 
-  static const Color _messageBg = Color(0xFFFBF0C9);
+  /// Same family as KYC transactional callouts — clearly “pending”, not error (red).
+  static const Color _cardBg = Color(0xFFFBF0C9);
 
   @override
   State<KycPendingApprovalCard> createState() => _KycPendingApprovalCardState();
@@ -47,66 +48,57 @@ class _KycPendingApprovalCardState extends State<KycPendingApprovalCard> {
   Widget build(BuildContext context) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w),
-      padding: EdgeInsets.all(16.w),
+      constraints: BoxConstraints(minHeight: 132.h),
+      padding: EdgeInsets.fromLTRB(18.w, 22.h, 18.w, 24.h),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF0F5),
+        color: KycPendingApprovalCard._cardBg,
         borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: const Color(0xFFE6D9A8)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                width: 44.w,
-                height: 44.w,
-                decoration: const BoxDecoration(
+                width: 30.w,
+                height: 30.w,
+                decoration: BoxDecoration(
                   color: Colors.black,
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(6.r),
                 ),
+                alignment: Alignment.center,
                 child: Icon(
                   Icons.error_outline,
                   color: Colors.white,
-                  size: 26.sp,
+                  size: 17.sp,
                 ),
               ),
               hSpace(12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'KYC PENDING APPROVAL',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'KYC PENDING APPROVAL',
+                  style: TextStyle(
+                    fontSize: 22.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                    height: 1.25,
+                  ),
                 ),
               ),
             ],
           ),
-          vSpace(12),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: KycPendingApprovalCard._messageBg,
-              borderRadius: BorderRadius.circular(10.r),
-            ),
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 12.h),
-              child: Text(
-                'Thanks, we\'ve received your documents. Our team will review them '
-                'and update your account shortly. Expected review time: 1–3 business days.',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  color: Colors.black87,
-                  height: 1.45,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+          vSpace(14),
+          Text(
+            'Thanks, we\'ve received your documents. Our team will review them '
+            'and update your account shortly. Expected review time: 1–3 business days.',
+            textAlign: TextAlign.start,
+            style: TextStyle(
+              fontSize: 17.sp,
+              color: Colors.grey.shade700,
+              height: 1.45,
             ),
           ),
         ],

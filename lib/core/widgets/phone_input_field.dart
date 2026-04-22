@@ -114,7 +114,10 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
             ),
             spaceBetweenSelectorAndTextField: 0,
             ignoreBlank: true,
-            autoValidateMode: AutovalidateMode.onUserInteraction,
+            // Keep validation messaging controlled by parent screens so errors
+            // always render outside the input field (below the container).
+            autoValidateMode: AutovalidateMode.disabled,
+            errorMessage: '',
             initialValue: initial,
             textFieldController: widget.controller,
             focusNode: widget.focusNode,

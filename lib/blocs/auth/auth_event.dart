@@ -34,6 +34,9 @@ class AuthUserUpdated extends AuthEvent {
 
 class CheckAuthStatus extends AuthEvent {}
 
+/// Refresh the authenticated user from the API without clearing session (silent poll).
+class AuthRefreshUserRequested extends AuthEvent {}
+
 class CheckLoginRequested extends AuthEvent {
   final String login;
 

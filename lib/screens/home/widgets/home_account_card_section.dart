@@ -16,7 +16,8 @@ const Color _kCopyButtonBg = Color(0x33C8A0FF);
 
 /// Home finance card: tabs (Savings / Investments / Loans) sit above a white card;
 /// the selected tab visually connects to the card. Shown when [UserModel.walletAccountNumber]
-/// is set (wallet provisioned after KYC); otherwise home shows [KycAlert].
+/// is set (wallet provisioned after KYC); otherwise home may show [KycPendingApprovalCard]
+/// or [KycAlert].
 class HomeAccountCardSection extends StatefulWidget {
   const HomeAccountCardSection({super.key, required this.user});
 

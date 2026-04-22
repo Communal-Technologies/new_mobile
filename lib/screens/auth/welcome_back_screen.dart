@@ -841,6 +841,22 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                             },
                             loadingBuilder: (context, child, loadingProgress) {
                               if (loadingProgress == null) return child;
+                              // App lock: avoid a circular "timer" look on the PIN screen.
+                              if (widget.isAppLock) {
+                                return Container(
+                                  width: 80.w,
+                                  height: 80.w,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.grey.shade200,
+                                  ),
+                                  child: Icon(
+                                    Icons.person,
+                                    size: 40.sp,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                );
+                              }
                               return Container(
                                 width: 80.w,
                                 height: 80.w,

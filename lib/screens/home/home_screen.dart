@@ -7,10 +7,12 @@ import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
 import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/data/models/user_model.dart';
 import 'package:communal_mobile/screens/home/widgets/home_account_card_section.dart';
 import 'package:communal_mobile/screens/home/widgets/home_account_frozen_card.dart';
 import 'package:communal_mobile/screens/home/widgets/home_header.dart';
 import 'package:communal_mobile/screens/home/widgets/kyc_alert.dart';
+import 'package:communal_mobile/screens/home/widgets/kyc_pending_approval_card.dart';
 import 'package:communal_mobile/screens/home/widgets/quick_actions_section.dart';
 import 'package:communal_mobile/screens/home/widgets/recent_transactions_section.dart';
 import 'package:communal_mobile/screens/home/widgets/new_feature_banner.dart';
@@ -60,20 +62,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 BlocBuilder<AuthBloc, AuthState>(
                   buildWhen: (prev, next) {
-                    String? wan(AuthState s) =>
-                        s is AuthAuthenticated ? s.user.walletAccountNumber : null;
-                    return wan(prev) != wan(next) ||
-                        prev.runtimeType != next.runtimeType;
+                    if (prev.runtimeType != next.runtimeType) return true;
+                    if (prev is! AuthAuthenticated || next is! AuthAuthenticated) {
+                      return true;
+                    }
+                    final a = prev.user;
+                    final b = next.user;
+                    String wan(UserModel u) => u.walletAccountNumber?.trim() ?? '';
+                    return wan(a) != wan(b) ||
+                        (a.communalTier ?? '') != (b.communalTier ?? '') ||
+                        a.kycStep3Submitted != b.kycStep3Submitted;
                   },
                   builder: (context, authState) {
                     if (authState is AuthAuthenticated) {
                       final u = authState.user;
-                      final hasWalletAccountNumber =
-                          u.walletAccountNumber != null &&
-                              u.walletAccountNumber!.trim().isNotEmpty;
-                      // Balance card only after wallet provisioning (KYC path); ledger alone is not enough.
-                      if (hasWalletAccountNumber) {
+                      if (u.hasProvisionedWalletAccountNumber) {
                         return HomeAccountCardSection(user: u);
+                      }
+                      if (u.shouldShowHomeKycPendingWalletProvisioning) {
+                        return const KycPendingApprovalCard();
                       }
                     }
                     return const KycAlert();

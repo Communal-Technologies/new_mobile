@@ -19,6 +19,9 @@ void pushKycResumeRoute(BuildContext context) {
   final dest = storage.resumeDestination(
     userId,
     communalTier: auth.user.communalTier,
+    backendStep1Submitted: auth.user.kycStep1Submitted,
+    backendStep2Submitted: auth.user.kycStep2Submitted,
+    backendStep3Submitted: auth.user.kycStep3Submitted,
   );
   final anchor = storage.getAnchor(userId);
   final extra = anchor != null && anchor.isNotEmpty

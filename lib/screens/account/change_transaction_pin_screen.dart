@@ -249,8 +249,8 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                       ((_hasExistingPin && _phase > 0) ||
                           (!_hasExistingPin && _phase > 1)))
                     Positioned(
-                      top: 0,
-                      left: 0,
+                      top: 6.h,
+                      left: 8.w,
                       child: TextButton.icon(
                         style: TextButton.styleFrom(
                           padding: EdgeInsets.zero,
@@ -274,13 +274,13 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                               },
                         icon: Icon(
                           Icons.arrow_back_ios_new,
-                          size: 12.sp,
+                          size: 14.sp,
                           color: Theme.of(context).primaryColor,
                         ),
                         label: Text(
                           'Go back',
                           style: TextStyle(
-                            fontSize: 12.sp,
+                            fontSize: 14.sp,
                             fontWeight: FontWeight.w700,
                             color: Theme.of(context).primaryColor,
                           ),

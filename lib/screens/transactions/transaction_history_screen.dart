@@ -381,7 +381,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     child: Text(
                       'Communal (Personal)',
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
                         color: Colors.black87,
                       ),
@@ -395,14 +395,16 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       Flexible(
                         child: _buildFilterButton(
                           icon: Icons.filter_list,
-                          label: 'All Categories',
+                          label: _categoryFilterButtonLabel,
+                          onTap: _openCategoryFilterSheet,
                         ),
                       ),
                       hSpace(12),
                       Flexible(
                         child: _buildFilterButton(
                           icon: null,
-                          label: 'Successful',
+                          label: _statusFilterButtonLabel,
+                          onTap: _openStatusFilterSheet,
                         ),
                       ),
                     ],
@@ -427,7 +429,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                 child: Text(
                                   'No transactions yet',
                                   style: TextStyle(
-                                    fontSize: 15.sp,
+                                    fontSize: 17.sp,
                                     color: Colors.grey.shade600,
                                   ),
                                 ),
@@ -497,7 +499,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: 15.sp,
               fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
               color: isActive ? theme.primaryColor : Colors.grey.shade600,
             ),
@@ -515,25 +517,47 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     );
   }
 
-  Widget _buildFilterButton({IconData? icon, required String label}) {
+  Future<void> _openCategoryFilterSheet() async {
+    final result = await showModalBottomSheet<CategoryFilterResult>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => FilterCategoryBottomSheet(
+        initialDirection: _filterDirection,
+        initialPaymentType: _filterPaymentType,
+      ),
+    );
+    if (!mounted || result == null) return;
+    setState(() {
+      _filterDirection = result.direction;
+      _filterPaymentType = result.paymentType;
+      _recomputeGrouped();
+    });
+  }
+
+  Future<void> _openStatusFilterSheet() async {
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => FilterStatusBottomSheet(
+        initialStatus: _filterStatus,
+      ),
+    );
+    if (!mounted || result == null) return;
+    setState(() {
+      _filterStatus = result;
+      _recomputeGrouped();
+    });
+  }
+
+  Widget _buildFilterButton({
+    IconData? icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
-      onTap: () {
-        if (label == 'All Categories') {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (context) => const FilterCategoryBottomSheet(),
-          );
-        } else if (label == 'Successful') {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (context) => const FilterStatusBottomSheet(),
-          );
-        }
-      },
+      onTap: onTap,
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 11.h),
         decoration: BoxDecoration(
@@ -544,7 +568,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 16.sp, color: Colors.grey.shade700),
+              Icon(icon, size: 18.sp, color: Colors.grey.shade700),
               hSpace(6),
             ],
             Flexible(
@@ -552,7 +576,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 label,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 14.sp,
+                  fontSize: 16.sp,
                   fontWeight: FontWeight.w500,
                   color: Colors.grey.shade700,
                 ),
@@ -561,7 +585,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             hSpace(4),
             Icon(
               Icons.keyboard_arrow_down,
-              size: 16.sp,
+              size: 18.sp,
               color: Colors.grey.shade700,
             ),
           ],
@@ -614,7 +638,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     Text(
                       month,
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 18.sp,
                         fontWeight: FontWeight.w700,
                         color: Colors.black,
                       ),
@@ -625,7 +649,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                           ? Icons.keyboard_arrow_down
                           : Icons.keyboard_arrow_right,
                       color: Colors.grey.shade600,
-                      size: 20.sp,
+                      size: 22.sp,
                     ),
                   ],
                 ),

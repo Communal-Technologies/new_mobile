@@ -49,7 +49,7 @@ class _SecurityWrapperState extends State<SecurityWrapper>
 
   /// Prevents stacking multiple idle dialogs if the cubit re-emits before dismiss.
   bool _idlePromptDialogOpen = false;
-  
+
   // Key for widget.child to force rebuild when unlocking
   int _childKey = 0;
   
@@ -308,6 +308,7 @@ class _SecurityWrapperState extends State<SecurityWrapper>
                         }
                         appRouter.go('/welcome');
                       } catch (e) {
+                        // Router may be unavailable during transitional teardown; ignore.
                       }
                     }
                   });

@@ -1,9 +1,13 @@
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
@@ -59,6 +63,14 @@ class _TransferInternalVerifyScreenState
 
   Future<void> _confirm() async {
     if (_pin.length != 4 || _submitting) return;
+    final authState = context.read<AuthBloc>().state;
+    final currencySymbol = authState is AuthAuthenticated
+        ? currencySymbolForUser(authState.user)
+        : currencySymbolForCode('NGN');
+    final currencyCode = authState is AuthAuthenticated
+        ? resolveCurrencyCode(authState.user)
+        : 'NGN';
+
     setState(() => _submitting = true);
     try {
       await _repo.verifySecurityPin(_pin);
@@ -67,11 +79,13 @@ class _TransferInternalVerifyScreenState
         amountKobo: widget.amountKobo,
         narration: widget.narration.trim().isEmpty ? 'Transfer' : widget.narration,
         destinationAccountId: widget.recipient.accountId,
+        currencyCode: currencyCode,
       );
       if (widget.saveAsBeneficiary) {
         await _favorites.upsert(widget.recipient);
       }
       if (!mounted) return;
+      final mapped = transactionStatusFromApi(result.status);
       context.pushNamed(
         'transaction-receipt',
         extra: {
@@ -81,7 +95,7 @@ class _TransferInternalVerifyScreenState
             counterpartyBank: widget.recipient.bank,
             counterpartyAccount: widget.recipient.accountNumber,
             amount: widget.amountKobo / 100,
-            currencySymbol: '₦',
+            currencySymbol: currencySymbol,
             transactionType: 'Book Transfer',
             dateTime: DateTime.now(),
             sessionId: result.transferId,
@@ -90,7 +104,8 @@ class _TransferInternalVerifyScreenState
             paymentMethod: 'Wallet',
             fees: 0,
             isIncoming: false,
-            status: TransactionStatus.pending,
+            status: mapped,
+            failureReason: result.failureReason,
           ),
         },
       );

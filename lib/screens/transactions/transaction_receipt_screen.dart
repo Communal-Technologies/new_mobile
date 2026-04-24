@@ -10,6 +10,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/core/constants/images.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
@@ -247,14 +248,14 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
             onPressed: () => Navigator.of(context).maybePop(),
           ),
           title: Text(
-            'Transaction Receipt',
+            'Transaction Status',
             style: TextStyle(
-              fontSize: 18.sp,
-              fontWeight: FontWeight.w700,
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w600,
               color: Colors.black,
             ),
           ),
-          centerTitle: true,
+          centerTitle: false,
         ),
         body: SafeArea(
           child: Padding(
@@ -289,6 +290,28 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                     ),
                   ],
                 ),
+                vSpace(16),
+                SizedBox(
+                  width: double.infinity,
+                  child: _ReceiptActionButton(
+                    label: 'Make Another Transfer',
+                    icon: Iconsax.arrow_swap_horizontal,
+                    background: const Color(0xFFEFE6FD),
+                    foreground: theme.primaryColor,
+                    onTap: () => context.goNamed('transfer'),
+                  ),
+                ),
+                vSpace(10),
+                SizedBox(
+                  width: double.infinity,
+                  child: _ReceiptActionButton(
+                    label: 'Back to Home',
+                    icon: Iconsax.home,
+                    background: theme.primaryColor,
+                    foreground: Colors.white,
+                    onTap: () => context.goNamed('home'),
+                  ),
+                ),
               ],
             ),
           ),
@@ -322,6 +345,43 @@ class _ReceiptCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Align(
+            alignment: Alignment.center,
+            child: Container(
+              width: 84.w,
+              height: 84.w,
+              decoration: BoxDecoration(
+                color: _statusHeroBackground,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                _statusHeroIcon,
+                color: _statusColor,
+                size: 44.sp,
+              ),
+            ),
+          ),
+          vSpace(14),
+          Text(
+            _statusTitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 24.sp,
+              fontWeight: FontWeight.w700,
+              color: _statusColor,
+            ),
+          ),
+          vSpace(6),
+          Text(
+            _statusSubtitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          vSpace(18),
           Row(
             children: [
               Image.asset(
@@ -340,7 +400,7 @@ class _ReceiptCard extends StatelessWidget {
               ),
             ],
           ),
-          vSpace(24),
+          vSpace(20),
           Text(
             details.amountLabel,
             textAlign: TextAlign.center,
@@ -352,96 +412,52 @@ class _ReceiptCard extends StatelessWidget {
             ),
           ),
           vSpace(12),
-          RichText(
-            textAlign: TextAlign.center,
-            text: TextSpan(
-              text: '${details.counterpartLabel} ',
-              style: TextStyle(
-                fontSize: 13.sp,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey.shade600,
-              ),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: _amountPillGradient),
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            child: Column(
               children: [
-                TextSpan(
-                  text: details.counterpartyName.toUpperCase(),
+                Text(
+                  'Transfer Amount',
                   style: TextStyle(
+                    color: Colors.white,
                     fontSize: 13.sp,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                vSpace(4),
+                Text(
+                  details.amountLabel,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 28.sp,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
-                    letterSpacing: 0.4,
                   ),
                 ),
               ],
             ),
           ),
-          vSpace(4),
-          Text(
-            details.formattedDate,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade500,
-              letterSpacing: 0.6,
-            ),
-          ),
-          vSpace(16),
-          Align(
-            alignment: Alignment.center,
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 8.h),
-              decoration: BoxDecoration(
-                color: _statusBackgroundColor,
-                borderRadius: BorderRadius.circular(24.r),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(_statusIcon, size: 16.sp, color: _statusColor),
-                  hSpace(6),
-                  Text(
-                    _statusLabel,
-                    style: TextStyle(
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w600,
-                      color: _statusColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          vSpace(24),
+          vSpace(18),
           Divider(color: Colors.grey.shade200, thickness: 1),
           vSpace(20),
-          _ReceiptInfoRow(label: 'Fees', value: details.feesLabel),
+          _ReceiptInfoRow(label: 'Recipient', value: details.counterpartyName),
           vSpace(16),
           _ReceiptInfoRow(
-            label: details.isIncoming ? 'Sender Details' : 'Recipient Details',
-            value:
-                '${details.counterpartyName}\n${details.counterpartyBankLine}',
-            isMultiline: true,
+            label: 'Bank Account',
+            value: details.counterpartyBankLine,
           ),
           vSpace(16),
-          _ReceiptInfoRow(
-            label: 'Transaction Type',
-            value: details.transactionType,
-          ),
+          _ReceiptInfoRow(label: 'Reference', value: details.reference),
           vSpace(16),
           _ReceiptInfoRow(label: 'Date and Time', value: details.formattedDate),
           vSpace(16),
-          _ReceiptInfoRow(label: 'Session ID', value: details.sessionId),
-          vSpace(16),
-          _ReceiptInfoRow(label: 'Description', value: details.description),
-          vSpace(16),
           _ReceiptInfoRow(
-            label: 'Transaction Reference',
-            value: details.reference,
-          ),
-          vSpace(16),
-          _ReceiptInfoRow(
-            label: 'Payment Method',
-            value: details.paymentMethod,
+            label: 'Status',
+            value: _statusLabel,
           ),
           vSpace(24),
           Container(
@@ -480,6 +496,61 @@ class _ReceiptCard extends StatelessWidget {
 }
 
 extension _ReceiptStatusStyling on _ReceiptCard {
+  IconData get _statusHeroIcon {
+    switch (details.status) {
+      case TransactionStatus.pending:
+        return Icons.access_time_rounded;
+      case TransactionStatus.failed:
+        return Icons.cancel_rounded;
+      case TransactionStatus.successful:
+        return Icons.check_circle;
+    }
+  }
+
+  Color get _statusHeroBackground {
+    switch (details.status) {
+      case TransactionStatus.pending:
+        return const Color(0xFFFFF4E6);
+      case TransactionStatus.failed:
+        return const Color(0xFFFFEEF0);
+      case TransactionStatus.successful:
+        return const Color(0xFFE4FAF1);
+    }
+  }
+
+  String get _statusTitle {
+    switch (details.status) {
+      case TransactionStatus.pending:
+        return 'Transaction Pending';
+      case TransactionStatus.failed:
+        return 'Sorry, Payment Failed';
+      case TransactionStatus.successful:
+        return 'Transfer Successful!';
+    }
+  }
+
+  String get _statusSubtitle {
+    switch (details.status) {
+      case TransactionStatus.pending:
+        return 'Your transaction is being processed';
+      case TransactionStatus.failed:
+        return 'Your transfer request was not successful';
+      case TransactionStatus.successful:
+        return 'Your money has been sent successfully';
+    }
+  }
+
+  List<Color> get _amountPillGradient {
+    switch (details.status) {
+      case TransactionStatus.pending:
+        return const [Color(0xFFFF9800), Color(0xFFF57C00)];
+      case TransactionStatus.failed:
+        return const [Color(0xFFFB5A5A), Color(0xFFED1B2D)];
+      case TransactionStatus.successful:
+        return const [Color(0xFF00C950), Color(0xFF00A63E)];
+    }
+  }
+
   Color get _statusColor {
     switch (details.status) {
       case TransactionStatus.pending:
@@ -488,28 +559,6 @@ extension _ReceiptStatusStyling on _ReceiptCard {
         return const Color(0xFFD7263D);
       case TransactionStatus.successful:
         return const Color(0xFF1AAE70);
-    }
-  }
-
-  Color get _statusBackgroundColor {
-    switch (details.status) {
-      case TransactionStatus.pending:
-        return const Color(0xFFFFF6E6);
-      case TransactionStatus.failed:
-        return const Color(0xFFFFEEF0);
-      case TransactionStatus.successful:
-        return const Color(0xFFE4FAF1);
-    }
-  }
-
-  IconData get _statusIcon {
-    switch (details.status) {
-      case TransactionStatus.pending:
-        return Iconsax.clock;
-      case TransactionStatus.failed:
-        return Iconsax.close_circle;
-      case TransactionStatus.successful:
-        return Iconsax.tick_circle;
     }
   }
 
@@ -529,19 +578,15 @@ class _ReceiptInfoRow extends StatelessWidget {
   const _ReceiptInfoRow({
     required this.label,
     required this.value,
-    this.isMultiline = false,
   });
 
   final String label;
   final String value;
-  final bool isMultiline;
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: isMultiline
-          ? CrossAxisAlignment.start
-          : CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
           flex: 4,
@@ -563,7 +608,7 @@ class _ReceiptInfoRow extends StatelessWidget {
               fontSize: 14.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black87,
-              height: isMultiline ? 1.4 : 1.2,
+              height: 1.2,
             ),
           ),
         ),

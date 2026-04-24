@@ -561,36 +561,12 @@ class _SecurityWrapperState extends State<SecurityWrapper>
               _cachedLockedScreen = null;
               _childKey++; // Force rebuild by changing key
               _logState('LISTENER - After PIN validation and unlock');
-              
-              // CRITICAL: Force a rebuild by calling setState immediately
-              // This ensures SecurityWrapper rebuilds even if BlocBuilder doesn't
+              // BlocBuilder below already rebuilds on [SecurityState.unlocked]. Avoid
+              // setState + a second [unlockApp] here — that re-enters layout/focus and
+              // triggers "wrong build scope" / InheritedWidget assertions after hot reload.
               if (mounted) {
-                setState(() {
-                  // Force rebuild of SecurityWrapper
-                });
+                setState(() {});
               }
-              
-              // CRITICAL: Force a rebuild by scheduling a frame
-              // Sometimes the BlocBuilder doesn't rebuild immediately after state change
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  // Force rebuild by reading the state again and triggering a rebuild
-                  final securityCubit = context.read<SecurityCubit>();
-                  if (securityCubit.state == SecurityState.unlocked) {
-                    debugPrint('📊   🔓 SECURITY WRAPPER LISTENER - Forcing rebuild after unlock');
-                    // Clear cache and force setState again
-                    _cachedLockedScreen = null;
-                    _childKey++;
-                    if (mounted) {
-                      setState(() {
-                        // Force rebuild again
-                      });
-                    }
-                    // Emit state again to ensure BlocBuilder rebuilds
-                    securityCubit.unlockApp(); // This will emit unlocked state again
-                  }
-                }
-              });
             }
             
             // Idle prompt: [SecurityWrapper] sits above [MaterialApp.router], so
@@ -625,24 +601,7 @@ class _SecurityWrapperState extends State<SecurityWrapper>
               });
             }
           },
-          child: BlocListener<SecurityCubit, SecurityState>(
-            listenWhen: (previous, current) {
-              // Listen when app becomes unlocked to force rebuild
-              return previous == SecurityState.locked && current == SecurityState.unlocked;
-            },
-            listener: (context, state) {
-              // CRITICAL: When app becomes unlocked, force SecurityWrapper to rebuild
-              // This ensures the dashboard is shown even if BlocBuilder doesn't rebuild
-              if (state == SecurityState.unlocked && mounted) {
-                debugPrint('📊   🔓 SECURITY WRAPPER LISTENER - App unlocked, forcing rebuild');
-                _cachedLockedScreen = null;
-                _childKey++;
-                setState(() {
-                  // Force rebuild of SecurityWrapper
-                });
-              }
-            },
-            child: BlocBuilder<SecurityCubit, SecurityState>(
+          child: BlocBuilder<SecurityCubit, SecurityState>(
               buildWhen: (previous, current) {
               // CRITICAL: Always rebuild when transitioning to unlocked OR when already unlocked
               // This ensures dashboard is shown immediately after correct PIN
@@ -801,12 +760,18 @@ class _SecurityWrapperState extends State<SecurityWrapper>
                   _isFromWelcomeBackScreen = false;
                   _freshLoginTimestamp = null;
                 } else if (authState is AuthAuthenticated && (recentlyCompletedFreshLogin || _isFreshLogin || _isFromWelcomeBackScreen)) {
-                  // Fresh login detected - unlock and show dashboard
-                  securityCubit.unlockApp();
-                  securityCubit.recordActivity();
-                  // Clear cached lock screen since we're showing dashboard
+                  // Fresh login: never call [unlockApp] synchronously from [build] — it emits
+                  // and can re-enter the framework ("wrong build scope", _dependents assertions).
                   _cachedLockedScreen = null;
                   _childKey++;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) return;
+                    final c = context.read<SecurityCubit>();
+                    if (c.state == SecurityState.locked) {
+                      c.unlockApp();
+                      c.recordActivity();
+                    }
+                  });
                   return _wrapDashboardWithIdleTracking(widget.child);
                 }
                 
@@ -884,7 +849,6 @@ class _SecurityWrapperState extends State<SecurityWrapper>
               return _wrapDashboardWithIdleTracking(widget.child);
             },
           ),
-        ),
       );
         },
       ),

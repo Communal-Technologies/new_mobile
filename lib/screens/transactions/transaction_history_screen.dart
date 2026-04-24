@@ -200,32 +200,14 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
           ? await _repo.fetchLedgerHistoryOnly(user)
           : const <TransactionListItem>[];
 
-      final pg = groupTransactionsByMonth(personal);
-      final lg = groupTransactionsByMonth(ledger);
-
       if (!mounted) return;
       setState(() {
-        _personalMonthly = pg.entries.toList();
-        _ledgerMonthly = lg.entries.toList();
-        _expandedPersonal
-          ..clear()
-          ..addEntries(
-            List.generate(
-              _personalMonthly.length,
-              (i) => MapEntry(_personalMonthly[i].key, i == 0),
-            ),
-          );
-        _expandedLedger
-          ..clear()
-          ..addEntries(
-            List.generate(
-              _ledgerMonthly.length,
-              (i) => MapEntry(_ledgerMonthly[i].key, i == 0),
-            ),
-          );
+        _personalFlat = personal;
+        _ledgerFlat = ledger;
         if (!_showLedgerTab(user) && _currentTabIndex != 0) {
           _currentTabIndex = 0;
         }
+        _recomputeGrouped();
         _loading = false;
       });
     } catch (e) {
@@ -265,7 +247,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
           title: Text(
             'Transaction History',
             style: TextStyle(
-              fontSize: 20.sp,
+              fontSize: 23.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
@@ -274,13 +256,20 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             Padding(
               padding: EdgeInsets.only(right: 16.w),
               child: GestureDetector(
-                onTap: () {
-                  showModalBottomSheet(
+                onTap: () async {
+                  final auth = context.read<AuthBloc>().state;
+                  final u = auth is AuthAuthenticated ? auth.user : null;
+                  final email = u?.email?.trim();
+                  final req = await showModalBottomSheet<StatementExportRequest>(
                     context: context,
                     isScrollControlled: true,
                     backgroundColor: Colors.transparent,
-                    builder: (context) => const DownloadStatementBottomSheet(),
+                    builder: (ctx) => DownloadStatementBottomSheet(
+                      initialEmail: email,
+                    ),
                   );
+                  if (!context.mounted || req == null || u == null) return;
+                  await _exportStatement(req, u);
                 },
                 child: Container(
                   padding: EdgeInsets.symmetric(
@@ -303,7 +292,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       Text(
                         'Statement',
                         style: TextStyle(
-                          fontSize: 14.sp,
+                          fontSize: 16.sp,
                           fontWeight: FontWeight.w500,
                           color: Colors.grey.shade700,
                         ),
@@ -346,7 +335,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       Text(
                         _error!,
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 14.sp),
+                        style: TextStyle(fontSize: 16.sp),
                       ),
                       vSpace(16),
                       FilledButton(

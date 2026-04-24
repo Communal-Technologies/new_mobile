@@ -148,9 +148,16 @@ String buildTransactionStatementCsv({
   buf.writeln(
     'Date,Description,Category,Status,Direction,Amount ($currencySymbol),Reference',
   );
+  final startDay = DateTime(
+    rangeStart.year,
+    rangeStart.month,
+    rangeStart.day,
+  );
+  final endDay = DateTime(rangeEnd.year, rangeEnd.month, rangeEnd.day);
   final inRange = items.where((t) {
     final d = t.details.dateTime;
-    return !d.isBefore(rangeStart) && !d.isAfter(rangeEnd);
+    final day = DateTime(d.year, d.month, d.day);
+    return !day.isBefore(startDay) && !day.isAfter(endDay);
   }).toList()
     ..sort((a, b) => b.details.dateTime.compareTo(a.details.dateTime));
 

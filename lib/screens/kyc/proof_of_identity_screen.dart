@@ -1,8 +1,15 @@
 import 'dart:ui';
+
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/navigation/root_navigator_key.dart';
+import 'package:communal_mobile/cubits/security/security_cubit.dart';
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
+import 'package:communal_mobile/data/repositories/auth_repository.dart';
+import 'package:communal_mobile/data/repositories/kyc_repository.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -10,7 +17,49 @@ import 'package:communal_mobile/core/widgets/custom_text_field.dart';
 import 'package:communal_mobile/core/widgets/kyc_idle_suppressor.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
+
+/// UI labels → Anchor `id_type` values ([UpgradeTier2Request] on backend).
+const Map<String, String> _kycTier2IdTypeToAnchor = {
+  'National ID': 'NATIONAL_ID',
+  'Driver\'s License': 'DRIVERS_LICENSE',
+  'Passport': 'PASSPORT',
+  'Voter\'s Card': 'VOTERS_CARD',
+  'NIN Slip': 'NIN_SLIP',
+};
+
+const List<String> _kycIdTypeDisplayLabels = [
+  'National ID',
+  'Driver\'s License',
+  'Passport',
+  'Voter\'s Card',
+  'NIN Slip',
+];
+
+/// ID types where Anchor / Communal accept submission without an expiry (see [UpgradeTier2Request]).
+bool _expiryOptionalForDisplayIdType(String? displayLabel) {
+  switch (displayLabel) {
+    case 'NIN Slip':
+    case 'National ID':
+    case 'Voter\'s Card':
+      return true;
+    default:
+      return false;
+  }
+}
+
+/// Anchor requested both front and back for this type in observed payloads.
+bool _requiresBackForDisplayIdType(String? displayLabel) {
+  switch (displayLabel) {
+    case 'National ID':
+    case 'Driver\'s License':
+    case 'Voter\'s Card':
+      return true;
+    default:
+      return false;
+  }
+}
 
 class ProofOfIdentityScreen extends StatefulWidget {
   const ProofOfIdentityScreen({super.key, this.anchorCustomerId});
@@ -49,7 +98,9 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
   String? _selectedDay;
   String? _selectedMonth;
   String? _selectedYear;
-  String? _uploadedDocument;
+  PlatformFile? _pickedFrontFile;
+  PlatformFile? _pickedBackFile;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -64,7 +115,9 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
     if (auth is! AuthAuthenticated) return;
     final fromRoute = widget.anchorCustomerId?.trim();
     final fromDisk = getIt<KycProgressStorage>().getAnchor(auth.userId);
-    final id = (fromRoute != null && fromRoute.isNotEmpty) ? fromRoute : fromDisk;
+    final id = (fromRoute != null && fromRoute.isNotEmpty)
+        ? fromRoute
+        : fromDisk;
     if (!mounted) return;
     setState(() => _resolvedAnchor = id);
     if (fromRoute != null && fromRoute.isNotEmpty) {
@@ -107,35 +160,172 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
       isValid = false;
     }
 
-    if (_selectedDay == null) {
+    final expiryOptional = _expiryOptionalForDisplayIdType(_selectedIdType);
+    final expiryParts = [_selectedDay, _selectedMonth, _selectedYear];
+    final expiryAnySet = expiryParts.any((e) => e != null);
+    final expiryAllSet = expiryParts.every((e) => e != null);
+
+    if (!expiryOptional) {
+      if (_selectedDay == null) {
+        setState(() {
+          _expiryDayError = 'Day is required';
+        });
+        isValid = false;
+      }
+
+      if (_selectedMonth == null) {
+        setState(() {
+          _expiryMonthError = 'Month is required';
+        });
+        isValid = false;
+      }
+
+      if (_selectedYear == null) {
+        setState(() {
+          _expiryYearError = 'Year is required';
+        });
+        isValid = false;
+      }
+    } else if (expiryAnySet && !expiryAllSet) {
       setState(() {
-        _expiryDayError = 'Day is required';
+        if (_selectedDay == null) {
+          _expiryDayError = 'Select day or clear all date fields';
+        }
+        if (_selectedMonth == null) {
+          _expiryMonthError = 'Select month or clear all date fields';
+        }
+        if (_selectedYear == null) {
+          _expiryYearError = 'Select year or clear all date fields';
+        }
       });
       isValid = false;
     }
 
-    if (_selectedMonth == null) {
+    if (_pickedFrontFile == null) {
       setState(() {
-        _expiryMonthError = 'Month is required';
+        _documentError = 'Please upload your ID front';
       });
       isValid = false;
     }
-
-    if (_selectedYear == null) {
+    if (_requiresBackForDisplayIdType(_selectedIdType) &&
+        _pickedBackFile == null) {
       setState(() {
-        _expiryYearError = 'Year is required';
-      });
-      isValid = false;
-    }
-
-    if (_uploadedDocument == null) {
-      setState(() {
-        _documentError = 'Please upload your ID document';
+        _documentError = 'Please upload both front and back for this ID type';
       });
       isValid = false;
     }
 
     return isValid;
+  }
+
+  Future<void> _pickIdType(ThemeData theme) async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: EdgeInsets.only(bottom: 4.h, top: 4.h),
+                child: Text(
+                  'Select ID type',
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              for (final label in _kycIdTypeDisplayLabels)
+                ListTile(
+                  title: Text(label, style: TextStyle(fontSize: 17.sp)),
+                  trailing: _selectedIdType == label
+                      ? Icon(Icons.check_circle, color: theme.primaryColor)
+                      : null,
+                  onTap: () => Navigator.of(ctx).pop(label),
+                ),
+              SizedBox(height: 8.h),
+            ],
+          ),
+        );
+      },
+    );
+    if (!mounted || choice == null) return;
+    setState(() {
+      _selectedIdType = choice;
+      _idTypeError = null;
+      _documentError = null;
+      _pickedFrontFile = null;
+      _pickedBackFile = null;
+      if (_expiryOptionalForDisplayIdType(choice)) {
+        _selectedDay = null;
+        _selectedMonth = null;
+        _selectedYear = null;
+        _expiryDayError = null;
+        _expiryMonthError = null;
+        _expiryYearError = null;
+      }
+    });
+  }
+
+  Widget _buildIdTypeSelector(ThemeData theme) {
+    final hasError = _idTypeError != null && _idTypeError!.isNotEmpty;
+    final display =
+        (_selectedIdType != null && _selectedIdType!.trim().isNotEmpty)
+        ? _selectedIdType!
+        : 'Select ID Type';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12.r),
+            onTap: () => _pickIdType(theme),
+            child: Container(
+              height: 52.h,
+              padding: EdgeInsets.symmetric(horizontal: 12.w),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(
+                  color: hasError ? Colors.red : Colors.grey.shade300,
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      display,
+                      style: TextStyle(
+                        fontSize: 18.sp,
+                        color: _selectedIdType == null
+                            ? Colors.grey.shade400
+                            : Colors.black87,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    Icons.keyboard_arrow_down,
+                    color: Colors.grey.shade600,
+                    size: 22.sp,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (hasError) ...[
+          SizedBox(height: 4.h),
+          Text(
+            _idTypeError!,
+            style: TextStyle(color: Colors.red, fontSize: 15.sp),
+          ),
+        ],
+      ],
+    );
   }
 
   void _skip() {
@@ -173,23 +363,247 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
       );
       return;
     }
-    final auth = context.read<AuthBloc>().state;
-    if (auth is AuthAuthenticated) {
-      await getIt<KycProgressStorage>().markProofStepDone(auth.userId);
+    final idType = _selectedIdType != null
+        ? _kycTier2IdTypeToAnchor[_selectedIdType!]
+        : null;
+    if (idType == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid ID type selection.')),
+      );
+      return;
     }
-    if (!mounted) return;
-    context.push(
-      '/kyc/verifying',
-      extra: <String, dynamic>{'anchorCustomerId': id},
-    );
+    final frontFile = _pickedFrontFile;
+    if (frontFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please choose the front image file from your device.'),
+        ),
+      );
+      return;
+    }
+    final frontBytes = frontFile.bytes;
+    final frontPath = frontFile.path;
+    if ((frontBytes == null || frontBytes.isEmpty) &&
+        (frontPath == null || frontPath.trim().isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not read the selected front image. Try another image or restart the app.',
+          ),
+        ),
+      );
+      return;
+    }
+    PlatformFile? backFile;
+    if (_requiresBackForDisplayIdType(_selectedIdType)) {
+      backFile = _pickedBackFile;
+      if (backFile == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please choose the back image file.')),
+        );
+        return;
+      }
+      final backUsable =
+          (backFile.bytes != null && backFile.bytes!.isNotEmpty) ||
+          (backFile.path != null && backFile.path!.trim().isNotEmpty);
+      if (!backUsable) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not read the selected back image.'),
+          ),
+        );
+        return;
+      }
+    }
+
+    final expiryOptional = _expiryOptionalForDisplayIdType(_selectedIdType);
+    final expiryParts = [_selectedDay, _selectedMonth, _selectedYear];
+    final expiryAllSet = expiryParts.every((e) => e != null);
+    final String? expiryYmd = (!expiryOptional || expiryAllSet) && expiryAllSet
+        ? '$_selectedYear-$_selectedMonth-$_selectedDay'
+        : null;
+
+    setState(() => _isSubmitting = true);
+    try {
+      await getIt<KycRepository>().upgradeToTier2(
+        anchorCustomerId: id,
+        idNumber: _idNumberController.text.trim(),
+        idType: idType,
+        expiryDateYmd: expiryYmd,
+        fileFrontPath: frontPath?.trim(),
+        fileFrontBytes: (frontBytes != null && frontBytes.isNotEmpty)
+            ? frontBytes
+            : null,
+        fileFrontName: frontFile.name.isNotEmpty
+            ? frontFile.name
+            : 'id_front.jpg',
+        fileBackPath: backFile?.path?.trim(),
+        fileBackBytes: (backFile?.bytes != null && backFile!.bytes!.isNotEmpty)
+            ? backFile.bytes
+            : null,
+        fileBackName: (backFile?.name.isNotEmpty ?? false)
+            ? backFile!.name
+            : null,
+      );
+
+      if (!mounted) return;
+      final auth = context.read<AuthBloc>().state;
+      if (auth is AuthAuthenticated) {
+        await getIt<KycProgressStorage>().markProofStepDone(auth.userId);
+      }
+
+      final token = await getIt<FlutterSecureStorage>().read(key: 'token');
+      if (token != null && mounted) {
+        getIt<AuthRepository>().updateToken(token);
+        final user = await getIt<AuthRepository>().getUserInfo(token);
+        if (user != null && mounted) {
+          context.read<AuthBloc>().add(AuthUserUpdated(user));
+        }
+      }
+
+      if (!mounted) return;
+      context.push(
+        '/kyc/verifying',
+        extra: <String, dynamic>{'anchorCustomerId': id},
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg.isEmpty ? 'Request failed' : msg)),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
-  void _uploadDocument() {
-    // TODO: Implement file picker
-    setState(() {
-      _uploadedDocument = 'document.pdf';
-      _documentError = null;
-    });
+  Future<void> _uploadDocument({required bool isBack}) async {
+    try {
+      // Gallery / document picker sends [paused] → blur → [resumed] would normally PIN-lock.
+      // Guard tells [SecurityCubit.onAppResumed] to treat the next return as part of this flow.
+      context.read<SecurityCubit>().beginExternalFilePickerGuard();
+      // Never use `withData: true` here: it decodes the whole image on the UI thread
+      // and commonly freezes the app (ANR) on Android for gallery photos.
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['jpg', 'jpeg', 'png', 'JPG', 'JPEG', 'PNG'],
+        allowMultiple: false,
+        withData: false,
+      );
+      if (result == null || result.files.isEmpty) return;
+      final f = result.files.first;
+      final usable =
+          (f.bytes != null && f.bytes!.isNotEmpty) ||
+          (f.path != null && f.path!.trim().isNotEmpty);
+      if (!usable) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'That file could not be used. Choose a JPG or PNG from your gallery or files.',
+            ),
+          ),
+        );
+        return;
+      }
+      if (!mounted) return;
+      setState(() {
+        if (isBack) {
+          _pickedBackFile = f;
+        } else {
+          _pickedFrontFile = f;
+        }
+        _documentError = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg.isEmpty ? 'Could not open the file picker.' : msg),
+        ),
+      );
+    } finally {
+      // Clear even if this route was disposed while the picker was open (e.g. pop).
+      final rootCtx = rootNavigatorKey.currentContext;
+      if (rootCtx != null && rootCtx.mounted) {
+        try {
+          rootCtx.read<SecurityCubit>().cancelExternalFilePickerGuard();
+        } catch (_) {}
+      }
+    }
+  }
+
+  Widget _buildUploadCard({
+    required ThemeData theme,
+    required String title,
+    required PlatformFile? file,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12.r),
+        onTap: onTap,
+        child: CustomPaint(
+          painter: DashedBorderPainter(
+            color: _documentError != null ? Colors.red : Colors.grey.shade300,
+            strokeWidth: 1.5,
+            dashWidth: 5,
+            dashSpace: 3,
+            borderRadius: 12.r,
+          ),
+          child: Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(32.w),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.cloud_upload_outlined,
+                  size: 48.sp,
+                  color: file != null
+                      ? theme.primaryColor
+                      : Colors.grey.shade400,
+                ),
+                vSpace(12),
+                Text(
+                  file?.name ?? title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                vSpace(8),
+                RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: TextStyle(
+                      fontSize: 17.sp,
+                      color: Colors.grey.shade600,
+                    ),
+                    children: [
+                      const TextSpan(text: 'Supported format: '),
+                      TextSpan(
+                        text: 'JPEG, PNG',
+                        style: TextStyle(
+                          color: theme.primaryColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -197,210 +611,222 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
     final theme = Theme.of(context);
     final auth = context.read<AuthBloc>().state;
     // Show back to step 2 only while step 2 is not submitted on the server (includes skip-to-proof).
-    final hideBack =
-        auth is AuthAuthenticated && auth.user.kycStep2Submitted;
+    final hideBack = auth is AuthAuthenticated && auth.user.kycStep2Submitted;
 
     return KycIdleSuppressor(
       child: Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-        leading: hideBack
-            ? const SizedBox.shrink()
-            : IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.black),
-                onPressed: _goBackFromProof,
-              ),
-        title: Text(
-          'Proof of Identity',
-          style: TextStyle(
-            fontSize: 22.sp,
-            fontWeight: FontWeight.w700,
-            color: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+          automaticallyImplyLeading: false,
+          leading: hideBack
+              ? const SizedBox.shrink()
+              : IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.black),
+                  onPressed: _goBackFromProof,
+                ),
+          title: Text(
+            'Proof of Identity',
+            style: TextStyle(
+              fontSize: 22.sp,
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+            ),
           ),
         ),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header with progress
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  vSpace(4),
-                  Center(
-                    child: Text(
-                      'Verify your identity',
-                      style: TextStyle(
-                        fontSize: 17.sp,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ),
-                  vSpace(12),
-                  // Title and step counter
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Proof of Identity',
-                        style: TextStyle(
-                          fontSize: 17.sp,
-                          color: theme.primaryColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        'Step 3 of 3',
-                        style: TextStyle(
-                          fontSize: 17.sp,
-                          color: theme.primaryColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  vSpace(8),
-                  // Progress bar
-                  LinearProgressIndicator(
-                    value: 1.0,
-                    backgroundColor: Colors.grey.shade200,
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(theme.primaryColor),
-                    minHeight: 4.h,
-                  ),
-                ],
-              ),
-            ),
-
-            vSpace(24),
-
-            // Form content
-            Expanded(
-              child: SingleChildScrollView(
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Header with progress
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: 24.w),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Identity Document
-                    Text(
-                      'Identity Document',
-                      style: TextStyle(
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
+                    vSpace(4),
+                    Center(
+                      child: Text(
+                        'Verify your identity',
+                        style: TextStyle(
+                          fontSize: 17.sp,
+                          color: Colors.grey.shade600,
+                        ),
                       ),
                     ),
-                    vSpace(16),
-                    _buildDropdown(
-                      label: 'Select ID Type',
-                      value: _selectedIdType,
-                      items: [
-                        'National ID',
-                        'Driver\'s License',
-                        'Passport',
-                        'Voter\'s Card'
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedIdType = value;
-                          _idTypeError = null;
-                        });
-                      },
-                      errorText: _idTypeError,
-                    ),
-                    vSpace(16),
-                    CustomTextField(
-                      controller: _idNumberController,
-                      hintText: 'Enter ID Number',
-                      textInputAction: TextInputAction.done,
-                      errorText: _idNumberError,
-                      onChanged: (_) => _clearErrors(),
-                      onFieldSubmitted: (_) {
-                        if (!mounted) return;
-                        FocusManager.instance.primaryFocus?.unfocus();
-                      },
-                    ),
-
-                    vSpace(32),
-
-                    // Document Expiry Date
-                    Text(
-                      'Document Expiry Date',
-                      style: TextStyle(
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
-                      ),
-                    ),
-                    vSpace(16),
+                    vSpace(12),
+                    // Title and step counter
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(
-                          child: _buildDropdown(
-                            label: '06',
-                            value: _selectedMonth,
-                            items: List.generate(12, (i) => '${i + 1}'.padLeft(2, '0')),
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedMonth = value;
-                                _expiryMonthError = null;
-                              });
-                            },
-                            errorText: _expiryMonthError,
+                        Text(
+                          'Proof of Identity',
+                          style: TextStyle(
+                            fontSize: 17.sp,
+                            color: theme.primaryColor,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        hSpace(12),
-                        Expanded(
-                          child: _buildDropdown(
-                            label: '02',
-                            value: _selectedDay,
-                            items: List.generate(31, (i) => '${i + 1}'.padLeft(2, '0')),
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedDay = value;
-                                _expiryDayError = null;
-                              });
-                            },
-                            errorText: _expiryDayError,
-                          ),
-                        ),
-                        hSpace(12),
-                        Expanded(
-                          child: _buildDropdown(
-                            label: '1998',
-                            value: _selectedYear,
-                            items: List.generate(
-                              50,
-                              (i) => '${DateTime.now().year + i}',
-                            ),
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedYear = value;
-                                _expiryYearError = null;
-                              });
-                            },
-                            errorText: _expiryYearError,
+                        Text(
+                          'Step 3 of 3',
+                          style: TextStyle(
+                            fontSize: 17.sp,
+                            color: theme.primaryColor,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
+                    vSpace(8),
+                    // Progress bar
+                    LinearProgressIndicator(
+                      value: 1.0,
+                      backgroundColor: Colors.grey.shade200,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        theme.primaryColor,
+                      ),
+                      minHeight: 4.h,
+                    ),
+                  ],
+                ),
+              ),
 
-                    vSpace(32),
+              vSpace(24),
 
-                    // Upload ID
-                    InkWell(
-                      onTap: _uploadDocument,
-                      child: CustomPaint(
+              // Form content
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: 24.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Identity Document
+                      Text(
+                        'Identity Document',
+                        style: TextStyle(
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                      vSpace(16),
+                      _buildIdTypeSelector(theme),
+                      vSpace(16),
+                      CustomTextField(
+                        controller: _idNumberController,
+                        hintText: 'Enter ID Number',
+                        textInputAction: TextInputAction.done,
+                        errorText: _idNumberError,
+                        onChanged: (_) => _clearErrors(),
+                        onFieldSubmitted: (_) {
+                          if (!mounted) return;
+                          FocusManager.instance.primaryFocus?.unfocus();
+                        },
+                      ),
+
+                      if (!_expiryOptionalForDisplayIdType(
+                        _selectedIdType,
+                      )) ...[
+                        vSpace(32),
+                        Text(
+                          'Document Expiry Date',
+                          style: TextStyle(
+                            fontSize: 20.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black,
+                          ),
+                        ),
+                        vSpace(16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildDropdown(
+                                label: '06',
+                                value: _selectedMonth,
+                                items: List.generate(
+                                  12,
+                                  (i) => '${i + 1}'.padLeft(2, '0'),
+                                ),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedMonth = value;
+                                    _expiryMonthError = null;
+                                  });
+                                },
+                                errorText: _expiryMonthError,
+                              ),
+                            ),
+                            hSpace(12),
+                            Expanded(
+                              child: _buildDropdown(
+                                label: '02',
+                                value: _selectedDay,
+                                items: List.generate(
+                                  31,
+                                  (i) => '${i + 1}'.padLeft(2, '0'),
+                                ),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedDay = value;
+                                    _expiryDayError = null;
+                                  });
+                                },
+                                errorText: _expiryDayError,
+                              ),
+                            ),
+                            hSpace(12),
+                            Expanded(
+                              child: _buildDropdown(
+                                label: '1998',
+                                value: _selectedYear,
+                                items: List.generate(
+                                  50,
+                                  (i) => '${DateTime.now().year + i}',
+                                ),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedYear = value;
+                                    _expiryYearError = null;
+                                  });
+                                },
+                                errorText: _expiryYearError,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      vSpace(32),
+
+                      _buildUploadCard(
+                        theme: theme,
+                        title: 'Upload ID Front',
+                        file: _pickedFrontFile,
+                        onTap: () => _uploadDocument(isBack: false),
+                      ),
+                      if (_requiresBackForDisplayIdType(_selectedIdType)) ...[
+                        vSpace(12),
+                        _buildUploadCard(
+                          theme: theme,
+                          title: 'Upload ID Back',
+                          file: _pickedBackFile,
+                          onTap: () => _uploadDocument(isBack: true),
+                        ),
+                      ],
+                      if (_documentError != null) ...[
+                        SizedBox(height: 4.h),
+                        Text(
+                          _documentError!,
+                          style: TextStyle(color: Colors.red, fontSize: 15.sp),
+                        ),
+                      ],
+
+                      vSpace(24),
+
+                      // Important Notice
+                      CustomPaint(
                         painter: DashedBorderPainter(
-                          color: _documentError != null
-                              ? Colors.red
-                              : Colors.grey.shade300,
+                          color: const Color(0xFF00BCD4),
                           strokeWidth: 1.5,
                           dashWidth: 5,
                           dashSpace: 3,
@@ -408,149 +834,87 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                         ),
                         child: Container(
                           width: double.infinity,
-                          padding: EdgeInsets.all(32.w),
+                          padding: EdgeInsets.all(16.w),
                           decoration: BoxDecoration(
+                            color: const Color(
+                              0xFFE0F7FA,
+                            ), // Light blue/teal background
                             borderRadius: BorderRadius.circular(12.r),
                           ),
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.cloud_upload_outlined,
-                              size: 48.sp,
-                              color: _uploadedDocument != null
-                                  ? theme.primaryColor
-                                  : Colors.grey.shade400,
-                            ),
-                            vSpace(12),
-                            Text(
-                              _uploadedDocument ?? 'Upload ID',
-                              style: TextStyle(
-                                fontSize: 20.sp,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            vSpace(8),
-                            RichText(
-                              text: TextSpan(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Important Notice',
                                 style: TextStyle(
                                   fontSize: 17.sp,
-                                  color: Colors.grey.shade600,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black,
                                 ),
-                                children: [
-                                  const TextSpan(text: 'Supported format: '),
-                                  TextSpan(
-                                    text: 'PDF, JPEG, PNG',
-                                    style: TextStyle(
-                                      color: theme.primaryColor,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
                               ),
-                            ),
-                          ],
-                        ),
+                              vSpace(12),
+                              _buildNoticeBullet(
+                                'Document must be clear and readable',
+                              ),
+                              _buildNoticeBullet(
+                                'All corners of the document should be visible',
+                              ),
+                              _buildNoticeBullet(
+                                'Documents should not be older than 3 months',
+                              ),
+                              _buildNoticeBullet(
+                                'Files are encrypted and securely stored',
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    if (_documentError != null) ...[
-                      SizedBox(height: 4.h),
-                      Text(
-                        _documentError!,
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontSize: 15.sp,
-                        ),
-                      ),
+
+                      vSpace(24),
                     ],
+                  ),
+                ),
+              ),
 
-                    vSpace(24),
-
-                    // Important Notice
-                    CustomPaint(
-                      painter: DashedBorderPainter(
-                        color: const Color(0xFF00BCD4),
-                        strokeWidth: 1.5,
-                        dashWidth: 5,
-                        dashSpace: 3,
-                        borderRadius: 12.r,
-                      ),
-                      child: Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.all(16.w),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE0F7FA), // Light blue/teal background
-                          borderRadius: BorderRadius.circular(12.r),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Important Notice',
-                              style: TextStyle(
-                                fontSize: 17.sp,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black,
-                              ),
-                            ),
-                            vSpace(12),
-                            _buildNoticeBullet(
-                                'Document must be clear and readable'),
-                            _buildNoticeBullet(
-                                'All corners of the document should be visible'),
-                            _buildNoticeBullet(
-                                'Documents should not be older than 3 months'),
-                            _buildNoticeBullet(
-                                'Files are encrypted and securely stored'),
-                          ],
-                        ),
+              // Bottom buttons
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.shade200,
+                      blurRadius: 10,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: AppSecondaryButton(
+                        title: 'Skip',
+                        isDark: false,
+                        onPressed: _skip,
                       ),
                     ),
-
-                    vSpace(24),
+                    hSpace(16),
+                    Expanded(
+                      flex: 2,
+                      child: AppElevatedButton(
+                        title: 'Submit',
+                        isLoading: _isSubmitting,
+                        loadingLabel: 'Submitting…',
+                        onPressed: _completeSetup,
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
-
-            // Bottom buttons
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.shade200,
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: AppSecondaryButton(
-                      title: 'Skip',
-                      isDark: false,
-                      onPressed: _skip,
-                    ),
-                  ),
-                  hSpace(16),
-                  Expanded(
-                    flex: 2,
-                    child: AppElevatedButton(
-                      title: 'Complete Setup',
-                      onPressed: _completeSetup,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 
@@ -562,10 +926,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
         children: [
           Text(
             '• ',
-            style: TextStyle(
-              fontSize: 17.sp,
-              color: Colors.grey.shade700,
-            ),
+            style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade700),
           ),
           Expanded(
             child: Text(
@@ -609,16 +970,10 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
               isExpanded: true,
               menuMaxHeight: 280.h,
               dropdownColor: Colors.white,
-              style: TextStyle(
-                fontSize: 18.sp,
-                color: Colors.black87,
-              ),
+              style: TextStyle(fontSize: 18.sp, color: Colors.black87),
               hint: Text(
                 label,
-                style: TextStyle(
-                  color: Colors.grey.shade400,
-                  fontSize: 18.sp,
-                ),
+                style: TextStyle(color: Colors.grey.shade400, fontSize: 18.sp),
               ),
               icon: Icon(
                 Icons.keyboard_arrow_down,
@@ -632,10 +987,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                   value: item,
                   child: Text(
                     item,
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      color: Colors.black87,
-                    ),
+                    style: TextStyle(fontSize: 18.sp, color: Colors.black87),
                   ),
                 );
               }).toList(),
@@ -647,10 +999,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
           SizedBox(height: 4.h),
           Text(
             errorText,
-            style: TextStyle(
-              color: Colors.red,
-              fontSize: 15.sp,
-            ),
+            style: TextStyle(color: Colors.red, fontSize: 15.sp),
           ),
         ],
       ],
@@ -682,10 +1031,12 @@ class DashedBorderPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final path = Path()
-      ..addRRect(RRect.fromRectAndRadius(
-        Rect.fromLTWH(0, 0, size.width, size.height),
-        Radius.circular(borderRadius),
-      ));
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(0, 0, size.width, size.height),
+          Radius.circular(borderRadius),
+        ),
+      );
 
     final dashPath = _createDashedPath(path, dashWidth, dashSpace);
     canvas.drawPath(dashPath, paint);

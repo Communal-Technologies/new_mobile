@@ -3,21 +3,33 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 
 class FilterStatusBottomSheet extends StatefulWidget {
-  const FilterStatusBottomSheet({super.key});
+  const FilterStatusBottomSheet({
+    super.key,
+    this.initialStatus = 'All Status',
+  });
+
+  final String initialStatus;
 
   @override
-  State<FilterStatusBottomSheet> createState() => _FilterStatusBottomSheetState();
+  State<FilterStatusBottomSheet> createState() =>
+      _FilterStatusBottomSheetState();
 }
 
 class _FilterStatusBottomSheetState extends State<FilterStatusBottomSheet> {
-  String _selectedStatus = 'All Status';
+  late String _selectedStatus;
 
-  final List<String> _statuses = [
+  static const List<String> _statuses = [
     'All Status',
     'Successful',
     'Pending',
     'Failed',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedStatus = widget.initialStatus;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,18 +45,15 @@ class _FilterStatusBottomSheetState extends State<FilterStatusBottomSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title
           Text(
-            'Sort by Transaction Status',
+            'Filter by status',
             style: TextStyle(
-              fontSize: 20.sp,
+              fontSize: 22.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
           ),
           vSpace(20),
-
-          // Status options
           ...List.generate(_statuses.length, (index) {
             final status = _statuses[index];
             final isSelected = _selectedStatus == status;
@@ -57,7 +66,9 @@ class _FilterStatusBottomSheetState extends State<FilterStatusBottomSheet> {
               },
               child: Container(
                 width: double.infinity,
-                margin: EdgeInsets.only(bottom: index == _statuses.length - 1 ? 0 : 10.h),
+                margin: EdgeInsets.only(
+                  bottom: index == _statuses.length - 1 ? 0 : 10.h,
+                ),
                 padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 14.h),
                 decoration: BoxDecoration(
                   color: isSelected ? theme.primaryColor : Colors.white,
@@ -70,7 +81,7 @@ class _FilterStatusBottomSheetState extends State<FilterStatusBottomSheet> {
                 child: Text(
                   status,
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 16.sp,
                     fontWeight: FontWeight.w500,
                     color: isSelected ? Colors.white : Colors.grey.shade700,
                   ),
@@ -79,13 +90,11 @@ class _FilterStatusBottomSheetState extends State<FilterStatusBottomSheet> {
             );
           }),
           vSpace(24),
-
-          // Action buttons
           Row(
             children: [
               Expanded(
                 child: GestureDetector(
-                  onTap: () => Navigator.pop(context),
+                  onTap: () => Navigator.pop<String?>(context),
                   child: Container(
                     padding: EdgeInsets.symmetric(vertical: 14.h),
                     decoration: BoxDecoration(
@@ -96,7 +105,7 @@ class _FilterStatusBottomSheetState extends State<FilterStatusBottomSheet> {
                     child: Text(
                       'Cancel',
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.grey.shade700,
                       ),
@@ -107,10 +116,7 @@ class _FilterStatusBottomSheetState extends State<FilterStatusBottomSheet> {
               hSpace(12),
               Expanded(
                 child: GestureDetector(
-                  onTap: () {
-                    // TODO: Apply filter
-                    Navigator.pop(context);
-                  },
+                  onTap: () => Navigator.pop(context, _selectedStatus),
                   child: Container(
                     padding: EdgeInsets.symmetric(vertical: 14.h),
                     decoration: BoxDecoration(
@@ -119,9 +125,9 @@ class _FilterStatusBottomSheetState extends State<FilterStatusBottomSheet> {
                     ),
                     alignment: Alignment.center,
                     child: Text(
-                      'Confirm',
+                      'Apply',
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
@@ -136,6 +142,3 @@ class _FilterStatusBottomSheetState extends State<FilterStatusBottomSheet> {
     );
   }
 }
-
-
-

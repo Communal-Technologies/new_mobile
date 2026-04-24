@@ -69,12 +69,14 @@ class TransferInitiationResult {
     required this.reference,
     required this.status,
     required this.type,
+    this.failureReason,
   });
 
   final String transferId;
   final String reference;
   final String status;
   final String type;
+  final String? failureReason;
 
   factory TransferInitiationResult.fromJson(
     Map<String, dynamic> json, {
@@ -83,11 +85,65 @@ class TransferInitiationResult {
     final attr = (json['attributes'] is Map)
         ? Map<String, dynamic>.from(json['attributes'] as Map)
         : <String, dynamic>{};
+    final fr = attr['failureReason'] ?? attr['failure_reason'];
     return TransferInitiationResult(
       transferId: json['id']?.toString() ?? '',
       reference: attr['reference']?.toString() ?? '',
       status: attr['status']?.toString() ?? 'PENDING',
       type: json['type']?.toString() ?? fallbackType,
+      failureReason: fr?.toString(),
+    );
+  }
+}
+
+DateTime? _parseProviderDateTime(String? raw) {
+  if (raw == null || raw.trim().isEmpty) return null;
+  var s = raw.trim();
+  final direct = DateTime.tryParse(s);
+  if (direct != null) return direct;
+
+  final m = RegExp(r'^(.*?)(\.\d{7,})(Z|[\+\-]\d{2}:?\d{2})$').firstMatch(s);
+  if (m != null) {
+    s = '${m[1]}${m[2]!.substring(0, 7)}${m[3]}';
+  }
+  return DateTime.tryParse(s);
+}
+
+/// Normalized transfer row from `GET /members/transfer/transactions/{id}/status`.
+class RemoteTransferStatus {
+  const RemoteTransferStatus({
+    required this.statusRaw,
+    required this.reference,
+    this.failureReason,
+    this.amountKobo,
+    this.providerOccurredAt,
+  });
+
+  final String statusRaw;
+  final String reference;
+  final String? failureReason;
+  /// Anchor amount in kobo when present.
+  final int? amountKobo;
+  final DateTime? providerOccurredAt;
+
+  factory RemoteTransferStatus.fromDataJson(Map<String, dynamic> json) {
+    final rawAmt = json['amount'];
+    int? kobo;
+    if (rawAmt is int) {
+      kobo = rawAmt;
+    } else if (rawAmt is num) {
+      kobo = rawAmt.round();
+    }
+    final updated = json['updated_at']?.toString();
+    final created = json['created_at']?.toString();
+    final when = _parseProviderDateTime(updated) ??
+        _parseProviderDateTime(created);
+    return RemoteTransferStatus(
+      statusRaw: json['status']?.toString() ?? '',
+      reference: json['reference']?.toString() ?? '',
+      failureReason: json['failure_reason']?.toString(),
+      amountKobo: kobo,
+      providerOccurredAt: when,
     );
   }
 }
@@ -256,12 +312,15 @@ class TransferRepository {
     required String narration,
     String? destinationAccountId,
     String? counterPartyId,
+    String? currencyCode,
   }) async {
     try {
+      var ccy = (currencyCode ?? 'NGN').trim().toUpperCase();
+      if (ccy.length != 3) ccy = 'NGN';
       final body = <String, dynamic>{
         'type': type,
         'amount': amountKobo,
-        'currency': 'NGN',
+        'currency': ccy,
         'narration': narration.trim(),
         if (destinationAccountId != null &&
             destinationAccountId.trim().isNotEmpty)
@@ -281,6 +340,31 @@ class TransferRepository {
       return TransferInitiationResult.fromJson(
         Map<String, dynamic>.from(raw),
         fallbackType: type,
+      );
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  Future<RemoteTransferStatus> fetchTransferStatus(String transferId) async {
+    final id = transferId.trim();
+    if (id.isEmpty) {
+      throw Exception('Missing transfer id.');
+    }
+    try {
+      final response = await _dioClient.get(
+        '/members/transfer/transactions/$id/status',
+      );
+      final data = response.data;
+      if (data is! Map || data['status'] != true) {
+        throw Exception('Could not load transfer status.');
+      }
+      final raw = data['data'];
+      if (raw is! Map) {
+        throw Exception('Invalid transfer status response.');
+      }
+      return RemoteTransferStatus.fromDataJson(
+        Map<String, dynamic>.from(raw),
       );
     } on DioException catch (e) {
       throw Exception(_messageFromDio(e));

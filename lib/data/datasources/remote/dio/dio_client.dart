@@ -162,6 +162,37 @@ class DioClient {
         appLog('DioClient Unexpected Error', 'Error: $e');
         print('❌ DioClient POST Unexpected Error: $e');
         print('❌ Stack Trace: $stackTrace');
+        rethrow;
+    }
+  }
+
+  /// POST `multipart/form-data` (e.g. KYC tier-2). Does not force JSON content-type.
+  Future<Response> postFormData(
+    String uri, {
+    required FormData data,
+    CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
+    bool requireAuth = true,
+  }) async {
+    _logRequest('POST', uri, null, '(FormData)');
+    final headers = <String, dynamic>{
+      'X-localization': AppConstants.defaultLanguage,
+    };
+    if (requireAuth) {
+      final auth = dio.options.headers[HttpHeaders.authorizationHeader];
+      if (auth != null && auth.toString().isNotEmpty) {
+        headers[HttpHeaders.authorizationHeader] = auth;
+      }
+    }
+    try {
+      return await dio.post(
+        uri,
+        data: data,
+        cancelToken: cancelToken,
+        onSendProgress: onSendProgress,
+        options: Options(headers: headers),
+      );
+    } on DioException {
       rethrow;
     }
   }

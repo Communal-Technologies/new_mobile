@@ -78,7 +78,9 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _syncAnchorFromStorage());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _syncAnchorFromStorage(),
+    );
   }
 
   void _syncAnchorFromStorage() {
@@ -86,7 +88,9 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
     if (auth is! AuthAuthenticated) return;
     final fromRoute = widget.anchorCustomerId?.trim();
     final fromDisk = getIt<KycProgressStorage>().getAnchor(auth.userId);
-    final id = (fromRoute != null && fromRoute.isNotEmpty) ? fromRoute : fromDisk;
+    final id = (fromRoute != null && fromRoute.isNotEmpty)
+        ? fromRoute
+        : fromDisk;
     if (!mounted) return;
     setState(() => _resolvedAnchor = id);
     if (fromRoute != null && fromRoute.isNotEmpty) {
@@ -205,7 +209,9 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
     if (id == null || id.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Missing customer id. Complete profile verification first.'),
+          content: Text(
+            'Missing customer id. Complete profile verification first.',
+          ),
         ),
       );
       return;
@@ -225,7 +231,9 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
     if (id == null || id.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Missing customer id. Complete profile verification first.'),
+          content: Text(
+            'Missing customer id. Complete profile verification first.',
+          ),
         ),
       );
       return;
@@ -272,271 +280,273 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final auth = context.read<AuthBloc>().state;
-    final hideBack = auth is AuthAuthenticated &&
+    final hideBack =
+        auth is AuthAuthenticated &&
         (auth.user.kycStep1Submitted ||
             getIt<KycProgressStorage>().getResumeStep(auth.userId) >= 1);
 
     return KycIdleSuppressor(
       child: Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-        leading: hideBack
-            ? const SizedBox.shrink()
-            : IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.black),
-                onPressed: () => context.pop(),
-              ),
-        title: Text(
-          'Bank Information',
-          style: TextStyle(
-            fontSize: 22.sp,
-            fontWeight: FontWeight.w700,
-            color: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+          automaticallyImplyLeading: false,
+          leading: hideBack
+              ? const SizedBox.shrink()
+              : IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.black),
+                  onPressed: () => context.pop(),
+                ),
+          title: Text(
+            'Bank Information',
+            style: TextStyle(
+              fontSize: 22.sp,
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+            ),
           ),
         ),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header with progress
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  vSpace(4),
-                  Center(
-                    child: Text(
-                      'Secure your account',
-                      style: TextStyle(
-                        fontSize: 17.sp,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ),
-                  vSpace(12),
-                  // Title and step counter
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Bank Information',
-                        style: TextStyle(
-                          fontSize: 17.sp,
-                          color: theme.primaryColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        'Step 2 of 3',
-                        style: TextStyle(
-                          fontSize: 17.sp,
-                          color: theme.primaryColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  vSpace(8),
-                  // Progress bar
-                  LinearProgressIndicator(
-                    value: 2 / 3,
-                    backgroundColor: Colors.grey.shade200,
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(theme.primaryColor),
-                    minHeight: 4.h,
-                  ),
-                ],
-              ),
-            ),
-
-            vSpace(24),
-
-            // Form content
-            Expanded(
-              child: SingleChildScrollView(
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Header with progress
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: 24.w),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Connect your BVN
-                    Text(
-                      'Connect your BVN',
-                      style: TextStyle(
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
+                    vSpace(4),
+                    Center(
+                      child: Text(
+                        'Secure your account',
+                        style: TextStyle(
+                          fontSize: 17.sp,
+                          color: Colors.grey.shade600,
+                        ),
                       ),
                     ),
-                    vSpace(16),
-                    CustomTextField(
-                      controller: _bvnController,
-                      hintText: 'Enter your 11 digit BVN',
-                      keyboardType: TextInputType.number,
-                      textInputAction: TextInputAction.done,
-                      maxLength: 11,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
-                      errorText: _bvnError,
-                      onChanged: (_) => _clearErrors(),
-                      onFieldSubmitted: (_) {
-                        if (!mounted) return;
-                        FocusManager.instance.primaryFocus?.unfocus();
-                      },
-                    ),
-
-                    vSpace(32),
-
-                    // Date of Birth
-                    Text(
-                      'Date of Birth',
-                      style: TextStyle(
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
-                      ),
-                    ),
-                    vSpace(16),
+                    vSpace(12),
+                    // Title and step counter
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(
-                          child: _buildDropdown(
-                            label: 'Day',
-                            value: _selectedDay,
-                            items: List.generate(31, (i) => '${i + 1}'),
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedDay = value;
-                                _dayError = null;
-                              });
-                            },
-                            errorText: _dayError,
+                        Text(
+                          'Bank Information',
+                          style: TextStyle(
+                            fontSize: 17.sp,
+                            color: theme.primaryColor,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        hSpace(12),
-                        Expanded(
-                          child: _buildDropdown(
-                            label: 'Month',
-                            value: _selectedMonth,
-                            items: [
-                              'January',
-                              'February',
-                              'March',
-                              'April',
-                              'May',
-                              'June',
-                              'July',
-                              'August',
-                              'September',
-                              'October',
-                              'November',
-                              'December'
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedMonth = value;
-                                _monthError = null;
-                              });
-                            },
-                            errorText: _monthError,
-                          ),
-                        ),
-                        hSpace(12),
-                        Expanded(
-                          child: _buildDropdown(
-                            label: 'Year',
-                            value: _selectedYear,
-                            items: List.generate(
-                              100,
-                              (i) => '${DateTime.now().year - 18 - i}',
-                            ),
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedYear = value;
-                                _yearError = null;
-                              });
-                            },
-                            errorText: _yearError,
+                        Text(
+                          'Step 2 of 3',
+                          style: TextStyle(
+                            fontSize: 17.sp,
+                            color: theme.primaryColor,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
-
-                    vSpace(32),
-
-                    // Gender
-                    Text(
-                      'Gender',
-                      style: TextStyle(
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
+                    vSpace(8),
+                    // Progress bar
+                    LinearProgressIndicator(
+                      value: 2 / 3,
+                      backgroundColor: Colors.grey.shade200,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        theme.primaryColor,
                       ),
+                      minHeight: 4.h,
                     ),
-                    vSpace(16),
-                    _buildDropdown(
-                      label: 'Gender',
-                      value: _selectedGender,
-                      items: const ['Male', 'Female'],
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedGender = value;
-                          _genderError = null;
-                        });
-                      },
-                      errorText: _genderError,
-                    ),
-
-                    vSpace(24),
                   ],
                 ),
               ),
-            ),
 
-            // Bottom buttons
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.shade200,
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
+              vSpace(24),
+
+              // Form content
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: 24.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Connect your BVN
+                      Text(
+                        'Connect your BVN',
+                        style: TextStyle(
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                      vSpace(16),
+                      CustomTextField(
+                        controller: _bvnController,
+                        hintText: 'Enter your 11 digit BVN',
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.done,
+                        maxLength: 11,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        errorText: _bvnError,
+                        onChanged: (_) => _clearErrors(),
+                        onFieldSubmitted: (_) {
+                          if (!mounted) return;
+                          FocusManager.instance.primaryFocus?.unfocus();
+                        },
+                      ),
+
+                      vSpace(32),
+
+                      // Date of Birth
+                      Text(
+                        'Date of Birth',
+                        style: TextStyle(
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                      vSpace(16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildDropdown(
+                              label: 'Day',
+                              value: _selectedDay,
+                              items: List.generate(31, (i) => '${i + 1}'),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedDay = value;
+                                  _dayError = null;
+                                });
+                              },
+                              errorText: _dayError,
+                            ),
+                          ),
+                          hSpace(12),
+                          Expanded(
+                            child: _buildDropdown(
+                              label: 'Month',
+                              value: _selectedMonth,
+                              items: [
+                                'January',
+                                'February',
+                                'March',
+                                'April',
+                                'May',
+                                'June',
+                                'July',
+                                'August',
+                                'September',
+                                'October',
+                                'November',
+                                'December',
+                              ],
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedMonth = value;
+                                  _monthError = null;
+                                });
+                              },
+                              errorText: _monthError,
+                            ),
+                          ),
+                          hSpace(12),
+                          Expanded(
+                            child: _buildDropdown(
+                              label: 'Year',
+                              value: _selectedYear,
+                              items: List.generate(
+                                100,
+                                (i) => '${DateTime.now().year - 18 - i}',
+                              ),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedYear = value;
+                                  _yearError = null;
+                                });
+                              },
+                              errorText: _yearError,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      vSpace(32),
+
+                      // Gender
+                      Text(
+                        'Gender',
+                        style: TextStyle(
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                      vSpace(16),
+                      _buildDropdown(
+                        label: 'Gender',
+                        value: _selectedGender,
+                        items: const ['Male', 'Female'],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedGender = value;
+                            _genderError = null;
+                          });
+                        },
+                        errorText: _genderError,
+                      ),
+
+                      vSpace(24),
+                    ],
                   ),
-                ],
+                ),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: AppSecondaryButton(
-                      title: 'Skip',
-                      isDark: false,
-                      onPressed: _isSubmitting ? null : _skip,
+
+              // Bottom buttons
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.shade200,
+                      blurRadius: 10,
+                      offset: const Offset(0, -2),
                     ),
-                  ),
-                  hSpace(16),
-                  Expanded(
-                    flex: 2,
-                    child: AppElevatedButton(
-                      title: 'Continue',
-                      isLoading: _isSubmitting,
-                      loadingLabel: 'Submitting…',
-                      onPressed: _continue,
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: AppSecondaryButton(
+                        title: 'Skip',
+                        isDark: false,
+                        onPressed: _isSubmitting ? null : _skip,
+                      ),
                     ),
-                  ),
-                ],
+                    hSpace(16),
+                    Expanded(
+                      flex: 2,
+                      child: AppElevatedButton(
+                        title: 'Continue',
+                        isLoading: _isSubmitting,
+                        loadingLabel: 'Submitting…',
+                        onPressed: _continue,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 
@@ -548,6 +558,62 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
     String? errorText,
   }) {
     final hasError = errorText != null && errorText.isNotEmpty;
+
+    Future<void> openPicker() async {
+      if (items.isEmpty) return;
+      final selected = await showModalBottomSheet<String>(
+        context: context,
+        showDragHandle: true,
+        isScrollControlled: true,
+        builder: (ctx) => DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.72,
+          minChildSize: 0.45,
+          maxChildSize: 0.92,
+          builder: (sheetCtx, scrollController) => SafeArea(
+            child: CustomScrollView(
+              controller: scrollController,
+              physics: const ClampingScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 4.h, bottom: 6.h),
+                    child: Center(
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                SliverList.builder(
+                  itemCount: items.length,
+                  itemBuilder: (_, index) {
+                    final item = items[index];
+                    return ListTile(
+                      title: Text(item, style: TextStyle(fontSize: 17.sp)),
+                      trailing: value == item
+                          ? Icon(
+                              Icons.check_circle,
+                              color: Theme.of(context).primaryColor,
+                            )
+                          : null,
+                      onTap: () => Navigator.of(ctx).pop(item),
+                    );
+                  },
+                ),
+                SliverToBoxAdapter(child: vSpace(8)),
+              ],
+            ),
+          ),
+        ),
+      );
+      if (!mounted || selected == null) return;
+      onChanged(selected);
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -561,43 +627,36 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
               width: 1.5,
             ),
           ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: value,
-              isExpanded: true,
-              menuMaxHeight: 280.h,
-              dropdownColor: Colors.white,
-              style: TextStyle(
-                fontSize: 18.sp,
-                color: Colors.black87,
-              ),
-              hint: Text(
-                label,
-                style: TextStyle(
-                  color: Colors.grey.shade400,
-                  fontSize: 18.sp,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12.r),
+              onTap: openPicker,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12.w),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        (value != null && value.isNotEmpty) ? value : label,
+                        style: TextStyle(
+                          color: (value != null && value.isNotEmpty)
+                              ? Colors.black87
+                              : Colors.grey.shade400,
+                          fontSize: 18.sp,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Icon(
+                      Icons.keyboard_arrow_down,
+                      color: Colors.grey.shade600,
+                      size: 22.sp,
+                    ),
+                  ],
                 ),
               ),
-              icon: Icon(
-                Icons.keyboard_arrow_down,
-                color: Colors.grey.shade600,
-                size: 22.sp,
-              ),
-              padding: EdgeInsets.symmetric(horizontal: 12.w),
-              borderRadius: BorderRadius.circular(12.r),
-              items: items.map((String item) {
-                return DropdownMenuItem<String>(
-                  value: item,
-                  child: Text(
-                    item,
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      color: Colors.black87,
-                    ),
-                  ),
-                );
-              }).toList(),
-              onChanged: onChanged,
             ),
           ),
         ),
@@ -605,14 +664,10 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
           SizedBox(height: 4.h),
           Text(
             errorText,
-            style: TextStyle(
-              color: Colors.red,
-              fontSize: 15.sp,
-            ),
+            style: TextStyle(color: Colors.red, fontSize: 15.sp),
           ),
         ],
       ],
     );
   }
 }
-

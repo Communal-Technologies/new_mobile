@@ -1,17 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/screens/transactions/transaction_history_filters.dart';
 
 class FilterCategoryBottomSheet extends StatefulWidget {
-  const FilterCategoryBottomSheet({super.key});
+  const FilterCategoryBottomSheet({
+    super.key,
+    this.initialDirection = 'All',
+    this.initialPaymentType = 'All Categories',
+  });
+
+  final String initialDirection;
+  final String initialPaymentType;
 
   @override
-  State<FilterCategoryBottomSheet> createState() => _FilterCategoryBottomSheetState();
+  State<FilterCategoryBottomSheet> createState() =>
+      _FilterCategoryBottomSheetState();
 }
 
 class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
-  String _selectedCategory = 'All';
-  String _selectedPaymentType = 'All Categories';
+  late String _selectedCategory;
+  late String _selectedPaymentType;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCategory = widget.initialDirection;
+    _selectedPaymentType = widget.initialPaymentType;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,18 +43,15 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title
           Text(
             'Filter by Category',
             style: TextStyle(
-              fontSize: 20.sp,
+              fontSize: 22.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
           ),
           vSpace(20),
-
-          // Category filters (All, Money In, Money Out)
           Row(
             children: [
               _buildCategoryChip('All', theme),
@@ -49,19 +62,15 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
             ],
           ),
           vSpace(24),
-
-          // Payment Type section
           Text(
             'Payment Type',
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w600,
               color: Colors.black,
             ),
           ),
           vSpace(12),
-
-          // Payment type grid (2 columns)
           Wrap(
             spacing: 10.w,
             runSpacing: 10.h,
@@ -77,13 +86,11 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
             ],
           ),
           vSpace(24),
-
-          // Action buttons
           Row(
             children: [
               Expanded(
                 child: GestureDetector(
-                  onTap: () => Navigator.pop(context),
+                  onTap: () => Navigator.pop<CategoryFilterResult?>(context),
                   child: Container(
                     padding: EdgeInsets.symmetric(vertical: 14.h),
                     decoration: BoxDecoration(
@@ -94,7 +101,7 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
                     child: Text(
                       'Cancel',
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.grey.shade700,
                       ),
@@ -106,8 +113,13 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
               Expanded(
                 child: GestureDetector(
                   onTap: () {
-                    // TODO: Apply filters
-                    Navigator.pop(context);
+                    Navigator.pop(
+                      context,
+                      CategoryFilterResult(
+                        direction: _selectedCategory,
+                        paymentType: _selectedPaymentType,
+                      ),
+                    );
                   },
                   child: Container(
                     padding: EdgeInsets.symmetric(vertical: 14.h),
@@ -117,9 +129,9 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
                     ),
                     alignment: Alignment.center,
                     child: Text(
-                      'Confirm',
+                      'Apply',
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
@@ -152,7 +164,7 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 14.sp,
+            fontSize: 15.sp,
             fontWeight: FontWeight.w500,
             color: isSelected ? Colors.white : Colors.grey.shade700,
           ),
@@ -179,7 +191,7 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 14.sp,
+            fontSize: 15.sp,
             fontWeight: FontWeight.w500,
             color: isSelected ? Colors.white : Colors.grey.shade700,
           ),
@@ -188,5 +200,3 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
     );
   }
 }
-
-

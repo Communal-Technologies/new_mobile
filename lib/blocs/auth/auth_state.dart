@@ -22,6 +22,27 @@ class AuthVerifyingCredentials extends AuthState {
   List<Object?> get props => [attemptId];
 }
 
+/// Password was accepted but another device still has a valid session — OTP was sent; [login] is stored after verify.
+class AuthSessionTakeoverPending extends AuthState {
+  final String takeoverChallengeId;
+  final String maskedDestination;
+  final String otpChannel;
+  final String login;
+  final String? message;
+
+  const AuthSessionTakeoverPending({
+    required this.takeoverChallengeId,
+    required this.maskedDestination,
+    required this.otpChannel,
+    required this.login,
+    this.message,
+  });
+
+  @override
+  List<Object?> get props =>
+      [takeoverChallengeId, maskedDestination, otpChannel, login, message];
+}
+
 class AuthAuthenticated extends AuthState {
   final String userId;
   final String login;

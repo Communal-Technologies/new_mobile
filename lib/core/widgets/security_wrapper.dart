@@ -246,6 +246,9 @@ class _SecurityWrapperState extends State<SecurityWrapper>
             if (previous is AuthVerifyingCredentials && current is AuthVerifyingCredentials) {
               return previous.attemptId != current.attemptId;
             }
+            if (previous is AuthSessionTakeoverPending && current is AuthSessionTakeoverPending) {
+              return previous.takeoverChallengeId != current.takeoverChallengeId;
+            }
             // Same state type and same content - no rebuild needed
             // CRITICAL: Don't rebuild for CheckLoginSuccess, AuthLoading, etc. if they're the same
             return false;
@@ -254,7 +257,9 @@ class _SecurityWrapperState extends State<SecurityWrapper>
           // BUT: Don't rebuild if both are non-authenticated states (CheckLoginSuccess, AuthLoading, etc.)
           // Only rebuild for meaningful transitions (AuthAuthenticated, AuthUnauthenticated, AuthFailure)
           if (previous is! AuthAuthenticated && previous is! AuthUnauthenticated && previous is! AuthFailure &&
-              current is! AuthAuthenticated && current is! AuthUnauthenticated && current is! AuthFailure) {
+              previous is! AuthSessionTakeoverPending &&
+              current is! AuthAuthenticated && current is! AuthUnauthenticated && current is! AuthFailure &&
+              current is! AuthSessionTakeoverPending) {
             // Both are intermediate states (CheckLoginSuccess, AuthLoading, AuthVerifyingCredentials, etc.) - don't rebuild
             return false;
           }
@@ -382,7 +387,8 @@ class _SecurityWrapperState extends State<SecurityWrapper>
               // Never return widget.child while PIN is verifying: that strips the SecurityCubit subtree,
               // disposes WelcomeBack's BlocListener, and the next AuthFailure/AuthAuthenticated can be
               // missed or mishandled (cold start keeps SecurityCubit unlocked until first PIN).
-              if (authState is! AuthVerifyingCredentials) {
+              if (authState is! AuthVerifyingCredentials &&
+                  authState is! AuthSessionTakeoverPending) {
                 return widget.child;
               }
             }

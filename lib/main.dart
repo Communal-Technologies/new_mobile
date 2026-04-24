@@ -12,11 +12,14 @@ import 'package:communal_mobile/cubits/settings/settings_cubit.dart';
 import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
 import 'package:communal_mobile/cubits/security/security_cubit.dart';
 import 'package:communal_mobile/core/widgets/connectivity_listener.dart';
+import 'package:communal_mobile/core/services/push_notification_service.dart';
 import 'package:communal_mobile/core/widgets/security_wrapper.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:toastification/toastification.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/data/repositories/auth_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -80,19 +83,29 @@ class MyApp extends StatelessWidget {
                   create: (_) => SecurityCubit(snapshot.data!, const FlutterSecureStorage()),
                 ),
               ],
-              child: SecurityWrapper(
-                child: MaterialApp.router(
-                  debugShowCheckedModeBanner: false,
-                  theme: AppTheme.light,
-                  themeMode: ThemeMode.light,
-                  routerConfig: appRouter,
-                  builder: (context, child) {
-                    return ToastificationWrapper(
-                      child: ConnectivityListener(
-                        child: child ?? const SizedBox.shrink(),
-                      ),
-                    );
-                  },
+              child: BlocListener<AuthBloc, AuthState>(
+                listenWhen: (previous, current) =>
+                    current is AuthAuthenticated && previous != current,
+                listener: (context, state) async {
+                  if (state is! AuthAuthenticated) return;
+                  await PushNotificationService.instance.initializeAndSync(
+                    getIt<AuthRepository>(),
+                  );
+                },
+                child: SecurityWrapper(
+                  child: MaterialApp.router(
+                    debugShowCheckedModeBanner: false,
+                    theme: AppTheme.light,
+                    themeMode: ThemeMode.light,
+                    routerConfig: appRouter,
+                    builder: (context, child) {
+                      return ToastificationWrapper(
+                        child: ConnectivityListener(
+                          child: child ?? const SizedBox.shrink(),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
             );

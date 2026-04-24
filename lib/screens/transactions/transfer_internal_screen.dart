@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:communal_mobile/core/constants/images.dart';
+import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/custom_text_field.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
@@ -28,14 +29,15 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
   Timer? _accountDebounce;
 
   bool _isLoading = true;
-  String? _error;
   bool _isSearchingAccount = false;
+  bool _continueBusy = false;
+  TransferFavorite? _footerRecipient;
   bool _showTopSuggestionPanel = false;
   List<_InternalRow> _topAccountSuggestions = const [];
 
   List<TransferSuggestion> _internalMembers = const [];
   List<TransferBeneficiary> _beneficiaries = const [];
-  List<String> _cooperativeTabs = const [];
+  List<String> _cooperativeTabs = const ['Beneficiaries'];
   String _activeTab = 'Beneficiaries';
   String _searchQuery = '';
 
@@ -45,7 +47,9 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
     final initial = widget.initialRecipient;
     if (initial != null) {
       _accountNumberCtrl.text = initial.accountNumber;
+      _footerRecipient = initial;
     }
+    _accountNumberCtrl.addListener(_onAccountNumberFieldChanged);
     _searchCtrl.addListener(() {
       setState(() => _searchQuery = _searchCtrl.text.trim().toLowerCase());
     });
@@ -55,6 +59,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
   @override
   void dispose() {
     _accountDebounce?.cancel();
+    _accountNumberCtrl.removeListener(_onAccountNumberFieldChanged);
     _accountNumberCtrl.dispose();
     _searchCtrl.dispose();
     _scrollController.dispose();
@@ -62,52 +67,150 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
   }
 
   Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-    try {
-      final res = await Future.wait([
-        _repo.fetchBankSuggestions(),
-        _repo.fetchBeneficiaries(),
-      ]);
-      final allSuggestions = res[0] as List<TransferSuggestion>;
-      final allBeneficiaries = res[1] as List<TransferBeneficiary>;
+    setState(() => _isLoading = true);
+    var internalMembers = <TransferSuggestion>[];
+    var beneficiaries = <TransferBeneficiary>[];
 
-      final internalMembers =
+    try {
+      final allSuggestions = await _repo.fetchBankSuggestions();
+      internalMembers =
           allSuggestions.where((e) => e.isInternal).toList(growable: false)
             ..sort(
               (a, b) => a.accountName.toLowerCase().compareTo(
                 b.accountName.toLowerCase(),
               ),
             );
-      final beneficiaries =
+    } catch (_) {
+      // Keep screen usable: manual account entry + Continue still work.
+    }
+
+    try {
+      final allBeneficiaries = await _repo.fetchBeneficiaries();
+      beneficiaries =
           allBeneficiaries.where((e) => e.isInternal).toList(growable: false)
             ..sort(
               (a, b) => a.accountName.toLowerCase().compareTo(
                 b.accountName.toLowerCase(),
               ),
             );
+    } catch (_) {
+      // Beneficiaries tab stays visible; list may be empty.
+    }
 
-      final coopNames = internalMembers
-          .map((e) => e.cooperativeName.trim())
-          .where((e) => e.isNotEmpty)
-          .toSet()
-          .toList(growable: false);
-      final tabs = <String>['Beneficiaries', ...coopNames.take(10)];
+    if (!mounted) return;
+    final coopNames = internalMembers
+        .map((e) => e.cooperativeName.trim())
+        .where((e) => e.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    final tabs = <String>['Beneficiaries', ...coopNames.take(10)];
+    setState(() {
+      _internalMembers = internalMembers;
+      _beneficiaries = beneficiaries;
+      _cooperativeTabs = tabs;
+      if (!_cooperativeTabs.contains(_activeTab)) _activeTab = 'Beneficiaries';
+      _isLoading = false;
+    });
+  }
+
+  void _onAccountNumberFieldChanged() {
+    final fav = _footerRecipient;
+    if (fav != null &&
+        _accountNumberCtrl.text.trim() != fav.accountNumber.trim()) {
+      setState(() => _footerRecipient = null);
+      return;
+    }
+    setState(() {});
+  }
+
+  _InternalRow? _findInternalRowExact(String accountNumber) {
+    final n = accountNumber.trim();
+    for (final b in _beneficiaries) {
+      if (b.accountNumber.trim() == n) {
+        return _InternalRow(
+          accountId: b.accountId,
+          accountName: b.accountName,
+          accountNumber: b.accountNumber,
+          cooperativeName: b.bankName,
+          bankName: b.bankName,
+          nipCode: b.nipCode,
+        );
+      }
+    }
+    for (final m in _internalMembers) {
+      if (m.accountNumber.trim() == n) {
+        return _InternalRow(
+          accountId: m.accountId,
+          accountName: m.accountName,
+          accountNumber: m.accountNumber,
+          cooperativeName: m.cooperativeName.trim(),
+          bankName: m.bank,
+          nipCode: m.nipCode,
+        );
+      }
+    }
+    return null;
+  }
+
+  Future<_InternalRow?> _fetchResolveInternalRow(String accountNumber) async {
+    final n = accountNumber.trim();
+    try {
+      final list = await _repo.fetchBankSuggestions(query: n);
+      final match = list.where(
+        (e) => e.isInternal && e.accountNumber.trim() == n,
+      );
+      if (match.isEmpty) return null;
+      final e = match.first;
+      return _InternalRow(
+        accountId: e.accountId,
+        accountName: e.accountName,
+        accountNumber: e.accountNumber,
+        cooperativeName: e.cooperativeName.trim(),
+        bankName: e.bank,
+        nipCode: e.nipCode,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  bool get _footerContinueEnabled {
+    if (_continueBusy) return false;
+    if (_footerRecipient != null) return true;
+    final raw = _accountNumberCtrl.text.trim();
+    return RegExp(r'^\d{10}$').hasMatch(raw);
+  }
+
+  Future<void> _onFooterContinue() async {
+    if (!_footerContinueEnabled) return;
+    final picked = _footerRecipient;
+    if (picked != null) {
+      context.pushNamed(
+        'transfer-internal-amount',
+        extra: {'favorite': picked.toJson()},
+      );
+      return;
+    }
+    final raw = _accountNumberCtrl.text.trim();
+    if (!RegExp(r'^\d{10}$').hasMatch(raw)) return;
+
+    setState(() => _continueBusy = true);
+    try {
+      final row = _findInternalRowExact(raw) ?? await _fetchResolveInternalRow(raw);
       if (!mounted) return;
-      setState(() {
-        _internalMembers = internalMembers;
-        _beneficiaries = beneficiaries;
-        _cooperativeTabs = tabs;
-        if (!_cooperativeTabs.contains(_activeTab))
-          _activeTab = 'Beneficiaries';
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      if (row == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Could not verify this account. Check the number and try again.',
+            ),
+          ),
+        );
+        return;
+      }
+      _openAmount(row);
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _continueBusy = false);
     }
   }
 
@@ -223,6 +326,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
         _isSearchingAccount = false;
         _showTopSuggestionPanel = false;
         _topAccountSuggestions = const [];
+        _footerRecipient = null;
       });
       return;
     }
@@ -269,47 +373,37 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
       ..clear()
       ..addEntries(letters.map((l) => MapEntry(l, GlobalKey())));
 
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        titleSpacing: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, size: 22),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('Select Communal Account'),
-      ),
-      body: Stack(
-              children: [
-                SingleChildScrollView(
-                  controller: _scrollController,
-                  padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 18.h),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (_error != null) ...[
-                        Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 12.w,
-                            vertical: 10.h,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFEEF0),
-                            borderRadius: BorderRadius.circular(10.r),
-                            border: Border.all(color: const Color(0xFFFFD5DA)),
-                          ),
-                          child: Text(
-                            _error!,
-                            style: TextStyle(
-                              color: const Color(0xFFC62828),
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        vSpace(10),
-                      ],
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Scaffold(
+          backgroundColor: Colors.grey.shade50,
+          appBar: AppBar(
+            titleSpacing: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios, size: 22),
+              onPressed: () => context.pop(),
+            ),
+            title: const Text('Select Communal Account'),
+          ),
+          bottomNavigationBar: SafeArea(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 12.h),
+              child: AppElevatedButton(
+                title: 'Continue',
+                onPressed: _footerContinueEnabled ? _onFooterContinue : null,
+                isLoading: _continueBusy,
+              ),
+            ),
+          ),
+          body: Stack(
+            children: [
+              SingleChildScrollView(
+                controller: _scrollController,
+                padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 18.h),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -392,7 +486,8 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                                     ],
                                   ),
                                 )
-                              else if (_topAccountSuggestions.isEmpty)
+                              else if (_topAccountSuggestions.isEmpty &&
+                                  _internalMembers.isNotEmpty)
                                 Text(
                                   'Invalid account number, please enter a valid communal account',
                                   style: TextStyle(
@@ -428,7 +523,23 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                                                   horizontal: 0,
                                                   vertical: 1.1,
                                                 ),
-                                            onTap: () => _openAmount(r),
+                                            onTap: () {
+                                              setState(() {
+                                                _footerRecipient = TransferFavorite(
+                                                  source: 'internal',
+                                                  accountId: r.accountId,
+                                                  bank: r.bankName,
+                                                  accountNumber: r.accountNumber,
+                                                  accountName: r.accountName,
+                                                  nipCode: r.nipCode,
+                                                );
+                                                _accountNumberCtrl.text =
+                                                    r.accountNumber;
+                                              });
+                                              _onTopAccountNumberChanged(
+                                                r.accountNumber,
+                                              );
+                                            },
                                             leading: CircleAvatar(
                                               radius: 21.r,
                                               backgroundColor: const Color(
@@ -527,12 +638,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                         ),
                       ),
                       vSpace(8),
-                      if (rows.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 12),
-                          child: Text('No accounts found.'),
-                        )
-                      else
+                      if (rows.isNotEmpty)
                         ...letters.map((letter) {
                           final section = grouped[letter]!;
                           return Column(
@@ -586,56 +692,62 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                             ],
                           );
                         }),
+                      SizedBox(height: 24.h),
                     ],
                   ),
                 ),
-                if (letters.isNotEmpty)
-                  Positioned(
-                    right: 2.w,
-                    top: 86.h,
-                    bottom: 16.h,
-                    child: SafeArea(
-                      child: Container(
-                        width: 24.w,
-                        padding: EdgeInsets.symmetric(vertical: 6.h),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.92),
-                          borderRadius: BorderRadius.circular(14.r),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: letters.map((l) {
-                            return GestureDetector(
-                              onTap: () => _jumpToLetter(l),
-                              child: Text(
-                                l,
-                                style: TextStyle(
-                                  fontSize: 11.sp,
-                                  color: Theme.of(context).primaryColor,
-                                  fontWeight: FontWeight.w700,
-                                ),
+              if (letters.isNotEmpty)
+                Positioned(
+                  right: 2.w,
+                  top: 86.h,
+                  bottom: 16.h,
+                  child: SafeArea(
+                    child: Container(
+                      width: 24.w,
+                      padding: EdgeInsets.symmetric(vertical: 6.h),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(14.r),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: letters.map((l) {
+                          return GestureDetector(
+                            onTap: () => _jumpToLetter(l),
+                            child: Text(
+                              l,
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                color: Theme.of(context).primaryColor,
+                                fontWeight: FontWeight.w700,
                               ),
-                            );
-                          }).toList(),
-                        ),
+                            ),
+                          );
+                        }).toList(),
                       ),
                     ),
                   ),
-                if (_isLoading)
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      child: Center(
-                        child: Image.asset(
-                          Images.loader,
-                          width: 84.w,
-                          height: 84.w,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ),
+                ),
+            ],
+          ),
+        ),
+        if (_isLoading)
+          Positioned.fill(
+            child: Material(
+              color: Colors.white.withValues(alpha: 0.78),
+              child: IgnorePointer(
+                child: Center(
+                  child: Image.asset(
+                    Images.loader,
+                    width: 84.w,
+                    height: 84.w,
+                    fit: BoxFit.contain,
                   ),
-              ],
+                ),
+              ),
             ),
+          ),
+      ],
     );
   }
 }

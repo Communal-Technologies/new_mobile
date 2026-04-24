@@ -5,19 +5,24 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class LoanApplicationScreen extends StatefulWidget {
   const LoanApplicationScreen({
     super.key,
     this.initialAmount,
     this.initialDuration,
-    this.currencySymbol = '₦',
+    /// When null, symbol is taken from the signed-in user (country / wallet currency).
+    this.currencySymbol,
   });
 
   final double? initialAmount;
   final int? initialDuration;
-  final String currencySymbol;
+  final String? currencySymbol;
 
   @override
   State<LoanApplicationScreen> createState() => _LoanApplicationScreenState();
@@ -87,9 +92,9 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   double get _totalInterest => _totalRepayment - _loanAmount;
   int get _numberOfInstallments => _loanDuration;
 
-  String _formatCurrency(double amount) {
+  String _formatCurrency(double amount, String currencySymbol) {
     final formatter = NumberFormat('#,##0.00', 'en_NG');
-    return '${widget.currencySymbol}${formatter.format(amount)}';
+    return '$currencySymbol${formatter.format(amount)}';
   }
 
   String _formatCurrencyNoDecimals(double amount) {
@@ -99,6 +104,14 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    final currencySymbol = (widget.currencySymbol != null &&
+            widget.currencySymbol!.trim().isNotEmpty)
+        ? widget.currencySymbol!.trim()
+        : (authState is AuthAuthenticated
+            ? currencySymbolForUser(authState.user)
+            : currencySymbolForCode('NGN'));
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(
         statusBarColor: Colors.transparent,
@@ -134,9 +147,9 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                   children: [
                     _buildProgressIndicator(),
                     vSpace(32),
-                    _buildLoanAmountSection(),
+                    _buildLoanAmountSection(currencySymbol),
                     vSpace(24),
-                    _buildRepaymentSummarySection(),
+                    _buildRepaymentSummarySection(currencySymbol),
                     vSpace(32),
                     _buildLoanUsageSection(),
                     vSpace(24),
@@ -216,7 +229,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     );
   }
 
-  Widget _buildLoanAmountSection() {
+  Widget _buildLoanAmountSection(String currencySymbol) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -232,7 +245,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             Row(
           children: [
             Text(
-              '${widget.currencySymbol}${_formatCurrencyNoDecimals(_minAmount)}',
+              '$currencySymbol${_formatCurrencyNoDecimals(_minAmount)}',
               style: TextStyle(
                 fontSize: 13.sp,
                 color: Colors.grey.shade600,
@@ -269,7 +282,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
               ),
             ),
             Text(
-              '${widget.currencySymbol}${_formatCurrencyNoDecimals(_maxAmount)}',
+              '$currencySymbol${_formatCurrencyNoDecimals(_maxAmount)}',
               style: TextStyle(
                 fontSize: 13.sp,
                 color: Colors.grey.shade600,
@@ -332,7 +345,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         ),
         vSpace(8),
         Text(
-          'Minimum: ${widget.currencySymbol}${_formatCurrencyNoDecimals(_minAmount)} | Maximum: ${widget.currencySymbol}${_formatCurrencyNoDecimals(_maxAmount)}',
+          'Minimum: $currencySymbol${_formatCurrencyNoDecimals(_minAmount)} | Maximum: $currencySymbol${_formatCurrencyNoDecimals(_maxAmount)}',
           style: TextStyle(
             fontSize: 12.sp,
             color: Colors.grey.shade600,
@@ -342,7 +355,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     );
   }
 
-  Widget _buildRepaymentSummarySection() {
+  Widget _buildRepaymentSummarySection(String currencySymbol) {
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
@@ -369,7 +382,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _formatCurrency(_monthlyPayment),
+                      _formatCurrency(_monthlyPayment, currencySymbol),
                       style: TextStyle(
                         fontSize: 20.sp,
                         fontWeight: FontWeight.w700,
@@ -392,7 +405,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      _formatCurrency(_totalRepayment),
+                      _formatCurrency(_totalRepayment, currencySymbol),
                       style: TextStyle(
                         fontSize: 20.sp,
                         fontWeight: FontWeight.w700,

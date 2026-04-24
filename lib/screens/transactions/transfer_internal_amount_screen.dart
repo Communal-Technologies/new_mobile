@@ -1,0 +1,344 @@
+import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
+
+class TransferInternalAmountScreen extends StatefulWidget {
+  const TransferInternalAmountScreen({super.key, required this.recipient});
+
+  final TransferFavorite recipient;
+
+  @override
+  State<TransferInternalAmountScreen> createState() =>
+      _TransferInternalAmountScreenState();
+}
+
+class _TransferInternalAmountScreenState
+    extends State<TransferInternalAmountScreen> {
+  final _amountCtrl = TextEditingController();
+  final _narrationCtrl = TextEditingController();
+  bool _saveAsFavorite = false;
+  static const List<int> _quickAmounts = [
+    1000,
+    3000,
+    5000,
+    10000,
+    15000,
+    20000,
+    30000,
+    50000,
+    100000,
+  ];
+
+  String _formatThousand(int value) {
+    final s = value.toString();
+    final b = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      final pos = s.length - i;
+      b.write(s[i]);
+      if (pos > 1 && pos % 3 == 1) b.write(',');
+    }
+    return b.toString();
+  }
+
+  void _applyQuickAmount(int amount) {
+    _amountCtrl.text = _formatThousand(amount);
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _amountCtrl.dispose();
+    _narrationCtrl.dispose();
+    super.dispose();
+  }
+
+  int? _amountToKobo(String value) {
+    final n = double.tryParse(value.replaceAll(',', '').trim());
+    if (n == null || n <= 0) return null;
+    return (n * 100).round();
+  }
+
+  Future<void> _submit() async {
+    final amountKobo = _amountToKobo(_amountCtrl.text);
+    if (amountKobo == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enter valid amount.')));
+      return;
+    }
+    if (!mounted) return;
+    context.pushNamed(
+      'transfer-internal-review',
+      extra: {
+        'favorite': widget.recipient.toJson(),
+        'amountKobo': amountKobo,
+        'narration': _narrationCtrl.text.trim(),
+        'saveAsBeneficiary': _saveAsFavorite,
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey.shade50,
+      appBar: AppBar(
+        titleSpacing: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, size: 22),
+          onPressed: () => context.pop(),
+        ),
+        title: const Text('Transfer to Communal Account'),
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(16.w),
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(14.w),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12.r),
+                gradient: const LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [Color(0xFF8C66F5), Color(0xFF6A39F3)],
+                ),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 18.r,
+                    backgroundColor: const Color(0xFF8F6BFF),
+                    child: Text(
+                      (() {
+                        final parts = widget.recipient.accountName
+                            .trim()
+                            .split(RegExp(r'\s+'))
+                            .where((e) => e.isNotEmpty)
+                            .toList();
+                        if (parts.isEmpty) return 'U';
+                        if (parts.length == 1) {
+                          final s = parts.first;
+                          return (s.length >= 2 ? s.substring(0, 2) : s)
+                              .toUpperCase();
+                        }
+                        return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+                      })(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  hSpace(10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.recipient.accountName,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 17.sp,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          widget.recipient.accountNumber,
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            vSpace(14),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(14.w),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(color: const Color(0xFFE7E7E7)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Amount',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      color: Colors.black54,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  vSpace(6),
+                  TextField(
+                    controller: _amountCtrl,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9,]')),
+                      _ThousandsSeparatorInputFormatter(),
+                    ],
+                    decoration: InputDecoration(
+                      hintText: '0',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  vSpace(10),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(10.w),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F5F5),
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
+                    child: Wrap(
+                      spacing: 8.w,
+                      runSpacing: 8.h,
+                      children: _quickAmounts
+                          .map(
+                            (v) => InkWell(
+                              onTap: () => _applyQuickAmount(v),
+                              borderRadius: BorderRadius.circular(16.r),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 14.w,
+                                  vertical: 10.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16.r),
+                                  border: Border.all(
+                                    color: const Color(0xFFE0E0E0),
+                                  ),
+                                ),
+                                child: Text(
+                                  '₦${v >= 1000 ? '${(v ~/ 1000)}k' : v}',
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+                  vSpace(12),
+                  Text(
+                    'Naration',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      color: Colors.black54,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  vSpace(6),
+                  TextField(
+                    controller: _narrationCtrl,
+                    decoration: InputDecoration(
+                      hintText: 'Enter transfer narration',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            vSpace(8),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Save as favourite'),
+              trailing: Transform.scale(
+                scale: 0.82,
+                child: Switch(
+                  value: _saveAsFavorite,
+                  onChanged: (v) => setState(() => _saveAsFavorite = v),
+                ),
+              ),
+            ),
+            vSpace(12),
+          ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: EdgeInsets.fromLTRB(16.w, 0, 16.w, 14.h),
+        child: SizedBox(
+          width: double.infinity,
+          height: 50.h,
+          child: InkWell(
+            onTap: _submit,
+            borderRadius: BorderRadius.circular(12.r),
+            child: Ink(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12.r),
+                gradient: const LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [Color(0xFF8C66F5), Color(0xFF6A39F3)],
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  'Continue',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ThousandsSeparatorInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) return const TextEditingValue(text: '');
+    final chars = digits.split('').reversed.toList();
+    final out = <String>[];
+    for (int i = 0; i < chars.length; i++) {
+      out.add(chars[i]);
+      if ((i + 1) % 3 == 0 && i != chars.length - 1) out.add(',');
+    }
+    final formatted = out.reversed.join();
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}

@@ -1,8 +1,14 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_event.dart';
+import 'package:communal_mobile/data/repositories/transfer_repository.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -17,6 +23,16 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 
 enum ReceiptAction { preview, download, share }
+
+String _humanizeTransferFailure(String code) {
+  switch (code.toUpperCase().trim()) {
+    case 'INSUFFICIENT_BALANCE':
+      return 'Insufficient balance to complete this transfer.';
+    default:
+      final t = code.replaceAll('_', ' ').trim().toLowerCase();
+      return t.isEmpty ? 'This transfer could not be completed.' : t;
+  }
+}
 
 class TransactionReceiptScreen extends StatefulWidget {
   const TransactionReceiptScreen({
@@ -35,11 +51,18 @@ class TransactionReceiptScreen extends StatefulWidget {
 
 class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
   final GlobalKey _receiptKey = GlobalKey();
+  final _repo = getIt<TransferRepository>();
+  late TransactionDetailsData _details;
+  Timer? _pollTimer;
+  int _pollTicks = 0;
+  static const int _maxPollTicks = 45;
 
   @override
   void initState() {
     super.initState();
-    if (widget.initialAction != null) {
+    _details = widget.details;
+    if (widget.initialAction != null &&
+        _details.status == TransactionStatus.successful) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         switch (widget.initialAction!) {
           case ReceiptAction.download:
@@ -53,12 +76,85 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
         }
       });
     }
+    if (_details.status == TransactionStatus.pending &&
+        _details.id.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _refreshTransferStatus();
+        _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+          if (!mounted) return;
+          if (_details.status != TransactionStatus.pending) {
+            _pollTimer?.cancel();
+            _pollTimer = null;
+            return;
+          }
+          if (_pollTicks >= _maxPollTicks) {
+            _pollTimer?.cancel();
+            _pollTimer = null;
+            return;
+          }
+          _refreshTransferStatus();
+        });
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshTransferStatus() async {
+    if (_details.status != TransactionStatus.pending) return;
+    _pollTicks++;
+    try {
+      final remote = await _repo.fetchTransferStatus(_details.id);
+      if (!mounted) return;
+      final mapped = transactionStatusFromApi(remote.statusRaw);
+      final ref = remote.reference.trim().isNotEmpty
+          ? remote.reference.trim()
+          : _details.reference;
+      setState(() {
+        _details = _details.copyWith(
+          status: mapped,
+          reference: ref,
+          amount: remote.amountKobo != null
+              ? remote.amountKobo! / 100.0
+              : _details.amount,
+          dateTime: remote.providerOccurredAt ?? _details.dateTime,
+          failureReason: mapped == TransactionStatus.failed
+              ? remote.failureReason
+              : null,
+          clearFailureReason: mapped != TransactionStatus.failed,
+          note: mapped == TransactionStatus.successful
+              ? (_details.note ??
+                  'This is a computer generated receipt and does not require a signature.')
+              : _details.note,
+        );
+      });
+      if (mapped != TransactionStatus.pending) {
+        _pollTimer?.cancel();
+        _pollTimer = null;
+      }
+      if (mapped == TransactionStatus.successful) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          context.read<AuthBloc>().add(AuthRefreshUserRequested());
+        });
+      }
+    } catch (_) {
+      // Keep showing last-known state; user can leave screen.
+    }
   }
 
   Future<void> _downloadReceipt() async {
     final bytes = await _captureReceiptImage();
     if (!mounted) return;
 
+    if (_details.status != TransactionStatus.successful) {
+      _showSnack('Receipt is available after the transfer succeeds.');
+      return;
+    }
     if (bytes == null) {
       _showSnack('Could not prepare receipt for download.');
       return;
@@ -98,6 +194,10 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
     final bytes = await _captureReceiptImage();
     if (!mounted) return;
 
+    if (_details.status != TransactionStatus.successful) {
+      _showSnack('Receipt is available after the transfer succeeds.');
+      return;
+    }
     if (bytes == null) {
       _showSnack('Unable to capture receipt.');
       return;
@@ -113,7 +213,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
           ),
         ],
         text:
-            'Transaction receipt • ${widget.details.transactionType} • ${widget.details.amountLabel}',
+            'Transaction receipt • ${_details.transactionType} • ${_details.amountLabel}',
       );
     } catch (e) {
       debugPrint('Receipt share failed: $e');
@@ -139,7 +239,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
   }
 
   String get _receiptIdentifier {
-    final raw = widget.details.reference;
+    final raw = _details.reference;
     final sanitized = raw.replaceAll(RegExp(r'[^A-Za-z0-9]'), '_');
     return sanitized.isEmpty ? 'transaction' : sanitized;
   }
@@ -258,39 +358,41 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
           centerTitle: false,
         ),
         body: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 28.h),
             child: Column(
               children: [
                 RepaintBoundary(
                   key: _receiptKey,
-                  child: _ReceiptCard(details: widget.details),
+                  child: _ReceiptCard(details: _details),
                 ),
                 vSpace(24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _ReceiptActionButton(
-                        label: 'Download',
-                        icon: Iconsax.import,
-                        background: const Color(0xFFF0E6FF),
-                        foreground: theme.primaryColor,
-                        onTap: _downloadReceipt,
+                if (_details.status == TransactionStatus.successful) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _ReceiptActionButton(
+                          label: 'Download',
+                          icon: Iconsax.import,
+                          background: const Color(0xFFF0E6FF),
+                          foreground: theme.primaryColor,
+                          onTap: _downloadReceipt,
+                        ),
                       ),
-                    ),
-                    hSpace(12),
-                    Expanded(
-                      child: _ReceiptActionButton(
-                        label: 'Share',
-                        icon: Iconsax.export_1,
-                        background: theme.primaryColor,
-                        foreground: Colors.white,
-                        onTap: _shareReceipt,
+                      hSpace(12),
+                      Expanded(
+                        child: _ReceiptActionButton(
+                          label: 'Share',
+                          icon: Iconsax.export_1,
+                          background: theme.primaryColor,
+                          foreground: Colors.white,
+                          onTap: _shareReceipt,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                vSpace(16),
+                    ],
+                  ),
+                  vSpace(16),
+                ],
                 SizedBox(
                   width: double.infinity,
                   child: _ReceiptActionButton(
@@ -336,7 +438,7 @@ class _ReceiptCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(32.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 25,
             offset: const Offset(0, 10),
           ),
@@ -391,7 +493,7 @@ class _ReceiptCard extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                'Transaction Receipt',
+                _cardHeaderTitle,
                 style: TextStyle(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w600,
@@ -401,17 +503,19 @@ class _ReceiptCard extends StatelessWidget {
             ],
           ),
           vSpace(20),
-          Text(
-            details.amountLabel,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 36.sp,
-              fontWeight: FontWeight.w800,
-              color: Colors.black,
-              letterSpacing: -0.5,
+          if (_showHeroAmount) ...[
+            Text(
+              details.amountLabel,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 36.sp,
+                fontWeight: FontWeight.w800,
+                color: Colors.black,
+                letterSpacing: -0.5,
+              ),
             ),
-          ),
-          vSpace(12),
+            vSpace(12),
+          ],
           Container(
             width: double.infinity,
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
@@ -451,7 +555,12 @@ class _ReceiptCard extends StatelessWidget {
             value: details.counterpartyBankLine,
           ),
           vSpace(16),
-          _ReceiptInfoRow(label: 'Reference', value: details.reference),
+          _ReceiptInfoRow(
+            label: 'Reference',
+            value: details.reference.trim().isEmpty
+                ? '—'
+                : details.reference,
+          ),
           vSpace(16),
           _ReceiptInfoRow(label: 'Date and Time', value: details.formattedDate),
           vSpace(16),
@@ -463,7 +572,7 @@ class _ReceiptCard extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(16.w),
             decoration: BoxDecoration(
-              color: const Color(0xFFE6FBFF),
+              color: _footerInfoBackground,
               borderRadius: BorderRadius.circular(18.r),
             ),
             child: Row(
@@ -472,13 +581,12 @@ class _ReceiptCard extends StatelessWidget {
                 Icon(
                   Iconsax.info_circle,
                   size: 18.sp,
-                  color: const Color(0xFF4CB0C9),
+                  color: _footerInfoIconColor,
                 ),
                 hSpace(10),
                 Expanded(
                   child: Text(
-                    details.note ??
-                        'This is a computer generated receipt and does not require a signature.',
+                    _infoFooterNote,
                     style: TextStyle(
                       fontSize: 12.5.sp,
                       color: Colors.grey.shade700,
@@ -496,6 +604,10 @@ class _ReceiptCard extends StatelessWidget {
 }
 
 extension _ReceiptStatusStyling on _ReceiptCard {
+  /// Large hero amount duplicates the pill on failed/pending; keep pill only.
+  bool get _showHeroAmount =>
+      details.status == TransactionStatus.successful;
+
   IconData get _statusHeroIcon {
     switch (details.status) {
       case TransactionStatus.pending:
@@ -534,9 +646,61 @@ extension _ReceiptStatusStyling on _ReceiptCard {
       case TransactionStatus.pending:
         return 'Your transaction is being processed';
       case TransactionStatus.failed:
+        final fr = details.failureReason?.trim();
+        if (fr != null && fr.isNotEmpty) {
+          return _humanizeTransferFailure(fr);
+        }
         return 'Your transfer request was not successful';
       case TransactionStatus.successful:
         return 'Your money has been sent successfully';
+    }
+  }
+
+  String get _cardHeaderTitle {
+    switch (details.status) {
+      case TransactionStatus.successful:
+        return 'Transaction Receipt';
+      case TransactionStatus.pending:
+      case TransactionStatus.failed:
+        return 'Transfer details';
+    }
+  }
+
+  String get _infoFooterNote {
+    switch (details.status) {
+      case TransactionStatus.successful:
+        return details.note ??
+            'This is a computer generated receipt and does not require a signature.';
+      case TransactionStatus.pending:
+        return 'This transfer is still processing. Reference and status update automatically. Download and share are available only after the transfer succeeds.';
+      case TransactionStatus.failed:
+        final fr = details.failureReason?.trim();
+        if (fr != null && fr.isNotEmpty) {
+          return '${_humanizeTransferFailure(fr)} If you need help, contact support.';
+        }
+        return 'This transfer did not complete successfully. If you need help, contact support.';
+    }
+  }
+
+  Color get _footerInfoBackground {
+    switch (details.status) {
+      case TransactionStatus.successful:
+        return const Color(0xFFE6FBFF);
+      case TransactionStatus.pending:
+        return const Color(0xFFFFF4E6);
+      case TransactionStatus.failed:
+        return const Color(0xFFFFEEF0);
+    }
+  }
+
+  Color get _footerInfoIconColor {
+    switch (details.status) {
+      case TransactionStatus.successful:
+        return const Color(0xFF4CB0C9);
+      case TransactionStatus.pending:
+        return const Color(0xFFE6A502);
+      case TransactionStatus.failed:
+        return const Color(0xFFD7263D);
     }
   }
 

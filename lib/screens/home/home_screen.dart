@@ -13,6 +13,7 @@ import 'package:communal_mobile/screens/home/widgets/home_account_frozen_card.da
 import 'package:communal_mobile/screens/home/widgets/home_header.dart';
 import 'package:communal_mobile/screens/home/widgets/kyc_alert.dart';
 import 'package:communal_mobile/screens/home/widgets/kyc_pending_approval_card.dart';
+import 'package:communal_mobile/screens/home/widgets/pin_setup_notice_card.dart';
 import 'package:communal_mobile/screens/home/widgets/quick_actions_section.dart';
 import 'package:communal_mobile/screens/home/widgets/recent_transactions_section.dart';
 import 'package:communal_mobile/screens/home/widgets/new_feature_banner.dart';
@@ -84,6 +85,25 @@ class _HomeScreenState extends State<HomeScreen> {
                       }
                     }
                     return const KycAlert();
+                  },
+                ),
+
+                vSpace(10),
+
+                BlocBuilder<AuthBloc, AuthState>(
+                  buildWhen: (prev, next) {
+                    if (prev.runtimeType != next.runtimeType) return true;
+                    if (prev is AuthAuthenticated && next is AuthAuthenticated) {
+                      return prev.user.hasSecurityPin != next.user.hasSecurityPin;
+                    }
+                    return true;
+                  },
+                  builder: (context, authState) {
+                    if (authState is AuthAuthenticated &&
+                        authState.user.hasSecurityPin != true) {
+                      return const PinSetupNoticeCard();
+                    }
+                    return const SizedBox.shrink();
                   },
                 ),
 

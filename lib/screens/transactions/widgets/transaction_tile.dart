@@ -40,7 +40,7 @@ class TransactionTile extends StatelessWidget {
                   Text(
                     item.title,
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.black,
                     ),
@@ -49,7 +49,7 @@ class TransactionTile extends StatelessWidget {
                   Text(
                     item.subtitle,
                     style: TextStyle(
-                      fontSize: 13.sp,
+                      fontSize: 15.sp,
                       color: Colors.grey.shade600,
                     ),
                   ),
@@ -59,7 +59,7 @@ class TransactionTile extends StatelessWidget {
             Text(
               item.signedAmountLabel,
               style: TextStyle(
-                fontSize: 16.sp,
+                fontSize: 18.sp,
                 fontWeight: FontWeight.w700,
                 color: item.amountColor,
               ),

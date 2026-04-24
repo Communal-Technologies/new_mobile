@@ -1,4 +1,5 @@
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
@@ -191,6 +192,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
       _confirmPin = input;
       await _repo.updateSecurityPin(_confirmPin);
       if (!mounted) return;
+      context.read<AuthBloc>().add(AuthRefreshUserRequested());
       setState(() {
         _isSuccess = true;
         _errorText = null;

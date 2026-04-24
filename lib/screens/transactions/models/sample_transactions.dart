@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 
 class TransactionListItem {
@@ -26,11 +27,19 @@ class TransactionListItem {
 
   String get subtitle => _tileDateFormat.format(details.dateTime);
 
-  String get signedAmountLabel =>
-      '${isCredit ? '+' : '-'}${details.amountLabel}';
+  String get signedAmountLabel {
+    if (details.status == TransactionStatus.failed) {
+      return details.amountLabel;
+    }
+    return '${isCredit ? '+' : '-'}${details.amountLabel}';
+  }
 
-  Color get amountColor =>
-      isCredit ? const Color(0xFF1AAE70) : const Color(0xFFD7263D);
+  Color get amountColor {
+    if (details.status == TransactionStatus.failed) {
+      return Colors.grey.shade700;
+    }
+    return isCredit ? const Color(0xFF1AAE70) : const Color(0xFFD7263D);
+  }
 }
 
 class SampleTransactions {
@@ -143,7 +152,7 @@ class SampleTransactions {
       counterpartyAccount: '2012112124',
       amount: amount,
       fees: 0,
-      currencySymbol: '₦',
+      currencySymbol: currencySymbolForCode('NGN'),
       transactionType: title,
       dateTime: dateTime,
       sessionId: sessionFormat.format(dateTime),

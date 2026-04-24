@@ -1,6 +1,10 @@
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -83,6 +87,11 @@ class _TransferInternalAmountScreenState
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthBloc>().state;
+    final currencySymbol = auth is AuthAuthenticated
+        ? currencySymbolForUser(auth.user)
+        : currencySymbolForCode('NGN');
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
@@ -232,7 +241,7 @@ class _TransferInternalAmountScreenState
                                   ),
                                 ),
                                 child: Text(
-                                  '₦${v >= 1000 ? '${(v ~/ 1000)}k' : v}',
+                                  '$currencySymbol${v >= 1000 ? '${(v ~/ 1000)}k' : v}',
                                   style: TextStyle(
                                     fontSize: 14.sp,
                                     fontWeight: FontWeight.w600,

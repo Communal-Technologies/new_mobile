@@ -95,3 +95,20 @@ class ResetPasswordRequested extends AuthEvent {
   @override
   List<Object?> get props => [login, newPassword, pin];
 }
+
+class SessionTakeoverVerifyRequested extends AuthEvent {
+  final String challengeId;
+  final String otp;
+
+  const SessionTakeoverVerifyRequested({
+    required this.challengeId,
+    required this.otp,
+  });
+
+  @override
+  List<Object?> get props => [challengeId, otp];
+}
+
+class SessionTakeoverCancelled extends AuthEvent {
+  const SessionTakeoverCancelled();
+}

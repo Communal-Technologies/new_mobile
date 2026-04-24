@@ -28,6 +28,10 @@ class UserModel extends Equatable {
 
   /// From `profile.tier` on `get-loggedin-user` (e.g. tier_0, tier_1, tier_2).
   final String? communalTier;
+  /// From `profile.kyc` webhook-driven verification status (e.g. approved, pending_review, rejected).
+  final String? kycStatus;
+  /// From top-level `kyc.status` workflow state (e.g. tier2_submitted, awaitingDocument).
+  final String? kycWorkflowStatus;
 
   /// From top-level `kyc.anchor_customer_id` on `get-loggedin-user`.
   final String? kycAnchorCustomerId;
@@ -74,6 +78,8 @@ class UserModel extends Equatable {
     this.phone,
     this.countryIso,
     this.communalTier,
+    this.kycStatus,
+    this.kycWorkflowStatus,
     this.kycAnchorCustomerId,
     this.kycStep1Submitted = false,
     this.kycStep2Submitted = false,
@@ -192,6 +198,12 @@ class UserModel extends Equatable {
     if (rawTier != null && rawTier.isNotEmpty) {
       communalTierVal = rawTier;
     }
+    String? kycStatusVal;
+    final rawKyc = profile?['kyc']?.toString().trim();
+    if (rawKyc != null && rawKyc.isNotEmpty) {
+      kycStatusVal = rawKyc;
+    }
+    String? kycWorkflowStatusVal;
 
     String? kycAnchorId;
     bool kycStep1SubmittedVal = false;
@@ -202,6 +214,10 @@ class UserModel extends Equatable {
       final k = Map<String, dynamic>.from(kycRaw);
       final aid = k['anchor_customer_id']?.toString().trim();
       if (aid != null && aid.isNotEmpty) kycAnchorId = aid;
+      final workflow = k['status']?.toString().trim();
+      if (workflow != null && workflow.isNotEmpty) {
+        kycWorkflowStatusVal = workflow;
+      }
     }
     final kycProgressRaw = json['kyc_progress'];
     if (kycProgressRaw is Map) {
@@ -300,6 +316,8 @@ class UserModel extends Equatable {
       phone: phoneVal != null && phoneVal.isNotEmpty ? phoneVal : null,
       countryIso: profileCountryIso,
       communalTier: communalTierVal,
+      kycStatus: kycStatusVal,
+      kycWorkflowStatus: kycWorkflowStatusVal,
       kycAnchorCustomerId: kycAnchorId,
       kycStep1Submitted: kycStep1SubmittedVal,
       kycStep2Submitted: kycStep2SubmittedVal,
@@ -332,6 +350,8 @@ class UserModel extends Equatable {
       'phone': phone,
       'country_iso': countryIso,
       'communal_tier': communalTier,
+      'kyc_status': kycStatus,
+      'kyc_workflow_status': kycWorkflowStatus,
       'kyc_anchor_customer_id': kycAnchorCustomerId,
       'kyc_step_1_submitted': kycStep1Submitted,
       'kyc_step_2_submitted': kycStep2Submitted,
@@ -363,6 +383,8 @@ class UserModel extends Equatable {
         phone,
         countryIso,
         communalTier,
+        kycStatus,
+        kycWorkflowStatus,
         kycAnchorCustomerId,
         kycStep1Submitted,
         kycStep2Submitted,

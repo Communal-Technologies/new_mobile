@@ -18,7 +18,6 @@ import 'package:communal_mobile/screens/transactions/widgets/download_statement_
 import 'package:communal_mobile/screens/transactions/transaction_history_filters.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';

@@ -1,16 +1,29 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
+import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money_formatter.dart';
+import 'package:communal_mobile/data/mappers/transaction_history_mapper.dart';
+import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
+import 'package:communal_mobile/data/models/user_model.dart';
+import 'package:communal_mobile/data/repositories/transactions_repository.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/transactions/models/sample_transactions.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 import 'package:communal_mobile/screens/transactions/widgets/transaction_tile.dart';
-import 'package:go_router/go_router.dart';
 import 'package:communal_mobile/screens/transactions/widgets/filter_category_bottomsheet.dart';
 import 'package:communal_mobile/screens/transactions/widgets/filter_status_bottomsheet.dart';
 import 'package:communal_mobile/screens/transactions/widgets/download_statement_bottomsheet.dart';
+import 'package:communal_mobile/screens/transactions/transaction_history_filters.dart';
+import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:share_plus/share_plus.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
   const TransactionHistoryScreen({super.key});
@@ -21,22 +34,214 @@ class TransactionHistoryScreen extends StatefulWidget {
 }
 
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
-  int _currentTabIndex = 0; // 0 = Communal, 1 = Ledger
+  late final TransactionsRepository _repo =
+      TransactionsRepository(getIt<DioClient>());
+  int _currentTabIndex = 0;
   int _currentNavIndex = 0;
-  late final List<MapEntry<String, List<TransactionListItem>>>
-  _monthlyTransactions;
-  late final Map<String, bool> _expandedMonths;
+
+  bool _loading = true;
+  String? _error;
+  List<TransactionListItem> _personalFlat = [];
+  List<TransactionListItem> _ledgerFlat = [];
+  String _filterDirection = 'All';
+  String _filterPaymentType = 'All Categories';
+  String _filterStatus = 'All Status';
+
+  List<MapEntry<String, List<TransactionListItem>>> _personalMonthly = [];
+  List<MapEntry<String, List<TransactionListItem>>> _ledgerMonthly = [];
+  final Map<String, bool> _expandedPersonal = {};
+  final Map<String, bool> _expandedLedger = {};
+
+  String get _categoryFilterButtonLabel {
+    if (_filterDirection == 'All' && _filterPaymentType == 'All Categories') {
+      return 'All categories';
+    }
+    if (_filterDirection != 'All' && _filterPaymentType != 'All Categories') {
+      return '$_filterDirection · $_filterPaymentType';
+    }
+    return _filterDirection != 'All' ? _filterDirection : _filterPaymentType;
+  }
+
+  String get _statusFilterButtonLabel =>
+      _filterStatus == 'All Status' ? 'All statuses' : _filterStatus;
+
+  List<TransactionListItem> _filteredFlatForCurrentTab() {
+    final src = _currentTabIndex == 0 ? _personalFlat : _ledgerFlat;
+    return applyTransactionHistoryFilters(
+      src,
+      direction: _filterDirection,
+      paymentType: _filterPaymentType,
+      statusLabel: _filterStatus,
+    );
+  }
+
+  void _recomputeGrouped() {
+    final pFiltered = applyTransactionHistoryFilters(
+      _personalFlat,
+      direction: _filterDirection,
+      paymentType: _filterPaymentType,
+      statusLabel: _filterStatus,
+    );
+    final lFiltered = applyTransactionHistoryFilters(
+      _ledgerFlat,
+      direction: _filterDirection,
+      paymentType: _filterPaymentType,
+      statusLabel: _filterStatus,
+    );
+    final pg = groupTransactionsByMonth(pFiltered);
+    final lg = groupTransactionsByMonth(lFiltered);
+    _personalMonthly = pg.entries.toList();
+    _ledgerMonthly = lg.entries.toList();
+    _expandedPersonal
+      ..clear()
+      ..addEntries(
+        List.generate(
+          _personalMonthly.length,
+          (i) => MapEntry(_personalMonthly[i].key, i == 0),
+        ),
+      );
+    _expandedLedger
+      ..clear()
+      ..addEntries(
+        List.generate(
+          _ledgerMonthly.length,
+          (i) => MapEntry(_ledgerMonthly[i].key, i == 0),
+        ),
+      );
+  }
+
+  Future<void> _exportStatement(
+    StatementExportRequest request,
+    UserModel user,
+  ) async {
+    final items = _filteredFlatForCurrentTab();
+    final sym = currencySymbolForUser(user);
+    final accountLabel =
+        _currentTabIndex == 0 ? 'Communal Personal' : 'Ledger Cooperative';
+    final csv = buildTransactionStatementCsv(
+      items: items,
+      currencySymbol: sym,
+      rangeStart: request.startInclusive,
+      rangeEnd: request.endInclusive,
+      accountLabel: accountLabel,
+    );
+    final lines = csv.split('\n');
+    if (lines.length <= 2) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No transactions in this period for the current filters.'),
+        ),
+      );
+      return;
+    }
+    if (request.delivery != 'Download') {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Server email delivery is not set up yet. Use your share sheet to save or send the CSV.',
+          ),
+        ),
+      );
+    }
+    try {
+      final stamp = DateTime.now().millisecondsSinceEpoch;
+      final bytes = Uint8List.fromList(utf8.encode(csv));
+      await Share.shareXFiles(
+        [
+          XFile.fromData(
+            bytes,
+            mimeType: 'text/csv',
+            name: 'communal_statement_$stamp.csv',
+          ),
+        ],
+        text: 'Communal transaction statement ($accountLabel)',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not export: $e')),
+      );
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    _monthlyTransactions = SampleTransactions.transactionsByMonth.entries
-        .toList();
-    _expandedMonths = {
-      for (int i = 0; i < _monthlyTransactions.length; i++)
-        _monthlyTransactions[i].key: i == 0,
-    };
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
+
+  bool _showLedgerTab(UserModel? user) {
+    if (user == null) return false;
+    final ln = user.ledgerNumber?.trim() ?? '';
+    return user.hasCooperativeMembership && ln.isNotEmpty;
+  }
+
+  Future<void> _load() async {
+    final auth = context.read<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'Please sign in to view transactions.';
+        });
+      }
+      return;
+    }
+    final user = auth.user;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final personal = await _repo.fetchPersonalHistoryMerged(user);
+      final ledger = _showLedgerTab(user)
+          ? await _repo.fetchLedgerHistoryOnly(user)
+          : const <TransactionListItem>[];
+
+      final pg = groupTransactionsByMonth(personal);
+      final lg = groupTransactionsByMonth(ledger);
+
+      if (!mounted) return;
+      setState(() {
+        _personalMonthly = pg.entries.toList();
+        _ledgerMonthly = lg.entries.toList();
+        _expandedPersonal
+          ..clear()
+          ..addEntries(
+            List.generate(
+              _personalMonthly.length,
+              (i) => MapEntry(_personalMonthly[i].key, i == 0),
+            ),
+          );
+        _expandedLedger
+          ..clear()
+          ..addEntries(
+            List.generate(
+              _ledgerMonthly.length,
+              (i) => MapEntry(_ledgerMonthly[i].key, i == 0),
+            ),
+          );
+        if (!_showLedgerTab(user) && _currentTabIndex != 0) {
+          _currentTabIndex = 0;
+        }
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  List<MapEntry<String, List<TransactionListItem>>> get _activeMonthly =>
+      _currentTabIndex == 0 ? _personalMonthly : _ledgerMonthly;
+
+  Map<String, bool> get _activeExpanded =>
+      _currentTabIndex == 0 ? _expandedPersonal : _expandedLedger;
 
   @override
   Widget build(BuildContext context) {
@@ -110,62 +315,176 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             ),
           ],
         ),
-        body: Column(
-          children: [
-            // Tabs
-            Container(
-              color: Colors.white,
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Row(
-                children: [
-                  Expanded(child: _buildTab('Communal (Personal)', 0, theme)),
-                  Expanded(child: _buildTab('Ledger (Cooperative)', 1, theme)),
-                ],
-              ),
-            ),
+        body: BlocConsumer<AuthBloc, AuthState>(
+          listenWhen: (prev, next) {
+            if (prev is AuthAuthenticated && next is AuthAuthenticated) {
+              return prev.user.id != next.user.id ||
+                  prev.user.walletBalanceKobo != next.user.walletBalanceKobo ||
+                  prev.user.ledgerNumber != next.user.ledgerNumber ||
+                  prev.user.countryIso != next.user.countryIso ||
+                  prev.user.walletCurrencyCode != next.user.walletCurrencyCode ||
+                  prev.user.hasCooperativeMembership !=
+                      next.user.hasCooperativeMembership;
+            }
+            return prev.runtimeType != next.runtimeType;
+          },
+          listener: (_, __) => _load(),
+          builder: (context, authState) {
+            final user = authState is AuthAuthenticated ? authState.user : null;
+            final showLedger = _showLedgerTab(user);
 
-            // Filters
-            Container(
-              color: Colors.white,
-              padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 12.h),
-              child: Row(
-                children: [
-                  Flexible(
-                    child: _buildFilterButton(
-                      icon: Icons.filter_list,
-                      label: 'All Categories',
+            if (_loading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (_error != null) {
+              return Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24.w),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _error!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 14.sp),
+                      ),
+                      vSpace(16),
+                      FilledButton(
+                        onPressed: _load,
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return Column(
+              children: [
+                if (showLedger)
+                  Container(
+                    color: Colors.white,
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _buildTab(
+                            'Communal (Personal)',
+                            0,
+                            theme,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildTab(
+                            'Ledger (Cooperative)',
+                            1,
+                            theme,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Container(
+                    width: double.infinity,
+                    color: Colors.white,
+                    padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
+                    child: Text(
+                      'Communal (Personal)',
+                      style: TextStyle(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black87,
+                      ),
                     ),
                   ),
-                  hSpace(12),
-                  Flexible(
-                    child: _buildFilterButton(icon: null, label: 'Successful'),
+                Container(
+                  color: Colors.white,
+                  padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 12.h),
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: _buildFilterButton(
+                          icon: Icons.filter_list,
+                          label: 'All Categories',
+                        ),
+                      ),
+                      hSpace(12),
+                      Flexible(
+                        child: _buildFilterButton(
+                          icon: null,
+                          label: 'Successful',
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-
-            vSpace(8),
-
-            // Transaction List
-            Expanded(
-              child: ListView.separated(
-                padding: EdgeInsets.symmetric(horizontal: 16.w),
-                itemBuilder: (_, index) => _buildMonthSection(
-                  _monthlyTransactions[index].key,
-                  _monthlyTransactions[index].value,
                 ),
-                separatorBuilder: (_, __) => vSpace(16),
-                itemCount: _monthlyTransactions.length,
-              ),
-            ),
-          ],
+                vSpace(8),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _load,
+                    child: _activeMonthly.isEmpty
+                        ? ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: [
+                              SizedBox(height: 120.h),
+                              Icon(
+                                Icons.receipt_long_outlined,
+                                size: 48.sp,
+                                color: Colors.grey.shade400,
+                              ),
+                              vSpace(12),
+                              Center(
+                                child: Text(
+                                  'No transactions yet',
+                                  style: TextStyle(
+                                    fontSize: 15.sp,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : ListView.separated(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: EdgeInsets.symmetric(horizontal: 16.w),
+                            itemBuilder: (_, index) => _buildMonthSection(
+                              _activeMonthly[index].key,
+                              _activeMonthly[index].value,
+                              user != null
+                                  ? currencySymbolForUser(user)
+                                  : currencySymbolForCode('NGN'),
+                            ),
+                            separatorBuilder: (_, __) => vSpace(16),
+                            itemCount: _activeMonthly.length,
+                          ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
         bottomNavigationBar: BottomNavBar(
           currentIndex: _currentNavIndex,
           onTap: (index) {
-            setState(() {
-              _currentNavIndex = index;
-            });
+            setState(() => _currentNavIndex = index);
+            switch (index) {
+              case 0:
+                context.goNamed('home');
+                break;
+              case 1:
+                context.pushNamed('obligations');
+                break;
+              case 2:
+                context.pushNamed('community');
+                break;
+              case 3:
+                context.goNamed('loans');
+                break;
+              case 4:
+                context.goNamed('account-settings');
+                break;
+            }
           },
         ),
       ),
@@ -187,8 +506,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         children: [
           Text(
             label,
+            textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 13.sp,
               fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
               color: isActive ? theme.primaryColor : Colors.grey.shade600,
             ),
@@ -238,12 +558,15 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
               Icon(icon, size: 16.sp, color: Colors.grey.shade700),
               hSpace(6),
             ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey.shade700,
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey.shade700,
+                ),
               ),
             ),
             hSpace(4),
@@ -261,23 +584,32 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   Widget _buildMonthSection(
     String month,
     List<TransactionListItem> transactions,
+    String currencySymbol,
   ) {
-    final isExpanded = _expandedMonths[month] ?? false;
+    final expanded = _activeExpanded;
+    final isExpanded = expanded[month] ?? false;
+    // API `type` is debit whenever the user is sender, even if the transfer
+    // failed — exclude failed rows from In/Out totals (no balance movement).
     final incoming = transactions
-        .where((t) => t.isCredit)
+        .where(
+          (t) =>
+              t.isCredit && t.details.status != TransactionStatus.failed,
+        )
         .fold<double>(0, (sum, item) => sum + item.details.amount);
     final outgoing = transactions
-        .where((t) => !t.isCredit)
+        .where(
+          (t) =>
+              !t.isCredit && t.details.status != TransactionStatus.failed,
+        )
         .fold<double>(0, (sum, item) => sum + item.details.amount);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Month header
         GestureDetector(
           onTap: () {
             setState(() {
-              _expandedMonths[month] = !isExpanded;
+              expanded[month] = !isExpanded;
             });
           },
           child: Container(
@@ -310,7 +642,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 ),
                 const Spacer(),
                 Text(
-                  'In: ₦${formatMoney(incoming)}',
+                  'In: $currencySymbol${formatMoney(incoming)}',
                   style: TextStyle(
                     fontSize: 13.sp,
                     fontWeight: FontWeight.w600,
@@ -319,7 +651,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 ),
                 hSpace(12),
                 Text(
-                  'Out: ₦${formatMoney(outgoing)}',
+                  'Out: $currencySymbol${formatMoney(outgoing)}',
                   style: TextStyle(
                     fontSize: 13.sp,
                     fontWeight: FontWeight.w600,
@@ -330,8 +662,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             ),
           ),
         ),
-
-        // Transactions list
         if (isExpanded) ...[
           vSpace(8),
           for (int i = 0; i < transactions.length; i++)
@@ -341,15 +671,14 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
               ),
               child: TransactionTile(
                 item: transactions[i],
-                onTap: () => _openTransactionDetails(transactions[i].details),
+                onTap: () => context.pushNamed(
+                  'transaction-details',
+                  extra: transactions[i].details,
+                ),
               ),
             ),
         ],
       ],
     );
-  }
-
-  void _openTransactionDetails(TransactionDetailsData data) {
-    context.pushNamed('transaction-details', extra: data);
   }
 }

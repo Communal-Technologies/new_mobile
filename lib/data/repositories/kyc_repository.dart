@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:dio/dio.dart';
 
@@ -12,16 +14,19 @@ class KycRepository {
     required Map<String, dynamic> body,
   }) async {
     try {
-      final response =
-          await _dioClient.post('/compliance/register/$userId', data: body);
+      final response = await _dioClient.post(
+        '/compliance/register/$userId',
+        data: body,
+      );
       final data = response.data;
-      if (data is Map &&
-          (data['status'] == true || data['status'] == 'true')) {
+      if (data is Map && (data['status'] == true || data['status'] == 'true')) {
         final id = data['customer_id']?.toString();
         if (id != null && id.isNotEmpty) return id;
       }
       throw Exception(
-        data is Map ? (data['message']?.toString() ?? 'Registration failed') : 'Registration failed',
+        data is Map
+            ? (data['message']?.toString() ?? 'Registration failed')
+            : 'Registration failed',
       );
     } on DioException catch (e) {
       throw Exception(_messageFromDio(e));
@@ -45,8 +50,7 @@ class KycRepository {
         },
       );
       final data = response.data;
-      if (data is Map &&
-          (data['status'] == true || data['status'] == 'true')) {
+      if (data is Map && (data['status'] == true || data['status'] == 'true')) {
         final inner = data['data'];
         if (inner is Map) {
           return Map<String, dynamic>.from(inner);
@@ -57,6 +61,102 @@ class KycRepository {
         data is Map
             ? (data['message']?.toString() ?? 'BVN verification failed')
             : 'BVN verification failed',
+      );
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  /// Step 3 (Communal tier_2 / Anchor `TIER_3` identity): multipart front/back files + fields.
+  /// Use bytes only when file paths are unavailable.
+  Future<Map<String, dynamic>?> upgradeToTier2({
+    required String anchorCustomerId,
+    required String idNumber,
+    required String idType,
+    String? expiryDateYmd,
+    String? fileFrontPath,
+    Uint8List? fileFrontBytes,
+    required String fileFrontName,
+    String? fileBackPath,
+    Uint8List? fileBackBytes,
+    String? fileBackName,
+  }) async {
+    try {
+      final MultipartFile frontMultipart;
+      final MultipartFile legacyFrontMultipart;
+      if (fileFrontPath != null && fileFrontPath.trim().isNotEmpty) {
+        final safeFrontPath = fileFrontPath.trim();
+        frontMultipart = await MultipartFile.fromFile(
+          safeFrontPath,
+          filename: fileFrontName,
+        );
+        // Must be a separate instance; MultipartFile is single-use once finalized.
+        legacyFrontMultipart = await MultipartFile.fromFile(
+          safeFrontPath,
+          filename: fileFrontName,
+        );
+      } else if (fileFrontBytes != null && fileFrontBytes.isNotEmpty) {
+        frontMultipart = MultipartFile.fromBytes(
+          fileFrontBytes,
+          filename: fileFrontName,
+        );
+        legacyFrontMultipart = MultipartFile.fromBytes(
+          fileFrontBytes,
+          filename: fileFrontName,
+        );
+      } else {
+        throw Exception('No front document selected.');
+      }
+
+      final map = <String, dynamic>{
+        // Send both legacy (`file`) and explicit (`file_front`) for compatibility.
+        'file': legacyFrontMultipart,
+        'file_front': frontMultipart,
+        'id_number': idNumber,
+        'id_type': idType,
+      };
+      final hasBackPath =
+          fileBackPath != null && fileBackPath.trim().isNotEmpty;
+      final hasBackBytes = fileBackBytes != null && fileBackBytes.isNotEmpty;
+      if (hasBackPath || hasBackBytes) {
+        final safeBackPath = fileBackPath?.trim();
+        final backMultipart = hasBackPath
+            ? await MultipartFile.fromFile(
+                safeBackPath!,
+                filename: (fileBackName != null && fileBackName.isNotEmpty)
+                    ? fileBackName
+                    : 'id_back.jpg',
+              )
+            : MultipartFile.fromBytes(
+                fileBackBytes!,
+                filename: (fileBackName != null && fileBackName.isNotEmpty)
+                    ? fileBackName
+                    : 'id_back.jpg',
+              );
+        map['file_back'] = backMultipart;
+      }
+      final exp = expiryDateYmd?.trim();
+      if (exp != null && exp.isNotEmpty) {
+        map['expiry_date'] = exp;
+      }
+
+      final formData = FormData.fromMap(map);
+      final response = await _dioClient.postFormData(
+        '/compliance/upgrade-to-tier2/$anchorCustomerId',
+        data: formData,
+      );
+      final data = response.data;
+      if (data is Map && (data['status'] == true || data['status'] == 'true')) {
+        final inner = data['data'];
+        if (inner is Map) {
+          return Map<String, dynamic>.from(inner);
+        }
+        return null;
+      }
+      throw Exception(
+        data is Map
+            ? (data['message']?.toString() ?? 'Identity verification failed')
+            : 'Identity verification failed',
       );
     } on DioException catch (e) {
       throw Exception(_messageFromDio(e));

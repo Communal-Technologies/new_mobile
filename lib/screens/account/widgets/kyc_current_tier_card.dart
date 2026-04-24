@@ -12,11 +12,21 @@ class KycCurrentTierCard extends StatelessWidget {
     required this.current,
     this.nextTierKey,
     this.onContinueVerification,
+    this.statusBadgeLabel,
+    this.statusBadgeColor,
+    this.statusBadgeBgColor,
+    this.disableUpgrade = false,
+    this.upgradeButtonLabel,
   });
 
   final TierCurrent current;
   final String? nextTierKey;
   final VoidCallback? onContinueVerification;
+  final String? statusBadgeLabel;
+  final Color? statusBadgeColor;
+  final Color? statusBadgeBgColor;
+  final bool disableUpgrade;
+  final String? upgradeButtonLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +34,8 @@ class KycCurrentTierCard extends StatelessWidget {
     final showUpgrade = nextTierKey != null && onContinueVerification != null;
     final showCurrentBadge =
         current.tierKey == 'tier_1' || current.tierKey == 'tier_2';
+    final hasStatusBadge =
+        statusBadgeLabel != null && statusBadgeLabel!.trim().isNotEmpty;
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w),
@@ -63,6 +75,25 @@ class KycCurrentTierCard extends StatelessWidget {
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (hasStatusBadge) ...[
+                    hSpace(8),
+                    Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                      decoration: BoxDecoration(
+                        color: statusBadgeBgColor ?? const Color(0xFF4B2EA4),
+                        borderRadius: BorderRadius.circular(20.r),
+                      ),
+                      child: Text(
+                        statusBadgeLabel!,
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w700,
+                          color: statusBadgeColor ?? Colors.white,
                         ),
                       ),
                     ),
@@ -134,7 +165,7 @@ class KycCurrentTierCard extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
-                onPressed: onContinueVerification,
+                onPressed: disableUpgrade ? null : onContinueVerification,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.white,
                   side: BorderSide(
@@ -147,9 +178,10 @@ class KycCurrentTierCard extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  nextTierKey == 'tier_2'
-                      ? 'Continue to Tier 2 verification'
-                      : 'Continue verification',
+                  upgradeButtonLabel ??
+                      (nextTierKey == 'tier_2'
+                          ? 'Upgrade to Tier 2'
+                          : 'Continue verification'),
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w600,

@@ -1,7 +1,9 @@
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/currency_formatter.dart';
+import 'package:communal_mobile/data/local/home_wallet_prefs.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -78,7 +80,15 @@ class _HomeAccountCardSectionState extends State<HomeAccountCardSection> {
         return _SavingsTabContent(
           user: user,
           balanceVisible: _balanceVisible,
-          onToggleBalance: () => setState(() => _balanceVisible = !_balanceVisible),
+          onToggleBalance: () async {
+            final auth = context.read<AuthBloc>().state;
+            final uid = auth is AuthAuthenticated
+                ? auth.user.id
+                : widget.user.id;
+            final next = !_balanceVisible;
+            await getIt<HomeWalletPrefs>().setBalanceVisible(uid, next);
+            if (mounted) setState(() => _balanceVisible = next);
+          },
           primary: Theme.of(context).primaryColor,
           copyBg: _kCopyButtonBg,
         );
@@ -193,7 +203,7 @@ class _SavingsTabContent extends StatelessWidget {
 
   final UserModel user;
   final bool balanceVisible;
-  final VoidCallback onToggleBalance;
+  final Future<void> Function() onToggleBalance;
   final Color primary;
   final Color copyBg;
 

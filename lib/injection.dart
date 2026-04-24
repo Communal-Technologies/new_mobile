@@ -1,4 +1,7 @@
+import 'package:communal_mobile/data/local/home_wallet_prefs.dart';
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
+import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
+import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:get_it/get_it.dart';
 import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,6 +17,21 @@ Future<void> configureDependencies() async {
   if (!getIt.isRegistered<KycProgressStorage>()) {
     getIt.registerLazySingleton<KycProgressStorage>(
       () => KycProgressStorage(getIt<SharedPreferences>()),
+    );
+  }
+  if (!getIt.isRegistered<HomeWalletPrefs>()) {
+    getIt.registerLazySingleton<HomeWalletPrefs>(
+      () => HomeWalletPrefs(getIt<SharedPreferences>()),
+    );
+  }
+  if (!getIt.isRegistered<TransferRepository>()) {
+    getIt.registerLazySingleton<TransferRepository>(
+      () => TransferRepository(getIt()),
+    );
+  }
+  if (!getIt.isRegistered<TransferFavoritesPrefs>()) {
+    getIt.registerLazySingleton<TransferFavoritesPrefs>(
+      () => TransferFavoritesPrefs(getIt<SharedPreferences>()),
     );
   }
 }

@@ -104,7 +104,10 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
 
   void _requestPinFocus() {
     if (!mounted || _isSuccess) return;
-    FocusScope.of(context).requestFocus(_pinFocus);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _isSuccess) return;
+      FocusScope.of(context).requestFocus(_pinFocus);
+    });
   }
 
   bool _canContinue() => !_submitting && _pinCtrl.text.trim().length == 4;
@@ -176,7 +179,11 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
       if (input != _newPin) {
         setState(() {
           _errorText = 'PINs do not match, please try again';
+          _newPin = '';
+          _confirmPin = '';
+          _pinCtrl.clear();
         });
+        _requestPinFocus();
         return;
       }
       _confirmPin = input;
@@ -272,6 +279,41 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                     ),
                   ),
                   if (!_isSuccess) ...[
+                    if ((_hasExistingPin && _phase > 0) ||
+                        (!_hasExistingPin && _phase > 1))
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: _submitting
+                              ? null
+                              : () {
+                                  setState(() {
+                                    _errorText = null;
+                                    _pinCtrl.clear();
+                                    if (_phase == 2) {
+                                      _newPin = '';
+                                      _confirmPin = '';
+                                    } else if (_phase == 1 && _hasExistingPin) {
+                                      _currentPin = '';
+                                    }
+                                  });
+                                  _requestPinFocus();
+                                },
+                          icon: Icon(
+                            Icons.arrow_back_ios_new,
+                            size: 12.sp,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                          label: Text(
+                            'Go back',
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Theme.of(context).primaryColor,
+                            ),
+                          ),
+                        ),
+                      ),
                     vSpace(16),
                     GestureDetector(
                       behavior: HitTestBehavior.opaque,

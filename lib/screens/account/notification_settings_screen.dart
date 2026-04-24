@@ -24,15 +24,9 @@ class _NotificationSettingsScreenState
   bool _emailNotifications = true;
   bool _smsNotifications = false;
 
-  // Transactions Section
-  bool _transactionAlerts = true;
+  // Transactions Section (non-security reminders only)
   bool _paymentReminders = true;
   bool _largeTransactions = true;
-
-  // Security Section
-  bool _loginAlerts = true;
-  bool _securityAlerts = true;
-  bool _passwordChanges = true;
 
   // Marketing & Updates Section
   bool _promotionalOffers = false;
@@ -85,12 +79,8 @@ class _NotificationSettingsScreenState
                       _pushNotifications = false;
                       _emailNotifications = false;
                       _smsNotifications = false;
-                      _transactionAlerts = false;
                       _paymentReminders = false;
                       _largeTransactions = false;
-                      _loginAlerts = false;
-                      _securityAlerts = false;
-                      _passwordChanges = false;
                       _promotionalOffers = false;
                       _productUpdates = false;
                       _newsletters = false;
@@ -147,19 +137,6 @@ class _NotificationSettingsScreenState
               _buildSectionHeader('Transactions'),
               vSpace(12),
               NotificationToggleItem(
-                icon: Icons.notifications_outlined,
-                title: 'Transaction Alerts',
-                description: 'Get notified for all transactions',
-                value: _transactionAlerts,
-                onChanged: (value) {
-                  setState(() {
-                    _transactionAlerts = value;
-                    if (value) _muteAllNotifications = false;
-                  });
-                },
-                enabled: !_muteAllNotifications,
-              ),
-              NotificationToggleItem(
                 icon: Icons.attach_money,
                 title: 'Payment Reminders',
                 description: 'Reminders for upcoming payments',
@@ -184,55 +161,6 @@ class _NotificationSettingsScreenState
                   });
                 },
                 enabled: !_muteAllNotifications,
-              ),
-              vSpace(16),
-              // Security Section
-              _buildSectionHeader('Security'),
-              vSpace(12),
-              NotificationToggleItem(
-                icon: Icons.shield_outlined,
-                title: 'Login Alerts',
-                description: 'Notify when account is accessed',
-                value: _loginAlerts,
-                onChanged: (value) {
-                  setState(() {
-                    _loginAlerts = value;
-                    if (value) _muteAllNotifications = false;
-                  });
-                },
-                enabled: !_muteAllNotifications,
-                iconColor: Colors.red,
-                tag: NotificationTag.recommended,
-              ),
-              NotificationToggleItem(
-                icon: Icons.shield_outlined,
-                title: 'Security Alerts',
-                description: 'Critical security notifications',
-                value: _securityAlerts,
-                onChanged: (value) {
-                  setState(() {
-                    _securityAlerts = value;
-                    if (value) _muteAllNotifications = false;
-                  });
-                },
-                enabled: !_muteAllNotifications,
-                iconColor: Colors.red,
-                tag: NotificationTag.recommended,
-              ),
-              NotificationToggleItem(
-                icon: Icons.shield_outlined,
-                title: 'Password Changes',
-                description: 'Alerts when password is changed',
-                value: _passwordChanges,
-                onChanged: (value) {
-                  setState(() {
-                    _passwordChanges = value;
-                    if (value) _muteAllNotifications = false;
-                  });
-                },
-                enabled: !_muteAllNotifications,
-                iconColor: Colors.red,
-                tag: NotificationTag.recommended,
               ),
               vSpace(16),
               // Marketing & Updates Section

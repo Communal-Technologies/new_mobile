@@ -4,6 +4,7 @@ import 'package:communal_mobile/data/repositories/community_settings_repository.
 import 'package:communal_mobile/data/repositories/kyc_repository.dart';
 import 'package:communal_mobile/data/repositories/locations_repository.dart';
 import 'package:communal_mobile/data/repositories/regions_repository.dart';
+import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:injectable/injectable.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,8 +29,12 @@ abstract class RepositoryModule {
 
   @lazySingleton
   CommunitySettingsRepository provideCommunitySettingsRepository(
-          DioClient dioClient) =>
-      CommunitySettingsRepository(dioClient);
+    DioClient dioClient,
+  ) => CommunitySettingsRepository(dioClient);
+
+  @lazySingleton
+  TransferRepository provideTransferRepository(DioClient dioClient) =>
+      TransferRepository(dioClient);
 
   @lazySingleton
   KycProgressStorage provideKycProgressStorage(SharedPreferences prefs) =>

@@ -126,7 +126,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       accountLabel: accountLabel,
     );
     final lines = csv.split('\n');
-    if (lines.length <= 2) {
+    if (lines.length < 3) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -518,7 +518,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   }
 
   Future<void> _openCategoryFilterSheet() async {
-    final result = await showModalBottomSheet<CategoryFilterResult>(
+    final result = await showModalBottomSheet<CategoryFilterResult?>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -536,7 +536,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   }
 
   Future<void> _openStatusFilterSheet() async {
-    final result = await showModalBottomSheet<String>(
+    final result = await showModalBottomSheet<String?>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

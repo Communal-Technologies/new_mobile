@@ -39,6 +39,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<VerifyOtpRequested>(_onVerifyOtpRequested);
     on<CreatePasswordRequested>(_onCreatePasswordRequested);
     on<ResetPasswordRequested>(_onResetPasswordRequested);
+    on<SessionTakeoverVerifyRequested>(_onSessionTakeoverVerifyRequested);
+    on<SessionTakeoverCancelled>(_onSessionTakeoverCancelled);
   }
 
   /// Extract clean error message from exception
@@ -155,6 +157,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         event.password,
       );
 
+      if (loginResponse != null && loginResponse.requiresSessionTakeoverOtp) {
+        final id = loginResponse.takeoverChallengeId;
+        if (id != null && id.isNotEmpty) {
+          emit(AuthSessionTakeoverPending(
+            takeoverChallengeId: id,
+            maskedDestination: loginResponse.maskedDestination ?? '',
+            otpChannel: loginResponse.otpChannel ?? 'phone',
+            login: event.login.trim(),
+            message: loginResponse.message,
+          ));
+          return;
+        }
+      }
+
       if (loginResponse != null && loginResponse.token != null) {
         await secureStorage.write(key: 'token', value: loginResponse.token!);
         await secureStorage.write(key: 'login', value: event.login);
@@ -174,7 +190,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           emit(AuthUnauthenticated());
         }
       } else {
-        emit(const AuthFailure("Invalid login response"));
+        emit(AuthFailure(
+          loginResponse?.message ?? 'Invalid login response',
+        ));
       }
     } catch (e) {
       final errorMsg = _extractErrorMessage(e);
@@ -188,6 +206,59 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
+  Future<void> _onSessionTakeoverVerifyRequested(
+    SessionTakeoverVerifyRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    final pending = state;
+    if (pending is! AuthSessionTakeoverPending) {
+      return;
+    }
+    final loginToStore = pending.login;
+
+    try {
+      final loginResponse = await authRepository.verifySessionTakeover(
+        event.challengeId,
+        event.otp,
+      );
+
+      if (loginResponse != null && loginResponse.token != null) {
+        await secureStorage.write(key: 'token', value: loginResponse.token!);
+        if (loginToStore.isNotEmpty) {
+          await secureStorage.write(key: 'login', value: loginToStore);
+        }
+        authRepository.updateToken(loginResponse.token!);
+        final user = await authRepository.getUserInfo(loginResponse.token!);
+        if (user != null) {
+          await _hydrateKycResumeFromBackend(user);
+          _hasRecentFailedLogin = false;
+          emit(AuthAuthenticated(
+            userId: user.id,
+            login: loginToStore.isNotEmpty ? loginToStore : user.login.trim(),
+            user: user,
+            sessionGeneration: ++_loginSessionGeneration,
+          ));
+        } else {
+          emit(const AuthFailure('Could not load your profile.'));
+        }
+      } else {
+        emit(AuthFailure(
+          loginResponse?.message ?? 'Invalid sign-in response',
+        ));
+      }
+    } catch (e) {
+      emit(AuthFailure(_extractErrorMessage(e)));
+    }
+  }
+
+  void _onSessionTakeoverCancelled(
+    SessionTakeoverCancelled event,
+    Emitter<AuthState> emit,
+  ) {
+    emit(const AuthFailure(
+      'Verification cancelled. Enter your password again.',
+    ));
+  }
 
   void _onAuthUserUpdated(AuthUserUpdated event, Emitter<AuthState> emit) {
     final s = state;

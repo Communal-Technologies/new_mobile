@@ -238,87 +238,93 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
             vSpace(22),
             Container(
               width: double.infinity,
-              padding: EdgeInsets.all(16.w),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12.r),
                 border: Border.all(color: const Color(0xFFE8E8E8)),
               ),
-              child: Column(
+              child: Stack(
                 children: [
-                  Container(
-                    width: 56.w,
-                    height: 56.w,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: (_isSuccess ? const Color(0xFF1AAE70) : primary)
-                          .withValues(alpha: 0.10),
-                    ),
-                    child: Icon(
-                      _isSuccess ? Icons.check_circle : Icons.lock_outline,
-                      color: _isSuccess ? const Color(0xFF1AAE70) : primary,
-                      size: 30.sp,
-                    ),
-                  ),
                   if (!_isSuccess &&
                       ((_hasExistingPin && _phase > 0) ||
                           (!_hasExistingPin && _phase > 1)))
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Padding(
-                        padding: EdgeInsets.only(top: 4.h),
-                        child: TextButton.icon(
-                          onPressed: _submitting
-                              ? null
-                              : () {
-                                  setState(() {
-                                    _errorText = null;
-                                    _pinCtrl.clear();
-                                    if (_phase == 2) {
-                                      _newPin = '';
-                                      _confirmPin = '';
-                                    } else if (_phase == 1 && _hasExistingPin) {
-                                      _currentPin = '';
-                                    }
-                                  });
-                                  _requestPinFocus();
-                                },
-                          icon: Icon(
-                            Icons.arrow_back_ios_new,
-                            size: 12.sp,
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      child: TextButton.icon(
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        onPressed: _submitting
+                            ? null
+                            : () {
+                                setState(() {
+                                  _errorText = null;
+                                  _pinCtrl.clear();
+                                  if (_phase == 2) {
+                                    _newPin = '';
+                                    _confirmPin = '';
+                                  } else if (_phase == 1 && _hasExistingPin) {
+                                    _currentPin = '';
+                                  }
+                                });
+                                _requestPinFocus();
+                              },
+                        icon: Icon(
+                          Icons.arrow_back_ios_new,
+                          size: 12.sp,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                        label: Text(
+                          'Go back',
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w700,
                             color: Theme.of(context).primaryColor,
-                          ),
-                          label: Text(
-                            'Go back',
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w700,
-                              color: Theme.of(context).primaryColor,
-                            ),
                           ),
                         ),
                       ),
                     ),
-                  vSpace(14),
-                  Text(
-                    _titleText,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 20.sp,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF0F1D40),
-                    ),
-                  ),
-                  vSpace(6),
-                  Text(
-                    _subtitleText,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13.sp,
-                      color: Colors.black54,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  Padding(
+                    padding: EdgeInsets.all(16.w),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 56.w,
+                          height: 56.w,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: (_isSuccess ? const Color(0xFF1AAE70) : primary)
+                                .withValues(alpha: 0.10),
+                          ),
+                          child: Icon(
+                            _isSuccess ? Icons.check_circle : Icons.lock_outline,
+                            color: _isSuccess ? const Color(0xFF1AAE70) : primary,
+                            size: 30.sp,
+                          ),
+                        ),
+                        vSpace(14),
+                        Text(
+                          _titleText,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 20.sp,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF0F1D40),
+                          ),
+                        ),
+                        vSpace(6),
+                        Text(
+                          _subtitleText,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            color: Colors.black54,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                   if (!_isSuccess) ...[
                     vSpace(16),
                     GestureDetector(
@@ -467,6 +473,9 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                       ),
                     ),
                   ],
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),

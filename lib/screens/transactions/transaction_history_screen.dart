@@ -657,7 +657,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 Text(
                   'In: $currencySymbol${formatMoney(incoming)}',
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.green,
                   ),
@@ -666,7 +666,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 Text(
                   'Out: $currencySymbol${formatMoney(outgoing)}',
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.red,
                   ),

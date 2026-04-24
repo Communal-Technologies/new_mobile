@@ -19,6 +19,12 @@ class SecurityCubit extends Cubit<SecurityState> {
   DateTime? _lastUnlockTime; // Track when app was last unlocked to prevent immediate re-lock
   bool _isLockedDueToIdleTimeout = false; // Track if app is locked due to idle timeout
 
+  /// When set by [beginExternalFilePickerGuard], the next [onAppResumed] skips PIN lock after
+  /// [paused]/[hidden] (system gallery / document picker). Cleared on that resume or by
+  /// [cancelExternalFilePickerGuard] if the OS never backgrounded the activity.
+  bool _externalPickerGuardActive = false;
+  bool _externalPickerPauseSeen = false;
+
   SecurityCubit(this.prefs, this.secureStorage) : super(SecurityState.unlocked) {
     // When cubit is created, check if app should be locked
     // This happens when app is reopened after being closed
@@ -38,6 +44,12 @@ class SecurityCubit extends Cubit<SecurityState> {
     if (state == SecurityState.locked) {
       return;
     }
+    if (_externalPickerGuardActive) {
+      // File picker/gallery transition: treat as in-flow activity, not a true background lock trigger.
+      _externalPickerPauseSeen = true;
+      _backgroundTime = null;
+      return;
+    }
     _backgroundTime ??= DateTime.now();
     emit(SecurityState.blurred);
   }
@@ -51,7 +63,21 @@ class SecurityCubit extends Cubit<SecurityState> {
       debugPrint('📊   App resumed but is locked - NOT unlocking (user must enter PIN)');
       return;
     }
-    
+
+    if (_externalPickerGuardActive && _externalPickerPauseSeen) {
+      _externalPickerGuardActive = false;
+      _externalPickerPauseSeen = false;
+      _backgroundTime = null;
+      _isIdlePromptShown = false;
+      if (state == SecurityState.blurred) {
+        emit(SecurityState.unlocked);
+      }
+      final now = DateTime.now();
+      _lastActivityTime = now;
+      _lastUnlockTime = now;
+      return;
+    }
+
     if (_backgroundTime != null || state == SecurityState.blurred) {
       _backgroundTime = null;
       lockApp(isIdleTimeout: true);
@@ -63,6 +89,21 @@ class SecurityCubit extends Cubit<SecurityState> {
       _lastActivityTime = now;
       _lastUnlockTime = now;
       _isIdlePromptShown = false;
+    }
+  }
+
+  /// Call immediately before [FilePicker.platform.pickFiles] (or similar) so returning from
+  /// the system gallery does not PIN-lock the session.
+  void beginExternalFilePickerGuard() {
+    _externalPickerGuardActive = true;
+    _externalPickerPauseSeen = false;
+  }
+
+  /// Call in [finally] after [pickFiles] returns so the guard is not left active if [paused]
+  /// never ran (and so a future resume does not incorrectly skip lock).
+  void cancelExternalFilePickerGuard() {
+    if (!_externalPickerPauseSeen) {
+      _externalPickerGuardActive = false;
     }
   }
 

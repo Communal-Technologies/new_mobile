@@ -81,8 +81,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
   PhoneNumber? _phoneInitial;
   bool _prefillDone = false;
 
-  String _digitsOnlyPostal(String raw) =>
-      raw.replaceAll(RegExp(r'\D'), '');
+  String _digitsOnlyPostal(String raw) => raw.replaceAll(RegExp(r'\D'), '');
 
   String _internationalPhone(PhoneNumber p) {
     final dial = (p.dialCode ?? '').replaceAll(RegExp(r'\D'), '');
@@ -106,10 +105,9 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
     if (digits.isEmpty) return null;
     if (regions.isEmpty) return null;
 
-    final sorted = List<RegionModel>.from(regions)
-      ..sort(
-        (a, b) => b.phoneDialCode.length.compareTo(a.phoneDialCode.length),
-      );
+    final sorted = List<RegionModel>.from(
+      regions,
+    )..sort((a, b) => b.phoneDialCode.length.compareTo(a.phoneDialCode.length));
 
     for (final r in sorted) {
       final dc = r.phoneDialCode.replaceAll(RegExp(r'\D'), '');
@@ -185,8 +183,9 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
       final regions = await regionsRepo.fetchRegions();
       if (!mounted) return;
 
-      final useRegions =
-          regions.isNotEmpty ? regions : RegionModel.offlineFallback;
+      final useRegions = regions.isNotEmpty
+          ? regions
+          : RegionModel.offlineFallback;
       final sortedRegions = List<RegionModel>.from(useRegions)
         ..sort((a, b) => a.name.compareTo(b.name));
 
@@ -315,8 +314,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
 
     setState(() => _lgasLoading = true);
     try {
-      final list =
-          await getIt<LocationsRepository>().fetchLgas('$stateId');
+      final list = await getIt<LocationsRepository>().fetchLgas('$stateId');
       if (!mounted) return;
       setState(() {
         _lgas = list;
@@ -541,7 +539,9 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
         _submitting = false;
       });
       final msg = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
-      AppToast.error(msg.isNotEmpty ? msg : 'Could not save. Please try again.');
+      AppToast.error(
+        msg.isNotEmpty ? msg : 'Could not save. Please try again.',
+      );
     }
   }
 
@@ -551,322 +551,327 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
 
     return KycIdleSuppressor(
       child: Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(
-          'Profile Information',
-          style: TextStyle(
-            fontSize: 22.sp,
-            fontWeight: FontWeight.w700,
-            color: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => context.pop(),
+          ),
+          title: Text(
+            'Profile Information',
+            style: TextStyle(
+              fontSize: 22.sp,
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+            ),
           ),
         ),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  vSpace(4),
-                  Center(
-                    child: Text(
-                      'Tell us about yourself',
-                      style: TextStyle(
-                        fontSize: 17.sp,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ),
-                  vSpace(12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Profile Information',
-                        style: TextStyle(
-                          fontSize: 17.sp,
-                          color: theme.primaryColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        'Step 1 of 3',
-                        style: TextStyle(
-                          fontSize: 17.sp,
-                          color: theme.primaryColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  vSpace(8),
-                  LinearProgressIndicator(
-                    value: 1 / 3,
-                    backgroundColor: Colors.grey.shade200,
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(theme.primaryColor),
-                    minHeight: 4.h,
-                  ),
-                ],
-              ),
-            ),
-            vSpace(24),
-            Expanded(
-              child: SingleChildScrollView(
+        body: SafeArea(
+          child: Column(
+            children: [
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: 24.w),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Personal Information',
-                      style: TextStyle(
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
+                    vSpace(4),
+                    Center(
+                      child: Text(
+                        'Tell us about yourself',
+                        style: TextStyle(
+                          fontSize: 17.sp,
+                          color: Colors.grey.shade600,
+                        ),
                       ),
                     ),
-                    vSpace(16),
-                    CustomTextField(
-                      controller: _firstNameController,
-                      focusNode: _firstNameFocus,
-                      hintText: 'First name',
-                      textInputAction: TextInputAction.next,
-                      errorText: _firstNameError,
-                      onChanged: (_) => _clearErrors(),
-                      onFieldSubmitted: (_) {
-                        if (!mounted) return;
-                        FocusScope.of(context).requestFocus(_middleNameFocus);
-                      },
-                    ),
-                    vSpace(16),
-                    CustomTextField(
-                      controller: _middleNameController,
-                      focusNode: _middleNameFocus,
-                      hintText: 'Middle name (optional)',
-                      textInputAction: TextInputAction.next,
-                      onChanged: (_) => _clearErrors(),
-                      onFieldSubmitted: (_) {
-                        if (!mounted) return;
-                        FocusScope.of(context).requestFocus(_lastNameFocus);
-                      },
-                    ),
-                    vSpace(16),
-                    CustomTextField(
-                      controller: _lastNameController,
-                      focusNode: _lastNameFocus,
-                      hintText: 'Last name',
-                      textInputAction: TextInputAction.next,
-                      errorText: _lastNameError,
-                      onChanged: (_) => _clearErrors(),
-                      onFieldSubmitted: (_) {
-                        if (!mounted) return;
-                        FocusScope.of(context).requestFocus(_emailFocus);
-                      },
-                    ),
-                    vSpace(16),
-                    CustomTextField(
-                      controller: _emailController,
-                      focusNode: _emailFocus,
-                      hintText: 'Email address',
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      errorText: _emailError,
-                      onChanged: (_) => _clearErrors(),
-                      onFieldSubmitted: (_) {
-                        if (!mounted) return;
-                        FocusScope.of(context).requestFocus(_phoneFocus);
-                      },
-                    ),
-                    vSpace(16),
-                    Text(
-                      'Phone number',
-                      style: TextStyle(
-                        fontSize: 17.sp,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                    vSpace(8),
-                    _regionsLoading
-                        ? SizedBox(
-                            height: 54.h,
-                            child: const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                          )
-                        : PhoneInputField(
-                            controller: _phoneController,
-                            regions: _regions,
-                            initialValue: _phoneInitial,
-                            focusNode: _phoneFocus,
-                            keyboardAction: TextInputAction.next,
-                            errorText: _phoneError,
-                            onChanged: () => _clearErrors(),
-                            onFieldSubmitted: (_) {
-                              if (!mounted) return;
-                              FocusScope.of(context).requestFocus(_address1Focus);
-                            },
-                            onPhoneNumberChanged: (phone, valid) {
-                              setState(() {
-                                _phoneNumber = phone;
-                                _phoneValid = valid;
-                              });
-                            },
-                          ),
-                    vSpace(32),
-                    Text(
-                      'Address Information',
-                      style: TextStyle(
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
-                      ),
-                    ),
-                    vSpace(16),
-                    CustomTextField(
-                      controller: _address1Controller,
-                      focusNode: _address1Focus,
-                      hintText: 'Address Line 1',
-                      textInputAction: TextInputAction.next,
-                      errorText: _address1Error,
-                      onChanged: (_) => _clearErrors(),
-                      onFieldSubmitted: (_) {
-                        if (!mounted) return;
-                        FocusScope.of(context).requestFocus(_address2Focus);
-                      },
-                    ),
-                    vSpace(16),
-                    CustomTextField(
-                      controller: _address2Controller,
-                      focusNode: _address2Focus,
-                      hintText: 'Address Line 2 (optional)',
-                      textInputAction: TextInputAction.next,
-                      onFieldSubmitted: (_) {
-                        if (!mounted) return;
-                        FocusScope.of(context).requestFocus(_cityFocus);
-                      },
-                    ),
-                    vSpace(16),
+                    vSpace(12),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(
-                          child: CustomTextField(
-                            controller: _cityController,
-                            focusNode: _cityFocus,
-                            hintText: 'City',
-                            textInputAction: TextInputAction.next,
-                            errorText: _cityError,
-                            onChanged: (_) => _clearErrors(),
-                            onFieldSubmitted: (_) {
-                              if (!mounted) return;
-                              FocusScope.of(context).requestFocus(_postalCodeFocus);
-                            },
+                        Text(
+                          'Profile Information',
+                          style: TextStyle(
+                            fontSize: 17.sp,
+                            color: theme.primaryColor,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        hSpace(12),
-                        Expanded(
-                          child: CustomTextField(
-                            controller: _postalCodeController,
-                            focusNode: _postalCodeFocus,
-                            hintText: 'Postal code',
-                            keyboardType: TextInputType.number,
-                            textInputAction: TextInputAction.done,
-                            errorText: _postalCodeError,
-                            onChanged: (_) => _clearErrors(),
-                            onFieldSubmitted: (_) {
-                              if (!mounted) return;
-                              FocusManager.instance.primaryFocus?.unfocus();
-                            },
+                        Text(
+                          'Step 1 of 3',
+                          style: TextStyle(
+                            fontSize: 17.sp,
+                            color: theme.primaryColor,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
-                    vSpace(16),
-                    _buildDropdown(
-                      label: 'Country',
-                      value: _selectedCountryName,
-                      items: _regions.map((r) => r.name).toList(),
-                      onChanged: (value) {
-                        _onCountryChanged(value);
-                      },
-                      errorText: _countryError,
-                      isLoading: _regionsLoading,
-                      loadingHint: 'Loading countries…',
+                    vSpace(8),
+                    LinearProgressIndicator(
+                      value: 1 / 3,
+                      backgroundColor: Colors.grey.shade200,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        theme.primaryColor,
+                      ),
+                      minHeight: 4.h,
                     ),
-                    vSpace(16),
-                    _buildDropdown(
-                      label: 'State',
-                      value: _selectedStateId != null
-                          ? _selectedStateModel?.name
-                          : null,
-                      items: _states.map((s) => s.name).toList(),
-                      onChanged: (name) {
-                        if (name == null) {
-                          _onStateSelected(null);
-                          return;
-                        }
-                        final row = _states.firstWhere(
-                          (s) => s.name == name,
-                          orElse: () => const StateModel(id: 0, name: ''),
-                        );
-                        if (row.id == 0) return;
-                        _onStateSelected(row.id);
-                      },
-                      errorText: _stateError,
-                      isLoading: _statesLoading,
-                      loadingHint: 'Loading states…',
-                    ),
-                    vSpace(16),
-                    _buildDropdown(
-                      label: 'LGA',
-                      value: _selectedLgaName,
-                      items: _lgas.map((l) => l.name).toList(),
-                      onChanged: _selectedStateId == null
-                          ? (_) {}
-                          : _onLgaSelected,
-                      errorText: _lgaError,
-                      enabled: _selectedStateId != null && _lgas.isNotEmpty,
-                      isLoading: _lgasLoading,
-                      loadingHint: 'Loading areas…',
-                    ),
-                    vSpace(24),
                   ],
                 ),
               ),
-            ),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.shade200,
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
+              vSpace(24),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: 24.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Personal Information',
+                        style: TextStyle(
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                      vSpace(16),
+                      CustomTextField(
+                        controller: _firstNameController,
+                        focusNode: _firstNameFocus,
+                        hintText: 'First name',
+                        textInputAction: TextInputAction.next,
+                        errorText: _firstNameError,
+                        onChanged: (_) => _clearErrors(),
+                        onFieldSubmitted: (_) {
+                          if (!mounted) return;
+                          FocusScope.of(context).requestFocus(_middleNameFocus);
+                        },
+                      ),
+                      vSpace(16),
+                      CustomTextField(
+                        controller: _middleNameController,
+                        focusNode: _middleNameFocus,
+                        hintText: 'Middle name (optional)',
+                        textInputAction: TextInputAction.next,
+                        onChanged: (_) => _clearErrors(),
+                        onFieldSubmitted: (_) {
+                          if (!mounted) return;
+                          FocusScope.of(context).requestFocus(_lastNameFocus);
+                        },
+                      ),
+                      vSpace(16),
+                      CustomTextField(
+                        controller: _lastNameController,
+                        focusNode: _lastNameFocus,
+                        hintText: 'Last name',
+                        textInputAction: TextInputAction.next,
+                        errorText: _lastNameError,
+                        onChanged: (_) => _clearErrors(),
+                        onFieldSubmitted: (_) {
+                          if (!mounted) return;
+                          FocusScope.of(context).requestFocus(_emailFocus);
+                        },
+                      ),
+                      vSpace(16),
+                      CustomTextField(
+                        controller: _emailController,
+                        focusNode: _emailFocus,
+                        hintText: 'Email address',
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        errorText: _emailError,
+                        onChanged: (_) => _clearErrors(),
+                        onFieldSubmitted: (_) {
+                          if (!mounted) return;
+                          FocusScope.of(context).requestFocus(_phoneFocus);
+                        },
+                      ),
+                      vSpace(16),
+                      Text(
+                        'Phone number',
+                        style: TextStyle(
+                          fontSize: 17.sp,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                      vSpace(8),
+                      _regionsLoading
+                          ? SizedBox(
+                              height: 54.h,
+                              child: const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            )
+                          : PhoneInputField(
+                              controller: _phoneController,
+                              regions: _regions,
+                              initialValue: _phoneInitial,
+                              focusNode: _phoneFocus,
+                              keyboardAction: TextInputAction.next,
+                              errorText: _phoneError,
+                              onChanged: () => _clearErrors(),
+                              onFieldSubmitted: (_) {
+                                if (!mounted) return;
+                                FocusScope.of(
+                                  context,
+                                ).requestFocus(_address1Focus);
+                              },
+                              onPhoneNumberChanged: (phone, valid) {
+                                setState(() {
+                                  _phoneNumber = phone;
+                                  _phoneValid = valid;
+                                });
+                              },
+                            ),
+                      vSpace(32),
+                      Text(
+                        'Address Information',
+                        style: TextStyle(
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                      vSpace(16),
+                      CustomTextField(
+                        controller: _address1Controller,
+                        focusNode: _address1Focus,
+                        hintText: 'Address Line 1',
+                        textInputAction: TextInputAction.next,
+                        errorText: _address1Error,
+                        onChanged: (_) => _clearErrors(),
+                        onFieldSubmitted: (_) {
+                          if (!mounted) return;
+                          FocusScope.of(context).requestFocus(_address2Focus);
+                        },
+                      ),
+                      vSpace(16),
+                      CustomTextField(
+                        controller: _address2Controller,
+                        focusNode: _address2Focus,
+                        hintText: 'Address Line 2 (optional)',
+                        textInputAction: TextInputAction.next,
+                        onFieldSubmitted: (_) {
+                          if (!mounted) return;
+                          FocusScope.of(context).requestFocus(_cityFocus);
+                        },
+                      ),
+                      vSpace(16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: CustomTextField(
+                              controller: _cityController,
+                              focusNode: _cityFocus,
+                              hintText: 'City',
+                              textInputAction: TextInputAction.next,
+                              errorText: _cityError,
+                              onChanged: (_) => _clearErrors(),
+                              onFieldSubmitted: (_) {
+                                if (!mounted) return;
+                                FocusScope.of(
+                                  context,
+                                ).requestFocus(_postalCodeFocus);
+                              },
+                            ),
+                          ),
+                          hSpace(12),
+                          Expanded(
+                            child: CustomTextField(
+                              controller: _postalCodeController,
+                              focusNode: _postalCodeFocus,
+                              hintText: 'Postal code',
+                              keyboardType: TextInputType.number,
+                              textInputAction: TextInputAction.done,
+                              errorText: _postalCodeError,
+                              onChanged: (_) => _clearErrors(),
+                              onFieldSubmitted: (_) {
+                                if (!mounted) return;
+                                FocusManager.instance.primaryFocus?.unfocus();
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      vSpace(16),
+                      _buildDropdown(
+                        label: 'Country',
+                        value: _selectedCountryName,
+                        items: _regions.map((r) => r.name).toList(),
+                        onChanged: (value) {
+                          _onCountryChanged(value);
+                        },
+                        errorText: _countryError,
+                        isLoading: _regionsLoading,
+                        loadingHint: 'Loading countries…',
+                      ),
+                      vSpace(16),
+                      _buildDropdown(
+                        label: 'State',
+                        value: _selectedStateId != null
+                            ? _selectedStateModel?.name
+                            : null,
+                        items: _states.map((s) => s.name).toList(),
+                        onChanged: (name) {
+                          if (name == null) {
+                            _onStateSelected(null);
+                            return;
+                          }
+                          final row = _states.firstWhere(
+                            (s) => s.name == name,
+                            orElse: () => const StateModel(id: 0, name: ''),
+                          );
+                          if (row.id == 0) return;
+                          _onStateSelected(row.id);
+                        },
+                        errorText: _stateError,
+                        isLoading: _statesLoading,
+                        loadingHint: 'Loading states…',
+                      ),
+                      vSpace(16),
+                      _buildDropdown(
+                        label: 'LGA',
+                        value: _selectedLgaName,
+                        items: _lgas.map((l) => l.name).toList(),
+                        onChanged: _selectedStateId == null
+                            ? (_) {}
+                            : _onLgaSelected,
+                        errorText: _lgaError,
+                        enabled: _selectedStateId != null && _lgas.isNotEmpty,
+                        isLoading: _lgasLoading,
+                        loadingHint: 'Loading areas…',
+                      ),
+                      vSpace(24),
+                    ],
                   ),
-                ],
+                ),
               ),
-              child: AppElevatedButton(
-                title: 'Continue',
-                onPressed: _continue,
-                isLoading: _submitting,
-                loadingLabel: 'Submitting…',
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.shade200,
+                      blurRadius: 10,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: AppElevatedButton(
+                  title: 'Continue',
+                  onPressed: _continue,
+                  isLoading: _submitting,
+                  loadingLabel: 'Submitting…',
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 
@@ -881,6 +886,63 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
     String loadingHint = 'Loading…',
   }) {
     final hasError = errorText != null && errorText.isNotEmpty;
+    final canPick = enabled && !isLoading && items.isNotEmpty;
+
+    Future<void> openPicker() async {
+      if (!canPick) return;
+      final selected = await showModalBottomSheet<String>(
+        context: context,
+        showDragHandle: true,
+        isScrollControlled: true,
+        builder: (ctx) => DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.72,
+          minChildSize: 0.45,
+          maxChildSize: 0.92,
+          builder: (sheetCtx, scrollController) => SafeArea(
+            child: CustomScrollView(
+              controller: scrollController,
+              physics: const ClampingScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 4.h, bottom: 6.h),
+                    child: Center(
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                SliverList.builder(
+                  itemCount: items.length,
+                  itemBuilder: (_, index) {
+                    final item = items[index];
+                    return ListTile(
+                      title: Text(item, style: TextStyle(fontSize: 17.sp)),
+                      trailing: value == item
+                          ? Icon(
+                              Icons.check_circle,
+                              color: Theme.of(context).primaryColor,
+                            )
+                          : null,
+                      onTap: () => Navigator.of(ctx).pop(item),
+                    );
+                  },
+                ),
+                SliverToBoxAdapter(child: vSpace(8)),
+              ],
+            ),
+          ),
+        ),
+      );
+      if (!mounted || selected == null) return;
+      onChanged(selected);
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -922,43 +984,38 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                     ],
                   ),
                 )
-              : DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: value,
-                    isExpanded: true,
-                    menuMaxHeight: 280.h,
-                    dropdownColor: Colors.white,
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      color: Colors.black87,
-                    ),
-                    hint: Text(
-                      label,
-                      style: TextStyle(
-                        color: Colors.grey.shade400,
-                        fontSize: 18.sp,
+              : Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12.r),
+                    onTap: canPick ? openPicker : null,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12.w),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              (value != null && value.isNotEmpty)
+                                  ? value
+                                  : label,
+                              style: TextStyle(
+                                color: (value != null && value.isNotEmpty)
+                                    ? Colors.black87
+                                    : Colors.grey.shade400,
+                                fontSize: 18.sp,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Icon(
+                            Icons.keyboard_arrow_down,
+                            color: Colors.grey.shade600,
+                            size: 22.sp,
+                          ),
+                        ],
                       ),
                     ),
-                    icon: Icon(
-                      Icons.keyboard_arrow_down,
-                      color: Colors.grey.shade600,
-                      size: 22.sp,
-                    ),
-                    padding: EdgeInsets.symmetric(horizontal: 12.w),
-                    borderRadius: BorderRadius.circular(12.r),
-                    items: items.map((String item) {
-                      return DropdownMenuItem<String>(
-                        value: item,
-                        child: Text(
-                          item,
-                          style: TextStyle(
-                            fontSize: 18.sp,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: enabled ? onChanged : null,
                   ),
                 ),
         ),
@@ -966,10 +1023,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
           SizedBox(height: 4.h),
           Text(
             errorText,
-            style: TextStyle(
-              color: Colors.red,
-              fontSize: 15.sp,
-            ),
+            style: TextStyle(color: Colors.red, fontSize: 15.sp),
           ),
         ],
       ],

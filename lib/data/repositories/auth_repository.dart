@@ -144,6 +144,15 @@ class AuthRepository {
     return null;
   }
 
+  Future<void> updateDeviceToken(String deviceToken) async {
+    final token = deviceToken.trim();
+    if (token.isEmpty) return;
+    await dioClient.post(
+      '/profile/device-token',
+      data: {'device_token': token},
+    );
+  }
+
   Future<Map<String, dynamic>?> checkLogin(String login) async {
     try {
       // This endpoint doesn't require authentication

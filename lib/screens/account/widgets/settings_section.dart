@@ -37,9 +37,7 @@ class SettingsSection extends StatelessWidget {
           title: 'Security Settings',
           description: 'Password, PIN, and security options',
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Security Settings')),
-            );
+            context.pushNamed('security-settings');
           },
         ),
         SettingItem(

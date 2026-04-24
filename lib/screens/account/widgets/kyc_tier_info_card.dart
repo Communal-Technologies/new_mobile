@@ -12,6 +12,9 @@ class KycTierInfoCard extends StatelessWidget {
     required this.maxBalanceKobo,
     required this.requirements,
     this.isCurrent = false,
+    this.statusBadgeLabel,
+    this.statusBadgeColor,
+    this.statusBadgeBgColor,
   });
 
   final int tier;
@@ -20,6 +23,9 @@ class KycTierInfoCard extends StatelessWidget {
   final int maxBalanceKobo;
   final List<String> requirements;
   final bool isCurrent;
+  final String? statusBadgeLabel;
+  final Color? statusBadgeColor;
+  final Color? statusBadgeBgColor;
 
   String _formatFromKobo(int kobo) {
     return CurrencyFormatter.formatNairaFromKobo(kobo);
@@ -27,6 +33,8 @@ class KycTierInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasStatusBadge =
+        statusBadgeLabel != null && statusBadgeLabel!.trim().isNotEmpty;
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w),
       padding: EdgeInsets.all(16.w),
@@ -71,6 +79,24 @@ class KycTierInfoCard extends StatelessWidget {
                     ),
                   ),
                 ),
+              if (hasStatusBadge) ...[
+                hSpace(8),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: statusBadgeBgColor ?? const Color(0xFF4B2EA4),
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                  child: Text(
+                    statusBadgeLabel!,
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w700,
+                      color: statusBadgeColor ?? Colors.white,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           vSpace(16),

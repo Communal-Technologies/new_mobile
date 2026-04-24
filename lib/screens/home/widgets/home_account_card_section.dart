@@ -34,6 +34,26 @@ class _HomeAccountCardSectionState extends State<HomeAccountCardSection> {
   bool _balanceVisible = true;
 
   @override
+  void initState() {
+    super.initState();
+    _reloadBalanceVisibilityFromPrefs();
+  }
+
+  @override
+  void didUpdateWidget(covariant HomeAccountCardSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.user.id != widget.user.id) {
+      _reloadBalanceVisibilityFromPrefs();
+    }
+  }
+
+  void _reloadBalanceVisibilityFromPrefs() {
+    final uid = widget.user.id.trim();
+    if (uid.isEmpty) return;
+    _balanceVisible = getIt<HomeWalletPrefs>().isBalanceVisible(uid);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
     final user =

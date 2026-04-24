@@ -63,40 +63,45 @@ class TransactionDetailsScreen extends StatelessWidget {
             ),
           ),
         ),
-        bottomNavigationBar: SafeArea(
-          top: false,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 16.h),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _BottomCtaButton(
-                    label: 'Download',
-                    icon: Iconsax.import,
-                    backgroundColor: const Color(0xFFF0E6FF),
-                    foregroundColor: theme.primaryColor,
-                    onTap: () => _openReceipt(context, _receiptDownloadAction),
+        bottomNavigationBar: details.status == TransactionStatus.successful
+            ? SafeArea(
+                top: false,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 16.h),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _BottomCtaButton(
+                          label: 'Download',
+                          icon: Iconsax.import,
+                          backgroundColor: const Color(0xFFF0E6FF),
+                          foregroundColor: theme.primaryColor,
+                          onTap: () =>
+                              _openReceipt(context, _receiptDownloadAction),
+                        ),
+                      ),
+                      hSpace(12),
+                      Expanded(
+                        child: _BottomCtaButton(
+                          label: 'Share',
+                          icon: Iconsax.export_1,
+                          backgroundColor: theme.primaryColor,
+                          foregroundColor: Colors.white,
+                          onTap: () =>
+                              _openReceipt(context, _receiptShareAction),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                hSpace(12),
-                Expanded(
-                  child: _BottomCtaButton(
-                    label: 'Share',
-                    icon: Iconsax.export_1,
-                    backgroundColor: theme.primaryColor,
-                    foregroundColor: Colors.white,
-                    onTap: () => _openReceipt(context, _receiptShareAction),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+              )
+            : null,
       ),
     );
   }
 
   void _openReceipt(BuildContext context, String action) {
+    if (details.status != TransactionStatus.successful) return;
     context.pushNamed(
       'transaction-receipt',
       extra: {'details': details, 'action': action},

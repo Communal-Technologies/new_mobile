@@ -1,3 +1,4 @@
+import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
@@ -37,21 +38,22 @@ class _TransferInternalReviewScreenState
     _saveAsBeneficiary = widget.saveAsBeneficiary;
   }
 
-  String _amountText() {
+  String _amountText(String currencySymbol) {
     final value = widget.amountKobo / 100;
-    return '₦${NumberFormat('#,##0.00').format(value)}';
+    return '$currencySymbol${NumberFormat('#,##0.00').format(value)}';
   }
 
-  String _amountInWords() {
-    final naira = widget.amountKobo ~/ 100;
-    if (naira <= 0) return 'Zero Naira only';
-    return '${_toWords(naira)} Naira only';
+  String _amountInWords(String currencyCode) {
+    final major = widget.amountKobo ~/ 100;
+    final name = majorCurrencyNameForCode(currencyCode);
+    if (major <= 0) return 'Zero $name only';
+    return '${_toWords(major)} $name only';
   }
 
-  String _balanceAfterTransferText(int currentBalanceKobo) {
+  String _balanceAfterTransferText(int currentBalanceKobo, String currencySymbol) {
     final after = currentBalanceKobo - widget.amountKobo;
     final safeAfter = after < 0 ? 0 : after;
-    return '₦${NumberFormat('#,##0.00').format(safeAfter / 100)}';
+    return '$currencySymbol${NumberFormat('#,##0.00').format(safeAfter / 100)}';
   }
 
   String _toWords(int value) {
@@ -152,6 +154,10 @@ class _TransferInternalReviewScreenState
     final walletBalanceKobo = authState is AuthAuthenticated
         ? authState.user.walletBalanceKobo
         : 0;
+    final currencyCode = authState is AuthAuthenticated
+        ? resolveCurrencyCode(authState.user)
+        : 'NGN';
+    final currencySymbol = currencySymbolForCode(currencyCode);
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
@@ -189,7 +195,7 @@ class _TransferInternalReviewScreenState
                   ),
                   vSpace(6),
                   Text(
-                    _amountText(),
+                    _amountText(currencySymbol),
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 30.sp,
@@ -198,7 +204,7 @@ class _TransferInternalReviewScreenState
                   ),
                   vSpace(4),
                   Text(
-                    _amountInWords(),
+                    _amountInWords(currencyCode),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white70,
@@ -294,7 +300,10 @@ class _TransferInternalReviewScreenState
               child: Column(
                 children: [
                   _kv('Transfer Type', 'Book Transfer'),
-                  _kv('Transfer fee', '₦0.00'),
+                  _kv(
+                    'Transfer fee',
+                    '$currencySymbol${NumberFormat('#,##0.00').format(0)}',
+                  ),
                   _kv(
                     'Naration',
                     widget.narration.trim().isEmpty ? 'Transfer' : widget.narration,
@@ -323,7 +332,7 @@ class _TransferInternalReviewScreenState
                     ),
                   ),
                   Text(
-                    _balanceAfterTransferText(walletBalanceKobo),
+                    _balanceAfterTransferText(walletBalanceKobo, currencySymbol),
                     style: TextStyle(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w800,

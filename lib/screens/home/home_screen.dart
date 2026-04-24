@@ -88,8 +88,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
 
-                vSpace(10),
-
                 BlocBuilder<AuthBloc, AuthState>(
                   buildWhen: (prev, next) {
                     if (prev.runtimeType != next.runtimeType) return true;
@@ -99,15 +97,21 @@ class _HomeScreenState extends State<HomeScreen> {
                     return true;
                   },
                   builder: (context, authState) {
-                    if (authState is AuthAuthenticated &&
-                        authState.user.hasSecurityPin != true) {
-                      return const PinSetupNoticeCard();
+                    final showPin = authState is AuthAuthenticated &&
+                        authState.user.hasSecurityPin != true;
+                    if (showPin) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          vSpace(10),
+                          const PinSetupNoticeCard(),
+                          vSpace(12),
+                        ],
+                      );
                     }
-                    return const SizedBox.shrink();
+                    return vSpace(4);
                   },
                 ),
-
-                vSpace(16),
 
                 BlocBuilder<AuthBloc, AuthState>(
                   buildWhen: (prev, next) {
@@ -125,7 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
 
-                vSpace(20),
+                vSpace(14),
 
                 // Quick Actions
                 QuickActionsSection(theme: theme),

@@ -1,3 +1,6 @@
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/custom_text_field.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
@@ -6,6 +9,7 @@ import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
@@ -129,6 +133,14 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
       );
       return;
     }
+    final authState = context.read<AuthBloc>().state;
+    final currencySymbol = authState is AuthAuthenticated
+        ? currencySymbolForUser(authState.user)
+        : currencySymbolForCode('NGN');
+    final currencyCode = authState is AuthAuthenticated
+        ? resolveCurrencyCode(authState.user)
+        : 'NGN';
+
     final pin = await _pin();
     if (pin == null || pin.isEmpty) return;
 
@@ -151,6 +163,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
             ? 'Transfer'
             : _narrationCtrl.text.trim(),
         counterPartyId: cpId,
+        currencyCode: currencyCode,
       );
       if (_saveAsFavorite) {
         await _favorites.upsert(
@@ -165,6 +178,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
         );
       }
       if (!mounted) return;
+      final mapped = transactionStatusFromApi(result.status);
       context.pushNamed(
         'transaction-receipt',
         extra: {
@@ -174,7 +188,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
             counterpartyBank: s.bank,
             counterpartyAccount: s.accountNumber,
             amount: amountKobo / 100,
-            currencySymbol: '₦',
+            currencySymbol: currencySymbol,
             transactionType: 'NIP Transfer',
             dateTime: DateTime.now(),
             sessionId: result.transferId,
@@ -183,7 +197,8 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
             paymentMethod: 'Wallet',
             fees: 0,
             isIncoming: false,
-            status: TransactionStatus.pending,
+            status: mapped,
+            failureReason: result.failureReason,
           ),
         },
       );
@@ -199,6 +214,11 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    final amountHintCode = authState is AuthAuthenticated
+        ? resolveCurrencyCode(authState.user)
+        : 'NGN';
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(titleSpacing: 0, title: const Text('To Other Banks')),
@@ -243,7 +263,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
             CustomTextField(
               controller: _amountCtrl,
               keyboardType: TextInputType.number,
-              hintText: 'Amount (NGN)',
+              hintText: 'Amount ($amountHintCode)',
             ),
             vSpace(12),
             CustomTextField(

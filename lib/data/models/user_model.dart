@@ -60,6 +60,9 @@ class UserModel extends Equatable {
   /// Wallet `frozen_by`: member user id when self-frozen; otherwise admin/system id.
   final String? walletFrozenBy;
 
+  /// Wallet `currency` / `currency_code` when API sends ISO 4217 (e.g. NGN). Overrides country default.
+  final String? walletCurrencyCode;
+
   const UserModel({
     required this.id,
     required this.name,
@@ -90,6 +93,7 @@ class UserModel extends Equatable {
     this.walletAccountName,
     this.walletAccountStatus,
     this.walletFrozenBy,
+    this.walletCurrencyCode,
   });
 
   String get roleLabel {
@@ -267,6 +271,7 @@ class UserModel extends Equatable {
     String? walletAcctName;
     String? walletAcctStatus;
     String? walletFrozenByVal;
+    String? walletCurrencyCodeVal;
     final walletRaw = userData['wallet'];
     if (walletRaw is Map) {
       final w = Map<String, dynamic>.from(walletRaw);
@@ -288,6 +293,12 @@ class UserModel extends Equatable {
           nz(w['deposit_account_name']?.toString());
       walletAcctStatus = w['account_status']?.toString().trim();
       walletFrozenByVal = w['frozen_by']?.toString().trim();
+      final curRaw =
+          w['currency'] ?? w['currency_code'] ?? w['currency_iso'];
+      if (curRaw != null) {
+        final t = curRaw.toString().trim().toUpperCase();
+        if (t.length == 3) walletCurrencyCodeVal = t;
+      }
     }
 
     return UserModel(
@@ -328,6 +339,7 @@ class UserModel extends Equatable {
       walletAccountName: walletAcctName,
       walletAccountStatus: walletAcctStatus,
       walletFrozenBy: walletFrozenByVal,
+      walletCurrencyCode: walletCurrencyCodeVal,
     );
   }
 
@@ -361,6 +373,7 @@ class UserModel extends Equatable {
       'wallet_account_name': walletAccountName,
       'wallet_account_status': walletAccountStatus,
       'wallet_frozen_by': walletFrozenBy,
+      'wallet_currency_code': walletCurrencyCode,
     };
   }
 
@@ -395,5 +408,6 @@ class UserModel extends Equatable {
         walletAccountName,
         walletAccountStatus,
         walletFrozenBy,
+        walletCurrencyCode,
       ];
 }

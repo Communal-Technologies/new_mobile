@@ -5,6 +5,7 @@ import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
@@ -107,6 +108,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _isSuccess) return;
       FocusScope.of(context).requestFocus(_pinFocus);
+      SystemChannels.textInput.invokeMethod('TextInput.show');
     });
   }
 
@@ -258,31 +260,13 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                       size: 30.sp,
                     ),
                   ),
-                  vSpace(14),
-                  Text(
-                    _titleText,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 20.sp,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF0F1D40),
-                    ),
-                  ),
-                  vSpace(6),
-                  Text(
-                    _subtitleText,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13.sp,
-                      color: Colors.black54,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  if (!_isSuccess) ...[
-                    if ((_hasExistingPin && _phase > 0) ||
-                        (!_hasExistingPin && _phase > 1))
-                      Align(
-                        alignment: Alignment.centerRight,
+                  if (!_isSuccess &&
+                      ((_hasExistingPin && _phase > 0) ||
+                          (!_hasExistingPin && _phase > 1)))
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: EdgeInsets.only(top: 4.h),
                         child: TextButton.icon(
                           onPressed: _submitting
                               ? null
@@ -314,6 +298,28 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                           ),
                         ),
                       ),
+                    ),
+                  vSpace(14),
+                  Text(
+                    _titleText,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 20.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0F1D40),
+                    ),
+                  ),
+                  vSpace(6),
+                  Text(
+                    _subtitleText,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      color: Colors.black54,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (!_isSuccess) ...[
                     vSpace(16),
                     GestureDetector(
                       behavior: HitTestBehavior.opaque,

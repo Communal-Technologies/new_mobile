@@ -38,6 +38,13 @@ import 'package:communal_mobile/screens/transactions/models/transaction_details_
 import 'package:communal_mobile/screens/transactions/transaction_details_screen.dart';
 import 'package:communal_mobile/screens/transactions/transaction_history_screen.dart';
 import 'package:communal_mobile/screens/transactions/transaction_receipt_screen.dart';
+import 'package:communal_mobile/screens/transactions/transfer_external_screen.dart';
+import 'package:communal_mobile/screens/transactions/transfer_internal_amount_screen.dart';
+import 'package:communal_mobile/screens/transactions/transfer_internal_screen.dart';
+import 'package:communal_mobile/screens/transactions/transfer_internal_verify_screen.dart';
+import 'package:communal_mobile/screens/transactions/transfer_internal_review_screen.dart';
+import 'package:communal_mobile/screens/transactions/transfer_screen.dart';
+import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:communal_mobile/screens/loans/loans_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_calculator_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_application_screen.dart';
@@ -57,6 +64,8 @@ import 'package:communal_mobile/screens/account/community_settings_screen.dart';
 import 'package:communal_mobile/screens/account/help_support_screen.dart';
 import 'package:communal_mobile/screens/account/faq_screen.dart';
 import 'package:communal_mobile/screens/account/notification_settings_screen.dart';
+import 'package:communal_mobile/screens/account/security_settings_screen.dart';
+import 'package:communal_mobile/screens/account/change_transaction_pin_screen.dart';
 import 'package:communal_mobile/screens/account/delete_account_screen.dart';
 import 'package:communal_mobile/screens/account/delete_account_confirmation_screen.dart';
 import 'package:communal_mobile/screens/account/delete_account_feedback_screen.dart';
@@ -139,10 +148,10 @@ final GoRouter appRouter = GoRouter(
         final extra = state.extra as Map<String, dynamic>?;
         final preFilledContact = extra?['preFilledContact'] as String?;
         print('🔵 ROUTE - forgot-password - extra: $extra');
-        print('🔵 ROUTE - forgot-password - preFilledContact: $preFilledContact');
-        return ForgotPasswordScreen(
-          preFilledContact: preFilledContact,
+        print(
+          '🔵 ROUTE - forgot-password - preFilledContact: $preFilledContact',
         );
+        return ForgotPasswordScreen(preFilledContact: preFilledContact);
       },
     ),
     GoRoute(
@@ -418,6 +427,16 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const NotificationSettingsScreen(),
     ),
     GoRoute(
+      path: '/security-settings',
+      name: 'security-settings',
+      builder: (context, state) => const SecuritySettingsScreen(),
+    ),
+    GoRoute(
+      path: '/change-transaction-pin',
+      name: 'change-transaction-pin',
+      builder: (context, state) => const ChangeTransactionPinScreen(),
+    ),
+    GoRoute(
       path: '/delete-account',
       name: 'delete-account',
       builder: (context, state) => const DeleteAccountScreen(),
@@ -440,8 +459,7 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/delete-account-final-confirmation',
       name: 'delete-account-final-confirmation',
-      builder: (context, state) =>
-          const DeleteAccountFinalConfirmationScreen(),
+      builder: (context, state) => const DeleteAccountFinalConfirmationScreen(),
     ),
     GoRoute(
       path: '/delete-account-success',
@@ -550,6 +568,127 @@ final GoRouter appRouter = GoRouter(
       path: '/transactions',
       name: 'transactions',
       builder: (context, state) => const TransactionHistoryScreen(),
+    ),
+    GoRoute(
+      path: '/transfer',
+      name: 'transfer',
+      builder: (context, state) => const TransferScreen(),
+    ),
+    GoRoute(
+      path: '/transfer/internal',
+      name: 'transfer-internal',
+      builder: (context, state) {
+        TransferFavorite? fav;
+        final extra = state.extra;
+        if (extra is Map && extra['favorite'] is Map) {
+          fav = TransferFavorite.fromJson(
+            Map<String, dynamic>.from(extra['favorite'] as Map),
+          );
+        }
+        return TransferInternalScreen(initialRecipient: fav);
+      },
+    ),
+    GoRoute(
+      path: '/transfer/internal-amount',
+      name: 'transfer-internal-amount',
+      builder: (context, state) {
+        final extra = state.extra;
+        if (extra is Map && extra['favorite'] is Map) {
+          final fav = TransferFavorite.fromJson(
+            Map<String, dynamic>.from(extra['favorite'] as Map),
+          );
+          return TransferInternalAmountScreen(recipient: fav);
+        }
+        return TransferInternalAmountScreen(
+          recipient: const TransferFavorite(
+            source: 'internal',
+            accountId: '',
+            bank: 'Communal',
+            accountNumber: '',
+            accountName: 'Recipient',
+          ),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/transfer/internal-review',
+      name: 'transfer-internal-review',
+      builder: (context, state) {
+        final extra = state.extra;
+        if (extra is Map && extra['favorite'] is Map) {
+          final fav = TransferFavorite.fromJson(
+            Map<String, dynamic>.from(extra['favorite'] as Map),
+          );
+          final amountKobo = int.tryParse('${extra['amountKobo']}') ?? 0;
+          final narration = (extra['narration']?.toString() ?? '').trim();
+          final saveAsBeneficiary = extra['saveAsBeneficiary'] == true;
+          return TransferInternalReviewScreen(
+            recipient: fav,
+            amountKobo: amountKobo,
+            narration: narration,
+            saveAsBeneficiary: saveAsBeneficiary,
+          );
+        }
+        return TransferInternalReviewScreen(
+          recipient: const TransferFavorite(
+            source: 'internal',
+            accountId: '',
+            bank: 'Communal',
+            accountNumber: '',
+            accountName: 'Recipient',
+          ),
+          amountKobo: 0,
+          narration: '',
+          saveAsBeneficiary: false,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/transfer/internal-verify',
+      name: 'transfer-internal-verify',
+      builder: (context, state) {
+        final extra = state.extra;
+        if (extra is Map && extra['favorite'] is Map) {
+          final fav = TransferFavorite.fromJson(
+            Map<String, dynamic>.from(extra['favorite'] as Map),
+          );
+          final amountKobo = int.tryParse('${extra['amountKobo']}') ?? 0;
+          final narration = (extra['narration']?.toString() ?? '').trim();
+          final saveAsBeneficiary = extra['saveAsBeneficiary'] == true;
+          return TransferInternalVerifyScreen(
+            recipient: fav,
+            amountKobo: amountKobo,
+            narration: narration,
+            saveAsBeneficiary: saveAsBeneficiary,
+          );
+        }
+        return TransferInternalVerifyScreen(
+          recipient: const TransferFavorite(
+            source: 'internal',
+            accountId: '',
+            bank: 'Communal',
+            accountNumber: '',
+            accountName: 'Recipient',
+          ),
+          amountKobo: 0,
+          narration: '',
+          saveAsBeneficiary: false,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/transfer/external',
+      name: 'transfer-external',
+      builder: (context, state) {
+        TransferFavorite? fav;
+        final extra = state.extra;
+        if (extra is Map && extra['favorite'] is Map) {
+          fav = TransferFavorite.fromJson(
+            Map<String, dynamic>.from(extra['favorite'] as Map),
+          );
+        }
+        return TransferExternalScreen(initialRecipient: fav);
+      },
     ),
     GoRoute(
       path: '/transaction-details',

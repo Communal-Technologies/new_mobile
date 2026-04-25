@@ -3,10 +3,10 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:communal_mobile/core/utils/app_logger.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/logging_interceptor.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/network_interceptor.dart';
 import 'package:communal_mobile/core/constants/constants.dart';
+import 'package:communal_mobile/core/security/session_invalidation_notifier.dart';
 
 class DioClient {
   final String baseUrl;
@@ -26,6 +26,31 @@ class DioClient {
     dio = customDio ?? Dio();
     _token = token;
     _init();
+  }
+
+  void _devLog(
+    String message, {
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    if (!kDebugMode) return;
+    developer.log(
+      message,
+      name: 'DioClient',
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  void print(Object? object) {
+    if (!kDebugMode) return;
+    developer.log((object ?? '').toString(), name: 'DioClient');
+  }
+
+  void debugPrint(String? message, {int? wrapWidth}) {
+    if (!kDebugMode) return;
+    if (message == null) return;
+    developer.log(message, name: 'DioClient');
   }
 
   void _init() {
@@ -57,6 +82,22 @@ class DioClient {
     dio.options.headers[HttpHeaders.authorizationHeader] = 'Bearer $token';
   }
 
+  void _handleUnauthorizedResponse(DioException error, {required bool requireAuth}) {
+    if (!requireAuth) return;
+    final code = error.response?.statusCode;
+    if (code != 401) return;
+
+    final data = error.response?.data;
+    String? backendMessage;
+    if (data is Map) {
+      backendMessage = data['message']?.toString();
+    } else if (data is String) {
+      backendMessage = data;
+    }
+
+    markSessionInvalidated(backendMessage);
+  }
+
   Future<Response> get(
     String uri, {
     Map<String, dynamic>? queryParameters,
@@ -81,6 +122,9 @@ class DioClient {
                 },
               ),
       );
+    } on DioException catch (e) {
+      _handleUnauthorizedResponse(e, requireAuth: requireAuth);
+      rethrow;
     } on SocketException {
       throw const SocketException('No Internet connection');
     } on FormatException {
@@ -100,9 +144,8 @@ class DioClient {
     bool requireAuth = true,
   }) async {
     _logRequest('POST', uri, queryParameters, data);
-      developer.log('📤 DioClient POST: $uri', name: 'DioClient');
-      developer.log('📤 RequireAuth: $requireAuth', name: 'DioClient');
-      appLog('DioClient POST', 'URI: $uri, RequireAuth: $requireAuth');
+      _devLog('📤 DioClient POST: $uri');
+      _devLog('📤 RequireAuth: $requireAuth');
       print('📤 DioClient POST: $uri');
       print('📤 RequireAuth: $requireAuth');
       try {
@@ -113,16 +156,14 @@ class DioClient {
             HttpHeaders.contentTypeHeader: 'application/json; charset=UTF-8',
             'X-localization': AppConstants.defaultLanguage,
           };
-          developer.log('📤 Headers (no auth): ${options.headers}', name: 'DioClient');
-          appLog('DioClient Headers', 'No auth: ${options.headers}');
+          _devLog('📤 Headers (no auth): ${options.headers}');
           print('📤 Headers (no auth): ${options.headers}');
         } else {
-          developer.log('📤 Headers (with auth): ${dio.options.headers}', name: 'DioClient');
+          _devLog('📤 Headers (with auth): ${dio.options.headers}');
           print('📤 Headers (with auth): ${dio.options.headers}');
         }
         
-        developer.log('📤 Making POST request to: $baseUrl$uri', name: 'DioClient');
-        appLog('DioClient POST Request', 'URL: $baseUrl$uri, Data: $data');
+        _devLog('📤 Making POST request to: $baseUrl$uri');
         print('📤 Making POST request to: $baseUrl$uri');
         final response = await dio.post(
         uri,
@@ -133,19 +174,18 @@ class DioClient {
         onReceiveProgress: onReceiveProgress,
           options: options,
         );
-        developer.log('📥 DioClient POST Response: Status ${response.statusCode}', name: 'DioClient');
-        developer.log('📥 Response Data: ${response.data}', name: 'DioClient');
-        appLog('DioClient POST Response', 'Status: ${response.statusCode}, Data: ${response.data}');
+        _devLog('📥 DioClient POST Response: Status ${response.statusCode}');
+        _devLog('📥 Response Data: ${response.data}');
         print('📥 DioClient POST Response: Status ${response.statusCode}');
         print('📥 Response Data: ${response.data}');
         return response;
       } on DioException catch (e) {
-        developer.log('❌ DioClient POST DioException', name: 'DioClient', error: e);
-        developer.log('❌ Error Type: ${e.type}', name: 'DioClient');
-        developer.log('❌ Error Message: ${e.message}', name: 'DioClient');
-        developer.log('❌ Response Status: ${e.response?.statusCode}', name: 'DioClient');
-        developer.log('❌ Response Data: ${e.response?.data}', name: 'DioClient');
-        appLog('DioClient POST ERROR', 'Type: ${e.type}, Message: ${e.message}, Status: ${e.response?.statusCode}, Data: ${e.response?.data}');
+        _handleUnauthorizedResponse(e, requireAuth: requireAuth);
+        _devLog('❌ DioClient POST DioException', error: e);
+        _devLog('❌ Error Type: ${e.type}');
+        _devLog('❌ Error Message: ${e.message}');
+        _devLog('❌ Response Status: ${e.response?.statusCode}');
+        _devLog('❌ Response Data: ${e.response?.data}');
         print('❌ DioClient POST DioException');
         print('❌ Error Type: ${e.type}');
         print('❌ Error Message: ${e.message}');
@@ -153,13 +193,11 @@ class DioClient {
         print('❌ Response Data: ${e.response?.data}');
         rethrow;
       } on FormatException catch (e) {
-        developer.log('❌ DioClient POST FormatException: $e', name: 'DioClient');
-        appLog('DioClient FormatException', e.toString());
+        _devLog('❌ DioClient POST FormatException: $e');
         print('❌ DioClient POST FormatException: $e');
       throw const FormatException("Unable to process the data");
       } catch (e, stackTrace) {
-        developer.log('❌ DioClient POST Unexpected Error: $e', name: 'DioClient', error: e, stackTrace: stackTrace);
-        appLog('DioClient Unexpected Error', 'Error: $e');
+        _devLog('❌ DioClient POST Unexpected Error: $e', error: e, stackTrace: stackTrace);
         print('❌ DioClient POST Unexpected Error: $e');
         print('❌ Stack Trace: $stackTrace');
         rethrow;
@@ -225,6 +263,9 @@ class DioClient {
         onReceiveProgress: onReceiveProgress,
         options: options,
       );
+    } on DioException catch (e) {
+      _handleUnauthorizedResponse(e, requireAuth: requireAuth);
+      rethrow;
     } on FormatException {
       throw const FormatException("Unable to process the data");
     } catch (e) {
@@ -246,6 +287,9 @@ class DioClient {
         queryParameters: queryParameters,
         cancelToken: cancelToken,
       );
+    } on DioException catch (e) {
+      _handleUnauthorizedResponse(e, requireAuth: true);
+      rethrow;
     } on FormatException {
       throw const FormatException("Unable to process the data");
     } catch (e) {

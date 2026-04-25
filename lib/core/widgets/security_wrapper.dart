@@ -5,8 +5,10 @@ import 'package:communal_mobile/core/widgets/blur_overlay.dart';
 import 'package:communal_mobile/core/widgets/idle_prompt_dialog.dart';
 import 'package:communal_mobile/screens/auth/welcome_back_screen.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/theme/colors.dart';
+import 'package:communal_mobile/core/security/session_invalidation_notifier.dart';
 import 'package:communal_mobile/routes/app_routes.dart';
 import 'package:communal_mobile/core/navigation/root_navigator_key.dart';
 
@@ -35,6 +37,8 @@ class SecurityWrapper extends StatefulWidget {
 
 class _SecurityWrapperState extends State<SecurityWrapper>
     with WidgetsBindingObserver {
+  static const Duration _sessionHeartbeatInterval = Duration(seconds: 45);
+
   bool _hasInitializedLock = false;
   bool _shouldLockOnNextAuth = false; // Track if we should lock when user becomes authenticated
   bool _hasSeenAuthBefore = false; // Track if we've seen AuthAuthenticated before (to distinguish first login vs app start with token)
@@ -52,6 +56,7 @@ class _SecurityWrapperState extends State<SecurityWrapper>
 
   // Key for widget.child to force rebuild when unlocking
   int _childKey = 0;
+  DateTime? _lastSessionHeartbeatAt;
   
   @override
   void initState() {
@@ -177,6 +182,7 @@ class _SecurityWrapperState extends State<SecurityWrapper>
         // Note: Removed _hasInitializedLock check - idle detection should work as soon as user is authenticated
         if (authState is AuthAuthenticated &&
             securityCubit.state != SecurityState.locked) {
+          _runSessionHeartbeat(authState);
           if (_isKycFlowActive()) {
             // Dismiss idle prompt if user navigated into KYC; keep activity fresh so timer doesn't fire on exit.
             if (securityCubit.state == SecurityState.idlePrompt) {
@@ -192,6 +198,17 @@ class _SecurityWrapperState extends State<SecurityWrapper>
         _startIdleDetection(); // Continue checking
       }
     });
+  }
+
+  void _runSessionHeartbeat(AuthAuthenticated authState) {
+    final now = DateTime.now();
+    final last = _lastSessionHeartbeatAt;
+    if (last != null && now.difference(last) < _sessionHeartbeatInterval) {
+      return;
+    }
+
+    _lastSessionHeartbeatAt = now;
+    context.read<AuthBloc>().add(AuthRefreshUserRequested());
   }
 
   void _handleUserInteraction() {
@@ -226,9 +243,71 @@ class _SecurityWrapperState extends State<SecurityWrapper>
     // Logging disabled - can be enabled for debugging
   }
 
+  Widget _buildSessionInvalidationOverlay(Widget child, String message) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        child,
+        Positioned.fill(
+          child: AbsorbPointer(
+            absorbing: true,
+            child: Container(color: Colors.black.withValues(alpha: 0.55)),
+          ),
+        ),
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 34),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Session Ended',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade700,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          clearSessionInvalidation();
+                          context.read<SecurityCubit>().unlockApp();
+                          context.read<AuthBloc>().add(LogoutRequested());
+                          appRouter.go('/welcome');
+                        },
+                        child: const Text('Log out'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
+    final securityContent = BlocListener<AuthBloc, AuthState>(
       listenWhen: (previous, current) =>
           current is AuthAuthenticated && previous is! AuthAuthenticated,
       listener: (context, state) {
@@ -858,6 +937,17 @@ class _SecurityWrapperState extends State<SecurityWrapper>
       );
         },
       ),
+    );
+
+    return ValueListenableBuilder<String?>(
+      valueListenable: sessionInvalidationMessage,
+      builder: (context, message, child) {
+        if (message == null || message.trim().isEmpty) {
+          return child!;
+        }
+        return _buildSessionInvalidationOverlay(child!, message.trim());
+      },
+      child: securityContent,
     );
   }
 }

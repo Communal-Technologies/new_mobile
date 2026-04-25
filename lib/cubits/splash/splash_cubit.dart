@@ -9,6 +9,7 @@ import 'package:communal_mobile/data/models/settings_model.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/data/repositories/regions_repository.dart';
 import 'package:dio/dio.dart' show DioException, DioExceptionType;
+import 'package:flutter/foundation.dart';
 import 'splash_state.dart';
 
 class SplashCubit extends Cubit<SplashState> {
@@ -61,8 +62,10 @@ class SplashCubit extends Cubit<SplashState> {
 
       await _verifyTokenAndEmit(token, settingsMap);
     } catch (e, stackTrace) {
-      // ignore: avoid_print
-      print('SPLASH - Top-level error: $e\n$stackTrace');
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print('SPLASH - Top-level error: $e\n$stackTrace');
+      }
       emit(SplashError('Something went wrong. Please try again.'));
     }
   }

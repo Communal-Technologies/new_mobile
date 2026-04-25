@@ -1,7 +1,7 @@
 import 'dart:developer' as developer;
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
-import 'package:communal_mobile/core/utils/app_logger.dart';
+import 'package:communal_mobile/core/utils/app_logger.dart' as app_logger;
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
@@ -41,6 +41,31 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<ResetPasswordRequested>(_onResetPasswordRequested);
     on<SessionTakeoverVerifyRequested>(_onSessionTakeoverVerifyRequested);
     on<SessionTakeoverCancelled>(_onSessionTakeoverCancelled);
+  }
+
+  void _devLog(
+    String message, {
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    if (!kDebugMode) return;
+    developer.log(
+      message,
+      name: 'AuthBloc',
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  void appLog(String title, String message) {
+    if (!kDebugMode) return;
+    app_logger.appLog(title, message);
+  }
+
+  void debugPrint(String? message, {int? wrapWidth}) {
+    if (!kDebugMode) return;
+    if (message == null) return;
+    developer.log(message, name: 'AuthBloc');
   }
 
   /// Extract clean error message from exception
@@ -242,12 +267,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           emit(const AuthFailure('Could not load your profile.'));
         }
       } else {
-        emit(AuthFailure(
-          loginResponse?.message ?? 'Invalid sign-in response',
+        final error = loginResponse?.message ?? 'Invalid sign-in response';
+        emit(AuthFailure(error));
+        emit(AuthSessionTakeoverPending(
+          takeoverChallengeId: pending.takeoverChallengeId,
+          maskedDestination: pending.maskedDestination,
+          otpChannel: pending.otpChannel,
+          login: pending.login,
+          message: error,
         ));
       }
     } catch (e) {
-      emit(AuthFailure(_extractErrorMessage(e)));
+      final error = _extractErrorMessage(e);
+      emit(AuthFailure(error));
+      emit(AuthSessionTakeoverPending(
+        takeoverChallengeId: pending.takeoverChallengeId,
+        maskedDestination: pending.maskedDestination,
+        otpChannel: pending.otpChannel,
+        login: pending.login,
+        message: error,
+      ));
     }
   }
 
@@ -428,7 +467,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         return;
       }
 
-      developer.log('🔵 BLOC: Calling authRepository.createPassword', name: 'AuthBloc');
+      _devLog('🔵 BLOC: Calling authRepository.createPassword');
       appLog('BLOC: Calling createPassword', 'UserId: ${event.userId}');
       debugPrint('🔵 BLOC: Calling authRepository.createPassword');
       final loginResponse = await authRepository.createPassword(
@@ -436,8 +475,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         event.password,
       );
 
-      developer.log('🔵 BLOC: createPassword returned', name: 'AuthBloc');
-      developer.log('🔵 BLOC: loginResponse is null: ${loginResponse == null}', name: 'AuthBloc');
+      _devLog('🔵 BLOC: createPassword returned');
+      _devLog('🔵 BLOC: loginResponse is null: ${loginResponse == null}');
       appLog('BLOC: createPassword returned', 'loginResponse is null: ${loginResponse == null}');
       debugPrint('🔵 BLOC: createPassword returned');
       debugPrint('🔵 BLOC: loginResponse is null: ${loginResponse == null}');
@@ -503,16 +542,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(CreatePasswordSuccess(token: null));
       }
     } catch (e, stackTrace) {
-      developer.log('❌ BLOC: Error in _onCreatePasswordRequested', name: 'AuthBloc', error: e, stackTrace: stackTrace);
-      developer.log('❌ BLOC: Error: $e', name: 'AuthBloc');
-      developer.log('❌ BLOC: Error Type: ${e.runtimeType}', name: 'AuthBloc');
+      _devLog('❌ BLOC: Error in _onCreatePasswordRequested', error: e, stackTrace: stackTrace);
+      _devLog('❌ BLOC: Error: $e');
+      _devLog('❌ BLOC: Error Type: ${e.runtimeType}');
       appLog('BLOC: Error in createPassword', 'Error: $e, Type: ${e.runtimeType}');
       debugPrint('❌ BLOC: Error in _onCreatePasswordRequested');
       debugPrint('❌ BLOC: Error: $e');
       debugPrint('❌ BLOC: Error Type: ${e.runtimeType}');
       debugPrint('❌ BLOC: Stack Trace: $stackTrace');
       final errorMessage = _extractErrorMessage(e);
-      developer.log('❌ BLOC: Extracted error message: $errorMessage', name: 'AuthBloc');
+      _devLog('❌ BLOC: Extracted error message: $errorMessage');
       appLog('BLOC: Extracted error message', errorMessage);
       debugPrint('❌ BLOC: Extracted error message: $errorMessage');
       emit(AuthFailure(errorMessage));

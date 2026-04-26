@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:flutter/foundation.dart';
 
 import 'package:communal_mobile/core/navigation/root_navigator_key.dart';
 
@@ -15,6 +16,7 @@ import 'package:communal_mobile/screens/auth/account_success_screen.dart';
 import 'package:communal_mobile/screens/auth/forgot_password_screen.dart';
 import 'package:communal_mobile/screens/auth/verify_reset_screen.dart';
 import 'package:communal_mobile/screens/auth/reset_password_screen.dart';
+import 'package:communal_mobile/screens/auth/session_takeover_screen.dart';
 import 'package:communal_mobile/screens/auth/password_reset_success_screen.dart';
 import 'package:communal_mobile/screens/kyc/profile_information_screen.dart';
 import 'package:communal_mobile/screens/kyc/bank_information_screen.dart';
@@ -139,6 +141,11 @@ final GoRouter appRouter = GoRouter(
         );
       },
     ),
+    GoRoute(
+      path: '/session-takeover',
+      name: 'session-takeover',
+      builder: (context, state) => const SessionTakeoverScreen(),
+    ),
 
     // Password Reset Flow
     GoRoute(
@@ -147,10 +154,14 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final extra = state.extra as Map<String, dynamic>?;
         final preFilledContact = extra?['preFilledContact'] as String?;
-        print('🔵 ROUTE - forgot-password - extra: $extra');
-        print(
-          '🔵 ROUTE - forgot-password - preFilledContact: $preFilledContact',
-        );
+        if (kDebugMode) {
+          // ignore: avoid_print
+          print('🔵 ROUTE - forgot-password - extra: $extra');
+          // ignore: avoid_print
+          print(
+            '🔵 ROUTE - forgot-password - preFilledContact: $preFilledContact',
+          );
+        }
         return ForgotPasswordScreen(preFilledContact: preFilledContact);
       },
     ),

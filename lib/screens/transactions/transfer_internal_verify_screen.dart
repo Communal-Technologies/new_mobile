@@ -18,12 +18,16 @@ class TransferInternalVerifyScreen extends StatefulWidget {
     required this.amountKobo,
     required this.narration,
     required this.saveAsBeneficiary,
+    this.useExternalNipFlow = false,
   });
 
   final TransferFavorite recipient;
   final int amountKobo;
   final String narration;
   final bool saveAsBeneficiary;
+
+  /// When true, completes an NIP transfer using [recipient.accountId] as counterparty.
+  final bool useExternalNipFlow;
 
   @override
   State<TransferInternalVerifyScreen> createState() =>
@@ -74,13 +78,24 @@ class _TransferInternalVerifyScreenState
     setState(() => _submitting = true);
     try {
       await _repo.verifySecurityPin(_pin);
-      final result = await _repo.initiateTransfer(
-        type: 'BookTransfer',
-        amountKobo: widget.amountKobo,
-        narration: widget.narration.trim().isEmpty ? 'Transfer' : widget.narration,
-        destinationAccountId: widget.recipient.accountId,
-        currencyCode: currencyCode,
-      );
+      final TransferInitiationResult result;
+      if (widget.useExternalNipFlow) {
+        result = await _repo.initiateTransfer(
+          type: 'NIPTransfer',
+          amountKobo: widget.amountKobo,
+          narration: widget.narration.trim().isEmpty ? 'Transfer' : widget.narration,
+          counterPartyId: widget.recipient.accountId,
+          currencyCode: currencyCode,
+        );
+      } else {
+        result = await _repo.initiateTransfer(
+          type: 'BookTransfer',
+          amountKobo: widget.amountKobo,
+          narration: widget.narration.trim().isEmpty ? 'Transfer' : widget.narration,
+          destinationAccountId: widget.recipient.accountId,
+          currencyCode: currencyCode,
+        );
+      }
       if (widget.saveAsBeneficiary) {
         await _favorites.upsert(widget.recipient);
       }
@@ -96,7 +111,8 @@ class _TransferInternalVerifyScreenState
             counterpartyAccount: widget.recipient.accountNumber,
             amount: widget.amountKobo / 100,
             currencySymbol: currencySymbol,
-            transactionType: 'Book Transfer',
+            transactionType:
+                widget.useExternalNipFlow ? 'NIP Transfer' : 'Book Transfer',
             dateTime: DateTime.now(),
             sessionId: result.transferId,
             reference: result.reference,

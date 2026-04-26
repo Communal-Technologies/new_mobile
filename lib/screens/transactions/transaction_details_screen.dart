@@ -7,6 +7,20 @@ import 'package:iconsax/iconsax.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 
+String _counterpartyInitials(String name, String bank) {
+  final n = name.trim();
+  if (n.isEmpty) {
+    final b = bank.trim();
+    if (b.length >= 2) return b.substring(0, 2).toUpperCase();
+    return 'BK';
+  }
+  final parts = n.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
+  if (parts.length >= 2) {
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+  return n.length >= 2 ? n.substring(0, 2).toUpperCase() : n.toUpperCase();
+}
+
 class TransactionDetailsScreen extends StatelessWidget {
   const TransactionDetailsScreen({super.key, required this.details});
 
@@ -25,19 +39,21 @@ class TransactionDetailsScreen extends StatelessWidget {
         statusBarBrightness: Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: Colors.grey.shade100,
+        backgroundColor: const Color(0xFFF4F2FA),
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
+          surfaceTintColor: Colors.transparent,
           centerTitle: false,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: Colors.black87, size: 22.sp),
+            icon: Icon(Icons.arrow_back_ios_new_rounded,
+                color: Colors.black87, size: 22.sp),
             onPressed: () => Navigator.of(context).maybePop(),
           ),
           title: Text(
-            'Transaction Details',
+            'Transaction details',
             style: TextStyle(
-              fontSize: 20.sp,
+              fontSize: 22.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
@@ -45,20 +61,20 @@ class TransactionDetailsScreen extends StatelessWidget {
         ),
         body: SafeArea(
           child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 32.h),
+            padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 28.h),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSummaryCard(theme),
-                vSpace(16),
+                _buildSummaryCard(context, theme),
+                vSpace(14),
                 _buildDetailsCard(theme),
                 if (details.note != null) ...[
                   vSpace(16),
                   _buildNoteCard(theme),
                 ],
-                vSpace(24),
-                _buildActionsSection(theme),
-                vSpace(40),
+                vSpace(20),
+                _buildActionsSection(context, theme),
+                vSpace(32),
               ],
             ),
           ),
@@ -67,7 +83,7 @@ class TransactionDetailsScreen extends StatelessWidget {
             ? SafeArea(
                 top: false,
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 16.h),
+                  padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
                   child: Row(
                     children: [
                       Expanded(
@@ -108,21 +124,35 @@ class TransactionDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryCard(ThemeData theme) {
+  Color _amountDisplayColor() {
+    if (details.status == TransactionStatus.failed) {
+      return Colors.grey.shade800;
+    }
+    if (details.isIncoming) return const Color(0xFF1AAE70);
+    return const Color(0xFF0F1D40);
+  }
+
+  Widget _buildSummaryCard(BuildContext context, ThemeData theme) {
     final statusColor = _statusColor(details.status, theme);
     final statusBackground = _statusBackgroundColor(details.status);
+    final initials = _counterpartyInitials(
+      details.counterpartyName,
+      details.counterpartyBank,
+    );
+    final failure = details.failureReason?.trim();
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 22.h),
+      padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 22.h),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24.r),
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -130,17 +160,13 @@ class TransactionDetailsScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _BankAvatar(
                 bankLogoAsset: details.bankLogoAsset,
-                initials: details.counterpartyBank.isNotEmpty
-                    ? details.counterpartyBank.characters
-                          .take(2)
-                          .join()
-                          .toUpperCase()
-                    : 'BK',
+                initials: initials,
               ),
-              hSpace(12),
+              hSpace(14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,19 +174,19 @@ class TransactionDetailsScreen extends StatelessWidget {
                     Text(
                       details.counterpartLabel,
                       style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: 14.sp,
                         color: Colors.grey.shade600,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    vSpace(4),
+                    vSpace(6),
                     Text(
-                      details.counterpartyName.toUpperCase(),
+                      details.counterpartyName,
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 18.sp,
                         fontWeight: FontWeight.w700,
-                        color: Colors.black,
-                        letterSpacing: 0.4,
+                        color: const Color(0xFF0F1D40),
+                        height: 1.25,
                       ),
                     ),
                   ],
@@ -168,43 +194,75 @@ class TransactionDetailsScreen extends StatelessWidget {
               ),
             ],
           ),
-          vSpace(20),
+          vSpace(22),
           Text(
             details.amountLabel,
             style: TextStyle(
-              fontSize: 34.sp,
+              fontSize: 36.sp,
               fontWeight: FontWeight.w800,
-              color: Colors.black,
-              letterSpacing: -0.5,
+              color: _amountDisplayColor(),
+              letterSpacing: -0.8,
             ),
           ),
-          vSpace(12),
+          vSpace(14),
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 8.h),
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
             decoration: BoxDecoration(
               color: statusBackground,
-              borderRadius: BorderRadius.circular(20.r),
+              borderRadius: BorderRadius.circular(24.r),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
                   _statusIcon(details.status),
-                  size: 16.sp,
+                  size: 18.sp,
                   color: statusColor,
                 ),
-                hSpace(6),
+                hSpace(8),
                 Text(
                   _statusLabel(details.status),
                   style: TextStyle(
-                    fontSize: 13.sp,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w700,
                     color: statusColor,
                   ),
                 ),
               ],
             ),
           ),
+          if (details.status == TransactionStatus.failed &&
+              failure != null &&
+              failure.isNotEmpty) ...[
+            vSpace(14),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(14.w),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF1F2),
+                borderRadius: BorderRadius.circular(14.r),
+                border: Border.all(color: const Color(0xFFFFD4DB)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Iconsax.info_circle, size: 20.sp, color: Colors.red.shade700),
+                  hSpace(10),
+                  Expanded(
+                    child: Text(
+                      failure,
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        height: 1.35,
+                        color: Colors.grey.shade900,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -228,20 +286,25 @@ class TransactionDetailsScreen extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 22.h),
+      padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24.r),
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
           for (int i = 0; i < infoRows.length; i++) ...[
             _TransactionInfoRow(data: infoRows[i]),
-            if (i != infoRows.length - 1) ...[
-              vSpace(16),
+            if (i != infoRows.length - 1)
               Divider(height: 1, thickness: 1, color: Colors.grey.shade100),
-              vSpace(16),
-            ],
           ],
         ],
       ),
@@ -251,10 +314,11 @@ class TransactionDetailsScreen extends StatelessWidget {
   Widget _buildNoteCard(ThemeData theme) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(18.w),
       decoration: BoxDecoration(
         color: const Color(0xFFEFFBF5),
-        borderRadius: BorderRadius.circular(20.r),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: const Color(0xFFC8E6D4)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -276,28 +340,34 @@ class TransactionDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionsSection(ThemeData theme) {
+  Widget _buildActionsSection(BuildContext context, ThemeData theme) {
     final actions = [
-      _ActionButtonData(
-        label: 'Report',
+      _ActionTileData(
+        label: 'Report issue',
+        subtitle: 'Get help with this transaction',
         icon: Iconsax.warning_2,
-        backgroundColor: const Color(0xFFFFEEF0),
-        borderColor: const Color(0xFFFFD4DB),
-        textColor: const Color(0xFFD7263D),
+        iconColor: const Color(0xFFD7263D),
+        tileColor: const Color(0xFFFFF5F6),
+        onTap: () => context.pushNamed('help-support'),
       ),
-      _ActionButtonData(
-        label: 'View Records',
+      _ActionTileData(
+        label: 'View history',
+        subtitle: 'Open full transaction list',
         icon: Iconsax.document_text5,
-        backgroundColor: const Color(0xFFF6F6F8),
-        borderColor: const Color(0xFFE4E4E7),
-        textColor: Colors.black87,
+        iconColor: theme.primaryColor,
+        tileColor: const Color(0xFFF6F2FF),
+        onTap: () => context.goNamed('transactions'),
       ),
-      _ActionButtonData(
-        label: 'Transfer Again',
-        icon: Iconsax.rotate_left,
-        backgroundColor: const Color(0xFFF6F6F8),
-        borderColor: const Color(0xFFE4E4E7),
-        textColor: Colors.black87,
+      _ActionTileData(
+        label: 'Transfer again',
+        subtitle: 'Send money from your wallet',
+        icon: Iconsax.send_1,
+        iconColor: const Color(0xFF0F1D40),
+        tileColor: Colors.white,
+        onTap: () {
+          context.pop();
+          context.pushNamed('transfer');
+        },
       ),
     ];
 
@@ -307,17 +377,26 @@ class TransactionDetailsScreen extends StatelessWidget {
         Text(
           'More actions',
           style: TextStyle(
-            fontSize: 16.sp,
-            fontWeight: FontWeight.w700,
-            color: Colors.black,
+            fontSize: 17.sp,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF0F1D40),
           ),
         ),
-        vSpace(12),
-        Row(
+        vSpace(10),
+        Text(
+          'Tap an option below',
+          style: TextStyle(
+            fontSize: 14.sp,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        vSpace(14),
+        Column(
           children: [
             for (int i = 0; i < actions.length; i++) ...[
-              if (i != 0) hSpace(12),
-              Expanded(child: _ActionButton(data: actions[i])),
+              if (i != 0) vSpace(10),
+              _ActionTile(data: actions[i], theme: theme),
             ],
           ],
         ),
@@ -389,89 +468,127 @@ class _TransactionInfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: data.isMultiline
-          ? CrossAxisAlignment.start
-          : CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          flex: 4,
-          child: Text(
-            data.label,
-            style: TextStyle(
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 14.h),
+      child: Row(
+        crossAxisAlignment: data.isMultiline
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            flex: 4,
+            child: Text(
+              data.label,
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade600,
+                height: 1.25,
+              ),
             ),
           ),
-        ),
-        Expanded(
-          flex: 6,
-          child: Text(
-            data.value,
-            textAlign: TextAlign.right,
-            style: TextStyle(
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-              height: data.isMultiline ? 1.4 : 1.2,
+          Expanded(
+            flex: 6,
+            child: Text(
+              data.value,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF0F1D40),
+                height: data.isMultiline ? 1.45 : 1.25,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-class _ActionButtonData {
-  const _ActionButtonData({
+class _ActionTileData {
+  const _ActionTileData({
     required this.label,
+    required this.subtitle,
     required this.icon,
-    required this.backgroundColor,
-    required this.borderColor,
-    required this.textColor,
+    required this.iconColor,
+    required this.tileColor,
+    required this.onTap,
   });
 
   final String label;
+  final String subtitle;
   final IconData icon;
-  final Color backgroundColor;
-  final Color borderColor;
-  final Color textColor;
+  final Color iconColor;
+  final Color tileColor;
+  final VoidCallback onTap;
 }
 
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.data});
+class _ActionTile extends StatelessWidget {
+  const _ActionTile({required this.data, required this.theme});
 
-  final _ActionButtonData data;
+  final _ActionTileData data;
+  final ThemeData theme;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(18.r),
-      onTap: () {},
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 14.h),
-        decoration: BoxDecoration(
-          color: data.backgroundColor,
-          borderRadius: BorderRadius.circular(18.r),
-          border: Border.all(color: data.borderColor),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(data.icon, color: data.textColor, size: 20.sp),
-            vSpace(6),
-            Text(
-              data.label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w600,
-                color: data.textColor,
-                height: 1.2,
+    return Material(
+      color: data.tileColor,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16.r),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: data.onTap,
+        borderRadius: BorderRadius.circular(16.r),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+          child: Row(
+            children: [
+              Container(
+                width: 46.w,
+                height: 46.w,
+                decoration: BoxDecoration(
+                  color: data.iconColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14.r),
+                ),
+                alignment: Alignment.center,
+                child: Icon(data.icon, color: data.iconColor, size: 22.sp),
               ),
-            ),
-          ],
+              hSpace(14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      data.label,
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF0F1D40),
+                      ),
+                    ),
+                    vSpace(4),
+                    Text(
+                      data.subtitle,
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.grey.shade400,
+                size: 26.sp,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -499,20 +616,20 @@ class _BottomCtaButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(18.r),
       onTap: onTap,
       child: Container(
-        height: 56.h,
+        height: 54.h,
         decoration: BoxDecoration(
           color: backgroundColor,
-          borderRadius: BorderRadius.circular(18.r),
+          borderRadius: BorderRadius.circular(16.r),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: foregroundColor, size: 20.sp),
+            Icon(icon, color: foregroundColor, size: 22.sp),
             hSpace(8),
             Text(
               label,
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 16.sp,
                 fontWeight: FontWeight.w700,
                 color: foregroundColor,
               ),

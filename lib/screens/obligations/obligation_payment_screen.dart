@@ -199,7 +199,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildOverviewCard(outstanding),
+              _buildOverviewCard(outstanding, auth),
               vSpace(24),
               _buildAmountInput(),
               vSpace(4),
@@ -313,7 +313,17 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
     );
   }
 
-  Widget _buildOverviewCard(String outstanding) {
+  String _cooperativeSubtitle(AuthState auth) {
+    if (auth is AuthAuthenticated) {
+      final line = auth.user.cooperativeDisplayName.trim();
+      if (line.isNotEmpty && line != '—') return line;
+    }
+    final id = widget.obligation.cooperativeId.trim();
+    if (id.isNotEmpty) return id;
+    return 'Cooperative';
+  }
+
+  Widget _buildOverviewCard(String outstanding, AuthState auth) {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(18.w),
@@ -345,7 +355,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
             ),
           ),
           Text(
-            'Total Lenders Forum',
+            _cooperativeSubtitle(auth),
             style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
           ),
           vSpace(16),
@@ -458,6 +468,20 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
         const SnackBar(content: Text('Enter a valid amount to continue.')),
       );
       return;
+    }
+
+    if (widget.obligation.category == 'Equity') {
+      final maxPay = widget.obligation.balance;
+      if (amount > maxPay + 0.009) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Equity payments cannot exceed your remaining cap (₦${formatMoney(maxPay)}).',
+            ),
+          ),
+        );
+        return;
+      }
     }
 
     if (_cashRepos.isEmpty) {

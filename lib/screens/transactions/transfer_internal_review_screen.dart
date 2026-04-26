@@ -16,12 +16,16 @@ class TransferInternalReviewScreen extends StatefulWidget {
     required this.amountKobo,
     required this.narration,
     required this.saveAsBeneficiary,
+    this.useExternalNipFlow = false,
   });
 
   final TransferFavorite recipient;
   final int amountKobo;
   final String narration;
   final bool saveAsBeneficiary;
+
+  /// When true, continue to NIP verify flow instead of book transfer verify.
+  final bool useExternalNipFlow;
 
   @override
   State<TransferInternalReviewScreen> createState() =>
@@ -136,14 +140,18 @@ class _TransferInternalReviewScreenState
   }
 
   Future<void> _sendMoney() async {
+    final extra = <String, dynamic>{
+      'favorite': widget.recipient.toJson(),
+      'amountKobo': widget.amountKobo,
+      'narration': widget.narration,
+      'saveAsBeneficiary': _saveAsBeneficiary,
+      if (widget.useExternalNipFlow) 'useExternalNipFlow': true,
+    };
     context.pushNamed(
-      'transfer-internal-verify',
-      extra: {
-        'favorite': widget.recipient.toJson(),
-        'amountKobo': widget.amountKobo,
-        'narration': widget.narration,
-        'saveAsBeneficiary': _saveAsBeneficiary,
-      },
+      widget.useExternalNipFlow
+          ? 'transfer-external-verify'
+          : 'transfer-internal-verify',
+      extra: extra,
     );
   }
 

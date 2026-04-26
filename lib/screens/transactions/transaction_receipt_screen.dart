@@ -4,8 +4,12 @@ import 'dart:ui' as ui;
 
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/screens/obligations/data/obligation_nip_settlement.dart';
+import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -39,10 +43,14 @@ class TransactionReceiptScreen extends StatefulWidget {
     super.key,
     required this.details,
     this.initialAction,
+    this.obligationNipSettlement,
   });
 
   final TransactionDetailsData details;
   final ReceiptAction? initialAction;
+
+  /// When the NIP transfer succeeds, post obligation payment then navigate to success.
+  final ObligationNipSettlement? obligationNipSettlement;
 
   @override
   State<TransactionReceiptScreen> createState() =>
@@ -52,10 +60,12 @@ class TransactionReceiptScreen extends StatefulWidget {
 class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
   final GlobalKey _receiptKey = GlobalKey();
   final _repo = getIt<TransferRepository>();
+  final _obligationsRepo = MemberObligationsRepository(getIt());
   late TransactionDetailsData _details;
   Timer? _pollTimer;
   int _pollTicks = 0;
   static const int _maxPollTicks = 45;
+  bool _obligationNipPosted = false;
 
   @override
   void initState() {
@@ -94,6 +104,11 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
           }
           _refreshTransferStatus();
         });
+      });
+    } else if (widget.obligationNipSettlement != null &&
+        _details.status == TransactionStatus.successful) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _postObligationNipIfNeeded();
       });
     }
   }
@@ -140,10 +155,59 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
           context.read<AuthBloc>().add(AuthRefreshUserRequested());
+          _postObligationNipIfNeeded();
         });
       }
     } catch (_) {
       // Keep showing last-known state; user can leave screen.
+    }
+  }
+
+  Future<void> _postObligationNipIfNeeded() async {
+    final settlement = widget.obligationNipSettlement;
+    if (settlement == null || _obligationNipPosted) return;
+    if (_details.status != TransactionStatus.successful) return;
+
+    final auth = context.read<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) return;
+
+    _obligationNipPosted = true;
+    try {
+      await _obligationsRepo.recordNipObligationPayment(
+        user: auth.user,
+        obligationAccountCode: settlement.obligationAccountCode,
+        transferId: _details.id.trim(),
+        cashRepositoryId: settlement.cashRepositoryId,
+        amountNaira: settlement.amountNaira,
+      );
+      if (!mounted) return;
+      final ref = _details.reference.trim().isNotEmpty
+          ? _details.reference.trim()
+          : _details.id.trim();
+      context.goNamed(
+        'obligation-payment-success',
+        extra: {
+          'obligation': Obligation.forSuccessSummary(
+            title: settlement.obligationTitle,
+            category: settlement.obligationCategory,
+          ),
+          'amount': settlement.amountNaira,
+          'method': 'Bank transfer',
+          'reference': ref,
+          'date': DateTime.now(),
+        },
+      );
+    } catch (e) {
+      _obligationNipPosted = false;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Transfer succeeded but the obligation could not be updated. '
+            '${e.toString().replaceFirst('Exception: ', '')}',
+          ),
+        ),
+      );
     }
   }
 

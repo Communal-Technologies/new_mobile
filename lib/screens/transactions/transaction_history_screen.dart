@@ -1,6 +1,7 @@
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
+import 'package:communal_mobile/core/widgets/loader_overlay.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money_formatter.dart';
@@ -45,6 +46,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   String _filterDirection = 'All';
   String _filterPaymentType = 'All Categories';
   String _filterStatus = 'All Status';
+  bool _exporting = false;
 
   List<MapEntry<String, List<TransactionListItem>>> _personalMonthly = [];
   List<MapEntry<String, List<TransactionListItem>>> _ledgerMonthly = [];
@@ -63,16 +65,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
   String get _statusFilterButtonLabel =>
       _filterStatus == 'All Status' ? 'All statuses' : _filterStatus;
-
-  List<TransactionListItem> _filteredFlatForCurrentTab() {
-    final src = _currentTabIndex == 0 ? _personalFlat : _ledgerFlat;
-    return applyTransactionHistoryFilters(
-      src,
-      direction: _filterDirection,
-      paymentType: _filterPaymentType,
-      statusLabel: _filterStatus,
-    );
-  }
 
   void _recomputeGrouped() {
     final pFiltered = applyTransactionHistoryFilters(
@@ -113,55 +105,86 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     StatementExportRequest request,
     UserModel user,
   ) async {
-    final items = _filteredFlatForCurrentTab();
-    final sym = currencySymbolForUser(user);
-    final accountLabel =
-        _currentTabIndex == 0 ? 'Communal Personal' : 'Ledger Cooperative';
-    final csv = buildTransactionStatementCsv(
-      items: items,
-      currencySymbol: sym,
-      rangeStart: request.startInclusive,
-      rangeEnd: request.endInclusive,
-      accountLabel: accountLabel,
-    );
-    final lines = csv.split('\n');
-    if (lines.length < 3) {
+    if (_exporting) return;
+    final scope = _currentTabIndex == 0 ? 'communal' : 'ledger';
+    final delivery = switch (request.delivery) {
+      'Send to Email' => 'email',
+      'Both' => 'both',
+      _ => 'download',
+    };
+    final format = request.formatLabel.toLowerCase().contains('pdf') ? 'pdf' : 'csv';
+    final email = request.email?.trim();
+    if ((delivery == 'email' || delivery == 'both') &&
+        (email == null || email.isEmpty)) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No transactions in this period for the current filters.'),
-        ),
+        const SnackBar(content: Text('Please enter your account email.')),
       );
       return;
     }
-    if (request.delivery != 'Download') {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Server email delivery is not set up yet. Use your share sheet to save or send the CSV.',
-          ),
-        ),
-      );
+
+    final ledgerNumber = scope == 'ledger' ? user.ledgerNumber?.trim() : null;
+
+    if (mounted) {
+      setState(() => _exporting = true);
     }
+
     try {
-      final stamp = DateTime.now().millisecondsSinceEpoch;
-      final bytes = Uint8List.fromList(utf8.encode(csv));
-      await Share.shareXFiles(
-        [
-          XFile.fromData(
-            bytes,
-            mimeType: 'text/csv',
-            name: 'communal_statement_$stamp.csv',
-          ),
-        ],
-        text: 'Communal transaction statement ($accountLabel)',
+      final result = await _repo.exportStatement(
+        scope: scope,
+        startInclusive: request.startInclusive,
+        endInclusive: request.endInclusive,
+        format: format,
+        delivery: delivery,
+        email: email,
+        ledgerNumber: ledgerNumber,
       );
+
+      if (!mounted) return;
+
+      final status = result['status'] == true;
+      if (!status) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('${result['message'] ?? 'Export failed'}')));
+        return;
+      }
+
+      if (delivery == 'download' || delivery == 'both') {
+        final fileB64 = result['file_base64']?.toString() ?? '';
+        if (fileB64.isNotEmpty) {
+          final fileBytes = base64Decode(fileB64);
+          final filename = result['filename']?.toString() ?? 'statement.$format';
+          final mime = result['mime']?.toString() ?? (format == 'pdf' ? 'application/pdf' : 'text/csv');
+          await Share.shareXFiles(
+            [XFile.fromData(Uint8List.fromList(fileBytes), mimeType: mime, name: filename)],
+            text: 'Communal transaction statement',
+          );
+        }
+      }
+
+      if (delivery == 'email' || delivery == 'both') {
+        if (!mounted) return;
+        final sent = result['email_sent'] == true;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              sent
+                  ? 'Statement sent to your email.'
+                  : 'Statement generated, but email delivery failed.',
+            ),
+          ),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not export: $e')),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _exporting = false);
+      }
     }
   }
 
@@ -234,7 +257,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         statusBarIconBrightness: Brightness.dark,
         statusBarBrightness: Brightness.light,
       ),
-      child: Scaffold(
+      child: Stack(
+        children: [
+          Scaffold(
         backgroundColor: Colors.grey.shade50,
         appBar: AppBar(
           backgroundColor: Colors.white,
@@ -255,7 +280,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             Padding(
               padding: EdgeInsets.only(right: 16.w),
               child: GestureDetector(
-                onTap: () async {
+                onTap: _exporting ? null : () async {
                   final auth = context.read<AuthBloc>().state;
                   final u = auth is AuthAuthenticated ? auth.user : null;
                   final email = u?.email?.trim();
@@ -289,7 +314,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       ),
                       hSpace(6),
                       Text(
-                        'Statement',
+                        _exporting ? 'Exporting...' : 'Statement',
                         style: TextStyle(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w500,
@@ -322,7 +347,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             final showLedger = _showLedgerTab(user);
 
             if (_loading) {
-              return const Center(child: CircularProgressIndicator());
+              return const LoaderOverlay();
             }
             if (_error != null) {
               return Center(
@@ -477,6 +502,48 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             }
           },
         ),
+      ),
+          if (_exporting)
+            Positioned.fill(
+              child: AbsorbPointer(
+                absorbing: true,
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  child: Center(
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 20.w,
+                        vertical: 16.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 20.w,
+                            height: 20.w,
+                            child: const CircularProgressIndicator(strokeWidth: 2.4),
+                          ),
+                          hSpace(10),
+                          Text(
+                            'Generating statement...',
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

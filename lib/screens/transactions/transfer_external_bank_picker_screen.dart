@@ -156,14 +156,14 @@ class _TransferExternalBankPickerScreenState
                     vSpace(10),
                     Container(
                       width: double.infinity,
-                      padding: EdgeInsets.fromLTRB(12.w, 14.h, 12.w, 16.h),
+                      padding: EdgeInsets.fromLTRB(8.w, 8.h, 8.w, 10.h),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12.r),
                         border: Border.all(color: const Color(0xFFE7E7E7)),
                       ),
                       child: SizedBox(
-                        height: 118.h,
+                        height: 108.h,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: featured.length,

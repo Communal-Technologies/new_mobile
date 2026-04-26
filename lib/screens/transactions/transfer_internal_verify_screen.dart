@@ -5,6 +5,7 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/screens/obligations/data/obligation_nip_settlement.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -19,6 +20,7 @@ class TransferInternalVerifyScreen extends StatefulWidget {
     required this.narration,
     required this.saveAsBeneficiary,
     this.useExternalNipFlow = false,
+    this.obligationNipSettlement,
   });
 
   final TransferFavorite recipient;
@@ -28,6 +30,8 @@ class TransferInternalVerifyScreen extends StatefulWidget {
 
   /// When true, completes an NIP transfer using [recipient.accountId] as counterparty.
   final bool useExternalNipFlow;
+
+  final ObligationNipSettlement? obligationNipSettlement;
 
   @override
   State<TransferInternalVerifyScreen> createState() =>
@@ -123,6 +127,9 @@ class _TransferInternalVerifyScreenState
             status: mapped,
             failureReason: result.failureReason,
           ),
+          if (widget.obligationNipSettlement != null)
+            'obligationNipSettlement':
+                widget.obligationNipSettlement!.toJson(),
         },
       );
     } catch (e) {

@@ -3,6 +3,29 @@ import 'package:communal_mobile/data/models/user_model.dart';
 import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
 import 'package:dio/dio.dart';
 
+/// Backend stores [Ledger.destination] as `{AccountType}-{account_code}` (e.g. `Equity-IA…`)
+/// and [obligation_type] as `{AccountType}-Obligation`, not the raw account code.
+bool _ledgerRowMatchesObligation(Map<String, dynamic> row, Obligation obligation) {
+  final code = obligation.accountCode.trim();
+  if (code.isEmpty) return false;
+
+  final dest = row['destination']?.toString().trim() ?? '';
+  if (dest.isNotEmpty) {
+    const prefixes = ['Equity', 'Patronage', 'Custom', 'Obligation'];
+    for (final p in prefixes) {
+      final prefix = '$p-';
+      if (dest.startsWith(prefix) && dest.substring(prefix.length) == code) {
+        return true;
+      }
+    }
+  }
+
+  final oblType = row['obligation_type']?.toString().trim() ?? '';
+  if (oblType == code) return true;
+
+  return false;
+}
+
 class CooperativeCashBankAccount {
   const CooperativeCashBankAccount({
     required this.id,
@@ -105,10 +128,21 @@ class MemberObligationsRepository {
       final raw = data is Map ? (data['data'] ?? data['transactions']) : null;
       if (raw is! List) return const [];
 
-      final rows = raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).where((row) {
-        final code = row['obligation_type']?.toString().trim() ?? '';
-        return code == obligation.accountCode;
-      }).toList()
+      final coopId = user.cooperativeId?.trim() ?? '';
+      final rows = raw
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .where((row) {
+            if (coopId.isNotEmpty) {
+              final rCoop = row['cooperative_id']?.toString().trim() ?? '';
+              if (rCoop.isNotEmpty && rCoop != coopId) return false;
+            }
+            if (row['trx_type']?.toString().trim() != '1') {
+              return false;
+            }
+            return _ledgerRowMatchesObligation(row, obligation);
+          })
+          .toList()
         ..sort((a, b) {
           final ad = DateTime.tryParse(a['created_at']?.toString() ?? '') ?? DateTime(1970);
           final bd = DateTime.tryParse(b['created_at']?.toString() ?? '') ?? DateTime(1970);
@@ -119,10 +153,14 @@ class MemberObligationsRepository {
         final amountKobo = _parseDouble(row['amount']);
         final amountMajor = amountKobo / 100;
         final date = DateTime.tryParse(row['created_at']?.toString() ?? '') ?? DateTime.now();
-        final type = row['trx_type']?.toString() ?? '';
         final mode = row['payment_mode']?.toString().trim();
+        final isBf = row['brought_forward']?.toString().trim() == '1';
+        final modeLower = (mode ?? '').toLowerCase();
+        final title = (isBf || modeLower.contains('brought forward'))
+            ? 'Brought forward'
+            : 'Payment received';
         return PaymentRecord(
-          title: type == '1' ? 'Payment Credit' : 'Payment Debit',
+          title: title,
           date: date,
           amount: amountMajor,
           method: (mode == null || mode.isEmpty) ? 'Wallet' : mode,

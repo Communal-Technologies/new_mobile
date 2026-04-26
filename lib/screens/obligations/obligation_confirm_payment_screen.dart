@@ -7,8 +7,11 @@ import 'package:go_router/go_router.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/money_formatter.dart';
+import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
+import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/screens/obligations/data/obligation_nip_settlement.dart';
 import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 
@@ -18,11 +21,17 @@ class ObligationConfirmPaymentScreen extends StatefulWidget {
     required this.obligation,
     required this.amount,
     required this.method,
+    this.cashAccount,
+    this.cashRepositoryId,
   });
 
   final Obligation obligation;
   final double amount;
   final String method;
+  final CooperativeCashBankAccount? cashAccount;
+
+  /// When [cashAccount] is missing (e.g. route extra dropped), resolve via API using this id.
+  final String? cashRepositoryId;
 
   @override
   State<ObligationConfirmPaymentScreen> createState() =>
@@ -33,6 +42,7 @@ class _ObligationConfirmPaymentScreenState
     extends State<ObligationConfirmPaymentScreen> {
   final MemberObligationsRepository _repository =
       MemberObligationsRepository(getIt());
+  final TransferRepository _transferRepo = getIt<TransferRepository>();
   late final List<TextEditingController> _pinControllers;
   late final List<FocusNode> _pinFocusNodes;
   bool _obscurePin = true;
@@ -317,11 +327,69 @@ class _ObligationConfirmPaymentScreenState
     setState(() => _submitting = true);
     try {
       await _repository.verifySecurityPin(pin);
-      await _repository.payObligation(
-        user: authState.user,
-        obligation: widget.obligation,
-        amount: widget.amount,
+
+      CooperativeCashBankAccount? cash = widget.cashAccount;
+      if (cash == null || cash.id.isEmpty) {
+        final accounts = await _repository.fetchCooperativeCashBankAccounts();
+        final rid = widget.cashRepositoryId?.trim() ?? '';
+        if (rid.isNotEmpty) {
+          for (final a in accounts) {
+            if (a.id == rid) {
+              cash = a;
+              break;
+            }
+          }
+        }
+        cash ??= accounts.length == 1 ? accounts.first : null;
+      }
+      if (cash == null || cash.id.isEmpty) {
+        throw Exception(
+          'No cooperative bank account is available. Please go back, wait for accounts to load, or contact your cooperative administrator.',
+        );
+      }
+
+      final verified = await _transferRepo.verifyAccount(
+        bankCode: cash.bankCode,
+        accountNumber: cash.accountNumber,
       );
+      final counterpartyId = await _transferRepo.createCounterParty(
+        bankCode: cash.bankCode,
+        accountNumber: cash.accountNumber,
+        accountName: verified.accountName,
+      );
+
+      final fav = TransferFavorite(
+        source: 'external',
+        accountId: counterpartyId,
+        bank: verified.bankName ?? 'Bank',
+        accountNumber: cash.accountNumber,
+        accountName: verified.accountName,
+        nipCode: cash.bankCode,
+      );
+
+      final coopId = authState.user.cooperativeId?.trim() ?? '';
+      final settlement = ObligationNipSettlement(
+        cashRepositoryId: cash.id,
+        cooperativeId: coopId,
+        obligationAccountCode: widget.obligation.accountCode,
+        obligationTitle: widget.obligation.title,
+        obligationCategory: widget.obligation.category,
+        amountNaira: widget.amount,
+      );
+
+      if (!mounted) return;
+      context.pushNamed(
+        'transfer-internal-review',
+        extra: {
+          'favorite': fav.toJson(),
+          'amountKobo': (widget.amount * 100).round(),
+          'narration': 'Obligation: ${widget.obligation.title}',
+          'saveAsBeneficiary': false,
+          'useExternalNipFlow': true,
+          'obligationNipSettlement': settlement.toJson(),
+        },
+      );
+      setState(() => _submitting = false);
     } catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
@@ -330,20 +398,5 @@ class _ObligationConfirmPaymentScreenState
       );
       return;
     }
-
-    if (!mounted) return;
-    final reference = 'REF-${DateTime.now().millisecondsSinceEpoch}';
-
-    context.pushNamed(
-      'obligation-payment-success',
-      extra: {
-        'obligation': widget.obligation,
-        'amount': widget.amount,
-        'method': widget.method,
-        'reference': reference,
-        'date': DateTime.now(),
-      },
-    );
-    setState(() => _submitting = false);
   }
 }

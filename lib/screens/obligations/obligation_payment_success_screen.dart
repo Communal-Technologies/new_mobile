@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/money_formatter.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
@@ -23,10 +26,22 @@ class ObligationPaymentSuccessScreen extends StatelessWidget {
   final String reference;
   final DateTime date;
 
+  String _paidToLine(BuildContext context) {
+    final auth = context.watch<AuthBloc>().state;
+    if (auth is AuthAuthenticated) {
+      final line = auth.user.cooperativeDisplayName.trim();
+      if (line.isNotEmpty && line != '—') return line;
+    }
+    final id = obligation.cooperativeId.trim();
+    if (id.isNotEmpty) return id;
+    return 'your cooperative';
+  }
+
   @override
   Widget build(BuildContext context) {
     final formattedAmount = '₦${formatMoney(amount)}';
     final dateLabel = DateFormat('MMM dd, yyyy, hh:mm a').format(date);
+    final paidTo = _paidToLine(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F5F7),
@@ -90,7 +105,7 @@ class ObligationPaymentSuccessScreen extends StatelessWidget {
             ),
             vSpace(4),
             Text(
-              'Paid to Total Lenders Forum',
+              'Paid to $paidTo',
               style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
             ),
             vSpace(24),

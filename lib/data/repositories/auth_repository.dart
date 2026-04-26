@@ -3,7 +3,7 @@ import 'dart:developer' as developer;
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
 import 'package:communal_mobile/data/models/login_response.dart';
-import 'package:communal_mobile/core/utils/app_logger.dart';
+import 'package:communal_mobile/core/utils/app_logger.dart' as app_logger;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
@@ -12,6 +12,39 @@ class AuthRepository {
   static const String _platform = 'mobile_app'; // Platform identifier for mobile app
 
   AuthRepository(this.dioClient);
+
+  void _devLog(
+    String message, {
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    if (!kDebugMode) return;
+    developer.log(
+      message,
+      name: 'AuthRepository',
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  // Keep legacy call sites but ensure release builds never log.
+  void appLog(String title, String message) {
+    if (!kDebugMode) return;
+    app_logger.appLog(title, message);
+  }
+
+  // Keep legacy call sites but ensure release builds never print.
+  void print(Object? object) {
+    if (!kDebugMode) return;
+    developer.log((object ?? '').toString(), name: 'AuthRepository');
+  }
+
+  // Keep legacy call sites but ensure release builds never print.
+  void debugPrint(String? message, {int? wrapWidth}) {
+    if (!kDebugMode) return;
+    if (message == null) return;
+    developer.log(message, name: 'AuthRepository');
+  }
   
   /// Update the token in DioClient for authenticated requests
   void updateToken(String token) {
@@ -108,6 +141,64 @@ class AuthRepository {
     return null;
   }
 
+  /// Completes login after OTP when another device still had an active session.
+  Future<LoginResponse?> verifySessionTakeover(
+    String takeoverChallengeId,
+    String otp,
+  ) async {
+    try {
+      final response = await dioClient.post(
+        '/login/session-takeover/verify',
+        data: {
+          'takeover_challenge_id': takeoverChallengeId,
+          'otp': otp,
+        },
+        requireAuth: false,
+      );
+
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        return LoginResponse.fromJson(response.data as Map<String, dynamic>);
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        final responseData = e.response?.data;
+        String errorMessage = 'Invalid or expired code.';
+        if (responseData is Map) {
+          errorMessage = responseData['message']?.toString() ?? errorMessage;
+        } else if (responseData is String) {
+          errorMessage = responseData;
+        }
+        throw Exception(errorMessage);
+      }
+      rethrow;
+    } catch (e) {
+      rethrow;
+    }
+    return null;
+  }
+
+  Future<void> resendSessionTakeoverOtp(String takeoverChallengeId) async {
+    try {
+      final response = await dioClient.post(
+        '/login/session-takeover/resend-otp',
+        data: {'takeover_challenge_id': takeoverChallengeId},
+        requireAuth: false,
+      );
+      if (response.statusCode != 200) {
+        throw Exception('Unable to resend code');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        final responseData = e.response?.data;
+        final msg = responseData is Map
+            ? (responseData['message']?.toString() ?? 'Unable to resend code')
+            : 'Unable to resend code';
+        throw Exception(msg);
+      }
+      rethrow;
+    }
+  }
+
   Future<UserModel?> getUserInfo(String token) async {
     print('🔵 GET USER INFO - Token: ${token.substring(0, 20)}...');
     // Ensure token is set in DioClient before making the request
@@ -151,6 +242,38 @@ class AuthRepository {
       '/profile/device-token',
       data: {'device_token': token},
     );
+  }
+
+  /// Verify password/PIN for an already-authenticated session unlock.
+  /// This avoids calling `/login` again (which can trigger session takeover OTP).
+  Future<bool> verifySessionUnlockPassword(String password) async {
+    try {
+      final response = await dioClient.post(
+        '/security/transaction/verify-password',
+        data: {'password': password},
+      );
+
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        final data = response.data as Map<String, dynamic>;
+        return data['verified'] == true;
+      }
+
+      return false;
+    } on DioException catch (e) {
+      if (e.response != null) {
+        final responseData = e.response?.data;
+        String errorMessage = 'Unable to verify PIN';
+        if (responseData is Map) {
+          errorMessage = responseData['message']?.toString() ?? errorMessage;
+        } else if (responseData is String) {
+          errorMessage = responseData;
+        }
+        throw Exception(errorMessage);
+      }
+      rethrow;
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>?> checkLogin(String login) async {
@@ -272,13 +395,13 @@ class AuthRepository {
   }
 
   Future<LoginResponse?> createPassword(String userId, String password) async {
-    developer.log('🚀🚀🚀 CREATE PASSWORD METHOD CALLED 🚀🚀🚀', name: 'AuthRepository');
-    developer.log('🚀 User ID: $userId', name: 'AuthRepository');
+    _devLog('🚀🚀🚀 CREATE PASSWORD METHOD CALLED 🚀🚀🚀');
+    _devLog('🚀 User ID: $userId');
     appLog('CREATE PASSWORD METHOD CALLED', 'User ID: $userId');
     try {
-      developer.log('=== CREATE PASSWORD REQUEST ===', name: 'AuthRepository');
-      developer.log('User ID: $userId', name: 'AuthRepository');
-      developer.log('Request URL: /create-account-password', name: 'AuthRepository');
+      _devLog('=== CREATE PASSWORD REQUEST ===');
+      _devLog('User ID: $userId');
+      _devLog('Request URL: /create-account-password');
       appLog('CREATE PASSWORD REQUEST', 'User ID: $userId, URL: /create-account-password');
       print('=== CREATE PASSWORD REQUEST ===');
       print('User ID: $userId');
@@ -382,11 +505,11 @@ class AuthRepository {
         return null;
       }
     } on DioException catch (e) {
-      developer.log('❌ === CREATE PASSWORD DIO ERROR ===', name: 'AuthRepository');
-      developer.log('❌ Error Type: ${e.type}', name: 'AuthRepository');
-      developer.log('❌ Error Message: ${e.message}', name: 'AuthRepository');
-      developer.log('❌ Status Code: ${e.response?.statusCode}', name: 'AuthRepository');
-      developer.log('❌ Response Data: ${e.response?.data}', name: 'AuthRepository');
+      _devLog('❌ === CREATE PASSWORD DIO ERROR ===');
+      _devLog('❌ Error Type: ${e.type}');
+      _devLog('❌ Error Message: ${e.message}');
+      _devLog('❌ Status Code: ${e.response?.statusCode}');
+      _devLog('❌ Response Data: ${e.response?.data}');
       appLog('CREATE PASSWORD DIO ERROR', 'Type: ${e.type}, Message: ${e.message}, Status: ${e.response?.statusCode}');
       print('❌ === CREATE PASSWORD DIO ERROR ===');
       print('❌ Error Type: ${e.type}');
@@ -489,9 +612,9 @@ class AuthRepository {
 
   Future<bool> resetPassword(String login, String newPassword, String pin) async {
     try {
-      developer.log('=== RESET PASSWORD REQUEST ===', name: 'AuthRepository');
-      developer.log('Login: $login', name: 'AuthRepository');
-      developer.log('Password length: ${newPassword.length}', name: 'AuthRepository');
+      _devLog('=== RESET PASSWORD REQUEST ===');
+      _devLog('Login: $login');
+      _devLog('Password length: ${newPassword.length}');
       appLog('RESET PASSWORD REQUEST', 'Login: $login, Password length: ${newPassword.length}');
       print('=== RESET PASSWORD REQUEST ===');
       print('Login: $login');
@@ -522,18 +645,18 @@ class AuthRepository {
         if (responseData is Map) {
           final message = responseData['message']?.toString().toLowerCase() ?? '';
           if (message.contains('success') || message.contains('updated') || responseData['status'] == true) {
-            developer.log('✅ Password reset successful', name: 'AuthRepository');
+            _devLog('✅ Password reset successful');
             appLog('RESET PASSWORD SUCCESS', responseData['message'] ?? 'Password updated');
             return true;
           } else if (responseData['message'] != null) {
             // Has a message but might not contain "success" - still consider it success if status is 200
-            developer.log('✅ Password reset successful (status 200)', name: 'AuthRepository');
+            _devLog('✅ Password reset successful (status 200)');
             appLog('RESET PASSWORD SUCCESS', responseData['message']);
             return true;
           }
         } else {
           // If response is not a map but status is 200, consider it success
-          developer.log('✅ Password reset successful (status 200, non-map response)', name: 'AuthRepository');
+          _devLog('✅ Password reset successful (status 200, non-map response)');
           appLog('RESET PASSWORD SUCCESS', 'Status: ${response.statusCode}');
           return true;
         }
@@ -541,11 +664,11 @@ class AuthRepository {
       print('⚠️ RESET PASSWORD: Unexpected response format or status code');
       return false;
     } on DioException catch (e) {
-      developer.log('❌ === RESET PASSWORD DIO ERROR ===', name: 'AuthRepository');
-      developer.log('❌ Error Type: ${e.type}', name: 'AuthRepository');
-      developer.log('❌ Error Message: ${e.message}', name: 'AuthRepository');
-      developer.log('❌ Status Code: ${e.response?.statusCode}', name: 'AuthRepository');
-      developer.log('❌ Response Data: ${e.response?.data}', name: 'AuthRepository');
+      _devLog('❌ === RESET PASSWORD DIO ERROR ===');
+      _devLog('❌ Error Type: ${e.type}');
+      _devLog('❌ Error Message: ${e.message}');
+      _devLog('❌ Status Code: ${e.response?.statusCode}');
+      _devLog('❌ Response Data: ${e.response?.data}');
       appLog('RESET PASSWORD DIO ERROR', 'Type: ${e.type}, Message: ${e.message}, Status: ${e.response?.statusCode}');
       print('❌ === RESET PASSWORD DIO ERROR ===');
       print('❌ Error Type: ${e.type}');
@@ -573,7 +696,7 @@ class AuthRepository {
       
       throw Exception('Network error: ${e.message}');
     } catch (e) {
-      developer.log('❌ RESET PASSWORD ERROR: $e', name: 'AuthRepository');
+      _devLog('❌ RESET PASSWORD ERROR: $e');
       appLog('RESET PASSWORD ERROR', e.toString());
       rethrow;
     }

@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 
+import 'package:communal_mobile/core/utils/money_formatter.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
 
@@ -49,7 +50,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
   void initState() {
     super.initState();
     _amountController = TextEditingController(
-      text: widget.obligation.perInstallment.toStringAsFixed(0),
+      text: widget.obligation.perInstallment.round().toString(),
     );
     _noteController.addListener(() => setState(() {}));
   }
@@ -63,7 +64,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final outstanding = widget.obligation.balance.toStringAsFixed(0);
+    final outstanding = formatMoney(widget.obligation.balance);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(
@@ -99,7 +100,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
               _buildAmountInput(),
               vSpace(4),
               Text(
-                'Suggested: ₦${widget.obligation.perInstallment.toStringAsFixed(0)}',
+                'Suggested: ₦${formatMoney(widget.obligation.perInstallment)}',
                 style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
               ),
               vSpace(24),
@@ -208,7 +209,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                 child: _MetricBlock(
                   label: 'Installment Amount',
                   value:
-                      '₦${widget.obligation.perInstallment.toStringAsFixed(0)}',
+                      '₦${formatMoney(widget.obligation.perInstallment)}',
                 ),
               ),
               Expanded(
@@ -380,6 +381,20 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
         double.tryParse(_amountController.text) ??
         widget.obligation.perInstallment;
     final method = _methods[_selectedMethodIndex].title;
+    if (method.toLowerCase() != 'wallet') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Only wallet payment is currently available for obligations.'),
+        ),
+      );
+      return;
+    }
+    if (amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid amount to continue.')),
+      );
+      return;
+    }
 
     context.pushNamed(
       'obligation-confirm-payment',

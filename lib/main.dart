@@ -92,19 +92,22 @@ class MyApp extends StatelessWidget {
                     getIt<AuthRepository>(),
                   );
                 },
-                child: SecurityWrapper(
-                  child: MaterialApp.router(
-                    debugShowCheckedModeBanner: false,
-                    theme: AppTheme.light,
-                    themeMode: ThemeMode.light,
-                    routerConfig: appRouter,
-                    builder: (context, child) {
-                      return ToastificationWrapper(
-                        child: ConnectivityListener(
+                child: ToastificationWrapper(
+                  // Must sit above [SecurityWrapper]: the lock UI swaps in a nested
+                  // [MaterialApp] and must not mount a second [ToastificationWrapper]
+                  // (the package uses one module-level GlobalKey for the overlay).
+                  child: SecurityWrapper(
+                    child: MaterialApp.router(
+                      debugShowCheckedModeBanner: false,
+                      theme: AppTheme.light,
+                      themeMode: ThemeMode.light,
+                      routerConfig: appRouter,
+                      builder: (context, child) {
+                        return ConnectivityListener(
                           child: child ?? const SizedBox.shrink(),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),

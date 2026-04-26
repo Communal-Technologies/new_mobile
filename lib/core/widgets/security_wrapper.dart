@@ -646,12 +646,8 @@ class _SecurityWrapperState extends State<SecurityWrapper>
               _cachedLockedScreen = null;
               _childKey++; // Force rebuild by changing key
               _logState('LISTENER - After PIN validation and unlock');
-              // BlocBuilder below already rebuilds on [SecurityState.unlocked]. Avoid
-              // setState + a second [unlockApp] here — that re-enters layout/focus and
-              // triggers "wrong build scope" / InheritedWidget assertions after hot reload.
-              if (mounted) {
-                setState(() {});
-              }
+              // BlocBuilder below already rebuilds on [SecurityState.unlocked].
+              // Avoid setState here to prevent cross-scope rebuild assertions.
             }
             
             // Idle prompt: [SecurityWrapper] sits above [MaterialApp.router], so

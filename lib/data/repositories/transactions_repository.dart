@@ -129,4 +129,41 @@ class TransactionsRepository {
     if (ln.isEmpty) return const [];
     return fetchLedgerListItems(user, ln, user.cooperativeDisplayName);
   }
+
+  Future<Map<String, dynamic>> exportStatement({
+    required String scope,
+    required DateTime startInclusive,
+    required DateTime endInclusive,
+    required String format,
+    required String delivery,
+    String? email,
+    String? ledgerNumber,
+  }) async {
+    try {
+      final response = await _dioClient.post(
+        '/members/transaction-statement/export',
+        data: {
+          'scope': scope,
+          'start_date': startInclusive.toIso8601String(),
+          'end_date': endInclusive.toIso8601String(),
+          'format': format,
+          'delivery': delivery,
+          if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
+          if (ledgerNumber != null && ledgerNumber.trim().isNotEmpty)
+            'ledger_number': ledgerNumber.trim(),
+        },
+      );
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        return data;
+      }
+      throw Exception('Invalid export response');
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        throw Exception(data['message'].toString());
+      }
+      throw Exception('Unable to export statement');
+    }
+  }
 }

@@ -1,27 +1,39 @@
-/// Utility class for formatting currency values
+import 'money.dart';
+
+/// Currency-aware money formatter. Prefer this over the deprecated
+/// `formatNairaFromKobo*` helpers below, which hardcode NGN.
 class CurrencyFormatter {
-  /// Whole naira from API kobo (1 NGN = 100 kobo).
+  /// Format an integer-minor amount for [currency] with the symbol prefix.
+  /// Always shows the canonical number of decimals (₦25,000.00, ¥1,500, …).
+  static String formatFromMinor(int amountMinor, String currency) =>
+      Money(amountMinor, currency).format();
+
+  /// Same as [formatFromMinor] but without the currency symbol.
+  static String formatFromMinorNoSymbol(int amountMinor, String currency) =>
+      Money(amountMinor, currency).format(symbol: false);
+
+  // -------------------------------------------------------------------------
+  // Deprecated NGN-only helpers — preserved so legacy call sites still build.
+  // Do NOT use these for any non-NGN flow.
+  // -------------------------------------------------------------------------
+
+  /// @Deprecated Use [formatFromMinor] with currency 'NGN' (or the user's
+  /// resolved currency). This rounds to whole naira, which is wrong for
+  /// non-zero kobo amounts.
+  @Deprecated('Use CurrencyFormatter.formatFromMinor(amount, currency).')
   static String formatNairaFromKobo(int kobo) {
     final naira = (kobo / 100).round();
     return formatNaira(naira);
   }
 
-  /// Kobo → naira with **two** fractional digits (e.g. `0` → `₦0.00`).
-  static String formatNairaFromKoboWithDecimals(int kobo) {
-    final negative = kobo < 0;
-    final abs = kobo.abs();
-    final whole = abs ~/ 100;
-    final cents = abs % 100;
-    final buf = StringBuffer('₦');
-    if (negative) buf.write('-');
-    buf.write(_digitsWithThousandsSeparators(whole));
-    buf.write('.');
-    buf.write(cents.toString().padLeft(2, '0'));
-    return buf.toString();
-  }
+  /// @Deprecated Use [formatFromMinor] with currency 'NGN'.
+  @Deprecated('Use CurrencyFormatter.formatFromMinor(amount, currency).')
+  static String formatNairaFromKoboWithDecimals(int kobo) =>
+      Money(kobo, 'NGN').format();
 
-  /// Formats an integer amount as Nigerian Naira with commas
-  /// Example: 5000000 -> "₦5,000,000"
+  /// @Deprecated Use [formatFromMinor] with currency 'NGN' (note the input
+  /// type — this helper takes whole naira, not kobo).
+  @Deprecated('Use CurrencyFormatter.formatFromMinor(amount, currency).')
   static String formatNaira(int amount) {
     final neg = amount < 0;
     final abs = amount.abs();

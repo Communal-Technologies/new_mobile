@@ -3,6 +3,36 @@ import 'package:communal_mobile/data/models/user_model.dart';
 import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
 import 'package:dio/dio.dart';
 
+class CooperativeCashBankAccount {
+  const CooperativeCashBankAccount({
+    required this.id,
+    required this.bankCode,
+    required this.accountName,
+    required this.accountNumber,
+  });
+
+  final String id;
+  final String bankCode;
+  final String accountName;
+  final String accountNumber;
+
+  factory CooperativeCashBankAccount.fromJson(Map<String, dynamic> m) {
+    return CooperativeCashBankAccount(
+      id: m['id']?.toString() ?? '',
+      bankCode: m['bank']?.toString().trim() ?? '',
+      accountName: m['account_name']?.toString().trim() ?? '',
+      accountNumber: m['account_number']?.toString().trim() ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'bank': bankCode,
+        'account_name': accountName,
+        'account_number': accountNumber,
+      };
+}
+
 class MemberObligationsRepository {
   MemberObligationsRepository(this._dioClient);
 
@@ -104,6 +134,36 @@ class MemberObligationsRepository {
     }
   }
 
+  Future<List<CooperativeCashBankAccount>> fetchCooperativeCashBankAccounts() async {
+    try {
+      final response = await _dioClient.get('/members/cooperative-cash-repositories');
+      final data = response.data;
+      if (data is! Map || data['status'] != true) {
+        return const [];
+      }
+      final raw = data['repositories'];
+      if (raw is! List) return const [];
+      final list = raw
+          .whereType<Map>()
+          .map((e) => CooperativeCashBankAccount.fromJson(Map<String, dynamic>.from(e)))
+          .where((e) => e.id.isNotEmpty && e.bankCode.isNotEmpty && e.accountNumber.isNotEmpty)
+          .toList(growable: false);
+      if (list.isEmpty) {
+        final msg = data['message']?.toString().trim();
+        if (msg != null && msg.isNotEmpty) {
+          throw Exception(msg);
+        }
+      }
+      return list;
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        throw Exception(data['message'].toString());
+      }
+      throw Exception('Unable to load cooperative bank accounts');
+    }
+  }
+
   Future<void> verifySecurityPin(String pin) async {
     try {
       final response = await _dioClient.post(
@@ -125,28 +185,41 @@ class MemberObligationsRepository {
     }
   }
 
-  Future<void> payObligation({
+  /// After a successful NIP transfer to the cooperative cash repository, record obligation payment.
+  Future<void> recordNipObligationPayment({
     required UserModel user,
-    required Obligation obligation,
-    required double amount,
+    required String obligationAccountCode,
+    required String transferId,
+    required String cashRepositoryId,
+    required double amountNaira,
   }) async {
     final cooperativeId = user.cooperativeId?.trim() ?? '';
     final ledgerNumber = user.ledgerNumber?.trim() ?? '';
-    final walletId = user.walletAccountNumber?.trim() ?? '';
-    if (cooperativeId.isEmpty || ledgerNumber.isEmpty || walletId.isEmpty) {
-      throw Exception('Missing cooperative, ledger, or wallet information');
+    final tid = transferId.trim();
+    final rid = cashRepositoryId.trim();
+    if (cooperativeId.isEmpty || ledgerNumber.isEmpty || tid.isEmpty || rid.isEmpty) {
+      throw Exception('Missing payment details');
+    }
+    final amountKobo = (amountNaira * 100).round();
+    if (amountKobo <= 0) {
+      throw Exception('Invalid amount');
+    }
+    final code = obligationAccountCode.trim();
+    if (code.isEmpty) {
+      throw Exception('Missing obligation');
     }
 
     try {
       final response = await _dioClient.post(
         '/members/pay-obligation',
         data: {
-          'amount': amount.toStringAsFixed(2),
-          'obligation': obligation.accountCode,
+          'amount': amountKobo.toString(),
+          'obligation': code,
           'ledger_number': ledgerNumber,
-          'gateway': 'e-wallet',
-          'gateway_id': walletId,
+          'gateway': 'nip_transfer',
+          'gateway_id': tid,
           'cooperative': cooperativeId,
+          'cash_repository_id': rid,
         },
       );
       final data = response.data;
@@ -154,13 +227,13 @@ class MemberObligationsRepository {
       if (data is Map && data['message'] != null) {
         throw Exception(data['message'].toString());
       }
-      throw Exception('Payment failed');
+      throw Exception('Unable to record obligation payment');
     } on DioException catch (e) {
       final data = e.response?.data;
       if (data is Map && data['message'] != null) {
         throw Exception(data['message'].toString());
       }
-      throw Exception('Unable to complete obligation payment');
+      throw Exception('Unable to record obligation payment');
     }
   }
 

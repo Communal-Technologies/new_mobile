@@ -678,7 +678,7 @@ class _LoanPromoCard extends StatelessWidget {
           ),
           vSpace(12),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () => context.goNamed('loans'),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF5B5CE2),
               foregroundColor: Colors.white,

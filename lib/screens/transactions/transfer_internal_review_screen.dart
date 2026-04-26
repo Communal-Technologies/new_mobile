@@ -3,6 +3,7 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
+import 'package:communal_mobile/screens/obligations/data/obligation_nip_settlement.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -17,6 +18,7 @@ class TransferInternalReviewScreen extends StatefulWidget {
     required this.narration,
     required this.saveAsBeneficiary,
     this.useExternalNipFlow = false,
+    this.obligationNipSettlement,
   });
 
   final TransferFavorite recipient;
@@ -26,6 +28,9 @@ class TransferInternalReviewScreen extends StatefulWidget {
 
   /// When true, continue to NIP verify flow instead of book transfer verify.
   final bool useExternalNipFlow;
+
+  /// When set, a successful transfer will record an obligation payment on the receipt screen.
+  final ObligationNipSettlement? obligationNipSettlement;
 
   @override
   State<TransferInternalReviewScreen> createState() =>
@@ -146,6 +151,8 @@ class _TransferInternalReviewScreenState
       'narration': widget.narration,
       'saveAsBeneficiary': _saveAsBeneficiary,
       if (widget.useExternalNipFlow) 'useExternalNipFlow': true,
+      if (widget.obligationNipSettlement != null)
+        'obligationNipSettlement': widget.obligationNipSettlement!.toJson(),
     };
     context.pushNamed(
       widget.useExternalNipFlow

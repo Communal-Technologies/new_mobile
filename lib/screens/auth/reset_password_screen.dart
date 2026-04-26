@@ -247,6 +247,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               context.go('/login');
             }
           }
+        } else if (state is AuthSessionTakeoverPending) {
+          setState(() {
+            _isSubmitting = false;
+          });
+          context.push('/session-takeover');
         } else if (state is ResetPasswordSuccess) {
           // Password reset successful, user should be authenticated automatically
           setState(() {

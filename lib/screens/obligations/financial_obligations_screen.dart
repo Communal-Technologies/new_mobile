@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
 import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
+import 'package:communal_mobile/core/widgets/loader_overlay.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
 import 'package:communal_mobile/screens/obligations/widgets/obligation_card.dart';
 
@@ -19,17 +25,53 @@ class FinancialObligationsScreen extends StatefulWidget {
 
 class _FinancialObligationsScreenState
     extends State<FinancialObligationsScreen> {
+  final MemberObligationsRepository _repository =
+      MemberObligationsRepository(getIt());
   final _searchController = TextEditingController();
   final List<String> _categories = ['Equity', 'Patronage', 'Custom', 'Fine'];
+  List<Obligation> _obligations = const [];
 
   String _selectedCategory = 'Equity';
   final int _currentNavIndex = 1;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadObligations());
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadObligations() async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final rows = await _repository.fetchMemberObligations(authState.user);
+      final availableCategories = rows.map((e) => e.category).toSet();
+      setState(() {
+        _obligations = rows;
+        if (rows.isNotEmpty && !availableCategories.contains(_selectedCategory)) {
+          _selectedCategory = rows.first.category;
+        }
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
   }
 
   @override
@@ -48,49 +90,53 @@ class _FinancialObligationsScreenState
         drawer: const CooperativeSidebar(),
         drawerEdgeDragWidth: 50.w,
         drawerScrimColor: Colors.black.withValues(alpha: 0.4),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(theme),
-                vSpace(16),
-                _buildSummaryCards(theme),
-                vSpace(20),
-                _buildCategorySelector(theme),
-                vSpace(16),
-                _buildSearchBar(theme),
-                vSpace(20),
-                ..._buildObligationList(theme),
-              ],
-            ),
-          ),
-        ),
-        bottomNavigationBar: BottomNavBar(
-          currentIndex: _currentNavIndex,
-          onTap: (index) {
-            if (index == _currentNavIndex) return;
-            switch (index) {
-              case 0:
-                context.go('/home');
-                break;
-              case 2:
-                context.goNamed('community');
-                break;
-              case 3:
-                context.goNamed('loans');
-                break;
-              case 4:
-                context.goNamed('account-settings');
-                break;
-              default:
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Section coming soon')),
-                );
-            }
-          },
-        ),
+        body: _loading
+            ? const LoaderOverlay()
+            : SafeArea(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(theme),
+                      vSpace(16),
+                      _buildSummaryCards(theme),
+                      vSpace(20),
+                      _buildCategorySelector(theme),
+                      vSpace(16),
+                      _buildSearchBar(theme),
+                      vSpace(20),
+                      ..._buildObligationList(theme),
+                    ],
+                  ),
+                ),
+              ),
+        bottomNavigationBar: _loading
+            ? null
+            : BottomNavBar(
+                currentIndex: _currentNavIndex,
+                onTap: (index) {
+                  if (index == _currentNavIndex) return;
+                  switch (index) {
+                    case 0:
+                      context.go('/home');
+                      break;
+                    case 2:
+                      context.goNamed('community');
+                      break;
+                    case 3:
+                      context.goNamed('loans');
+                      break;
+                    case 4:
+                      context.goNamed('account-settings');
+                      break;
+                    default:
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Section coming soon')),
+                      );
+                  }
+                },
+              ),
       ),
     );
   }
@@ -124,7 +170,7 @@ class _FinancialObligationsScreenState
             ],
           ),
         ),
-        _roundedIcon(icon: Icons.refresh, onTap: () {}),
+        _roundedIcon(icon: Icons.refresh, onTap: _loadObligations),
       ],
     );
   }
@@ -152,24 +198,33 @@ class _FinancialObligationsScreenState
   }
 
   Widget _buildSummaryCards(ThemeData theme) {
+    final totalDue = _obligations.fold<double>(0, (sum, row) => sum + row.balance);
+    final totalPaid = _obligations.fold<double>(0, (sum, row) => sum + row.paidAmount);
+    final nextDueLabel = _obligations.isEmpty
+        ? 'N/A'
+        : _formatDate(
+            _obligations
+                .map((e) => e.nextDueDate)
+                .reduce((a, b) => a.isBefore(b) ? a : b),
+          );
     final cards = [
       _SummaryCardData(
         label: 'Total Due',
-        value: '₦900,000',
+        value: '₦${_formatCompact(totalDue)}',
         color: const Color(0xFFFFE6E9),
         icon: Icons.error_outline,
         valueColor: const Color(0xFFD7263D),
       ),
       _SummaryCardData(
         label: 'Total Paid',
-        value: '₦1,000,000',
+        value: '₦${_formatCompact(totalPaid)}',
         color: const Color(0xFFE7FFF2),
         icon: Icons.check_circle_outline,
         valueColor: const Color(0xFF1AAE70),
       ),
       _SummaryCardData(
         label: 'Next Due',
-        value: 'Nov 10, 2024',
+        value: nextDueLabel,
         color: const Color(0xFFEAF1FF),
         icon: Icons.calendar_today_outlined,
         valueColor: theme.primaryColor,
@@ -217,6 +272,7 @@ class _FinancialObligationsScreenState
             child: ChoiceChip(
               label: Text(category),
               selected: isActive,
+              showCheckmark: false,
               onSelected: (_) {
                 setState(() => _selectedCategory = category);
               },
@@ -279,8 +335,26 @@ class _FinancialObligationsScreenState
   }
 
   List<Widget> _buildObligationList(ThemeData theme) {
+    if (_error != null) {
+      return [
+        vSpace(12),
+        Center(
+          child: Column(
+            children: [
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13.sp, color: Colors.red.shade400),
+              ),
+              vSpace(8),
+              TextButton(onPressed: _loadObligations, child: const Text('Retry')),
+            ],
+          ),
+        ),
+      ];
+    }
     final query = _searchController.text.toLowerCase();
-    final items = SampleObligations.all.where((obligation) {
+    final items = _obligations.where((obligation) {
       final matchesCategory =
           obligation.category.toLowerCase() == _selectedCategory.toLowerCase();
       final matchesQuery =
@@ -312,6 +386,32 @@ class _FinancialObligationsScreenState
       ],
       vSpace(20),
     ];
+  }
+
+  String _formatCompact(double value) {
+    final whole = value.round().toString();
+    return whole.replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]},',
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 }
 

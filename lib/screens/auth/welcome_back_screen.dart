@@ -18,6 +18,9 @@ import 'package:communal_mobile/cubits/security/security_cubit.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
+import 'package:communal_mobile/cubits/splash/splash_cubit.dart';
+import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:communal_mobile/routes/app_routes.dart';
 
@@ -511,12 +514,36 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
       ));
       
     } catch (e) {
+      if (e is DioException && isDioTransportFailure(e)) {
+        if (mounted) {
+          setState(() {
+            _isAuthenticating = false;
+            _waitingForBackendValidation = false;
+            _password = '';
+            _pinController.clear();
+          });
+          context.read<SplashCubit>().initApp();
+          context.go('/');
+        }
+        return;
+      }
+      final msg = _friendlyBackendError(e);
       setState(() {
         _isAuthenticating = false;
         _waitingForBackendValidation = false;
-        _passwordError = 'Error: ${e.toString()}';
+        _passwordError = msg;
       });
     }
+  }
+
+  void _restartSplashColdStart() {
+    if (!mounted) return;
+    context.read<SplashCubit>().initApp();
+    context.go('/');
+  }
+
+  String _friendlyBackendError(Object error) {
+    return error.toString().replaceFirst('Exception: ', '').trim();
   }
 
   void _switchMethod(SignInMethod method) {
@@ -731,6 +758,19 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
             });
           }
         } else if (state is AuthFailure) {
+          if (shouldRedirectToSplashForAuthFailure(state.error)) {
+            _waitingForBackendValidation = false;
+            _isAuthenticating = false;
+            _password = '';
+            _pinController.clear();
+            _passwordError = null;
+            if (mounted) {
+              setState(() {});
+              _restartSplashColdStart();
+            }
+            return;
+          }
+
           // Authentication failed - backend rejected the password
           _waitingForBackendValidation = false; // Clear the flag
           

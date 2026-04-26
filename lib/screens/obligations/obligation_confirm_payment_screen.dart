@@ -6,10 +6,15 @@ import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money_formatter.dart';
+import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
+import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/screens/obligations/data/obligation_nip_settlement.dart';
 import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
+import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 
 class ObligationConfirmPaymentScreen extends StatefulWidget {
@@ -18,11 +23,17 @@ class ObligationConfirmPaymentScreen extends StatefulWidget {
     required this.obligation,
     required this.amount,
     required this.method,
+    this.cashAccount,
+    this.cashRepositoryId,
   });
 
   final Obligation obligation;
   final double amount;
   final String method;
+  final CooperativeCashBankAccount? cashAccount;
+
+  /// When [cashAccount] is missing (e.g. route extra dropped), resolve via API using this id.
+  final String? cashRepositoryId;
 
   @override
   State<ObligationConfirmPaymentScreen> createState() =>
@@ -33,6 +44,7 @@ class _ObligationConfirmPaymentScreenState
     extends State<ObligationConfirmPaymentScreen> {
   final MemberObligationsRepository _repository =
       MemberObligationsRepository(getIt());
+  final TransferRepository _transferRepo = getIt<TransferRepository>();
   late final List<TextEditingController> _pinControllers;
   late final List<FocusNode> _pinFocusNodes;
   bool _obscurePin = true;
@@ -60,16 +72,43 @@ class _ObligationConfirmPaymentScreenState
     super.dispose();
   }
 
+  bool get _pinCompletelyEmpty =>
+      _pinControllers.every((c) => c.text.isEmpty);
+
+  /// System / gesture back while PIN is partial: clear the last filled digit first.
+  void _handleSystemBackDuringPinEntry() {
+    for (var i = _pinControllers.length - 1; i >= 0; i--) {
+      if (_pinControllers[i].text.isNotEmpty) {
+        _pinControllers[i].clear();
+        _pinFocusNodes[i].requestFocus();
+        setState(() {});
+        return;
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: _pinCompletelyEmpty,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _handleSystemBackDuringPinEntry();
+      },
+      child: Scaffold(
       backgroundColor: const Color(0xFFF6F6F9),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.of(context).maybePop(),
+          onPressed: () {
+            if (!_pinCompletelyEmpty) {
+              _handleSystemBackDuringPinEntry();
+              return;
+            }
+            Navigator.of(context).maybePop();
+          },
         ),
         title: Text(
           'Confirm Payment',
@@ -154,6 +193,7 @@ class _ObligationConfirmPaymentScreenState
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -204,39 +244,55 @@ class _ObligationConfirmPaymentScreenState
       spacing: 12.w,
       children: List.generate(
         4,
-        (index) => SizedBox(
-          width: 56.w,
-          child: TextField(
-            controller: _pinControllers[index],
-            focusNode: _pinFocusNodes[index],
-            textAlign: TextAlign.center,
-            obscureText: _obscurePin,
-            maxLength: 1,
-            keyboardType: TextInputType.number,
-            style: TextStyle(
-              fontSize: 26.sp,
-              fontWeight: FontWeight.w700,
-              color: Colors.black,
-            ),
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              counterText: '',
-              contentPadding: EdgeInsets.symmetric(vertical: 18.h),
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14.r),
-                borderSide: BorderSide(color: Colors.grey.shade300),
+        (index) => Focus(
+          onKeyEvent: (node, event) {
+            if (event is! KeyDownEvent) return KeyEventResult.ignored;
+            if (event.logicalKey != LogicalKeyboardKey.backspace) {
+              return KeyEventResult.ignored;
+            }
+            if (_pinControllers[index].text.isNotEmpty) {
+              return KeyEventResult.ignored;
+            }
+            if (index <= 0) return KeyEventResult.ignored;
+            _pinControllers[index - 1].clear();
+            _pinFocusNodes[index - 1].requestFocus();
+            setState(() {});
+            return KeyEventResult.handled;
+          },
+          child: SizedBox(
+            width: 56.w,
+            child: TextField(
+              controller: _pinControllers[index],
+              focusNode: _pinFocusNodes[index],
+              textAlign: TextAlign.center,
+              obscureText: _obscurePin,
+              maxLength: 1,
+              keyboardType: TextInputType.number,
+              style: TextStyle(
+                fontSize: 26.sp,
+                fontWeight: FontWeight.w700,
+                color: Colors.black,
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14.r),
-                borderSide: const BorderSide(
-                  color: Color(0xFF7434FF),
-                  width: 2,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: InputDecoration(
+                counterText: '',
+                contentPadding: EdgeInsets.symmetric(vertical: 18.h),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14.r),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14.r),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF7434FF),
+                    width: 2,
+                  ),
                 ),
               ),
+              onChanged: (value) => _handlePinInput(index, value),
             ),
-            onChanged: (value) => _handlePinInput(index, value),
           ),
         ),
       ),
@@ -317,33 +373,109 @@ class _ObligationConfirmPaymentScreenState
     setState(() => _submitting = true);
     try {
       await _repository.verifySecurityPin(pin);
-      await _repository.payObligation(
-        user: authState.user,
-        obligation: widget.obligation,
-        amount: widget.amount,
+
+      if (widget.obligation.category == 'Equity' &&
+          widget.amount > widget.obligation.balance + 0.009) {
+        throw Exception(
+          'Equity payments cannot exceed your remaining cap (₦${formatMoney(widget.obligation.balance)}).',
+        );
+      }
+
+      CooperativeCashBankAccount? cash = widget.cashAccount;
+      if (cash == null || cash.id.isEmpty) {
+        final accounts = await _repository.fetchCooperativeCashBankAccounts();
+        final rid = widget.cashRepositoryId?.trim() ?? '';
+        if (rid.isNotEmpty) {
+          for (final a in accounts) {
+            if (a.id == rid) {
+              cash = a;
+              break;
+            }
+          }
+        }
+        cash ??= accounts.length == 1 ? accounts.first : null;
+      }
+      if (cash == null || cash.id.isEmpty) {
+        throw Exception(
+          'No cooperative bank account is available. Please go back, wait for accounts to load, or contact your cooperative administrator.',
+        );
+      }
+
+      final verified = await _transferRepo.verifyAccount(
+        bankCode: cash.bankCode,
+        accountNumber: cash.accountNumber,
+      );
+      final counterpartyId = await _transferRepo.createCounterParty(
+        bankCode: cash.bankCode,
+        accountNumber: cash.accountNumber,
+        accountName: verified.accountName,
+      );
+
+      final fav = TransferFavorite(
+        source: 'external',
+        accountId: counterpartyId,
+        bank: verified.bankName ?? 'Bank',
+        accountNumber: cash.accountNumber,
+        accountName: verified.accountName,
+        nipCode: cash.bankCode,
+      );
+
+      final coopId = authState.user.cooperativeId?.trim() ?? '';
+      final settlement = ObligationNipSettlement(
+        cashRepositoryId: cash.id,
+        cooperativeId: coopId,
+        obligationAccountCode: widget.obligation.accountCode,
+        obligationTitle: widget.obligation.title,
+        obligationCategory: widget.obligation.category,
+        amountNaira: widget.amount,
+      );
+
+      final currencySymbol = currencySymbolForUser(authState.user);
+      final currencyCode = resolveCurrencyCode(authState.user);
+      final narration = 'Obligation: ${widget.obligation.title}';
+      final amountKobo = (widget.amount * 100).round();
+
+      final result = await _transferRepo.initiateTransfer(
+        type: 'NIPTransfer',
+        amountKobo: amountKobo,
+        narration: narration.trim().isEmpty ? 'Transfer' : narration,
+        counterPartyId: fav.accountId,
+        currencyCode: currencyCode,
+      );
+
+      if (!mounted) return;
+      final mapped = transactionStatusFromApi(result.status);
+      context.pushNamed(
+        'transaction-receipt',
+        extra: {
+          'details': TransactionDetailsData(
+            id: result.transferId,
+            counterpartyName: fav.accountName,
+            counterpartyBank: fav.bank,
+            counterpartyAccount: fav.accountNumber,
+            amount: widget.amount,
+            currencySymbol: currencySymbol,
+            transactionType: 'NIP Transfer',
+            dateTime: DateTime.now(),
+            sessionId: result.transferId,
+            reference: result.reference,
+            description: narration,
+            paymentMethod: 'Wallet',
+            fees: 0,
+            isIncoming: false,
+            status: mapped,
+            failureReason: result.failureReason,
+          ),
+          'obligationNipSettlement': settlement.toJson(),
+        },
       );
     } catch (e) {
       if (!mounted) return;
-      setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
-      return;
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
-
-    if (!mounted) return;
-    final reference = 'REF-${DateTime.now().millisecondsSinceEpoch}';
-
-    context.pushNamed(
-      'obligation-payment-success',
-      extra: {
-        'obligation': widget.obligation,
-        'amount': widget.amount,
-        'method': widget.method,
-        'reference': reference,
-        'date': DateTime.now(),
-      },
-    );
-    setState(() => _submitting = false);
   }
 }

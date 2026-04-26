@@ -2,6 +2,7 @@ import 'dart:developer' as developer;
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/app_logger.dart' as app_logger;
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
@@ -79,6 +80,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       return errorStr;
     }
     return error.toString();
+  }
+
+  String _messageForAuthFailure(dynamic e) {
+    if (e is DioException && isDioTransportFailure(e)) {
+      return dioTransportUserMessage(e);
+    }
+    return _extractErrorMessage(e);
   }
 
   Future<void> _hydrateKycResumeFromBackend(UserModel user) async {
@@ -220,7 +228,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         ));
       }
     } catch (e) {
-      final errorMsg = _extractErrorMessage(e);
+      final errorMsg = _messageForAuthFailure(e);
       final existingToken = await secureStorage.read(key: 'token');
       final hasExistingToken = existingToken != null && existingToken.isNotEmpty;
       if (!hasExistingToken) {
@@ -402,7 +410,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(const AuthFailure('User not found'));
       }
     } catch (e) {
-      emit(AuthFailure(_extractErrorMessage(e)));
+      emit(AuthFailure(_messageForAuthFailure(e)));
     }
   }
 

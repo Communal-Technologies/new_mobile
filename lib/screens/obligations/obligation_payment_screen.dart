@@ -1,12 +1,17 @@
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/utils/app_currency.dart';
+import 'package:communal_mobile/core/utils/money_formatter.dart';
+import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
+import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
-
-import 'package:communal_mobile/core/utils/money_formatter.dart';
-import 'package:communal_mobile/core/widgets/space.dart';
-import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
 
 class ObligationPaymentScreen extends StatefulWidget {
   const ObligationPaymentScreen({super.key, required this.obligation});
@@ -21,30 +26,93 @@ class ObligationPaymentScreen extends StatefulWidget {
 class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
   late final TextEditingController _amountController;
   final TextEditingController _noteController = TextEditingController();
-  int _selectedMethodIndex = 0;
 
-  final List<_PaymentMethodOption> _methods = [
-    _PaymentMethodOption(
-      title: 'Wallet',
-      subtitle: 'Balance: ₦450,000',
-      icon: Iconsax.wallet_check,
-      highlightColor: const Color(0xFF7434FF),
-    ),
-    _PaymentMethodOption(
-      title: 'Debit Card',
-      subtitle: 'Pay with your card',
-      icon: Iconsax.card,
-      highlightColor: const Color(0xFFFFB65C),
-    ),
-    _PaymentMethodOption(
-      title: 'Bank Transfer',
-      subtitle: 'Pay from your bank',
-      icon: Iconsax.building,
-      highlightColor: const Color(0xFF5B8DFF),
-    ),
-  ];
+  final MemberObligationsRepository _obligationsRepo =
+      MemberObligationsRepository(getIt());
+  List<CooperativeCashBankAccount> _cashRepos = const [];
+  bool _loadingCashRepos = true;
+  CooperativeCashBankAccount? _selectedCashRepo;
+  String? _cashRepoError;
 
   static const int _noteLimit = 100;
+
+  Widget _buildNipTransferInfo(AuthState auth) {
+    final walletLine = auth is AuthAuthenticated
+        ? '${currencySymbolForUser(auth.user)}${formatMoney(auth.user.walletBalanceKobo / 100)}'
+        : '—';
+    final hasRepo = _cashRepos.isNotEmpty;
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: hasRepo ? Colors.white : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: hasRepo ? const Color(0xFF7434FF) : Colors.grey.shade300,
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40.w,
+            height: 40.w,
+            decoration: BoxDecoration(
+              color: const Color(0xFF5B8DFF).withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            child: Icon(
+              Iconsax.building,
+              color: const Color(0xFF5B8DFF),
+              size: 22.sp,
+            ),
+          ),
+          hSpace(14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Transfer (NIP)',
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                ),
+                vSpace(4),
+                Text(
+                  hasRepo
+                      ? 'Payment is sent from your Communal account to your cooperative’s bank account. Anchor settles this as an outbound NIP transfer.'
+                      : 'Your cooperative has not published an active bank account to receive this payment yet.',
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                vSpace(6),
+                Text(
+                  'Available in Communal: $walletLine',
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF0F1D40),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -53,6 +121,36 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
       text: widget.obligation.perInstallment.round().toString(),
     );
     _noteController.addListener(() => setState(() {}));
+    _loadCashRepos();
+  }
+
+  Future<void> _loadCashRepos() async {
+    setState(() {
+      _loadingCashRepos = true;
+      _cashRepoError = null;
+    });
+    try {
+      final rows = await _obligationsRepo.fetchCooperativeCashBankAccounts();
+      if (!mounted) return;
+      setState(() {
+        _cashRepos = rows;
+        _selectedCashRepo = rows.length == 1 ? rows.first : null;
+        _loadingCashRepos = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      var msg = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '').trim();
+      if (msg.isEmpty) {
+        msg =
+            'Unable to load cooperative bank accounts. Please try again or contact your cooperative administrator.';
+      }
+      setState(() {
+        _cashRepos = const [];
+        _selectedCashRepo = null;
+        _loadingCashRepos = false;
+        _cashRepoError = msg;
+      });
+    }
   }
 
   @override
@@ -65,6 +163,12 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
   @override
   Widget build(BuildContext context) {
     final outstanding = formatMoney(widget.obligation.balance);
+
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, auth) {
+        final bankSubtitleExtra = _loadingCashRepos
+            ? 'Loading cooperative accounts…'
+            : (_cashRepoError ?? '');
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(
@@ -95,7 +199,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildOverviewCard(outstanding),
+              _buildOverviewCard(outstanding, auth),
               vSpace(24),
               _buildAmountInput(),
               vSpace(4),
@@ -112,18 +216,60 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                   color: Colors.black,
                 ),
               ),
+              if (bankSubtitleExtra.isNotEmpty) ...[
+                vSpace(6),
+                Text(
+                  bankSubtitleExtra,
+                  style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
+                ),
+              ],
               vSpace(12),
-              Column(
-                children: List.generate(
-                  _methods.length,
-                  (index) => Padding(
-                    padding: EdgeInsets.only(
-                      bottom: index == _methods.length - 1 ? 0 : 12.h,
-                    ),
-                    child: _buildPaymentMethodTile(index),
+              _buildNipTransferInfo(auth),
+              if (_cashRepos.length > 1) ...[
+                vSpace(12),
+                Text(
+                  'Cooperative account',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
                   ),
                 ),
-              ),
+                vSpace(8),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12.w),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14.r),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<CooperativeCashBankAccount>(
+                      isExpanded: true,
+                      value: _selectedCashRepo,
+                      hint: const Text('Select account'),
+                      items: _cashRepos
+                          .map(
+                            (e) => DropdownMenuItem(
+                              value: e,
+                              child: Text(
+                                '${e.accountName} • ${e.accountNumber}',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) => setState(() => _selectedCashRepo = v),
+                    ),
+                  ),
+                ),
+              ] else if (_cashRepos.length == 1) ...[
+                vSpace(10),
+                Text(
+                  'Paying into: ${_cashRepos.first.accountName} • ${_cashRepos.first.accountNumber}',
+                  style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade700),
+                ),
+              ],
               vSpace(24),
               Text(
                 'Narration (Optional)',
@@ -163,9 +309,21 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
         ),
       ),
     );
+      },
+    );
   }
 
-  Widget _buildOverviewCard(String outstanding) {
+  String _cooperativeSubtitle(AuthState auth) {
+    if (auth is AuthAuthenticated) {
+      final line = auth.user.cooperativeDisplayName.trim();
+      if (line.isNotEmpty && line != '—') return line;
+    }
+    final id = widget.obligation.cooperativeId.trim();
+    if (id.isNotEmpty) return id;
+    return 'Cooperative';
+  }
+
+  Widget _buildOverviewCard(String outstanding, AuthState auth) {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(18.w),
@@ -197,7 +355,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
             ),
           ),
           Text(
-            'Total Lenders Forum',
+            _cooperativeSubtitle(auth),
             style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
           ),
           vSpace(16),
@@ -267,81 +425,6 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
     );
   }
 
-  Widget _buildPaymentMethodTile(int index) {
-    final method = _methods[index];
-    final isSelected = _selectedMethodIndex == index;
-
-    return GestureDetector(
-      onTap: () => setState(() => _selectedMethodIndex = index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: EdgeInsets.all(16.w),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF7434FF) : Colors.transparent,
-            width: 2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40.w,
-              height: 40.w,
-              decoration: BoxDecoration(
-                color: method.highlightColor.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-              child: Icon(
-                method.icon,
-                color: method.highlightColor,
-                size: 22.sp,
-              ),
-            ),
-            hSpace(14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    method.title,
-                    style: TextStyle(
-                      fontSize: 15.sp,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black,
-                    ),
-                  ),
-                  vSpace(4),
-                  Text(
-                    method.subtitle,
-                    style: TextStyle(
-                      fontSize: 13.sp,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: isSelected
-                  ? const Color(0xFF7434FF)
-                  : Colors.grey.shade400,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildNarrationField() {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
@@ -380,18 +463,41 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
     final amount =
         double.tryParse(_amountController.text) ??
         widget.obligation.perInstallment;
-    final method = _methods[_selectedMethodIndex].title;
-    if (method.toLowerCase() != 'wallet') {
+    if (amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid amount to continue.')),
+      );
+      return;
+    }
+
+    if (widget.obligation.category == 'Equity') {
+      final maxPay = widget.obligation.balance;
+      if (amount > maxPay + 0.009) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Equity payments cannot exceed your remaining cap (₦${formatMoney(maxPay)}).',
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
+    if (_cashRepos.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Only wallet payment is currently available for obligations.'),
+          content: Text('No cooperative bank account is available for this payment.'),
         ),
       );
       return;
     }
-    if (amount <= 0) {
+
+    final CooperativeCashBankAccount? cash =
+        _cashRepos.length == 1 ? _cashRepos.first : _selectedCashRepo;
+    if (cash == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid amount to continue.')),
+        const SnackBar(content: Text('Select the cooperative account to pay into.')),
       );
       return;
     }
@@ -401,24 +507,12 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
       extra: {
         'obligation': widget.obligation,
         'amount': amount,
-        'method': method,
+        'method': 'NIP transfer',
+        'cash_account': cash.toJson(),
+        'cash_repository_id': cash.id,
       },
     );
   }
-}
-
-class _PaymentMethodOption {
-  const _PaymentMethodOption({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.highlightColor,
-  });
-
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color highlightColor;
 }
 
 class _MetricBlock extends StatelessWidget {

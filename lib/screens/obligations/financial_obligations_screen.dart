@@ -142,6 +142,15 @@ class _FinancialObligationsScreenState
   }
 
   Widget _buildHeader(ThemeData theme) {
+    final auth = context.watch<AuthBloc>().state;
+    final coopLine = auth is AuthAuthenticated
+        ? () {
+            final line = auth.user.cooperativeDisplayName.trim();
+            if (line.isNotEmpty && line != '—') return line;
+            return 'Cooperative';
+          }()
+        : 'Cooperative';
+
     return Row(
       children: [
         _roundedIcon(
@@ -164,7 +173,7 @@ class _FinancialObligationsScreenState
               ),
               vSpace(4),
               Text(
-                'Total Lenders Forum',
+                coopLine,
                 style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
               ),
             ],

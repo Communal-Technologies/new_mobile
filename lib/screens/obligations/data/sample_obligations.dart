@@ -99,6 +99,30 @@ class Obligation {
   String get installmentsLabel =>
       'Installments paid: $installmentsPaid of $totalInstallments';
 
+  /// Minimal instance for success / receipt flows that only need title + category.
+  factory Obligation.forSuccessSummary({
+    required String title,
+    required String category,
+  }) {
+    final now = DateTime.now();
+    return Obligation(
+      category: category,
+      status: 'Completed',
+      title: title,
+      description: '',
+      paidAmount: 0,
+      totalAmount: 0,
+      perInstallment: 0,
+      installmentsPaid: 0,
+      totalInstallments: 0,
+      startDate: now,
+      endDate: now,
+      nextDueDate: now,
+      frequency: '',
+      payments: const [],
+    );
+  }
+
   String get nextDueDateLabel => DateFormat('MMM dd, yyyy').format(nextDueDate);
   String get startDateLabel => DateFormat('MMM dd, yyyy').format(startDate);
   String get endDateLabel => DateFormat('MMM dd, yyyy').format(endDate);
@@ -116,25 +140,60 @@ class Obligation {
     final month = _asInt(obligation['month']);
     final year = _asInt(obligation['year']);
     final now = DateTime.now();
-    final dueDate = (month > 0 && year > 0)
+    final createdAt = _parseDate(obligation['created_at']);
+    final hasPeriod = month > 0 && year > 0;
+    final dueDate = hasPeriod
         ? DateTime(year, month, 1)
-        : DateTime(now.year, now.month, 1);
+        : DateTime(
+            createdAt?.year ?? now.year,
+            createdAt?.month ?? now.month,
+            createdAt?.day ?? 1,
+          );
     final amountMajor = amount / 100;
     final amountPaidMajor = amountPaid / 100;
-    final minPayableMajor = _asDouble(account?['min_amount_payable']) / 100;
+    final minPayableRaw = _asDouble(account?['min_amount_payable']);
+    final minPayableMajor = minPayableRaw / 100;
+    final totalShares = _asInt(account?['total_shares']);
+    final costPerShareMajor = _asDouble(account?['cost_per_share']) / 100;
     final category = _resolveCategory(account?['account_type']?.toString());
     final title = account?['account_name']?.toString().trim().isNotEmpty == true
         ? account!['account_name'].toString()
         : '$category Obligation';
     final status = _resolveStatus(amountPaid: amountPaid, amount: amount, dueDate: dueDate);
-    final installmentsPaid =
-        amount <= 0 ? 0 : (amountPaid / amount).floor().clamp(0, 9999);
+
+    var totalInstallments = 1;
+    if (totalShares > 0) {
+      totalInstallments = totalShares.clamp(1, 9999);
+    } else if (minPayableRaw > 0 && amount > 0) {
+      totalInstallments = (amount / minPayableRaw).ceil().clamp(1, 9999);
+    }
+
+    var perInstallment = minPayableMajor;
+    if (perInstallment <= 0 && totalShares > 0 && costPerShareMajor > 0) {
+      perInstallment = costPerShareMajor;
+    } else if (perInstallment <= 0 && totalInstallments > 0 && amountMajor > 0) {
+      perInstallment = amountMajor / totalInstallments;
+    } else if (perInstallment <= 0 && amountMajor > 0) {
+      perInstallment = amountMajor;
+    }
+
+    var installmentsPaid = 0;
+    if (perInstallment > 0) {
+      installmentsPaid = (amountPaidMajor / perInstallment).floor();
+    } else if (amount > 0) {
+      installmentsPaid = (amountPaid / amount).floor();
+    }
+    installmentsPaid = installmentsPaid.clamp(0, totalInstallments);
+
+    final startDate = createdAt != null
+        ? DateTime(createdAt.year, createdAt.month, createdAt.day)
+        : dueDate;
 
     return Obligation(
       id: obligation['id']?.toString(),
       accountCode: obligation['account_code']?.toString() ?? '',
       cooperativeId: obligation['cooperative_id']?.toString() ?? '',
-      createdAt: _parseDate(obligation['created_at']),
+      createdAt: createdAt,
       updatedAt: _parseDate(obligation['updated_at']),
       category: category,
       status: status,
@@ -142,10 +201,10 @@ class Obligation {
       description: account?['account_name']?.toString() ?? 'Member financial obligation',
       paidAmount: amountPaidMajor,
       totalAmount: amountMajor,
-      perInstallment: minPayableMajor > 0 ? minPayableMajor : (amountMajor > 0 ? amountMajor : 0),
+      perInstallment: perInstallment,
       installmentsPaid: installmentsPaid,
-      totalInstallments: 1,
-      startDate: dueDate,
+      totalInstallments: totalInstallments,
+      startDate: startDate,
       endDate: dueDate,
       nextDueDate: dueDate,
       frequency: 'Monthly',

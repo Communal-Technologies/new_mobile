@@ -433,6 +433,48 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
     // Always validate password with backend for security
     // This ensures account locking works correctly and passwords are never stored locally
     try {
+      final existingToken = await _secureStorage.read(key: 'token');
+      final hasExistingToken = existingToken != null && existingToken.isNotEmpty;
+
+      // App lock path: verify password against authenticated session, do NOT call /login.
+      // Calling /login on same device can incorrectly trigger takeover OTP because active
+      // tokens already exist for this account.
+      if (widget.isAppLock && hasExistingToken) {
+        setState(() {
+          _isAuthenticating = true;
+          _waitingForBackendValidation = false;
+          _passwordError = null;
+        });
+
+        final verified = await _authRepository.verifySessionUnlockPassword(_password);
+        if (!mounted) return;
+
+        if (verified) {
+          final securityCubit = context.read<SecurityCubit>();
+          _isAuthenticating = false;
+          _password = '';
+          _pinController.clear();
+          _passwordError = null;
+          setState(() {});
+
+          securityCubit.unlockApp();
+          securityCubit.recordActivity();
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            context.go('/home');
+          });
+        } else {
+          setState(() {
+            _isAuthenticating = false;
+            _password = '';
+            _pinController.clear();
+            _passwordError = 'Incorrect PIN';
+          });
+        }
+        return;
+      }
+
       // Get stored login from secure storage
       final storedLogin = await _secureStorage.read(key: 'login');
       final login = storedLogin ?? widget.phoneNumber;
@@ -567,12 +609,40 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
             }
             return false; // Already processed this error
           }
+          if (previous is AuthSessionTakeoverPending) {
+            if (_lastProcessedError != current.error) {
+              _lastProcessedError = current.error;
+              return true;
+            }
+            return false;
+          }
+          return false;
+        } else if (current is AuthSessionTakeoverPending) {
+          if (_waitingForBackendValidation &&
+              previous is AuthVerifyingCredentials &&
+              _isAuthenticating) {
+            return true;
+          }
           return false;
         }
         return false;
       },
       listener: (context, state) {
         // Handle authentication responses
+        if (state is AuthSessionTakeoverPending) {
+          _lastProcessedError = null;
+          if (mounted) {
+            setState(() {
+              _isAuthenticating = false;
+              _waitingForBackendValidation = false;
+              _password = '';
+              _pinController.clear();
+              _passwordError = null;
+            });
+            context.push('/session-takeover');
+          }
+          return;
+        }
         if (state is AuthAuthenticated) {
           // CRITICAL SECURITY CHECK: Only unlock if ALL conditions are met:
           // 1. We're waiting for backend validation (_waitingForBackendValidation = true)

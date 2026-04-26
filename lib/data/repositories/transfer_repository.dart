@@ -36,16 +36,38 @@ class TransferSuggestion {
   }
 }
 
+class TransferBank {
+  const TransferBank({
+    required this.name,
+    required this.nipCode,
+  });
+
+  final String name;
+  final String nipCode;
+
+  factory TransferBank.fromJson(Map<String, dynamic> json) {
+    final attr = (json['attributes'] is Map)
+        ? Map<String, dynamic>.from(json['attributes'] as Map)
+        : <String, dynamic>{};
+    return TransferBank(
+      name: attr['name']?.toString() ?? '',
+      nipCode: attr['nipCode']?.toString() ?? '',
+    );
+  }
+}
+
 class AccountVerificationResult {
   const AccountVerificationResult({
     required this.accountName,
     required this.accountNumber,
     required this.bankCode,
+    this.bankName,
   });
 
   final String accountName;
   final String accountNumber;
   final String bankCode;
+  final String? bankName;
 
   factory AccountVerificationResult.fromJson(
     Map<String, dynamic> json, {
@@ -59,6 +81,9 @@ class AccountVerificationResult {
       accountName: attr['accountName']?.toString() ?? '',
       accountNumber: attr['accountNumber']?.toString() ?? fallbackAccountNumber,
       bankCode: attr['bankCode']?.toString() ?? fallbackBankCode,
+      bankName: (attr['bank'] is Map)
+          ? (attr['bank']['name']?.toString())
+          : null,
     );
   }
 }
@@ -183,6 +208,25 @@ class TransferRepository {
   TransferRepository(this._dioClient);
 
   final DioClient _dioClient;
+
+  Future<List<TransferBank>> fetchBanks() async {
+    try {
+      final response = await _dioClient.get('/transfer/banks');
+      final data = response.data;
+      if (data is! Map || data['status'] != true) {
+        throw Exception('Could not load bank list.');
+      }
+      final raw = data['data'];
+      if (raw is! List) return const [];
+      return raw
+          .whereType<Map>()
+          .map((e) => TransferBank.fromJson(Map<String, dynamic>.from(e)))
+          .where((e) => e.name.trim().isNotEmpty && e.nipCode.trim().isNotEmpty)
+          .toList(growable: false);
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
 
   Future<List<TransferSuggestion>> fetchBankSuggestions({String? query}) async {
     try {

@@ -1,5 +1,6 @@
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/constants/images.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/repositories/transactions_repository.dart';
@@ -112,11 +113,12 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
             if (_loading)
               Padding(
                 padding: EdgeInsets.symmetric(vertical: 24.h),
-                child: const Center(
-                  child: SizedBox(
-                    width: 28,
-                    height: 28,
-                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                child: Center(
+                  child: Image.asset(
+                    Images.loader,
+                    width: 52.w,
+                    height: 52.w,
+                    fit: BoxFit.contain,
                   ),
                 ),
               )

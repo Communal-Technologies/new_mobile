@@ -52,7 +52,7 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
       final list = await _repo.fetchPersonalHistoryMerged(auth.user);
       if (!mounted) return;
       setState(() {
-        _items = list.take(4).toList(growable: false);
+        _items = list.take(5).toList(growable: false);
         _loading = false;
       });
     } catch (e) {

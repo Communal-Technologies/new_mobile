@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'package:communal_mobile/core/utils/money_formatter.dart';
 
 class PaymentRecord {
   PaymentRecord({
@@ -40,6 +41,11 @@ class FineRecord {
 
 class Obligation {
   Obligation({
+    this.id,
+    this.accountCode = '',
+    this.cooperativeId = '',
+    this.createdAt,
+    this.updatedAt,
     required this.category,
     required this.status,
     required this.title,
@@ -58,6 +64,11 @@ class Obligation {
     this.infoNote,
   });
 
+  final String? id;
+  final String accountCode;
+  final String cooperativeId;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
   final String category;
   final String status;
   final String title;
@@ -91,10 +102,102 @@ class Obligation {
   String get nextDueDateLabel => DateFormat('MMM dd, yyyy').format(nextDueDate);
   String get startDateLabel => DateFormat('MMM dd, yyyy').format(startDate);
   String get endDateLabel => DateFormat('MMM dd, yyyy').format(endDate);
+  String get createdAtLabel =>
+      createdAt == null ? 'N/A' : DateFormat('MMM dd, yyyy').format(createdAt!);
+  String get updatedAtLabel =>
+      updatedAt == null ? 'N/A' : DateFormat('MMM dd, yyyy').format(updatedAt!);
+
+  factory Obligation.fromBackend({
+    required Map<String, dynamic> obligation,
+    Map<String, dynamic>? account,
+  }) {
+    final amount = _asDouble(obligation['amount']);
+    final amountPaid = _asDouble(obligation['amount_paid']);
+    final month = _asInt(obligation['month']);
+    final year = _asInt(obligation['year']);
+    final now = DateTime.now();
+    final dueDate = (month > 0 && year > 0)
+        ? DateTime(year, month, 1)
+        : DateTime(now.year, now.month, 1);
+    final amountMajor = amount / 100;
+    final amountPaidMajor = amountPaid / 100;
+    final minPayableMajor = _asDouble(account?['min_amount_payable']) / 100;
+    final category = _resolveCategory(account?['account_type']?.toString());
+    final title = account?['account_name']?.toString().trim().isNotEmpty == true
+        ? account!['account_name'].toString()
+        : '$category Obligation';
+    final status = _resolveStatus(amountPaid: amountPaid, amount: amount, dueDate: dueDate);
+    final installmentsPaid =
+        amount <= 0 ? 0 : (amountPaid / amount).floor().clamp(0, 9999);
+
+    return Obligation(
+      id: obligation['id']?.toString(),
+      accountCode: obligation['account_code']?.toString() ?? '',
+      cooperativeId: obligation['cooperative_id']?.toString() ?? '',
+      createdAt: _parseDate(obligation['created_at']),
+      updatedAt: _parseDate(obligation['updated_at']),
+      category: category,
+      status: status,
+      title: title,
+      description: account?['account_name']?.toString() ?? 'Member financial obligation',
+      paidAmount: amountPaidMajor,
+      totalAmount: amountMajor,
+      perInstallment: minPayableMajor > 0 ? minPayableMajor : (amountMajor > 0 ? amountMajor : 0),
+      installmentsPaid: installmentsPaid,
+      totalInstallments: 1,
+      startDate: dueDate,
+      endDate: dueDate,
+      nextDueDate: dueDate,
+      frequency: 'Monthly',
+      payments: const [],
+      fines: const [],
+    );
+  }
 
   static String _currencyFormat(double value) {
-    final formatter = NumberFormat('#,##0', 'en_NG');
-    return formatter.format(value);
+    return formatMoney(value);
+  }
+
+  static double _asDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value == null) return 0;
+    return double.tryParse(value.toString()) ?? 0;
+  }
+
+  static int _asInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value == null) return 0;
+    return int.tryParse(value.toString()) ?? 0;
+  }
+
+  static String _resolveCategory(String? accountType) {
+    switch ((accountType ?? '').trim()) {
+      case '1523':
+        return 'Equity';
+      case '1524':
+        return 'Patronage';
+      case '1525':
+        return 'Custom';
+      default:
+        return 'Custom';
+    }
+  }
+
+  static String _resolveStatus({
+    required double amountPaid,
+    required double amount,
+    required DateTime dueDate,
+  }) {
+    if (amount > 0 && amountPaid >= amount) return 'Completed';
+    if (dueDate.isBefore(DateTime.now())) return 'Overdue';
+    return 'Active';
+  }
+
+  static DateTime? _parseDate(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is DateTime) return raw;
+    return DateTime.tryParse(raw.toString());
   }
 }
 

@@ -1,14 +1,63 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
 
-class ObligationDetailScreen extends StatelessWidget {
+class ObligationDetailScreen extends StatefulWidget {
   const ObligationDetailScreen({super.key, required this.obligation});
 
   final Obligation obligation;
+
+  @override
+  State<ObligationDetailScreen> createState() => _ObligationDetailScreenState();
+}
+
+class _ObligationDetailScreenState extends State<ObligationDetailScreen> {
+  final MemberObligationsRepository _repository =
+      MemberObligationsRepository(getIt());
+  late Obligation _obligation;
+  List<PaymentRecord> _history = const [];
+  bool _loadingHistory = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _obligation = widget.obligation;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadDetails());
+  }
+
+  Future<void> _loadDetails() async {
+    final auth = context.read<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) return;
+    setState(() => _loadingHistory = true);
+    try {
+      final allObligations = await _repository.fetchMemberObligations(auth.user);
+      final updated = allObligations.firstWhere(
+        (e) => e.accountCode == _obligation.accountCode,
+        orElse: () => _obligation,
+      );
+      final history = await _repository.fetchObligationPaymentHistory(
+        user: auth.user,
+        obligation: updated,
+      );
+      if (!mounted) return;
+      setState(() {
+        _obligation = updated;
+        _history = history;
+        _loadingHistory = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingHistory = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +65,7 @@ class ObligationDetailScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      appBar: _DetailAppBar(title: obligation.title),
+      appBar: _DetailAppBar(title: _obligation.title),
       body: SafeArea(
         top: false,
         child: Column(
@@ -27,23 +76,29 @@ class ObligationDetailScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _SummaryCard(obligation: obligation),
+                    _SummaryCard(obligation: _obligation),
                     vSpace(20),
-                    _AboutSection(obligation: obligation),
-                    if (obligation.fines.isNotEmpty) ...[
+                    _AboutSection(
+                      obligation: _obligation,
+                      paymentHistory: _history,
+                    ),
+                    if (_obligation.fines.isNotEmpty) ...[
                       vSpace(20),
-                      _FinesSection(fine: obligation.fines.first),
+                      _FinesSection(fine: _obligation.fines.first),
                     ],
                     vSpace(20),
-                    _PaymentHistorySection(obligation: obligation),
+                    _PaymentHistorySection(
+                      payments: _history,
+                      loading: _loadingHistory,
+                    ),
                     vSpace(20),
-                    _LoanPromoCard(note: obligation.infoNote),
+                    _LoanPromoCard(note: _obligation.infoNote),
                     vSpace(20),
                   ],
                 ),
               ),
             ),
-            _BottomActions(obligation: obligation, theme: theme),
+            _BottomActions(obligation: _obligation, theme: theme),
           ],
         ),
       ),
@@ -144,10 +199,10 @@ class _SummaryCard extends StatelessWidget {
                     ),
                     vSpace(4),
                     Text(
-                      '₦${obligation.totalAmount.toStringAsFixed(0)}',
+                      obligation.amountBreakdown.split(' of ').last,
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 22.sp,
+                        fontSize: 24.sp,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -208,15 +263,26 @@ class _AmountColumn extends StatelessWidget {
         ),
         vSpace(4),
         Text(
-          '₦${value.toStringAsFixed(0)}',
+          '₦${_fmt(value)}',
           style: TextStyle(
             color: Colors.white,
-            fontSize: 18.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w700,
           ),
         ),
       ],
     );
+  }
+
+  String _fmt(double value) {
+    final fixed = value.toStringAsFixed(2);
+    final parts = fixed.split('.');
+    final whole = parts.first.replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]},',
+    );
+    if (parts.length < 2 || parts[1] == '00') return whole;
+    return '$whole.${parts[1]}';
   }
 }
 
@@ -264,9 +330,13 @@ class _StatusChip extends StatelessWidget {
 }
 
 class _AboutSection extends StatelessWidget {
-  const _AboutSection({required this.obligation});
+  const _AboutSection({
+    required this.obligation,
+    required this.paymentHistory,
+  });
 
   final Obligation obligation;
+  final List<PaymentRecord> paymentHistory;
 
   @override
   Widget build(BuildContext context) {
@@ -278,7 +348,7 @@ class _AboutSection extends StatelessWidget {
           Text(
             obligation.description,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 15.sp,
               color: Colors.grey.shade700,
               height: 1.4,
             ),
@@ -288,15 +358,15 @@ class _AboutSection extends StatelessWidget {
             children: [
               Expanded(
                 child: _InfoTile(
-                  label: 'Start Date',
-                  value: obligation.startDateLabel,
+                  label: 'Created At',
+                  value: obligation.createdAtLabel,
                 ),
               ),
               hSpace(16),
               Expanded(
                 child: _InfoTile(
-                  label: 'End Date',
-                  value: obligation.endDateLabel,
+                  label: 'Updated At',
+                  value: obligation.updatedAtLabel,
                 ),
               ),
             ],
@@ -307,7 +377,7 @@ class _AboutSection extends StatelessWidget {
               Expanded(
                 child: _InfoTile(
                   label: 'Frequency',
-                  value: obligation.frequency,
+                  value: _deriveFrequency(paymentHistory, obligation.frequency),
                 ),
               ),
               hSpace(16),
@@ -322,6 +392,19 @@ class _AboutSection extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _deriveFrequency(List<PaymentRecord> records, String fallback) {
+    if (records.length < 2) {
+      final text = fallback.trim();
+      return text.isEmpty ? 'Not specified' : text;
+    }
+    final sorted = [...records]..sort((a, b) => b.date.compareTo(a.date));
+    final days = sorted.first.date.difference(sorted[1].date).inDays.abs();
+    if (days <= 10) return 'Weekly';
+    if (days <= 45) return 'Monthly';
+    if (days <= 110) return 'Quarterly';
+    return 'Irregular';
   }
 }
 
@@ -444,9 +527,13 @@ class _FinesSection extends StatelessWidget {
 }
 
 class _PaymentHistorySection extends StatelessWidget {
-  const _PaymentHistorySection({required this.obligation});
+  const _PaymentHistorySection({
+    required this.payments,
+    required this.loading,
+  });
 
-  final Obligation obligation;
+  final List<PaymentRecord> payments;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
@@ -454,15 +541,23 @@ class _PaymentHistorySection extends StatelessWidget {
       title: 'Payment History',
       child: Column(
         children: [
-          for (int i = 0; i < obligation.payments.length; i++) ...[
-            _PaymentTile(record: obligation.payments[i]),
-            if (i != obligation.payments.length - 1) vSpace(12),
-          ],
+          if (loading)
+            const Center(child: CircularProgressIndicator())
+          else if (payments.isEmpty)
+            Text(
+              'No payment history yet.',
+              style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
+            )
+          else
+            for (int i = 0; i < payments.length; i++) ...[
+              _PaymentTile(record: payments[i]),
+              if (i != payments.length - 1) vSpace(12),
+            ],
           vSpace(12),
           Align(
             alignment: Alignment.centerRight,
             child: Text(
-              'View All (${obligation.payments.length})',
+              'Total records (${payments.length})',
               style: TextStyle(
                 fontSize: 13.sp,
                 color: const Color(0xFF5B5CE2),
@@ -586,12 +681,16 @@ class _LoanPromoCard extends StatelessWidget {
             onPressed: () {},
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF5B5CE2),
+              foregroundColor: Colors.white,
               minimumSize: Size(double.infinity, 48.h),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14.r),
               ),
             ),
-            child: const Text('View Loan Options'),
+            child: const Text(
+              'View Loan Options',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),

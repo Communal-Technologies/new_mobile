@@ -20,7 +20,7 @@ class _DownloadStatementBottomSheetState
     extends State<DownloadStatementBottomSheet> {
   String _selectedPeriod = 'Last Week';
   String _selectedDelivery = 'Download';
-  String _selectedFormat = 'CSV (Excel)';
+  String _selectedFormat = 'PDF';
   late final TextEditingController _emailController;
 
   @override
@@ -89,7 +89,7 @@ class _DownloadStatementBottomSheetState
                         ),
                         vSpace(6),
                         Text(
-                          'Export transactions in the selected period as a CSV file you can open in Excel or Sheets.',
+                          'Generate your statement as PDF or CSV. Email delivery is handled securely by the backend service.',
                           style: TextStyle(
                             fontSize: 15.sp,
                             color: Colors.grey.shade600,
@@ -177,7 +177,7 @@ class _DownloadStatementBottomSheetState
                     ),
                     hSpace(8),
                     Text(
-                      'Email (optional)',
+                      'Email',
                       style: TextStyle(
                         fontSize: 17.sp,
                         fontWeight: FontWeight.w600,
@@ -212,7 +212,7 @@ class _DownloadStatementBottomSheetState
                 ),
                 vSpace(8),
                 Text(
-                  'Email sending from the app is not wired yet — export still uses your device share sheet.',
+                  'For security, statements are generated and sent by the backend only.',
                   style: TextStyle(
                     fontSize: 13.sp,
                     color: Colors.grey.shade600,
@@ -242,11 +242,11 @@ class _DownloadStatementBottomSheetState
               Row(
                 children: [
                   Expanded(
-                    child: _buildFormatChip('CSV (Excel)', Icons.table_chart, theme),
+                    child: _buildFormatChip('PDF', Icons.picture_as_pdf, theme),
                   ),
                   hSpace(10),
                   Expanded(
-                    child: _buildFormatChip('CSV (plain)', Icons.text_snippet, theme),
+                    child: _buildFormatChip('CSV', Icons.table_chart, theme),
                   ),
                 ],
               ),
@@ -270,7 +270,7 @@ class _DownloadStatementBottomSheetState
                       ),
                       hSpace(8),
                       Text(
-                        'Export & share',
+                        'Continue',
                         style: TextStyle(
                           fontSize: 17.sp,
                           fontWeight: FontWeight.w600,

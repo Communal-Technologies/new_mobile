@@ -30,6 +30,7 @@ import 'package:communal_mobile/screens/obligations/obligation_detail_screen.dar
 import 'package:communal_mobile/screens/obligations/obligation_payment_screen.dart';
 import 'package:communal_mobile/screens/obligations/obligation_confirm_payment_screen.dart';
 import 'package:communal_mobile/screens/obligations/obligation_payment_success_screen.dart';
+import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
 import 'package:communal_mobile/screens/community/community_screen.dart';
 import 'package:communal_mobile/screens/community/community_map_screen.dart';
 import 'package:communal_mobile/screens/community/community_detail_screen.dart';
@@ -39,6 +40,7 @@ import 'package:communal_mobile/screens/community/data/sample_community_location
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 import 'package:communal_mobile/screens/transactions/transaction_details_screen.dart';
 import 'package:communal_mobile/screens/transactions/transaction_history_screen.dart';
+import 'package:communal_mobile/screens/obligations/data/obligation_nip_settlement.dart';
 import 'package:communal_mobile/screens/transactions/transaction_receipt_screen.dart';
 import 'package:communal_mobile/screens/transactions/transfer_external_screen.dart';
 import 'package:communal_mobile/screens/transactions/transfer_internal_amount_screen.dart';
@@ -506,6 +508,8 @@ final GoRouter appRouter = GoRouter(
         Obligation obligation = SampleObligations.all.first;
         double amount = obligation.perInstallment;
         String method = 'Wallet';
+        CooperativeCashBankAccount? cashAccount;
+        String? cashRepositoryId;
 
         final extra = state.extra;
         if (extra is Map) {
@@ -521,12 +525,25 @@ final GoRouter appRouter = GoRouter(
           if (maybeMethod is String) {
             method = maybeMethod;
           }
+          final rawCash = extra['cash_account'];
+          if (rawCash is Map) {
+            cashAccount = CooperativeCashBankAccount.fromJson(
+              Map<String, dynamic>.from(rawCash),
+            );
+          }
+          final rawRid = extra['cash_repository_id'];
+          if (rawRid != null) {
+            final rid = rawRid.toString().trim();
+            cashRepositoryId = rid.isEmpty ? null : rid;
+          }
         }
 
         return ObligationConfirmPaymentScreen(
           obligation: obligation,
           amount: amount,
           method: method,
+          cashAccount: cashAccount,
+          cashRepositoryId: cashRepositoryId,
         );
       },
     ),
@@ -634,12 +651,19 @@ final GoRouter appRouter = GoRouter(
           final narration = (extra['narration']?.toString() ?? '').trim();
           final saveAsBeneficiary = extra['saveAsBeneficiary'] == true;
           final useExternalNipFlow = extra['useExternalNipFlow'] == true;
+          final settlementRaw = extra['obligationNipSettlement'];
+          final obligationNipSettlement = settlementRaw is Map
+              ? ObligationNipSettlement.tryFromJson(
+                  Map<String, dynamic>.from(settlementRaw),
+                )
+              : null;
           return TransferInternalReviewScreen(
             recipient: fav,
             amountKobo: amountKobo,
             narration: narration,
             saveAsBeneficiary: saveAsBeneficiary,
             useExternalNipFlow: useExternalNipFlow,
+            obligationNipSettlement: obligationNipSettlement,
           );
         }
         return TransferInternalReviewScreen(
@@ -653,6 +677,7 @@ final GoRouter appRouter = GoRouter(
           amountKobo: 0,
           narration: '',
           saveAsBeneficiary: false,
+          obligationNipSettlement: null,
         );
       },
     ),
@@ -669,12 +694,19 @@ final GoRouter appRouter = GoRouter(
           final narration = (extra['narration']?.toString() ?? '').trim();
           final saveAsBeneficiary = extra['saveAsBeneficiary'] == true;
           final useExternalNipFlow = extra['useExternalNipFlow'] == true;
+          final settlementRaw = extra['obligationNipSettlement'];
+          final obligationNipSettlement = settlementRaw is Map
+              ? ObligationNipSettlement.tryFromJson(
+                  Map<String, dynamic>.from(settlementRaw),
+                )
+              : null;
           return TransferInternalVerifyScreen(
             recipient: fav,
             amountKobo: amountKobo,
             narration: narration,
             saveAsBeneficiary: saveAsBeneficiary,
             useExternalNipFlow: useExternalNipFlow,
+            obligationNipSettlement: obligationNipSettlement,
           );
         }
         return TransferInternalVerifyScreen(
@@ -688,6 +720,7 @@ final GoRouter appRouter = GoRouter(
           amountKobo: 0,
           narration: '',
           saveAsBeneficiary: false,
+          obligationNipSettlement: null,
         );
       },
     ),
@@ -703,12 +736,19 @@ final GoRouter appRouter = GoRouter(
           final amountKobo = int.tryParse('${extra['amountKobo']}') ?? 0;
           final narration = (extra['narration']?.toString() ?? '').trim();
           final saveAsBeneficiary = extra['saveAsBeneficiary'] == true;
+          final settlementRaw = extra['obligationNipSettlement'];
+          final obligationNipSettlement = settlementRaw is Map
+              ? ObligationNipSettlement.tryFromJson(
+                  Map<String, dynamic>.from(settlementRaw),
+                )
+              : null;
           return TransferInternalVerifyScreen(
             recipient: fav,
             amountKobo: amountKobo,
             narration: narration,
             saveAsBeneficiary: saveAsBeneficiary,
             useExternalNipFlow: true,
+            obligationNipSettlement: obligationNipSettlement,
           );
         }
         return TransferInternalVerifyScreen(
@@ -723,6 +763,7 @@ final GoRouter appRouter = GoRouter(
           narration: '',
           saveAsBeneficiary: false,
           useExternalNipFlow: true,
+          obligationNipSettlement: null,
         );
       },
     ),
@@ -759,12 +800,20 @@ final GoRouter appRouter = GoRouter(
         TransactionDetailsData details = kSampleTransactionDetails;
         ReceiptAction? action;
 
+        ObligationNipSettlement? obligationNipSettlement;
         if (extra is Map<String, dynamic>) {
           final maybeDetails = extra['details'];
           if (maybeDetails is TransactionDetailsData) {
             details = maybeDetails;
           }
           action = _parseReceiptAction(extra['action']);
+          final sRaw = extra['obligationNipSettlement'];
+          if (sRaw is Map) {
+            obligationNipSettlement =
+                ObligationNipSettlement.tryFromJson(
+              Map<String, dynamic>.from(sRaw),
+            );
+          }
         } else if (extra is TransactionDetailsData) {
           details = extra;
         }
@@ -772,6 +821,7 @@ final GoRouter appRouter = GoRouter(
         return TransactionReceiptScreen(
           details: details,
           initialAction: action,
+          obligationNipSettlement: obligationNipSettlement,
         );
       },
     ),

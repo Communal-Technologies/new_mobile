@@ -633,11 +633,13 @@ final GoRouter appRouter = GoRouter(
           final amountKobo = int.tryParse('${extra['amountKobo']}') ?? 0;
           final narration = (extra['narration']?.toString() ?? '').trim();
           final saveAsBeneficiary = extra['saveAsBeneficiary'] == true;
+          final useExternalNipFlow = extra['useExternalNipFlow'] == true;
           return TransferInternalReviewScreen(
             recipient: fav,
             amountKobo: amountKobo,
             narration: narration,
             saveAsBeneficiary: saveAsBeneficiary,
+            useExternalNipFlow: useExternalNipFlow,
           );
         }
         return TransferInternalReviewScreen(
@@ -666,11 +668,13 @@ final GoRouter appRouter = GoRouter(
           final amountKobo = int.tryParse('${extra['amountKobo']}') ?? 0;
           final narration = (extra['narration']?.toString() ?? '').trim();
           final saveAsBeneficiary = extra['saveAsBeneficiary'] == true;
+          final useExternalNipFlow = extra['useExternalNipFlow'] == true;
           return TransferInternalVerifyScreen(
             recipient: fav,
             amountKobo: amountKobo,
             narration: narration,
             saveAsBeneficiary: saveAsBeneficiary,
+            useExternalNipFlow: useExternalNipFlow,
           );
         }
         return TransferInternalVerifyScreen(
@@ -684,6 +688,41 @@ final GoRouter appRouter = GoRouter(
           amountKobo: 0,
           narration: '',
           saveAsBeneficiary: false,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/transfer/external-verify',
+      name: 'transfer-external-verify',
+      builder: (context, state) {
+        final extra = state.extra;
+        if (extra is Map && extra['favorite'] is Map) {
+          final fav = TransferFavorite.fromJson(
+            Map<String, dynamic>.from(extra['favorite'] as Map),
+          );
+          final amountKobo = int.tryParse('${extra['amountKobo']}') ?? 0;
+          final narration = (extra['narration']?.toString() ?? '').trim();
+          final saveAsBeneficiary = extra['saveAsBeneficiary'] == true;
+          return TransferInternalVerifyScreen(
+            recipient: fav,
+            amountKobo: amountKobo,
+            narration: narration,
+            saveAsBeneficiary: saveAsBeneficiary,
+            useExternalNipFlow: true,
+          );
+        }
+        return TransferInternalVerifyScreen(
+          recipient: const TransferFavorite(
+            source: 'external',
+            accountId: '',
+            bank: '',
+            accountNumber: '',
+            accountName: 'Recipient',
+          ),
+          amountKobo: 0,
+          narration: '',
+          saveAsBeneficiary: false,
+          useExternalNipFlow: true,
         );
       },
     ),

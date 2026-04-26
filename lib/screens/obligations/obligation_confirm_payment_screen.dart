@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/utils/money_formatter.dart';
+import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 
@@ -25,9 +31,12 @@ class ObligationConfirmPaymentScreen extends StatefulWidget {
 
 class _ObligationConfirmPaymentScreenState
     extends State<ObligationConfirmPaymentScreen> {
+  final MemberObligationsRepository _repository =
+      MemberObligationsRepository(getIt());
   late final List<TextEditingController> _pinControllers;
   late final List<FocusNode> _pinFocusNodes;
   bool _obscurePin = true;
+  bool _submitting = false;
 
   @override
   void initState() {
@@ -124,7 +133,7 @@ class _ObligationConfirmPaymentScreenState
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _onConfirm,
+                onPressed: _submitting ? null : _onConfirm,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF7434FF),
                   minimumSize: Size(double.infinity, 52.h),
@@ -133,7 +142,7 @@ class _ObligationConfirmPaymentScreenState
                   ),
                 ),
                 child: Text(
-                  'Authorize Payment',
+                  _submitting ? 'Processing...' : 'Authorize Payment',
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w600,
@@ -164,9 +173,9 @@ class _ObligationConfirmPaymentScreenState
           ),
           vSpace(4),
           Text(
-            '₦${widget.amount.toStringAsFixed(0)}',
+            '₦${formatMoney(widget.amount)}',
             style: TextStyle(
-              fontSize: 28.sp,
+              fontSize: 30.sp,
               fontWeight: FontWeight.w800,
               color: const Color(0xFF7434FF),
             ),
@@ -288,7 +297,7 @@ class _ObligationConfirmPaymentScreenState
     setState(() {});
   }
 
-  void _onConfirm() {
+  Future<void> _onConfirm() async {
     final pin = _pinControllers.map((c) => c.text).join();
     if (pin.length < 4) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -297,6 +306,32 @@ class _ObligationConfirmPaymentScreenState
       return;
     }
 
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in again and retry.')),
+      );
+      return;
+    }
+
+    setState(() => _submitting = true);
+    try {
+      await _repository.verifySecurityPin(pin);
+      await _repository.payObligation(
+        user: authState.user,
+        obligation: widget.obligation,
+        amount: widget.amount,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+      return;
+    }
+
+    if (!mounted) return;
     final reference = 'REF-${DateTime.now().millisecondsSinceEpoch}';
 
     context.pushNamed(
@@ -309,5 +344,6 @@ class _ObligationConfirmPaymentScreenState
         'date': DateTime.now(),
       },
     );
+    setState(() => _submitting = false);
   }
 }

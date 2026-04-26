@@ -16,6 +16,8 @@ import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
+import 'package:communal_mobile/cubits/splash/splash_cubit.dart';
 
 enum LoginType { phone, email }
 
@@ -119,6 +121,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // Dispatch event to check login
     context.read<AuthBloc>().add(CheckLoginRequested(login: login));
+  }
+
+  void _restartSplashColdStart() {
+    if (!mounted) return;
+    context.read<SplashCubit>().initApp();
+    context.go('/');
   }
 
   @override
@@ -302,6 +310,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       });
                     }
                   } else if (state is AuthFailure) {
+                    if (shouldRedirectToSplashForAuthFailure(state.error)) {
+                      if (_isLoading) {
+                        setState(() => _isLoading = false);
+                      }
+                      _restartSplashColdStart();
+                      return;
+                    }
                     setState(() {
                       _isLoading = false;
                       // Show error message below the input field

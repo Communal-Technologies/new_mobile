@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:communal_mobile/core/utils/money_formatter.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
 
@@ -24,8 +25,7 @@ class ObligationPaymentSuccessScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formattedAmount =
-        '₦${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\\d)(?=(\\d{3})+(?!\\d))'), (m) => '${m[1]},')}';
+    final formattedAmount = '₦${formatMoney(amount)}';
     final dateLabel = DateFormat('MMM dd, yyyy, hh:mm a').format(date);
 
     return Scaffold(
@@ -83,7 +83,7 @@ class ObligationPaymentSuccessScreen extends StatelessWidget {
             Text(
               formattedAmount,
               style: TextStyle(
-                fontSize: 28.sp,
+                fontSize: 30.sp,
                 fontWeight: FontWeight.w800,
                 color: Colors.black,
               ),

@@ -8,7 +8,8 @@ import 'package:communal_mobile/cubits/settings/settings_cubit.dart';
 import 'package:communal_mobile/data/models/settings_model.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/data/repositories/regions_repository.dart';
-import 'package:dio/dio.dart' show DioException, DioExceptionType;
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
+import 'package:dio/dio.dart' show DioException;
 import 'package:flutter/foundation.dart';
 import 'splash_state.dart';
 
@@ -114,7 +115,7 @@ class SplashCubit extends Cubit<SplashState> {
       settingsCubit.setSettings(settingsMap);
       return settingsMap;
     } on DioException catch (e) {
-      emit(SplashError(_dioErrorMessage(e)));
+      emit(SplashError(dioTransportUserMessage(e)));
       return null;
     } catch (_) {
       emit(SplashError('Could not load app settings. Please try again.'));
@@ -127,7 +128,7 @@ class SplashCubit extends Cubit<SplashState> {
       await regionsRepository.fetchRegions(forceRefresh: true);
       return true;
     } on DioException catch (e) {
-      emit(SplashError(_dioErrorMessage(e)));
+      emit(SplashError(dioTransportUserMessage(e)));
       return false;
     } catch (_) {
       emit(SplashError('Could not load regions. Please try again.'));
@@ -151,7 +152,7 @@ class SplashCubit extends Cubit<SplashState> {
       if (statusCode == 401 || statusCode == 403) {
         emit(SplashLoggedOut());
       } else {
-        emit(SplashError(_dioErrorMessage(e)));
+        emit(SplashError(dioTransportUserMessage(e)));
       }
     } catch (_) {
       emit(
@@ -162,22 +163,4 @@ class SplashCubit extends Cubit<SplashState> {
     }
   }
 
-  String _dioErrorMessage(DioException e) {
-    switch (e.type) {
-      case DioExceptionType.connectionTimeout:
-      case DioExceptionType.sendTimeout:
-      case DioExceptionType.receiveTimeout:
-        return 'Request timed out. Check your connection and try again.';
-      case DioExceptionType.connectionError:
-        return 'No internet connection. Check your network and try again.';
-      case DioExceptionType.badResponse:
-        final code = e.response?.statusCode;
-        if (code != null) {
-          return 'Server error ($code). Please try again later.';
-        }
-        return 'Could not reach the server. Please try again.';
-      default:
-        return 'Something went wrong. Please try again.';
-    }
-  }
 }

@@ -59,13 +59,28 @@ class _ObligationDetailScreenState extends State<ObligationDetailScreen> {
     }
   }
 
+  String _cooperativeSubtitle(AuthState auth) {
+    if (auth is AuthAuthenticated) {
+      final line = auth.user.cooperativeDisplayName.trim();
+      if (line.isNotEmpty && line != '—') return line;
+    }
+    final id = _obligation.cooperativeId.trim();
+    if (id.isNotEmpty) return id;
+    return 'Cooperative';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, auth) {
+        return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      appBar: _DetailAppBar(title: _obligation.title),
+      appBar: _DetailAppBar(
+        title: _obligation.title,
+        subtitle: _cooperativeSubtitle(auth),
+      ),
       body: SafeArea(
         top: false,
         child: Column(
@@ -103,13 +118,16 @@ class _ObligationDetailScreenState extends State<ObligationDetailScreen> {
         ),
       ),
     );
+      },
+    );
   }
 }
 
 class _DetailAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _DetailAppBar({required this.title});
+  const _DetailAppBar({required this.title, required this.subtitle});
 
   final String title;
+  final String subtitle;
 
   @override
   Size get preferredSize => Size.fromHeight(64.h);
@@ -132,7 +150,7 @@ class _DetailAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           vSpace(4),
           Text(
-            'Total Lenders Forum',
+            subtitle,
             style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
           ),
         ],

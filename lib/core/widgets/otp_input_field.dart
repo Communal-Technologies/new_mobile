@@ -32,7 +32,9 @@ class _OtpInputFieldState extends State<OtpInputField> {
     );
     _focusNodes = List.generate(
       widget.length,
-      (index) => FocusNode(),
+      (index) => FocusNode(
+        onKeyEvent: (node, event) => _handleOtpKey(index, event),
+      ),
     );
     _previousValues = List.generate(
       widget.length,
@@ -63,25 +65,61 @@ class _OtpInputFieldState extends State<OtpInputField> {
     }
   }
 
-  /// Clipboard / autofill: multiple digits at once — fill boxes from the start.
-  void _applyPastedDigits(String raw) {
+  /// Backspace on an empty cell: move to previous and clear its digit (OTP UX).
+  KeyEventResult _handleOtpKey(int index, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    if (event.logicalKey != LogicalKeyboardKey.backspace) {
+      return KeyEventResult.ignored;
+    }
+    if (_controllers[index].text.isNotEmpty) {
+      return KeyEventResult.ignored;
+    }
+    if (index <= 0) {
+      return KeyEventResult.handled;
+    }
+    setState(() {
+      _controllers[index - 1].clear();
+      _previousValues[index - 1] = '';
+    });
+    _focusNodes[index - 1].requestFocus();
+    _emitCode();
+    return KeyEventResult.handled;
+  }
+
+  /// Paste / autofill: place digits starting at [startIndex] (focused box).
+  void _applyPastedDigits(String raw, int startIndex) {
     final digits = raw.replaceAll(RegExp(r'\D'), '');
     if (digits.isEmpty) return;
 
-    final take = digits.length > widget.length
-        ? digits.substring(0, widget.length)
+    final maxLen = widget.length - startIndex;
+    if (maxLen <= 0) return;
+
+    final take = digits.length > maxLen
+        ? digits.substring(0, maxLen)
         : digits;
 
     for (var i = 0; i < widget.length; i++) {
-      final ch = i < take.length ? take[i] : '';
-      _controllers[i].text = ch;
-      _previousValues[i] = ch;
+      if (i < startIndex) {
+        continue;
+      }
+      final rel = i - startIndex;
+      if (rel < take.length) {
+        final ch = take[rel];
+        _controllers[i].text = ch;
+        _previousValues[i] = ch;
+      } else {
+        _controllers[i].clear();
+        _previousValues[i] = '';
+      }
     }
 
-    if (take.length >= widget.length) {
-      _focusNodes[widget.length - 1].unfocus();
+    final filledEnd = startIndex + take.length;
+    if (filledEnd >= widget.length) {
+      _focusNodes[widget.length - 1].requestFocus();
     } else {
-      _focusNodes[take.length].requestFocus();
+      _focusNodes[filledEnd].requestFocus();
     }
 
     _emitCode();
@@ -114,11 +152,10 @@ class _OtpInputFieldState extends State<OtpInputField> {
               focusNode: _focusNodes[index],
               textAlign: TextAlign.center,
               keyboardType: TextInputType.number,
+              enableInteractiveSelection: true,
               autofillHints: index == 0
                   ? const [AutofillHints.oneTimeCode]
                   : null,
-              // No per-cell maxLength — paste must deliver all digits to one field;
-              // we split in onChanged.
               style: TextStyle(
                 fontSize: 24.sp,
                 fontWeight: FontWeight.w600,
@@ -158,9 +195,8 @@ class _OtpInputFieldState extends State<OtpInputField> {
                 final digitsOnly = value.replaceAll(RegExp(r'\D'), '');
 
                 if (digitsOnly.length > 1) {
-                  // Paste (or OS autofill) delivered multiple digits into this cell.
                   setState(() {
-                    _applyPastedDigits(digitsOnly);
+                    _applyPastedDigits(digitsOnly, index);
                   });
                   return;
                 }

@@ -1,11 +1,23 @@
 import 'package:equatable/equatable.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
 
+/// Audit M37: PIN / password values appear in `props` on
+/// [LoginRequested] / [CreatePasswordRequested] / [ResetPasswordRequested]
+/// because Equatable uses `props` for value-equality. They must NOT
+/// appear in `toString()` — `Equatable.stringify` is therefore left at
+/// its default of `false` so `someEvent.toString()` returns
+/// `'<EventType>()'` with no field values, even if a logger ever calls
+/// `.toString()` on the event by accident. Don't enable `stringify` on
+/// any event class that carries a credential.
 abstract class AuthEvent extends Equatable {
   const AuthEvent();
 
   @override
   List<Object?> get props => [];
+
+  // Do not override stringify = true — see class doc-block.
+  @override
+  bool? get stringify => false;
 }
 
 class AppStarted extends AuthEvent {}

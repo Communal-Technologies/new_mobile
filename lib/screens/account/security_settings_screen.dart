@@ -1,5 +1,7 @@
+import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/core/utils/biometric_service.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -12,7 +14,13 @@ class SecuritySettingsScreen extends StatefulWidget {
 }
 
 class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
-  bool _biometricEnabled = false;
+  /// Reflects actual server-side enrollment (audit M38), not just device
+  /// hardware availability — matches what the user sees inside the
+  /// enrollment screen's master switch. Refreshed every time we come
+  /// back from `/biometric-enrollment` so the badge stays in sync after
+  /// the user toggles in there.
+  bool _biometricEnrolled = false;
+  bool _biometricHardwareAvailable = false;
   bool _loginAlertEnabled = true;
   bool _transactionAlertEnabled = true;
   bool _allowScreenshotEnabled = false;
@@ -25,8 +33,28 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
 
   Future<void> _loadBiometricStatus() async {
     final available = await BiometricService.isBiometricAvailable();
+    final enrolled = await getIt<BiometricSignerService>().isEnrolled();
     if (!mounted) return;
-    setState(() => _biometricEnabled = available);
+    setState(() {
+      _biometricHardwareAvailable = available;
+      _biometricEnrolled = enrolled;
+    });
+  }
+
+  Future<void> _openBiometricEnrollment() async {
+    if (!_biometricHardwareAvailable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Biometric is not available on this device. Set it up in your device settings first.',
+          ),
+        ),
+      );
+      return;
+    }
+    await context.pushNamed('biometric-enrollment');
+    // User may have toggled enrollment on/off — refresh.
+    await _loadBiometricStatus();
   }
 
   @override
@@ -148,24 +176,24 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                         vertical: 4.h,
                       ),
                       decoration: BoxDecoration(
-                        color: (_biometricEnabled
+                        color: (_biometricEnrolled
                                 ? const Color(0xFF1AAE70)
                                 : Colors.grey)
                             .withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(20.r),
                       ),
                       child: Text(
-                        _biometricEnabled ? 'Enabled' : 'Disabled',
+                        _biometricEnrolled ? 'Enabled' : 'Disabled',
                         style: TextStyle(
                           fontSize: 12.sp,
                           fontWeight: FontWeight.w700,
-                          color: _biometricEnabled
+                          color: _biometricEnrolled
                               ? const Color(0xFF1AAE70)
                               : Colors.grey.shade700,
                         ),
                       ),
                     ),
-                    onTap: () {},
+                    onTap: _openBiometricEnrollment,
                   ),
                 ],
               ),

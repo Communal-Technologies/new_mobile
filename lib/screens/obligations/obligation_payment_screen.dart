@@ -23,6 +23,13 @@ class ObligationPaymentScreen extends StatefulWidget {
       _ObligationPaymentScreenState();
 }
 
+/// Source-of-funds picker on the obligation-payment screen. `wallet` keeps
+/// the existing path (Communal account → NIP transfer to the cooperative
+/// bank → record payment). `obligation` uses one of the member's existing
+/// obligation balances to pay this one — backend gateway `'obligation'`,
+/// no NIP transfer.
+enum _PayMethod { wallet, obligation }
+
 class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
   late final TextEditingController _amountController;
   final TextEditingController _noteController = TextEditingController();
@@ -33,6 +40,14 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
   bool _loadingCashRepos = true;
   CooperativeCashBankAccount? _selectedCashRepo;
   String? _cashRepoError;
+
+  // Source-obligation flow. Loaded post-frame because the AuthBloc user
+  // is only available via context.
+  _PayMethod _payMethod = _PayMethod.wallet;
+  List<Obligation> _sourceObligations = const [];
+  bool _loadingSourceObligations = false;
+  String? _sourceObligationsError;
+  Obligation? _selectedSourceObligation;
 
   static const int _noteLimit = 100;
 
@@ -122,6 +137,59 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
     );
     _noteController.addListener(() => setState(() {}));
     _loadCashRepos();
+    // Source obligations need the AuthBloc user — available via context
+    // only after the first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadSourceObligations();
+    });
+  }
+
+  Future<void> _loadSourceObligations() async {
+    final auth = context.read<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) {
+      setState(() {
+          _sourceObligationsError = 'Sign in again to load obligations.';
+      });
+      return;
+    }
+    setState(() {
+      _loadingSourceObligations = true;
+      _sourceObligationsError = null;
+    });
+    try {
+      final all = await _obligationsRepo.fetchMemberObligations(auth.user);
+      if (!mounted) return;
+      // Filter rules:
+      //   - Drop equities (product rule: equity can never be a source).
+      //   - Drop the obligation being paid (no self-payment).
+      //   - Drop ones with no contributed balance to spend (`paidAmount`
+      //     is what the backend will decrement from).
+      final filtered = all.where((o) {
+        if (o.category.toLowerCase() == 'equity') return false;
+        final code = o.accountCode.trim();
+        if (code.isNotEmpty && code == widget.obligation.accountCode.trim()) {
+          return false;
+        }
+        if (code.isEmpty) return false; // can't reference it on the API
+        return o.paidAmount > 0;
+      }).toList();
+      setState(() {
+        _sourceObligations = filtered;
+        _selectedSourceObligation = filtered.length == 1 ? filtered.first : null;
+        _loadingSourceObligations = false;
+        });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _sourceObligations = const [];
+        _selectedSourceObligation = null;
+        _loadingSourceObligations = false;
+          _sourceObligationsError = e
+            .toString()
+            .replaceFirst(RegExp(r'^Exception:\s*'), '')
+            .trim();
+      });
+    }
   }
 
   Future<void> _loadCashRepos() async {
@@ -166,9 +234,11 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
 
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, auth) {
-        final bankSubtitleExtra = _loadingCashRepos
-            ? 'Loading cooperative accounts…'
-            : (_cashRepoError ?? '');
+        final bankSubtitleExtra = _payMethod == _PayMethod.wallet
+            ? (_loadingCashRepos
+                ? 'Loading cooperative accounts…'
+                : (_cashRepoError ?? ''))
+            : '';
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(
@@ -224,51 +294,57 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                 ),
               ],
               vSpace(12),
-              _buildNipTransferInfo(auth),
-              if (_cashRepos.length > 1) ...[
-                vSpace(12),
-                Text(
-                  'Cooperative account',
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                  ),
-                ),
-                vSpace(8),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12.w),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14.r),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<CooperativeCashBankAccount>(
-                      isExpanded: true,
-                      value: _selectedCashRepo,
-                      hint: const Text('Select account'),
-                      items: _cashRepos
-                          .map(
-                            (e) => DropdownMenuItem(
-                              value: e,
-                              child: Text(
-                                '${e.accountName} • ${e.accountNumber}',
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => _selectedCashRepo = v),
+              _buildMethodSelector(auth),
+              vSpace(14),
+              if (_payMethod == _PayMethod.wallet) ...[
+                _buildNipTransferInfo(auth),
+                if (_cashRepos.length > 1) ...[
+                  vSpace(12),
+                  Text(
+                    'Cooperative account',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
                     ),
                   ),
-                ),
-              ] else if (_cashRepos.length == 1) ...[
-                vSpace(10),
-                Text(
-                  'Paying into: ${_cashRepos.first.accountName} • ${_cashRepos.first.accountNumber}',
-                  style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade700),
-                ),
+                  vSpace(8),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14.r),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<CooperativeCashBankAccount>(
+                        isExpanded: true,
+                        value: _selectedCashRepo,
+                        hint: const Text('Select account'),
+                        items: _cashRepos
+                            .map(
+                              (e) => DropdownMenuItem(
+                                value: e,
+                                child: Text(
+                                  '${e.accountName} • ${e.accountNumber}',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) => setState(() => _selectedCashRepo = v),
+                      ),
+                    ),
+                  ),
+                ] else if (_cashRepos.length == 1) ...[
+                  vSpace(10),
+                  Text(
+                    'Paying into: ${_cashRepos.first.accountName} • ${_cashRepos.first.accountNumber}',
+                    style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade700),
+                  ),
+                ],
+              ] else ...[
+                _buildSourceObligationPicker(),
               ],
               vSpace(24),
               Text(
@@ -425,6 +501,92 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
     );
   }
 
+  Widget _buildMethodSelector(AuthState auth) {
+    return Row(
+      children: [
+        Expanded(
+          child: _MethodChip(
+            icon: Iconsax.wallet_3,
+            iconColor: const Color(0xFF7434FF),
+            label: 'Wallet',
+            sublabel: 'NIP transfer',
+            selected: _payMethod == _PayMethod.wallet,
+            onTap: () => setState(() => _payMethod = _PayMethod.wallet),
+          ),
+        ),
+        hSpace(10),
+        Expanded(
+          child: _MethodChip(
+            icon: Iconsax.refresh_2,
+            iconColor: const Color(0xFF16A34A),
+            label: 'Obligation',
+            sublabel: 'Use another balance',
+            selected: _payMethod == _PayMethod.obligation,
+            onTap: () => setState(() => _payMethod = _PayMethod.obligation),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSourceObligationPicker() {
+    if (_loadingSourceObligations) {
+      return _PickerCard.message(
+        icon: Iconsax.refresh_2,
+        title: 'Loading your obligations…',
+        body: 'Pulling balances we can use to fund this payment.',
+        accent: const Color(0xFF7434FF),
+      );
+    }
+    if (_sourceObligationsError != null) {
+      return _PickerCard.message(
+        icon: Iconsax.warning_2,
+        title: 'Could not load obligations',
+        body: _sourceObligationsError!,
+        accent: Colors.red,
+        action: TextButton(
+          onPressed: _loadSourceObligations,
+          child: const Text('Retry'),
+        ),
+      );
+    }
+    if (_sourceObligations.isEmpty) {
+      return _PickerCard.message(
+        icon: Iconsax.info_circle,
+        title: 'No eligible obligations',
+        body:
+            'You need a non-equity obligation with a contributed balance to '
+            'fund this payment. Equity contributions cannot be used.',
+        accent: Colors.grey.shade700,
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: const Color(0xFF7434FF), width: 2),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < _sourceObligations.length; i++) ...[
+            _SourceObligationTile(
+              obligation: _sourceObligations[i],
+              selected:
+                  _selectedSourceObligation?.accountCode ==
+                  _sourceObligations[i].accountCode,
+              onTap: () => setState(
+                () => _selectedSourceObligation = _sourceObligations[i],
+              ),
+            ),
+            if (i < _sourceObligations.length - 1)
+              Divider(height: 1, color: Colors.grey.shade200),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildNarrationField() {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
@@ -484,6 +646,51 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
       }
     }
 
+    if (_payMethod == _PayMethod.obligation) {
+      final source = _selectedSourceObligation;
+      if (source == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Select an obligation to pay from.'),
+          ),
+        );
+        return;
+      }
+      // Defensive: equities are filtered out of the picker, but re-check
+      // here in case the list ever ships a stale entry.
+      if (source.category.toLowerCase() == 'equity') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Equity contributions cannot be used to pay other obligations.'),
+          ),
+        );
+        return;
+      }
+      if (source.paidAmount + 0.009 < amount) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${source.title} only has ₦${formatMoney(source.paidAmount)} '
+              'available. Reduce the amount or pick another obligation.',
+            ),
+          ),
+        );
+        return;
+      }
+      context.pushNamed(
+        'obligation-confirm-payment',
+        extra: {
+          'obligation': widget.obligation,
+          'amount': amount,
+          'method': 'Obligation',
+          'source_obligation_code': source.accountCode,
+          'source_obligation_title': source.title,
+          'source_obligation_balance': source.paidAmount,
+        },
+      );
+      return;
+    }
+
     if (_cashRepos.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -511,6 +718,234 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
         'cash_account': cash.toJson(),
         'cash_repository_id': cash.id,
       },
+    );
+  }
+}
+
+class _MethodChip extends StatelessWidget {
+  const _MethodChip({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.sublabel,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final String sublabel;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16.r),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: selected ? const Color(0xFF7434FF) : Colors.grey.shade300,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36.w,
+              height: 36.w,
+              decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: Icon(icon, color: iconColor, size: 18.sp),
+            ),
+            hSpace(10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                    ),
+                  ),
+                  Text(
+                    sublabel,
+                    style: TextStyle(
+                      fontSize: 11.sp,
+                      color: Colors.grey.shade600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              selected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              color: selected
+                  ? const Color(0xFF7434FF)
+                  : Colors.grey.shade400,
+              size: 20.sp,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SourceObligationTile extends StatelessWidget {
+  const _SourceObligationTile({
+    required this.obligation,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final Obligation obligation;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = selected ? const Color(0xFF7434FF) : Colors.grey.shade700;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14.r),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.h),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 38.w,
+              height: 38.w,
+              decoration: BoxDecoration(
+                color: const Color(0xFF16A34A).withOpacity(0.10),
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: Icon(
+                Iconsax.coin,
+                color: const Color(0xFF16A34A),
+                size: 18.sp,
+              ),
+            ),
+            hSpace(12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    obligation.title,
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                    ),
+                  ),
+                  vSpace(2),
+                  Text(
+                    '${obligation.category} • Available ₦${formatMoney(obligation.paidAmount)}',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            hSpace(8),
+            Icon(
+              selected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              color: accent,
+              size: 20.sp,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PickerCard extends StatelessWidget {
+  const _PickerCard.message({
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.accent,
+    this.action,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+  final Color accent;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 38.w,
+            height: 38.w,
+            decoration: BoxDecoration(
+              color: accent.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            child: Icon(icon, color: accent, size: 18.sp),
+          ),
+          hSpace(12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                ),
+                vSpace(4),
+                Text(
+                  body,
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                if (action != null) ...[
+                  vSpace(6),
+                  action!,
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:injectable/injectable.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/logging_interceptor.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/network_interceptor.dart';
+import 'package:communal_mobile/data/datasources/remote/dio/refresh_token_interceptor.dart';
 import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
 
 
@@ -24,11 +25,13 @@ abstract class NetworkModule {
     Dio dio,
     LoggingInterceptor loggingInterceptor,
     NetworkInterceptor networkInterceptor,
+    RefreshTokenInterceptor refreshTokenInterceptor,
   ) {
     return DioClient(
       AppConstants.baseUrl,
       loggingInterceptor: loggingInterceptor,
       networkInterceptor: networkInterceptor,
+      refreshTokenInterceptor: refreshTokenInterceptor,
       customDio: dio,
     );
   }

@@ -292,18 +292,44 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
       );
 
       if (authenticated && mounted) {
-        // App-lock-only path now: existing session unlocks via SecurityCubit.
-        context.read<SecurityCubit>().unlockApp();
-        context.read<SecurityCubit>().recordActivity();
+        // App-lock-only path. Two important details:
+        //   1. Clear `_isAuthenticating` synchronously so the button
+        //      spinner stops the moment the user lifts their finger —
+        //      relying on the SecurityCubit BlocListener (which fires
+        //      only on the locked→unlocked transition) is fragile when
+        //      the cubit was already in `unlocked` (the emit becomes a
+        //      no-op and no listener fires; the spinner sticks).
+        //   2. After `unlockApp()`, fall back to an explicit
+        //      `context.go('/home')` when no transition happened —
+        //      otherwise SecurityWrapper's BlocBuilder never rebuilds
+        //      and the lock screen stays mounted (the user-reported
+        //      "still on the welcome screen" symptom).
+        final securityCubit = context.read<SecurityCubit>();
+        final wasLocked = securityCubit.state == SecurityState.locked;
+        setState(() {
+          _isAuthenticating = false;
+        });
+        securityCubit.unlockApp();
+        securityCubit.recordActivity();
+        if (!wasLocked && mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            try {
+              context.go('/home');
+            } catch (_) {}
+          });
+        }
       } else {
         setState(() {
           _isAuthenticating = false;
         });
       }
     } catch (e) {
-      setState(() {
-        _isAuthenticating = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isAuthenticating = false;
+        });
+      }
     }
   }
 

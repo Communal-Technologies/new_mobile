@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:communal_mobile/core/constants/constants.dart';
 import 'package:communal_mobile/core/constants/images.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/otp_input_field.dart';
@@ -41,7 +42,9 @@ class VerifyResetScreen extends StatefulWidget {
 }
 
 class _VerifyResetScreenState extends State<VerifyResetScreen> {
-  static const int _otpLength = 6;
+  // Audit M25: single source of truth for the OTP length lives in
+  // [AppConstants.otpLength].
+  static int get _otpLength => AppConstants.otpLength;
 
   /// Bumps to rebuild [OtpInputField] and clear digits after a failed attempt.
   int _otpFieldKey = 0;

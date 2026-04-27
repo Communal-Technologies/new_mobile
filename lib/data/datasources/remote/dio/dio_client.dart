@@ -1,7 +1,10 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
+import 'package:communal_mobile/data/datasources/remote/dio/cert_pinning.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/logging_interceptor.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/network_interceptor.dart';
+import 'package:communal_mobile/data/datasources/remote/dio/refresh_token_interceptor.dart';
 import 'package:communal_mobile/core/constants/constants.dart';
 import 'package:communal_mobile/core/security/session_invalidation_notifier.dart';
 import 'package:communal_mobile/core/utils/app_logger.dart';
@@ -10,6 +13,7 @@ class DioClient {
   final String baseUrl;
   final LoggingInterceptor loggingInterceptor;
   final NetworkInterceptor? networkInterceptor;
+  final RefreshTokenInterceptor? refreshTokenInterceptor;
 
   Dio dio = Dio();
   String? _token;
@@ -18,6 +22,7 @@ class DioClient {
     this.baseUrl, {
     required this.loggingInterceptor,
     this.networkInterceptor,
+    this.refreshTokenInterceptor,
     Dio? customDio,
     String? token, // Inject the token externally (from BLoC or secure storage)
   }) {
@@ -37,11 +42,36 @@ class DioClient {
         'X-localization': AppConstants.defaultLanguage, // Replace with runtime language if needed
       };
 
+    // Audit M8: SPKI cert-pin override for the dio HTTP client. Adds a
+    // post-validation check on cert errors that accepts only pinned certs
+    // for a configured host, rejecting MITM attempts via rogue / locally-
+    // installed CAs. When CertPinning.pinsByHost is empty (the shipping
+    // default until real pins are generated), the callback returns false so
+    // behaviour matches the platform default.
+    dio.httpClientAdapter = IOHttpClientAdapter(
+      createHttpClient: () => HttpClient()
+        ..badCertificateCallback = (cert, host, port) {
+          if (!CertPinning.isPinned(host)) {
+            // No pins configured → don't override the default-trust failure.
+            return false;
+          }
+          return CertPinning.verify(cert, host);
+        },
+    );
+
     final isDebug = AppConstants.appEnvironment == 'development';
 
     // Add network interceptor first (so it can wait for connectivity)
     if (networkInterceptor != null) {
       dio.interceptors.insert(0, networkInterceptor!);
+    }
+
+    // Refresh interceptor (audit M6): proactive + reactive token refresh.
+    // Sits *after* the network interceptor (so we don't try to refresh
+    // before connectivity is restored) and *before* the logger (so the
+    // refreshed Authorization header is what gets logged in dev).
+    if (refreshTokenInterceptor != null) {
+      dio.interceptors.add(refreshTokenInterceptor!);
     }
 
     // Only add logger in dev

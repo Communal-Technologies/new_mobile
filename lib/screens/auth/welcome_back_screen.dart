@@ -7,6 +7,8 @@ import 'package:communal_mobile/core/widgets/numeric_keypad.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/loader_overlay.dart';
 import 'package:communal_mobile/core/utils/biometric_service.dart';
+import 'package:communal_mobile/core/security/biometric_key_service.dart';
+import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/data/local/biometric_prefs.dart';
 import 'package:shared_preferences/shared_preferences.dart' as shared_prefs;
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
@@ -53,6 +55,16 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
   bool _isPasswordVisible = false; // Hide password by default (show dots)
   String? _passwordError; // Error message for password
   bool _isBiometricAvailable = false;
+  // Audit follow-up: hardware availability + a 6-digit PIN is NOT proof
+  // that the user has enrolled the M38 biometric flow. The two prior
+  // bugs (PIN→biometric reorder mid-screen, and biometric tap that
+  // looped on fresh-login) both came from offering biometric to users
+  // who never enrolled. `_canUseBiometric` is the real gate: device
+  // hardware + a Keystore/Secure-Enclave key for this device_id +
+  // `BiometricPrefs.appLoginEnabled` + we're in the app-lock path
+  // (fresh-login can't authenticate against the server with just a
+  // local biometric prompt — there's no stored token to refresh).
+  bool _canUseBiometric = false;
   String _biometricName = 'Fingerprint';
   bool _isAuthenticating = false;
   UserModel? _user;

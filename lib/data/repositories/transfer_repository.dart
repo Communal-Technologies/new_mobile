@@ -357,6 +357,7 @@ class TransferRepository {
     String? destinationAccountId,
     String? counterPartyId,
     String? currencyCode,
+    String? idempotencyKey,
   }) async {
     try {
       var ccy = (currencyCode ?? 'NGN').trim().toUpperCase();
@@ -372,7 +373,11 @@ class TransferRepository {
         if (counterPartyId != null && counterPartyId.trim().isNotEmpty)
           'counterPartyId': counterPartyId.trim(),
       };
-      final response = await _dioClient.post('/transfer/initiate', data: body);
+      final response = await _dioClient.post(
+        '/transfer/initiate',
+        data: body,
+        idempotencyKey: idempotencyKey,
+      );
       final data = response.data;
       if (data is! Map || data['status'] != true) {
         throw Exception('Transfer initiation failed.');

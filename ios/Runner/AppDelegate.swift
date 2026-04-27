@@ -12,11 +12,26 @@ import UIKit
   /// captured snapshot is the overlay, then remove it on resume.
   private var snapshotOverlay: UIView?
 
+  /// Audit M38: holds the strong reference to the biometric key channel
+  /// for the lifetime of the app; without this the channel deallocates
+  /// after `application(_:didFinishLaunching...)` returns and platform
+  /// invocations never reach Swift.
+  private var biometricKeyChannel: BiometricKeyChannel?
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
+
+    // Audit M38: register the biometric key channel so Dart can generate
+    // / sign / revoke ECDSA P-256 keys via the Secure Enclave.
+    if let controller = self.window?.rootViewController as? FlutterViewController {
+      self.biometricKeyChannel = BiometricKeyChannel(
+        messenger: controller.binaryMessenger
+      )
+    }
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 

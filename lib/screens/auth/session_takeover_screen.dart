@@ -8,8 +8,11 @@ import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/otp_input_field.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
+import 'package:communal_mobile/cubits/splash/splash_cubit.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -35,6 +38,12 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
   String? _takeoverChallengeId;
   String _maskedDestination = '';
   String _otpChannel = 'phone';
+
+  void _restartSplashColdStart() {
+    if (!mounted) return;
+    context.read<SplashCubit>().initApp();
+    context.go('/');
+  }
 
   @override
   void initState() {
@@ -112,6 +121,10 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
       AppToast.success('A new code was sent.');
     } catch (e) {
       if (!mounted) return;
+      if (e is DioException && isDioTransportFailure(e)) {
+        _restartSplashColdStart();
+        return;
+      }
       final msg =
           e is Exception ? e.toString().replaceFirst('Exception: ', '') : e.toString();
       AppToast.error(msg);
@@ -147,6 +160,15 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
           return;
         }
         if (state is AuthFailure) {
+          if (shouldRedirectToSplashForAuthFailure(state.error)) {
+            setState(() {
+              _isVerifying = false;
+              _otpFieldKey++;
+              _code = '';
+            });
+            _restartSplashColdStart();
+            return;
+          }
           setState(() {
             _isVerifying = false;
             _otpFieldKey++;

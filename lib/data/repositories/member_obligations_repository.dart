@@ -260,6 +260,7 @@ class MemberObligationsRepository {
           'cooperative': cooperativeId,
           'cash_repository_id': rid,
         },
+        idempotencyKey: idempotencyKey,
       );
       final data = response.data;
       if (response.statusCode == 200) return;

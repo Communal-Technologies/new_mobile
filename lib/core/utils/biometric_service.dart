@@ -72,5 +72,16 @@ class BiometricService {
     }
     return type;
   }
+
+  /// Returns the raw `List<BiometricType>` from the platform — used by
+  /// the enrollment screen's "Registered Biometrics" section to render
+  /// per-method active/inactive badges.
+  static Future<List<BiometricType>> getAvailableBiometrics() async {
+    try {
+      return await _localAuth.getAvailableBiometrics();
+    } catch (_) {
+      return const <BiometricType>[];
+    }
+  }
 }
 

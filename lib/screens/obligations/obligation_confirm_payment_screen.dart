@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart' as shared_prefs;
 
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
@@ -12,6 +12,7 @@ import 'package:communal_mobile/core/utils/idempotency.dart';
 import 'package:communal_mobile/core/utils/tap_debouncer.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/utils/money_formatter.dart';
+import 'package:communal_mobile/data/local/biometric_prefs.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
@@ -20,6 +21,12 @@ import 'package:communal_mobile/screens/obligations/data/obligation_nip_settleme
 import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+
+/// Three states the confirm screen can be in. Backend M38 middleware
+/// requires a biometric signature on `pay-obligation`, so PIN-only
+/// confirmation is no longer a valid auth path — `_AuthMode.notReady`
+/// surfaces a "set this up first" page instead.
+enum _AuthMode { checking, biometric, notReady }
 
 class ObligationConfirmPaymentScreen extends StatefulWidget {
   const ObligationConfirmPaymentScreen({
@@ -65,10 +72,10 @@ class _ObligationConfirmPaymentScreenState
   final BiometricSignerService _biometricSigner = getIt<BiometricSignerService>();
   // Audit M28: swallows rapid double-taps on the Confirm button.
   final TapDebouncer _confirmDebouncer = TapDebouncer();
-  late final List<TextEditingController> _pinControllers;
-  late final List<FocusNode> _pinFocusNodes;
-  bool _obscurePin = true;
   bool _submitting = false;
+
+  _AuthMode _authMode = _AuthMode.checking;
+  String? _notReadyReason;
 
   /// Audit M23: minted once per screen mount; reused across user-initiated
   /// retries of the Confirm action so a transient failure + retry dedupes
@@ -78,62 +85,55 @@ class _ObligationConfirmPaymentScreenState
   @override
   void initState() {
     super.initState();
-    _pinControllers = List.generate(
-      4,
-      (_) => TextEditingController(),
-      growable: false,
-    );
-    _pinFocusNodes = List.generate(4, (_) => FocusNode(), growable: false);
+    _checkAuthReadiness();
   }
 
-  @override
-  void dispose() {
-    for (final controller in _pinControllers) {
-      controller.dispose();
-    }
-    for (final node in _pinFocusNodes) {
-      node.dispose();
-    }
-    super.dispose();
-  }
-
-  bool get _pinCompletelyEmpty =>
-      _pinControllers.every((c) => c.text.isEmpty);
-
-  /// System / gesture back while PIN is partial: clear the last filled digit first.
-  void _handleSystemBackDuringPinEntry() {
-    for (var i = _pinControllers.length - 1; i >= 0; i--) {
-      if (_pinControllers[i].text.isNotEmpty) {
-        _pinControllers[i].clear();
-        _pinFocusNodes[i].requestFocus();
-        setState(() {});
+  Future<void> _checkAuthReadiness() async {
+    try {
+      final shared = await shared_prefs.SharedPreferences.getInstance();
+      final prefs = BiometricPrefs(shared);
+      if (!prefs.transactionsEnabled) {
+        if (!mounted) return;
+        setState(() {
+          _authMode = _AuthMode.notReady;
+          _notReadyReason =
+              'Biometric authorization for transactions is turned off. '
+              'Re-enable it in Settings → Biometric Authentication.';
+        });
         return;
       }
+      final enrolled = await _biometricSigner.isEnrolled();
+      if (!mounted) return;
+      if (enrolled) {
+        setState(() => _authMode = _AuthMode.biometric);
+      } else {
+        setState(() {
+          _authMode = _AuthMode.notReady;
+          _notReadyReason =
+              'Biometric authorization is required for payments on this account. '
+              'Set it up to continue.';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _authMode = _AuthMode.notReady;
+        _notReadyReason =
+            'Could not verify biometric setup: ${e.toString().replaceFirst('Exception: ', '')}';
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: _pinCompletelyEmpty,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        _handleSystemBackDuringPinEntry();
-      },
-      child: Scaffold(
+    return Scaffold(
       backgroundColor: const Color(0xFFF6F6F9),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            if (!_pinCompletelyEmpty) {
-              _handleSystemBackDuringPinEntry();
-              return;
-            }
-            Navigator.of(context).maybePop();
-          },
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
         title: Text(
           'Confirm Payment',
@@ -151,77 +151,118 @@ class _ObligationConfirmPaymentScreenState
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Icon(
-              Icons.lock_outline,
+              _authMode == _AuthMode.notReady
+                  ? Icons.fingerprint
+                  : Icons.lock_outline,
               color: const Color(0xFF7434FF),
               size: 44.sp,
             ),
             vSpace(16),
             Text(
-              'Enter Your PIN',
+              _headerForMode(),
               style: TextStyle(
                 fontSize: 20.sp,
                 fontWeight: FontWeight.w700,
                 color: Colors.black,
               ),
+              textAlign: TextAlign.center,
             ),
             vSpace(6),
             Text(
-              'Enter your 4-digit transaction PIN to authorize this payment',
+              _subheaderForMode(),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
             ),
             vSpace(24),
             _buildAmountBanner(),
             vSpace(24),
-            _buildPinInputs(),
-            vSpace(12),
-            TextButton.icon(
-              onPressed: () => setState(() => _obscurePin = !_obscurePin),
-              icon: Icon(
-                _obscurePin ? Icons.visibility : Icons.visibility_off,
-                color: Colors.grey.shade700,
-                size: 18.sp,
-              ),
-              label: Text(
-                _obscurePin ? 'Show PIN' : 'Hide PIN',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade700,
-                ),
-              ),
-            ),
-            vSpace(24),
             _buildSecureInfo(),
             vSpace(32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _submitting
-                    ? null
-                    : () => _confirmDebouncer.run(_onConfirm),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF7434FF),
-                  minimumSize: Size(double.infinity, 52.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18.r),
-                  ),
-                ),
-                child: Text(
-                  _submitting ? 'Processing...' : 'Authorize Payment',
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
+            _buildPrimaryAction(),
           ],
         ),
       ),
-    ),
     );
+  }
+
+  String _headerForMode() {
+    switch (_authMode) {
+      case _AuthMode.checking:
+        return 'Preparing biometric…';
+      case _AuthMode.biometric:
+        return 'Authorize with Biometrics';
+      case _AuthMode.notReady:
+        return 'Biometric Required';
+    }
+  }
+
+  String _subheaderForMode() {
+    switch (_authMode) {
+      case _AuthMode.checking:
+        return 'One moment.';
+      case _AuthMode.biometric:
+        return 'Tap below and scan your fingerprint or face to confirm.';
+      case _AuthMode.notReady:
+        return _notReadyReason ?? 'Biometric is not configured for this device.';
+    }
+  }
+
+  Widget _buildPrimaryAction() {
+    switch (_authMode) {
+      case _AuthMode.checking:
+        return SizedBox(
+          height: 52.h,
+          width: 52.h,
+          child: const CircularProgressIndicator(strokeWidth: 2),
+        );
+      case _AuthMode.biometric:
+        return SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: _submitting
+                ? null
+                : () => _confirmDebouncer.run(_onConfirm),
+            icon: const Icon(Icons.fingerprint),
+            label: Text(
+              _submitting ? 'Processing…' : 'Authorize Payment',
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF7434FF),
+              foregroundColor: Colors.white,
+              minimumSize: Size(double.infinity, 52.h),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18.r),
+              ),
+            ),
+          ),
+        );
+      case _AuthMode.notReady:
+        return SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: () => context.pushNamed('biometric-enrollment'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF7434FF),
+              foregroundColor: Colors.white,
+              minimumSize: Size(double.infinity, 52.h),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18.r),
+              ),
+            ),
+            child: Text(
+              'Set up Biometrics',
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        );
+    }
   }
 
   Widget _buildAmountBanner() {
@@ -261,67 +302,6 @@ class _ObligationConfirmPaymentScreenState
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildPinInputs() {
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: 12.w,
-      children: List.generate(
-        4,
-        (index) => Focus(
-          onKeyEvent: (node, event) {
-            if (event is! KeyDownEvent) return KeyEventResult.ignored;
-            if (event.logicalKey != LogicalKeyboardKey.backspace) {
-              return KeyEventResult.ignored;
-            }
-            if (_pinControllers[index].text.isNotEmpty) {
-              return KeyEventResult.ignored;
-            }
-            if (index <= 0) return KeyEventResult.ignored;
-            _pinControllers[index - 1].clear();
-            _pinFocusNodes[index - 1].requestFocus();
-            setState(() {});
-            return KeyEventResult.handled;
-          },
-          child: SizedBox(
-            width: 56.w,
-            child: TextField(
-              controller: _pinControllers[index],
-              focusNode: _pinFocusNodes[index],
-              textAlign: TextAlign.center,
-              obscureText: _obscurePin,
-              maxLength: 1,
-              keyboardType: TextInputType.number,
-              style: TextStyle(
-                fontSize: 26.sp,
-                fontWeight: FontWeight.w700,
-                color: Colors.black,
-              ),
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: InputDecoration(
-                counterText: '',
-                contentPadding: EdgeInsets.symmetric(vertical: 18.h),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14.r),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14.r),
-                  borderSide: const BorderSide(
-                    color: Color(0xFF7434FF),
-                    width: 2,
-                  ),
-                ),
-              ),
-              onChanged: (value) => _handlePinInput(index, value),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -367,28 +347,7 @@ class _ObligationConfirmPaymentScreenState
     );
   }
 
-  void _handlePinInput(int index, String value) {
-    if (value.isNotEmpty) {
-      if (index < _pinFocusNodes.length - 1) {
-        _pinFocusNodes[index + 1].requestFocus();
-      } else {
-        _pinFocusNodes[index].unfocus();
-      }
-    } else if (index > 0) {
-      _pinFocusNodes[index - 1].requestFocus();
-    }
-    setState(() {});
-  }
-
   Future<void> _onConfirm() async {
-    final pin = _pinControllers.map((c) => c.text).join();
-    if (pin.length < 4) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter your 4-digit PIN to continue.')),
-      );
-      return;
-    }
-
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -399,8 +358,6 @@ class _ObligationConfirmPaymentScreenState
 
     setState(() => _submitting = true);
     try {
-      await _repository.verifySecurityPin(pin);
-
       // Equity *target* cap still applies under both gateways — the
       // backend rejects over-cap payments either way; this gives a
       // friendlier message before we round-trip.

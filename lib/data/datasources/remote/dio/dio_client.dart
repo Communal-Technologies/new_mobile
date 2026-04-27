@@ -1,12 +1,10 @@
-import 'dart:developer' as developer;
 import 'dart:io';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/logging_interceptor.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/network_interceptor.dart';
 import 'package:communal_mobile/core/constants/constants.dart';
 import 'package:communal_mobile/core/security/session_invalidation_notifier.dart';
+import 'package:communal_mobile/core/utils/app_logger.dart';
 
 class DioClient {
   final String baseUrl;
@@ -28,31 +26,6 @@ class DioClient {
     _init();
   }
 
-  void _devLog(
-    String message, {
-    Object? error,
-    StackTrace? stackTrace,
-  }) {
-    if (!kDebugMode) return;
-    developer.log(
-      message,
-      name: 'DioClient',
-      error: error,
-      stackTrace: stackTrace,
-    );
-  }
-
-  void print(Object? object) {
-    if (!kDebugMode) return;
-    developer.log((object ?? '').toString(), name: 'DioClient');
-  }
-
-  void debugPrint(String? message, {int? wrapWidth}) {
-    if (!kDebugMode) return;
-    if (message == null) return;
-    developer.log(message, name: 'DioClient');
-  }
-
   void _init() {
     dio
       ..options.baseUrl = baseUrl
@@ -64,7 +37,7 @@ class DioClient {
         'X-localization': AppConstants.defaultLanguage, // Replace with runtime language if needed
       };
 
-    final isDebug = dotenv.env['APP_ENV'] == 'development';
+    final isDebug = AppConstants.appEnvironment == 'development';
 
     // Add network interceptor first (so it can wait for connectivity)
     if (networkInterceptor != null) {
@@ -105,7 +78,6 @@ class DioClient {
     ProgressCallback? onReceiveProgress,
     bool requireAuth = true,
   }) async {
-    _logRequest('GET', uri, queryParameters);
     try {
       return await dio.get(
         uri,
@@ -143,64 +115,37 @@ class DioClient {
     ProgressCallback? onReceiveProgress,
     bool requireAuth = true,
   }) async {
-    _logRequest('POST', uri, queryParameters, data);
-      _devLog('📤 DioClient POST: $uri');
-      _devLog('📤 RequireAuth: $requireAuth');
-      print('📤 DioClient POST: $uri');
-      print('📤 RequireAuth: $requireAuth');
-      try {
-        final options = Options();
-        if (!requireAuth) {
-          // Remove authorization header for public endpoints
-          options.headers = {
-            HttpHeaders.contentTypeHeader: 'application/json; charset=UTF-8',
-            'X-localization': AppConstants.defaultLanguage,
-          };
-          _devLog('📤 Headers (no auth): ${options.headers}');
-          print('📤 Headers (no auth): ${options.headers}');
-        } else {
-          _devLog('📤 Headers (with auth): ${dio.options.headers}');
-          print('📤 Headers (with auth): ${dio.options.headers}');
-        }
-        
-        _devLog('📤 Making POST request to: $baseUrl$uri');
-        print('📤 Making POST request to: $baseUrl$uri');
-        final response = await dio.post(
+    try {
+      final options = Options();
+      if (!requireAuth) {
+        // Public endpoint — strip the Authorization header.
+        options.headers = {
+          HttpHeaders.contentTypeHeader: 'application/json; charset=UTF-8',
+          'X-localization': AppConstants.defaultLanguage,
+        };
+      }
+      return await dio.post(
         uri,
         data: data,
         queryParameters: queryParameters,
         cancelToken: cancelToken,
         onSendProgress: onSendProgress,
         onReceiveProgress: onReceiveProgress,
-          options: options,
-        );
-        _devLog('📥 DioClient POST Response: Status ${response.statusCode}');
-        _devLog('📥 Response Data: ${response.data}');
-        print('📥 DioClient POST Response: Status ${response.statusCode}');
-        print('📥 Response Data: ${response.data}');
-        return response;
-      } on DioException catch (e) {
-        _handleUnauthorizedResponse(e, requireAuth: requireAuth);
-        _devLog('❌ DioClient POST DioException', error: e);
-        _devLog('❌ Error Type: ${e.type}');
-        _devLog('❌ Error Message: ${e.message}');
-        _devLog('❌ Response Status: ${e.response?.statusCode}');
-        _devLog('❌ Response Data: ${e.response?.data}');
-        print('❌ DioClient POST DioException');
-        print('❌ Error Type: ${e.type}');
-        print('❌ Error Message: ${e.message}');
-        print('❌ Response Status: ${e.response?.statusCode}');
-        print('❌ Response Data: ${e.response?.data}');
-        rethrow;
-      } on FormatException catch (e) {
-        _devLog('❌ DioClient POST FormatException: $e');
-        print('❌ DioClient POST FormatException: $e');
+        options: options,
+      );
+    } on DioException catch (e) {
+      _handleUnauthorizedResponse(e, requireAuth: requireAuth);
+      AppLogger.warn(
+        'DioClient',
+        'POST $uri failed (${e.type.name}, status=${e.response?.statusCode})',
+      );
+      rethrow;
+    } on FormatException {
       throw const FormatException("Unable to process the data");
-      } catch (e, stackTrace) {
-        _devLog('❌ DioClient POST Unexpected Error: $e', error: e, stackTrace: stackTrace);
-        print('❌ DioClient POST Unexpected Error: $e');
-        print('❌ Stack Trace: $stackTrace');
-        rethrow;
+    } catch (e, stackTrace) {
+      AppLogger.error('DioClient', 'POST $uri unexpected error',
+          error: e, stackTrace: stackTrace);
+      rethrow;
     }
   }
 
@@ -212,7 +157,6 @@ class DioClient {
     ProgressCallback? onSendProgress,
     bool requireAuth = true,
   }) async {
-    _logRequest('POST', uri, null, '(FormData)');
     final headers = <String, dynamic>{
       'X-localization': AppConstants.defaultLanguage,
     };
@@ -244,11 +188,10 @@ class DioClient {
     ProgressCallback? onReceiveProgress,
     bool requireAuth = true,
   }) async {
-    _logRequest('PUT', uri, queryParameters, data);
     try {
       final options = Options();
       if (!requireAuth) {
-        // Remove authorization header for public endpoints
+        // Public endpoint — strip the Authorization header.
         options.headers = {
           HttpHeaders.contentTypeHeader: 'application/json; charset=UTF-8',
           'X-localization': AppConstants.defaultLanguage,
@@ -279,7 +222,6 @@ class DioClient {
     Map<String, dynamic>? queryParameters,
     CancelToken? cancelToken,
   }) async {
-    _logRequest('DELETE', uri, queryParameters, data);
     try {
       return await dio.delete(
         uri,
@@ -294,19 +236,6 @@ class DioClient {
       throw const FormatException("Unable to process the data");
     } catch (e) {
       rethrow;
-    }
-  }
-
-  void _logRequest(
-    String method,
-    String uri,
-    Map<String, dynamic>? params, [
-    dynamic data,
-  ]) {
-    if (dotenv.env['APP_ENV'] == 'development') {
-      debugPrint('[$method] $baseUrl$uri');
-      if (params != null) debugPrint('Query: $params');
-      if (data != null) debugPrint('Body: $data');
     }
   }
 }

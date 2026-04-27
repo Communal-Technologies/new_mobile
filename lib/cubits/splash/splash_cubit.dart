@@ -8,9 +8,9 @@ import 'package:communal_mobile/cubits/settings/settings_cubit.dart';
 import 'package:communal_mobile/data/models/settings_model.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/data/repositories/regions_repository.dart';
+import 'package:communal_mobile/core/utils/app_logger.dart';
 import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 import 'package:dio/dio.dart' show DioException;
-import 'package:flutter/foundation.dart';
 import 'splash_state.dart';
 
 class SplashCubit extends Cubit<SplashState> {
@@ -63,10 +63,8 @@ class SplashCubit extends Cubit<SplashState> {
 
       await _verifyTokenAndEmit(token, settingsMap);
     } catch (e, stackTrace) {
-      if (kDebugMode) {
-        // ignore: avoid_print
-        print('SPLASH - Top-level error: $e\n$stackTrace');
-      }
+      AppLogger.error('Splash', 'Top-level error',
+          error: e, stackTrace: stackTrace);
       emit(SplashError('Something went wrong. Please try again.'));
     }
   }

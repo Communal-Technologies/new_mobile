@@ -41,7 +41,6 @@ dependencies:
   equatable: ^2.0.7
   shared_preferences: ^2.5.3
   flutter_secure_storage: ^9.2.4
-  flutter_dotenv: ^5.2.1
   location_geocoder: ^1.0.5
   gmaps_by_road_distance_calculator: ^3.0.2
   intl: ^0.20.2
@@ -93,7 +92,6 @@ flutter:
   assets:
     - assets/language/
     - assets/images/
-    - .env
 
   # An image assets can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

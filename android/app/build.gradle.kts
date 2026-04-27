@@ -65,6 +65,14 @@ android {
     }
 }
 
+// Audit M38: androidx.biometric brings BiometricPrompt + BiometricManager
+// for the platform channel that backs `lib/data/datasources/...biometric*`.
+// Pinning to a specific 1.2.x build avoids surprises with the alpha-only
+// auth-types API the channel uses.
+dependencies {
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
+}
+
 flutter {
     source = "../.."
 }

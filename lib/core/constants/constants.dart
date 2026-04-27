@@ -14,6 +14,11 @@ class AppConstants {
   static const String defaultLanguage = 'en';
   static const String configUri = '/fetch-system-settings';
 
+  /// Audit M25: OTP length used by the verify-reset, session-takeover, and
+  /// phone-verification screens. Backend issues 6-digit codes today; bumping
+  /// this constant is the only mobile change required if it ever changes.
+  static const int otpLength = 6;
+
   /// Staging API (used when `APP_ENV` is `staging`).
   static const String stagingApiBaseUrl =
       'https://api-staging.communalhq.com/api/v1';

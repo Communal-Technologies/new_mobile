@@ -14,6 +14,7 @@ import 'package:communal_mobile/core/di/cubit_module.dart' as _i588;
 import 'package:communal_mobile/core/di/local_storage_module.dart' as _i323;
 import 'package:communal_mobile/core/di/network_module.dart' as _i770;
 import 'package:communal_mobile/core/di/repository_module.dart' as _i620;
+import 'package:communal_mobile/core/security/token_manager.dart' as _i94;
 import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart'
     as _i751;
 import 'package:communal_mobile/cubits/security/security_cubit.dart' as _i723;
@@ -25,6 +26,8 @@ import 'package:communal_mobile/data/datasources/remote/dio/logging_interceptor.
     as _i354;
 import 'package:communal_mobile/data/datasources/remote/dio/network_interceptor.dart'
     as _i126;
+import 'package:communal_mobile/data/datasources/remote/dio/refresh_token_interceptor.dart'
+    as _i241;
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart' as _i798;
 import 'package:communal_mobile/data/repositories/auth_repository.dart'
     as _i493;
@@ -35,6 +38,8 @@ import 'package:communal_mobile/data/repositories/locations_repository.dart'
     as _i210;
 import 'package:communal_mobile/data/repositories/regions_repository.dart'
     as _i835;
+import 'package:communal_mobile/data/repositories/transfer_repository.dart'
+    as _i218;
 import 'package:dio/dio.dart' as _i361;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart' as _i558;
 import 'package:get_it/get_it.dart' as _i174;
@@ -67,6 +72,9 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i354.LoggingInterceptor>(
       () => networkModule.loggingInterceptor(),
     );
+    gh.lazySingleton<_i94.TokenManager>(
+      () => _i94.TokenManager(gh<_i558.FlutterSecureStorage>()),
+    );
     gh.lazySingleton<_i126.NetworkInterceptor>(
       () => networkModule.networkInterceptor(gh<_i751.ConnectivityCubit>()),
     );
@@ -81,11 +89,18 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i460.SharedPreferences>(),
       ),
     );
+    gh.lazySingleton<_i241.RefreshTokenInterceptor>(
+      () => _i241.RefreshTokenInterceptor(
+        gh<_i94.TokenManager>(),
+        gh<_i361.Dio>(),
+      ),
+    );
     gh.lazySingleton<_i750.DioClient>(
       () => networkModule.dioClient(
         gh<_i361.Dio>(),
         gh<_i354.LoggingInterceptor>(),
         gh<_i126.NetworkInterceptor>(),
+        gh<_i241.RefreshTokenInterceptor>(),
       ),
     );
     gh.lazySingleton<_i493.AuthRepository>(
@@ -105,6 +120,16 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i750.DioClient>(),
       ),
     );
+    gh.lazySingleton<_i218.TransferRepository>(
+      () => repositoryModule.provideTransferRepository(gh<_i750.DioClient>()),
+    );
+    gh.factory<_i789.AuthBloc>(
+      () => _i789.AuthBloc(
+        authRepository: gh<_i493.AuthRepository>(),
+        secureStorage: gh<_i558.FlutterSecureStorage>(),
+        tokenManager: gh<_i94.TokenManager>(),
+      ),
+    );
     gh.lazySingleton<_i739.SplashCubit>(
       () => cubitModule.provideSplashCubit(
         gh<_i460.SharedPreferences>(),
@@ -113,12 +138,6 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i587.SettingsCubit>(),
         gh<_i493.AuthRepository>(),
         gh<_i835.RegionsRepository>(),
-      ),
-    );
-    gh.factory<_i789.AuthBloc>(
-      () => _i789.AuthBloc(
-        authRepository: gh<_i493.AuthRepository>(),
-        secureStorage: gh<_i558.FlutterSecureStorage>(),
       ),
     );
     return this;

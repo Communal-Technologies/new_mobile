@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:communal_mobile/core/constants/constants.dart';
 import 'package:communal_mobile/core/theme/colors.dart';
 import 'package:communal_mobile/injection.dart';
@@ -38,11 +40,12 @@ void main() async {
     ),
   );
 
-  // Lock to portrait only
-  SystemChrome.setPreferredOrientations([
+  // Lock to portrait only — fire-and-forget; the `.then` chains the
+  // runApp call so we don't await this at top level.
+  unawaited(SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
-  ]  ).then(
+  ]).then(
     (_) => runApp(
       MultiBlocProvider(
         providers: [
@@ -53,7 +56,7 @@ void main() async {
         child: const MyApp(),
       ),
     ),
-  );
+  ));
 }
 
 /// Surfaces missing build-time `--dart-define` values at startup instead of

@@ -113,34 +113,26 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
     }
   }
   
-  /// Load only login from secure storage (for app lock - no API calls)
-  /// CRITICAL: This should ONLY be called once in initState for app lock
-  /// It should NEVER be called again to prevent flickering/rebuilds
+  /// Hydrate the in-memory `_user` for the lock screen from the active
+  /// [AuthBloc] state. Audit M5: the legacy version of this method read
+  /// the email/phone identifier from secureStorage so the lock screen could
+  /// re-render it across rebuilds. We no longer persist that identifier;
+  /// when the bloc still holds an [AuthAuthenticated] (idle-lock case)
+  /// the resident `user` is the source. Cold-start lock with no resident
+  /// state simply renders the generic "Welcome back" greeting.
   Future<void> _loadUserLoginFromStorage() async {
-    // CRITICAL: Prevent duplicate calls that cause flickering
-    if (_isLoadingUserInfo) {
-      return;
-    }
-    
+    if (_isLoadingUserInfo) return;
     _isLoadingUserInfo = true;
     try {
-      final storedLogin = await _secureStorage.read(key: 'login');
-      if (mounted && storedLogin != null && storedLogin.isNotEmpty) {
-        // CRITICAL: Only update if _user is null or login is different
-        // This prevents unnecessary rebuilds and flickering
-        // Also check if login is empty to handle edge cases
-        if (_user == null || _user!.login != storedLogin || _user!.login.isEmpty) {
-          setState(() {
-            _user = UserModel(
-              id: '0',
-              name: storedLogin,
-              login: storedLogin,
-            );
-          });
+      if (!mounted) return;
+      final auth = context.read<AuthBloc>().state;
+      if (auth is AuthAuthenticated) {
+        if (_user?.id != auth.user.id) {
+          setState(() => _user = auth.user);
         }
       }
-    } catch (e) {
-      debugPrint('Error loading login from storage: $e');
+    } catch (_) {
+      // Silent: no in-memory state means we render the generic greeting.
     } finally {
       _isLoadingUserInfo = false;
     }
@@ -173,27 +165,15 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
         }
       }
       
-      // If no token (app is locked), try to get login from secure storage
-      // and create a minimal user object for display
-      // CRITICAL: Always load from secure storage if _user is null or login is empty
-      // This ensures user data is preserved even after rebuilds (e.g., after wrong PIN)
-      final storedLogin = await _secureStorage.read(key: 'login');
-      if (mounted && storedLogin != null && storedLogin.isNotEmpty) {
-        // Always update if _user is null or login is different
-        // This ensures user data is preserved after rebuilds
-        if (_user == null || _user!.login != storedLogin || _user!.login.isEmpty) {
-          // Create a minimal user object with just the login for display
-          setState(() {
-            _user = UserModel(
-              id: '0', // Placeholder string ID
-              name: storedLogin, // Use login as name for display
-              login: storedLogin,
-              // Other fields will be null/empty, but login is enough for display
-            );
-          });
+      // Audit M5: no fallback to a stored identifier here either. If the
+      // bloc holds AuthAuthenticated (idle-lock with active session), use
+      // its user; otherwise leave `_user` null and render the generic
+      // greeting.
+      if (mounted) {
+        final auth = context.read<AuthBloc>().state;
+        if (auth is AuthAuthenticated && _user?.id != auth.user.id) {
+          setState(() => _user = auth.user);
         }
-      } else if (mounted && _user == null) {
-        // If no login in storage and _user is null, log a warning
       }
     } catch (e) {
       // Failed to load user info, continue without it
@@ -291,30 +271,67 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
     super.dispose();
   }
 
-  /// Get masked login (email or phone) for display
-  /// CRITICAL: This method should always return a masked login, even if _user is null
-  /// It will try multiple sources: _user.login, widget.phoneNumber, secure storage
+  /// Returns a masked email/phone for display below the "Welcome Back" header.
+  ///
+  /// Audit M5: this method NEVER reads from secure storage — that was the
+  /// audit's actual attack surface (Keystore extraction reveals which
+  /// account is logged in). All sources here are in-memory only:
+  ///   1. `_user.login` — server-fetched UserModel from `/get-loggedin-user`
+  ///   2. `widget.phoneNumber` — passed via the route extra at navigation time
+  ///   3. `AuthBloc.state.login` — resident in-memory through idle-lock
+  /// Renders `****` when none of the in-memory sources have a value (cold
+  /// lock with no resident state).
   String _getMaskedLogin() {
-    // First, try _user.login
     if (_user?.login != null && _user!.login.isNotEmpty) {
       return _maskString(_user!.login);
     }
-    
-    // Second, try widget.phoneNumber
     if (widget.phoneNumber.isNotEmpty) {
       return _maskString(widget.phoneNumber);
     }
-
-    // Third: active session still has login (e.g. idle lock before storage read completes)
     try {
       final authState = context.read<AuthBloc>().state;
       if (authState is AuthAuthenticated && authState.login.isNotEmpty) {
         return _maskString(authState.login);
       }
     } catch (_) {}
-    
-    // Fourth: rely on _loadUserLoginFromStorage / _loadUserInfo to set _user
     return '****';
+  }
+
+  /// Mask email or phone number with asterisks.
+  String _maskString(String input) {
+    if (input.isEmpty) return '****';
+
+    if (input.contains('@')) {
+      final parts = input.split('@');
+      if (parts.length == 2) {
+        final username = parts[0];
+        final domain = parts[1];
+        // Fixed-width middle mask: always 5 asterisks, regardless of
+        // username length. When the username has 5 chars or fewer there's
+        // nothing to peek out around the mask, so substitute the whole
+        // thing.
+        if (username.length <= 5) {
+          return '*****@$domain';
+        }
+        final revealed = username.length - 5;
+        final startLen = (revealed + 1) ~/ 2; // bias to the start on odd
+        final endLen = revealed - startLen;
+        final start = username.substring(0, startLen);
+        final end = endLen > 0
+            ? username.substring(username.length - endLen)
+            : '';
+        return '$start*****$end@$domain';
+      }
+    }
+
+    // Phone: keep the first 5 and last 2 digits visible, mask the middle.
+    if (input.length <= 7) {
+      return '*' * input.length;
+    }
+    final start = input.substring(0, 5);
+    final end = input.substring(input.length - 2);
+    final middle = '*' * (input.length - 7);
+    return '$start$middle$end';
   }
 
   /// Show logout confirmation dialog
@@ -337,11 +354,14 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
               // Unlocking would cause SecurityWrapper to rebuild and show dashboard
               // We want to navigate to welcome screen, not unlock the app
               
-              // Step 1: Clear all data first
+              // Step 1: Clear all data first.
+              // Audit M5: the `login` key is no longer written, but legacy
+              // installs may still have it — keep the delete for cleanup.
               try {
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.clear();
                 await _secureStorage.delete(key: 'token');
+                await _secureStorage.delete(key: 'user_id');
                 await _secureStorage.delete(key: 'login');
               } catch (e) {
                 // Continue even if clearing fails
@@ -374,37 +394,6 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
       ),
     );
   }
-
-  /// Mask email or phone number with asterisks
-  String _maskString(String input) {
-    if (input.isEmpty) return '****';
-    
-    // Check if it's an email
-    if (input.contains('@')) {
-      final parts = input.split('@');
-      if (parts.length == 2) {
-        final username = parts[0];
-        final domain = parts[1];
-        // Show first 2 chars and last char of username, mask the rest
-        if (username.length <= 3) {
-          return '${'*' * username.length}@$domain';
-        }
-        final masked = '${username.substring(0, 2)}${'*' * (username.length - 3)}${username.substring(username.length - 1)}@$domain';
-        return masked;
-      }
-    }
-    
-    // It's a phone number
-    // Show first 3 digits and last 4 digits, mask the rest
-    if (input.length <= 7) {
-      return '*' * input.length;
-    }
-    final start = input.substring(0, 3);
-    final end = input.substring(input.length - 4);
-    final middle = '*' * (input.length - 7);
-    return '$start$middle$end';
-  }
-
 
   void _onNumberTap(String number) {
     if (_password.length < 6) {
@@ -478,10 +467,18 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
         return;
       }
 
-      // Get stored login from secure storage
-      final storedLogin = await _secureStorage.read(key: 'login');
-      final login = storedLogin ?? widget.phoneNumber;
-      
+      // Audit M5: no longer read the email/phone identifier from secure
+      // storage. For idle-lock the resident AuthBloc state still has the
+      // session login (in-memory only); for fresh-login it's the phone /
+      // email passed in via route extras.
+      String login = widget.phoneNumber;
+      if (login.isEmpty && mounted) {
+        final auth = context.read<AuthBloc>().state;
+        if (auth is AuthAuthenticated) {
+          login = auth.login;
+        }
+      }
+
       if (login.isEmpty) {
         // No login stored, show error
         setState(() {
@@ -1015,7 +1012,9 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
 
               vSpace(6),
 
-              // Email/Phone number (masked)
+              // Masked email / phone — the in-memory copy only (audit M5:
+              // never read this value from secure storage; see
+              // [_getMaskedLogin] for the source priority).
               Center(
                 child: Text(
                   _getMaskedLogin(),
@@ -1215,28 +1214,26 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
           alignment: Alignment.centerRight,
           child: TextButton(
               onPressed: () async {
-                // Get the user's login (email or phone)
-                // Try multiple sources to ensure we get the login
-                final storedLogin = await _secureStorage.read(key: 'login');
-                String? login = storedLogin;
-                
-                // If no stored login, try user model
-                if (login == null || login.isEmpty) {
-                  login = _user?.login;
-                }
-                
-                // If still no login, try widget phoneNumber
+                // Get the user's login (email or phone) for the forgot-password
+                // pre-fill. Audit M5: never read it from secure storage —
+                // use the in-memory user model or the route extras.
+                String? login = _user?.login;
                 if (login == null || login.isEmpty) {
                   login = widget.phoneNumber;
                 }
-                
-                
-                // Navigate with login if available
+                if ((login.isEmpty) && mounted) {
+                  final auth = context.read<AuthBloc>().state;
+                  if (auth is AuthAuthenticated) {
+                    login = auth.login;
+                  }
+                }
+
                 final Map<String, dynamic> extra = {};
-                if (login.isNotEmpty) {
+                if (login != null && login.isNotEmpty) {
                   extra['preFilledContact'] = login;
                 }
-                
+
+                if (!mounted) return;
                 context.push('/forgot-password', extra: extra);
             },
             style: TextButton.styleFrom(

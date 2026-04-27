@@ -1,4 +1,5 @@
 import 'package:communal_mobile/core/utils/app_currency.dart';
+import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/mappers/transaction_history_mapper.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
@@ -19,7 +20,7 @@ class TransactionsRepository {
     if (uid.isEmpty) return const [];
     try {
       final response = await _dioClient.get(
-        '/members/fetch-transactions/$uid',
+        ApiEndpoints.membersFetchTransactions(uid),
         queryParameters: {
           'page': page,
           'per_page': perPage,
@@ -47,7 +48,7 @@ class TransactionsRepository {
     if (ln.isEmpty) return const [];
     try {
       final response = await _dioClient.get(
-        '/members/fetch-member-transactions/$ln',
+        ApiEndpoints.membersFetchMemberTransactions(ln),
       );
       final data = response.data;
       if (data is! Map) return const [];
@@ -141,7 +142,7 @@ class TransactionsRepository {
   }) async {
     try {
       final response = await _dioClient.post(
-        '/members/transaction-statement/export',
+        ApiEndpoints.membersTransactionStatementExport,
         data: {
           'scope': scope,
           'start_date': startInclusive.toIso8601String(),

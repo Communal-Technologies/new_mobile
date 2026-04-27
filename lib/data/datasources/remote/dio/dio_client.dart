@@ -145,6 +145,7 @@ class DioClient {
     ProgressCallback? onReceiveProgress,
     bool requireAuth = true,
     String? idempotencyKey,
+    Map<String, String>? extraHeaders,
   }) async {
     try {
       final options = Options();
@@ -161,6 +162,15 @@ class DioClient {
       if (idempotencyKey != null && idempotencyKey.isNotEmpty) {
         final headers = options.headers ?? <String, dynamic>{};
         headers['Idempotency-Key'] = idempotencyKey;
+        options.headers = headers;
+      }
+      // Audit M38: biometric signature triple (X-Biometric-{Device-Id,
+      // Nonce-Id, Signature}) lives in [extraHeaders] when the caller is
+      // a biometric-gated endpoint (transfer, pay-obligation). Generic
+      // mechanism so future per-request headers don't need a new param.
+      if (extraHeaders != null && extraHeaders.isNotEmpty) {
+        final headers = options.headers ?? <String, dynamic>{};
+        headers.addAll(extraHeaders);
         options.headers = headers;
       }
       return await dio.post(

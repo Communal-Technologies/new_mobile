@@ -2,9 +2,16 @@ package com.example.communal_mobile
 
 import android.os.Bundle
 import android.view.WindowManager
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
 
-class MainActivity : FlutterActivity() {
+/**
+ * Extends `FlutterFragmentActivity` (rather than `FlutterActivity`) so the
+ * audit M38 [BiometricKeyChannel] can host an `androidx.biometric`
+ * `BiometricPrompt`, which requires a `FragmentActivity` host.
+ */
+class MainActivity : FlutterFragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // FLAG_SECURE: tell Android never to capture this app's content for
@@ -24,5 +31,17 @@ class MainActivity : FlutterActivity() {
             WindowManager.LayoutParams.FLAG_SECURE,
             WindowManager.LayoutParams.FLAG_SECURE,
         )
+    }
+
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        super.configureFlutterEngine(flutterEngine)
+        // Audit M38: register the biometric key channel so Dart can
+        // generate / sign / revoke ECDSA P-256 keys via the platform's
+        // hardware-backed Keystore.
+        val channel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            BiometricKeyChannel.CHANNEL,
+        )
+        BiometricKeyChannel(this).register(channel)
     }
 }

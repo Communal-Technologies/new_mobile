@@ -1,3 +1,4 @@
+import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/models/community_membership_model.dart';
 import 'package:dio/dio.dart';
@@ -9,7 +10,7 @@ class CommunitySettingsRepository {
 
   Future<List<CommunityMembership>> fetchMemberships() async {
     try {
-      final response = await _dioClient.get('/members/community-settings');
+      final response = await _dioClient.get(ApiEndpoints.membersCommunitySettings);
       final data = response.data;
       if (data is! Map) {
         throw Exception('Invalid response');
@@ -35,7 +36,7 @@ class CommunitySettingsRepository {
   ) async {
     try {
       final response = await _dioClient.put(
-        '/members/community-settings/$cooperativeId',
+        ApiEndpoints.membersCommunitySettingsForCooperative(cooperativeId),
         data: body,
       );
       final data = response.data;

@@ -2,6 +2,7 @@ import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
+import 'package:communal_mobile/core/utils/tier_limit_check.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:flutter/material.dart';
@@ -80,7 +81,27 @@ class _TransferInternalAmountScreenState
       ).showSnackBar(const SnackBar(content: Text('Enter valid amount.')));
       return;
     }
+
+    // Audit M21: bail before navigating if the amount can't possibly
+    // succeed given the user's tier (KYC not done, or amount > daily
+    // cap). Saves a wasted round-trip and gives the user a clearer
+    // message than the backend's generic 4xx.
+    if (auth is AuthAuthenticated) {
+      final tierError = checkTransferAgainstTierLimits(
+        user: auth.user,
+        amountMinor: amountMinor,
+        currency: currency,
+      );
+      if (tierError != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(tierError)));
+        return;
+      }
+    }
+
     if (!mounted) return;
+    // ignore: unawaited_futures
     context.pushNamed(
       'transfer-internal-review',
       extra: {

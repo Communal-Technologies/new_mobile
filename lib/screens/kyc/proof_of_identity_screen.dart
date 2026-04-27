@@ -5,6 +5,7 @@ import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/navigation/root_navigator_key.dart';
 import 'package:communal_mobile/cubits/security/security_cubit.dart';
+import 'package:communal_mobile/core/utils/idempotency.dart';
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/data/repositories/kyc_repository.dart';
@@ -62,10 +63,7 @@ bool _requiresBackForDisplayIdType(String? displayLabel) {
 }
 
 class ProofOfIdentityScreen extends StatefulWidget {
-  const ProofOfIdentityScreen({super.key, this.anchorCustomerId});
-
-  /// From route [extra] or recovered from [KycProgressStorage] on resume.
-  final String? anchorCustomerId;
+  const ProofOfIdentityScreen({super.key});
 
   @override
   State<ProofOfIdentityScreen> createState() => _ProofOfIdentityScreenState();
@@ -74,17 +72,28 @@ class ProofOfIdentityScreen extends StatefulWidget {
 class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
   final _idNumberController = TextEditingController();
 
+  /// Resolved from one of two trusted sources (audit M30 — route extras are
+  /// no longer accepted):
+  ///
+  /// 1. [AuthAuthenticated.user.kycAnchorCustomerId] — server-vouched, comes
+  ///    straight from `/get-loggedin-user` (`kyc.anchor_customer_id`). This
+  ///    is the cross-device-resume path.
+  /// 2. [KycProgressStorage.getAnchor] — per-user-keyed local cache written
+  ///    by [KycProgressStorage.saveAfterProfileRegistered] right after the
+  ///    `/compliance/register/{id}` response. Same-device resume.
   String? _resolvedAnchor;
 
   String? _effectiveAnchor() {
-    final fromRoute = widget.anchorCustomerId?.trim();
-    if (fromRoute != null && fromRoute.isNotEmpty) return fromRoute;
+    if (_resolvedAnchor != null && _resolvedAnchor!.isNotEmpty) {
+      return _resolvedAnchor;
+    }
     final auth = context.read<AuthBloc>().state;
     if (auth is AuthAuthenticated) {
-      return _resolvedAnchor ??
-          getIt<KycProgressStorage>().getAnchor(auth.userId);
+      final fromUser = auth.user.kycAnchorCustomerId?.trim();
+      if (fromUser != null && fromUser.isNotEmpty) return fromUser;
+      return getIt<KycProgressStorage>().getAnchor(auth.userId);
     }
-    return _resolvedAnchor;
+    return null;
   }
 
   String? _idTypeError;
@@ -102,6 +111,10 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
   PlatformFile? _pickedBackFile;
   bool _isSubmitting = false;
 
+  /// Audit M23: minted once per screen mount; reused across user retries so
+  /// duplicate Anchor identity submissions are deduped server-side.
+  late final String _idempotencyKey = newIdempotencyKey();
+
   @override
   void initState() {
     super.initState();
@@ -113,15 +126,19 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
   void _syncAnchorFromStorage() {
     final auth = context.read<AuthBloc>().state;
     if (auth is! AuthAuthenticated) return;
-    final fromRoute = widget.anchorCustomerId?.trim();
-    final fromDisk = getIt<KycProgressStorage>().getAnchor(auth.userId);
-    final id = (fromRoute != null && fromRoute.isNotEmpty)
-        ? fromRoute
+    final storage = getIt<KycProgressStorage>();
+    final fromUser = auth.user.kycAnchorCustomerId?.trim();
+    final fromDisk = storage.getAnchor(auth.userId);
+    final resolved = (fromUser != null && fromUser.isNotEmpty)
+        ? fromUser
         : fromDisk;
     if (!mounted) return;
-    setState(() => _resolvedAnchor = id);
-    if (fromRoute != null && fromRoute.isNotEmpty) {
-      getIt<KycProgressStorage>().ensureAnchorSynced(auth.userId, fromRoute);
+    setState(() => _resolvedAnchor = resolved);
+    // Mirror the server-vouched value into local storage so the next launch
+    // (or any flow that consults storage first) stays consistent without
+    // needing another /get-loggedin-user round-trip.
+    if (fromUser != null && fromUser.isNotEmpty) {
+      storage.ensureAnchorSynced(auth.userId, fromUser);
     }
   }
 
@@ -430,6 +447,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
         idNumber: _idNumberController.text.trim(),
         idType: idType,
         expiryDateYmd: expiryYmd,
+        idempotencyKey: _idempotencyKey,
         fileFrontPath: frontPath?.trim(),
         fileFrontBytes: (frontBytes != null && frontBytes.isNotEmpty)
             ? frontBytes

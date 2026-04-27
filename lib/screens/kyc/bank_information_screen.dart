@@ -190,6 +190,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
       await getIt<KycProgressStorage>().markBankStepDone(auth.userId);
     }
     if (!mounted) return;
+    // ignore: unawaited_futures
     context.push('/kyc/proof-of-identity', extra: _kycExtra());
   }
 
@@ -238,6 +239,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
       await getIt<KycProgressStorage>().markBankStepDone(auth.userId);
     }
     if (!mounted) return;
+    // ignore: unawaited_futures
     context.push('/kyc/proof-of-identity', extra: _kycExtra());
   }
 

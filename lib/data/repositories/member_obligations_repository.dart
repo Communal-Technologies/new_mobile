@@ -231,6 +231,7 @@ class MemberObligationsRepository {
     required String cashRepositoryId,
     required double amountNaira,
     String? idempotencyKey,
+    Map<String, String>? biometricHeaders,
   }) async {
     final cooperativeId = user.cooperativeId?.trim() ?? '';
     final ledgerNumber = user.ledgerNumber?.trim() ?? '';
@@ -261,6 +262,7 @@ class MemberObligationsRepository {
           'cash_repository_id': rid,
         },
         idempotencyKey: idempotencyKey,
+        extraHeaders: biometricHeaders,
       );
       final data = response.data;
       if (response.statusCode == 200) return;

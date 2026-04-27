@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/idempotency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
@@ -47,6 +48,7 @@ class _ObligationConfirmPaymentScreenState
   final MemberObligationsRepository _repository =
       MemberObligationsRepository(getIt());
   final TransferRepository _transferRepo = getIt<TransferRepository>();
+  final BiometricSignerService _biometricSigner = getIt<BiometricSignerService>();
   late final List<TextEditingController> _pinControllers;
   late final List<FocusNode> _pinFocusNodes;
   bool _obscurePin = true;
@@ -444,6 +446,13 @@ class _ObligationConfirmPaymentScreenState
       // than the legacy `(amount * 100).round()` (which was kobo-locked).
       final amountMinor = Money.fromMajor(widget.amount, currencyCode).amountMinor;
 
+      // Audit M38: biometric proof for the transfer that backs this
+      // obligation payment. Same shape as the user-driven transfer flow.
+      final biometricHeaders = (await _biometricSigner.signTransferIntent(
+        promptTitle: 'Authorize payment',
+        promptSubtitle: 'Use biometrics to confirm this obligation payment',
+      )).toHeaders();
+
       final result = await _transferRepo.initiateTransfer(
         type: 'NIPTransfer',
         amountMinor: amountMinor,
@@ -451,6 +460,7 @@ class _ObligationConfirmPaymentScreenState
         counterPartyId: fav.accountId,
         currencyCode: currencyCode,
         idempotencyKey: _idempotencyKey,
+        biometricHeaders: biometricHeaders,
       );
 
       if (!mounted) return;

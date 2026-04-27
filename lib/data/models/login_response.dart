@@ -3,6 +3,17 @@ import 'package:communal_mobile/data/models/user_model.dart';
 
 class LoginResponse extends Equatable {
   final String? token;
+
+  /// Refresh token returned alongside the access token (audit M6). Required
+  /// for [TokenManager] to perform proactive + reactive token refresh
+  /// without re-prompting the user for credentials.
+  final String? refreshToken;
+
+  /// Access-token lifetime (seconds), as reported by `/login` and
+  /// `/refresh-token`. May be null on older payload shapes; in that case
+  /// the access-token's own `exp` claim is consulted instead.
+  final int? expiresIn;
+
   final UserModel? user;
   final bool requiresSessionTakeoverOtp;
   final String? takeoverChallengeId;
@@ -13,6 +24,8 @@ class LoginResponse extends Equatable {
 
   const LoginResponse({
     this.token,
+    this.refreshToken,
+    this.expiresIn,
     this.user,
     this.requiresSessionTakeoverOtp = false,
     this.takeoverChallengeId,
@@ -25,6 +38,8 @@ class LoginResponse extends Equatable {
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
     return LoginResponse(
       token: json['token'] as String?,
+      refreshToken: json['refresh_token'] as String?,
+      expiresIn: (json['expires_in'] as num?)?.toInt(),
       user: json['user'] != null
           ? UserModel.fromJson(json['user'] as Map<String, dynamic>)
           : null,
@@ -40,6 +55,8 @@ class LoginResponse extends Equatable {
   Map<String, dynamic> toJson() {
     return {
       'token': token,
+      'refresh_token': refreshToken,
+      'expires_in': expiresIn,
       'user': user?.toJson(),
       'requires_session_takeover_otp': requiresSessionTakeoverOtp,
       'takeover_challenge_id': takeoverChallengeId,
@@ -53,6 +70,8 @@ class LoginResponse extends Equatable {
   @override
   List<Object?> get props => [
         token,
+        refreshToken,
+        expiresIn,
         user,
         requiresSessionTakeoverOtp,
         takeoverChallengeId,

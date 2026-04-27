@@ -185,6 +185,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
     if (!_footerContinueEnabled) return;
     final picked = _footerRecipient;
     if (picked != null) {
+      // ignore: unawaited_futures
       context.pushNamed(
         'transfer-internal-amount',
         extra: {'favorite': picked.toJson()},

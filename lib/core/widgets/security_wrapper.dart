@@ -112,11 +112,21 @@ class _SecurityWrapperState extends State<SecurityWrapper>
         securityCubit.onAppPaused();
         break;
       case AppLifecycleState.resumed:
-        // Clear privacy blur when actually returning to the app ([paused]/[hidden] had run).
-        // Do not blur on [inactive] — that also runs for the notification shade / system sheets.
+        // Clear privacy blur when actually returning to the app
+        // ([paused]/[hidden] had run). Do not blur on [inactive] —
+        // that also runs for the notification shade / system sheets.
+        //
+        // IMPORTANT: always clear `blurOverlay` on resume. Previously
+        // the locked branch skipped `onAppResumed()`, which is what
+        // flips the overlay off — so the Flutter blur stayed painted
+        // over the lock-screen welcome-back UI until the user
+        // unlocked. `onAppResumed()` already early-returns once it's
+        // cleared blur if the cubit is locked, so calling it
+        // unconditionally is safe.
         if (securityCubit.state == SecurityState.locked) {
           _hasInitializedLock = false;
           _shouldLockOnNextAuth = true;
+          securityCubit.blurOverlay.value = false;
         } else {
           securityCubit.onAppResumed();
         }

@@ -76,7 +76,11 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
   @override
   void initState() {
     super.initState();
-    _currentMethod = widget.method;
+    // Default to PIN. `_currentMethod` only flips to fingerprint after
+    // `_checkBiometricAvailability` confirms real enrollment (sets
+    // `_canUseBiometric = true`) — guarantees the very first frame is
+    // PIN, never the half-painted "biometric available" state.
+    _currentMethod = SignInMethod.pin;
     _authRepository = getIt<AuthRepository>();
     _waitingForBackendValidation = false; // Always start with false - no pending validation
     _isAuthenticating = false; // Always start with false

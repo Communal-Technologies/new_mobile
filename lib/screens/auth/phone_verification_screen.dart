@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:communal_mobile/core/constants/constants.dart';
 import 'package:communal_mobile/core/constants/images.dart';
 import 'package:communal_mobile/core/widgets/otp_input_field.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
@@ -168,7 +169,8 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   }
 
   void _verifyCode() {
-    if (_code.length == 6) {
+    // Audit M25: read from [AppConstants.otpLength].
+    if (_code.length == AppConstants.otpLength) {
       // TODO: Verify code with backend
       // Navigate to PIN setup
       context.push('/set-pin');
@@ -309,7 +311,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
               // Continue button
               AppElevatedButton(
                 title: 'Continue',
-                onPressed: _code.length == 6 ? _verifyCode : null,
+                onPressed: _code.length == AppConstants.otpLength ? _verifyCode : null,
               ),
 
               vSpace(32),

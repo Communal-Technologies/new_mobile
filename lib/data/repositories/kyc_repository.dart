@@ -149,6 +149,7 @@ class KycRepository {
       final response = await _dioClient.postFormData(
         '/compliance/upgrade-to-tier2/$anchorCustomerId',
         data: formData,
+        idempotencyKey: idempotencyKey,
       );
       final data = response.data;
       if (data is Map && (data['status'] == true || data['status'] == 'true')) {

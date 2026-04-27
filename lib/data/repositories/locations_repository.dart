@@ -1,3 +1,4 @@
+import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/models/lga_model.dart';
 import 'package:communal_mobile/data/models/state_model.dart';
@@ -15,7 +16,7 @@ class LocationsRepository {
       query['country_iso'] = countryIso.toUpperCase();
     }
     final response = await _dioClient.get(
-      '/fetch-states',
+      ApiEndpoints.fetchStates,
       queryParameters: query.isEmpty ? null : query,
       requireAuth: false,
     );
@@ -32,7 +33,7 @@ class LocationsRepository {
 
   /// Authenticated.
   Future<List<LgaModel>> fetchLgas(String stateId) async {
-    final response = await _dioClient.get('/fetch-lgas/$stateId');
+    final response = await _dioClient.get(ApiEndpoints.fetchLgas(stateId));
     final data = response.data;
     if (data is! Map) return [];
     final raw = data['lgas'];

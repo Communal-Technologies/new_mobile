@@ -1,23 +1,23 @@
-import 'dart:developer' as developer;
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
-import 'package:communal_mobile/core/utils/app_logger.dart' as app_logger;
+import 'package:communal_mobile/core/utils/app_logger.dart';
 import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dio/dio.dart';
 
 @injectable
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
+  static const String _tag = 'AuthBloc';
+
   final AuthRepository authRepository;
   final FlutterSecureStorage secureStorage;
-  
+
   // CRITICAL: Track if we just had a failed login attempt
   // This prevents AppStarted from unlocking with a cached token after password failure
   bool _hasRecentFailedLogin = false;
@@ -42,31 +42,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<ResetPasswordRequested>(_onResetPasswordRequested);
     on<SessionTakeoverVerifyRequested>(_onSessionTakeoverVerifyRequested);
     on<SessionTakeoverCancelled>(_onSessionTakeoverCancelled);
-  }
-
-  void _devLog(
-    String message, {
-    Object? error,
-    StackTrace? stackTrace,
-  }) {
-    if (!kDebugMode) return;
-    developer.log(
-      message,
-      name: 'AuthBloc',
-      error: error,
-      stackTrace: stackTrace,
-    );
-  }
-
-  void appLog(String title, String message) {
-    if (!kDebugMode) return;
-    app_logger.appLog(title, message);
-  }
-
-  void debugPrint(String? message, {int? wrapWidth}) {
-    if (!kDebugMode) return;
-    if (message == null) return;
-    developer.log(message, name: 'AuthBloc');
   }
 
   /// Extract clean error message from exception
@@ -118,8 +93,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onAppStarted(AppStarted event, Emitter<AuthState> emit) async {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    debugPrint('AUTH AppStarted ts=$timestamp failedLogin=$_hasRecentFailedLogin');
+    AppLogger.debug(
+        _tag, 'AppStarted failedLogin=$_hasRecentFailedLogin');
 
     if (_hasRecentFailedLogin) {
       Future.delayed(const Duration(seconds: 5), () {
@@ -133,7 +108,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     try {
       final token = await secureStorage.read(key: 'token');
-      debugPrint('AUTH AppStarted tokenPresent=${token != null}');
+      AppLogger.debug(_tag, 'AppStarted tokenPresent=${token != null}');
 
       if (token != null) {
         try {
@@ -170,7 +145,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthUnauthenticated());
       }
     } catch (e, st) {
-      debugPrint('AUTH AppStarted error $e $st');
+      AppLogger.error(_tag, 'AppStarted error', error: e, stackTrace: st);
       try {
         await secureStorage.delete(key: 'token');
       } catch (_) {}
@@ -232,7 +207,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final existingToken = await secureStorage.read(key: 'token');
       final hasExistingToken = existingToken != null && existingToken.isNotEmpty;
       if (!hasExistingToken) {
-        debugPrint('AUTH LoginFailed fresh attempt (no prior token)');
+        AppLogger.debug(_tag, 'LoginFailed fresh attempt (no prior token)');
       }
       _hasRecentFailedLogin = true;
       emit(AuthFailure(errorMsg));
@@ -347,17 +322,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     LogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
-    debugPrint('📊   🚪 LOGOUT REQUESTED - Clearing all user data');
-    
-    // Clear ALL user-related keys from secure storage (preserve app-level settings like onboarding_completed)
-    // This ensures onboarding flag persists through logout but is cleared on app uninstall
+    // Clear ALL user-related keys from secure storage (preserve app-level
+    // settings like onboarding_completed). The onboarding flag persists
+    // through logout but is cleared on app uninstall.
     await secureStorage.delete(key: 'token');
     await secureStorage.delete(key: 'login');
-    // Note: 'onboarding_completed' is intentionally NOT deleted (app-level setting)
-    
-    debugPrint('📊   🗑️ Deleted token and login from secure storage');
-    debugPrint('📊   ✅ User data cleared - emitting AuthUnauthenticated');
-    
     emit(AuthUnauthenticated());
   }
 
@@ -443,68 +412,44 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     CreatePasswordRequested event,
     Emitter<AuthState> emit,
   ) async {
-    debugPrint('🔵 BLOC: CreatePasswordRequested - Starting');
     emit(AuthLoading());
 
     try {
       if (event.password != event.confirmPassword) {
-        debugPrint('❌ BLOC: Passwords do not match');
         emit(const AuthFailure('Passwords do not match'));
         return;
       }
 
       // Password must be exactly 6 digits (numeric only) for mobile
       if (event.password.length != 6) {
-        debugPrint('❌ BLOC: Password must be 6 digits');
         emit(const AuthFailure('Password must be exactly 6 digits'));
         return;
       }
 
       // Check if password is numeric only
       if (!RegExp(r'^[0-9]+$').hasMatch(event.password)) {
-        debugPrint('❌ BLOC: Password must be numeric only');
         emit(const AuthFailure('Password must contain only numbers'));
         return;
       }
 
-      // Check if password is all the same character (brute force prevention)
+      // Brute force prevention: reject all-same-digit PINs.
       final firstChar = event.password[0];
       if (event.password.split('').every((char) => char == firstChar)) {
-        debugPrint('❌ BLOC: Password cannot be all the same digit');
         emit(const AuthFailure('Password cannot be all the same digit. Please use a mix of different numbers.'));
         return;
       }
 
-      _devLog('🔵 BLOC: Calling authRepository.createPassword');
-      appLog('BLOC: Calling createPassword', 'UserId: ${event.userId}');
-      debugPrint('🔵 BLOC: Calling authRepository.createPassword');
       final loginResponse = await authRepository.createPassword(
         event.userId,
         event.password,
       );
 
-      _devLog('🔵 BLOC: createPassword returned');
-      _devLog('🔵 BLOC: loginResponse is null: ${loginResponse == null}');
-      appLog('BLOC: createPassword returned', 'loginResponse is null: ${loginResponse == null}');
-      debugPrint('🔵 BLOC: createPassword returned');
-      debugPrint('🔵 BLOC: loginResponse is null: ${loginResponse == null}');
-      if (loginResponse != null) {
-        debugPrint('🔵 BLOC: loginResponse.token is null: ${loginResponse.token == null}');
-        if (loginResponse.token != null) {
-          debugPrint('🔵 BLOC: Token found, saving and authenticating');
-        }
-      }
-
       if (loginResponse?.token != null) {
         // Token was returned, save it and authenticate
         final token = loginResponse!.token!;
-        debugPrint('🔵 BLOC: Saving token to secure storage');
         await secureStorage.write(key: 'token', value: token);
-        
-        debugPrint('🔵 BLOC: Updating DioClient with new token');
         authRepository.updateToken(token);
-        
-        debugPrint('🔵 BLOC: Fetching user info');
+
         try {
           final user = await authRepository.getUserInfo(token);
           if (user != null) {
@@ -516,7 +461,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             if (loginToStore.isNotEmpty) {
               await secureStorage.write(key: 'login', value: loginToStore);
             }
-            debugPrint('✅ BLOC: User info fetched, emitting success');
             emit(CreatePasswordSuccess(token: token));
             emit(AuthAuthenticated(
               userId: user.id,
@@ -525,7 +469,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
               sessionGeneration: ++_loginSessionGeneration,
             ));
           } else {
-            debugPrint('⚠️ BLOC: User info is null, but password was set');
             final fallbackLogin = event.contact?.trim() ?? '';
             if (fallbackLogin.isNotEmpty) {
               await secureStorage.write(key: 'login', value: fallbackLogin);
@@ -534,8 +477,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             emit(CreatePasswordSuccess(token: token));
           }
         } catch (userInfoError) {
-          debugPrint('❌ BLOC: Error fetching user info: $userInfoError');
-          debugPrint('❌ BLOC: Error type: ${userInfoError.runtimeType}');
+          AppLogger.warn(_tag,
+              'createPassword: getUserInfo failed (${userInfoError.runtimeType})');
           final fallbackLogin = event.contact?.trim() ?? '';
           if (fallbackLogin.isNotEmpty) {
             await secureStorage.write(key: 'login', value: fallbackLogin);
@@ -545,24 +488,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           emit(CreatePasswordSuccess(token: token));
         }
       } else {
-        debugPrint('⚠️ BLOC: No token returned, will login separately');
         // No token returned, need to login after password creation
         emit(CreatePasswordSuccess(token: null));
       }
     } catch (e, stackTrace) {
-      _devLog('❌ BLOC: Error in _onCreatePasswordRequested', error: e, stackTrace: stackTrace);
-      _devLog('❌ BLOC: Error: $e');
-      _devLog('❌ BLOC: Error Type: ${e.runtimeType}');
-      appLog('BLOC: Error in createPassword', 'Error: $e, Type: ${e.runtimeType}');
-      debugPrint('❌ BLOC: Error in _onCreatePasswordRequested');
-      debugPrint('❌ BLOC: Error: $e');
-      debugPrint('❌ BLOC: Error Type: ${e.runtimeType}');
-      debugPrint('❌ BLOC: Stack Trace: $stackTrace');
-      final errorMessage = _extractErrorMessage(e);
-      _devLog('❌ BLOC: Extracted error message: $errorMessage');
-      appLog('BLOC: Extracted error message', errorMessage);
-      debugPrint('❌ BLOC: Extracted error message: $errorMessage');
-      emit(AuthFailure(errorMessage));
+      AppLogger.error(_tag, 'createPassword failed',
+          error: e, stackTrace: stackTrace);
+      emit(AuthFailure(_extractErrorMessage(e)));
     }
   }
 
@@ -573,9 +505,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
 
     try {
-      debugPrint('🔵 BLOC: Resetting password for: ${event.login}');
-      debugPrint('🔵 BLOC: Password length: ${event.newPassword.length}');
-      
       // Reset password via API
       final success = await authRepository.resetPassword(
         event.login,
@@ -583,11 +512,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         event.pin,
       );
 
-      debugPrint('🔵 BLOC: Reset password API returned: $success');
-
       if (success) {
-        debugPrint('✅ BLOC: Password reset successful, now logging in...');
-        
         // After successful password reset, automatically log the user in
         final loginResponse = await authRepository.login(
           event.login,
@@ -596,14 +521,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
         if (loginResponse != null && loginResponse.token != null) {
           await secureStorage.write(key: 'token', value: loginResponse.token!);
-          
-          // Store login for reference (password hash not stored for security)
+          // Store login for reference (password not stored).
           await secureStorage.write(key: 'login', value: event.login);
 
           final user = await authRepository.getUserInfo(loginResponse.token!);
 
           if (user != null) {
-            debugPrint('✅ BLOC: User authenticated after password reset');
             emit(ResetPasswordSuccess());
             emit(AuthAuthenticated(
               userId: user.id,
@@ -616,15 +539,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             emit(AuthUnauthenticated());
           }
         } else {
-          // Password reset successful but login failed
+          // Password reset succeeded but login failed.
           emit(ResetPasswordSuccess());
           emit(const AuthFailure("Password reset successful, but login failed. Please try logging in manually."));
         }
       } else {
         emit(const AuthFailure("Failed to reset password. Please try again."));
       }
-    } catch (e) {
-      debugPrint('❌ BLOC: Error in reset password: $e');
+    } catch (e, stackTrace) {
+      AppLogger.warn(_tag, 'resetPassword failed', error: e);
+      AppLogger.debug(_tag, 'stack', stackTrace: stackTrace);
       emit(AuthFailure(_extractErrorMessage(e)));
     }
   }

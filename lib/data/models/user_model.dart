@@ -215,6 +215,14 @@ class UserModel extends Equatable {
     bool kycStep3SubmittedVal = false;
     final kycRaw = json['kyc'];
     if (kycRaw is Map) {
+      // Audit M19: only `anchor_customer_id` and `status` are read here.
+      // BVN / NIN / dateOfBirth and any other Tier-1/Tier-2 identity
+      // payload that the server might attach to the `kyc` blob are
+      // intentionally NOT parsed — they would otherwise sit in the
+      // [UserModel] in memory + persisted Bloc state long after the
+      // KYC flow finished. The backend is asked to omit them outside
+      // the KYC submission round trip; this parser is a defence-in-depth
+      // belt for a backend regression.
       final k = Map<String, dynamic>.from(kycRaw);
       final aid = k['anchor_customer_id']?.toString().trim();
       if (aid != null && aid.isNotEmpty) kycAnchorId = aid;

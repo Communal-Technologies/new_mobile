@@ -235,10 +235,15 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
     final shouldUpdate = _isBiometricAvailable != isAvailable ||
         _biometricName != biometricName ||
         _canUseBiometric != canUseBiometric;
-    if (shouldUpdate) {
-      if (widget.isAppLock) {
-        // For app lock, NEVER call setState during authentication to prevent flicker.
-        // Update fields directly — they'll be picked up on the next natural rebuild.
+    // Honour caller's `widget.method` only once enrollment is confirmed
+    // — otherwise the screen would briefly render the fingerprint pane
+    // empty and the user would tap a button that does nothing.
+    final shouldFlipToFingerprint = canUseBiometric &&
+        widget.method == SignInMethod.fingerprint &&
+        _currentMethod != SignInMethod.fingerprint;
+    if (shouldUpdate || shouldFlipToFingerprint) {
+      if (widget.isAppLock && !shouldFlipToFingerprint) {
+        // App lock: update fields directly to avoid mid-PIN flicker.
         _isBiometricAvailable = isAvailable;
         _biometricName = biometricName;
         _canUseBiometric = canUseBiometric;
@@ -247,6 +252,9 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
           _isBiometricAvailable = isAvailable;
           _biometricName = biometricName;
           _canUseBiometric = canUseBiometric;
+          if (shouldFlipToFingerprint) {
+            _currentMethod = SignInMethod.fingerprint;
+          }
         });
       }
     }

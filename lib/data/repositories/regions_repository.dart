@@ -1,3 +1,4 @@
+import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/models/region_model.dart';
 
@@ -15,7 +16,7 @@ class RegionsRepository {
       return _memoryCache!;
     }
 
-    final response = await _dioClient.get('/fetch-regions');
+    final response = await _dioClient.get(ApiEndpoints.fetchRegions);
     final data = response.data;
     if (data is! Map) {
       _memoryCache = [];

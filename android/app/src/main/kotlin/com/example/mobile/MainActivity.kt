@@ -1,7 +1,12 @@
 package com.example.communal_mobile
 
+import android.graphics.Color
+import android.graphics.RenderEffect
+import android.graphics.Shader
+import android.os.Build
 import android.os.Bundle
-import android.view.WindowManager
+import android.view.View
+import android.view.ViewGroup
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -10,27 +15,26 @@ import io.flutter.plugin.common.MethodChannel
  * Extends `FlutterFragmentActivity` (rather than `FlutterActivity`) so the
  * audit M38 [BiometricKeyChannel] can host an `androidx.biometric`
  * `BiometricPrompt`, which requires a `FragmentActivity` host.
+ *
+ * ## Recents-snapshot privacy
+ *
+ * The audit's original recommendation was `FLAG_SECURE`, which gives a
+ * black recents thumbnail. The user followed up asking for a *blurred*
+ * thumbnail instead, so we drop `FLAG_SECURE` and apply a native overlay
+ * in `onPause()` — the OS captures the recents snapshot between `onPause`
+ * and `onStop`, so anything we add in `onPause` is what ends up in the
+ * thumbnail.
+ *
+ * Trade-off: removing `FLAG_SECURE` re-enables user-initiated screenshots
+ * and screen recording. Acceptable for now per product call; if PII-in-
+ * screenshots becomes a concern, restore `window.setFlags(FLAG_SECURE,
+ * FLAG_SECURE)` in `onCreate` and accept the black thumbnail.
  */
 class MainActivity : FlutterFragmentActivity() {
+    private var privacyOverlay: View? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // FLAG_SECURE: tell Android never to capture this app's content for
-        // the recents-list thumbnail (or for Assistant / accessibility
-        // screenshots). Without this flag the OS snapshots the live frame
-        // *before* Flutter's onPaused callback runs, so any Flutter-side
-        // privacy blur is too late to protect the recents tile. With the
-        // flag set, the recents tile is replaced with a blank surface
-        // automatically by the system.
-        //
-        // Side effects:
-        //   - User-initiated screenshots are blocked too (acceptable for a
-        //     finance app; matches typical banking apps' behavior).
-        //   - Screen recording stops capturing the app's content while it's
-        //     in the foreground.
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_SECURE,
-            WindowManager.LayoutParams.FLAG_SECURE,
-        )
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -43,5 +47,58 @@ class MainActivity : FlutterFragmentActivity() {
             BiometricKeyChannel.CHANNEL,
         )
         BiometricKeyChannel(this).register(channel)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        applyPrivacyShield()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        removePrivacyShield()
+    }
+
+    private fun applyPrivacyShield() {
+        // Android 12+ (API 31): real Gaussian blur via RenderEffect on
+        // the decorView. The OS-captured recents thumbnail picks this
+        // up because RenderEffect applies during the next draw, which
+        // happens before the snapshot.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            window.decorView.setRenderEffect(
+                RenderEffect.createBlurEffect(
+                    25f,
+                    25f,
+                    Shader.TileMode.CLAMP,
+                ),
+            )
+            return
+        }
+
+        // Pre-Android 12: no native blur API runs fast enough in the
+        // pause/snapshot window. Fall back to a translucent neutral
+        // overlay so the thumbnail at least doesn't expose live PII.
+        if (privacyOverlay != null) return
+        val decor = window.decorView as? ViewGroup ?: return
+        val overlay = View(this).apply {
+            setBackgroundColor(Color.argb(0xE6, 0xF2, 0xF2, 0xF6))
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            )
+        }
+        decor.addView(overlay)
+        privacyOverlay = overlay
+    }
+
+    private fun removePrivacyShield() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            window.decorView.setRenderEffect(null)
+            return
+        }
+        privacyOverlay?.let {
+            (it.parent as? ViewGroup)?.removeView(it)
+        }
+        privacyOverlay = null
     }
 }

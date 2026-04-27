@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:dio/dio.dart';
 
@@ -16,7 +17,7 @@ class KycRepository {
   }) async {
     try {
       final response = await _dioClient.post(
-        '/compliance/register/$userId',
+        ApiEndpoints.complianceRegister(userId),
         data: body,
         idempotencyKey: idempotencyKey,
       );
@@ -45,7 +46,7 @@ class KycRepository {
   }) async {
     try {
       final response = await _dioClient.post(
-        '/compliance/upgrade-to-tier1/$anchorCustomerId',
+        ApiEndpoints.complianceUpgradeTier1(anchorCustomerId),
         data: <String, dynamic>{
           'bvn': bvn,
           'date_of_birth': dateOfBirth,
@@ -147,7 +148,7 @@ class KycRepository {
 
       final formData = FormData.fromMap(map);
       final response = await _dioClient.postFormData(
-        '/compliance/upgrade-to-tier2/$anchorCustomerId',
+        ApiEndpoints.complianceUpgradeTier2(anchorCustomerId),
         data: formData,
         idempotencyKey: idempotencyKey,
       );

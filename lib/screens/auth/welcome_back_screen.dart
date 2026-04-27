@@ -258,15 +258,13 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
   }
 
   Future<void> _attemptBiometricAuth() async {
-    if (!_isBiometricAvailable || _isAuthenticating) return;
-
-    // Audit M38 Phase D: respect the user's "App Login" pref. If the
-    // user disabled biometric for app-login in Settings (but kept it on
-    // for transactions, or disabled it altogether), skip the prompt and
-    // require PIN entry.
-    final shared = await shared_prefs.SharedPreferences.getInstance();
-    final prefs = BiometricPrefs(shared);
-    if (!prefs.appLoginEnabled) return;
+    // `_canUseBiometric` already collapses every precondition: hardware
+    // present, M38 enrolment recorded locally, App Login pref on, and
+    // we're in the app-lock path (where a token + session exist for
+    // SecurityCubit to flip). Without these, the prior code would
+    // local-auth → context.go('/home') → router redirect bounces back
+    // → loader spins forever (the "infinite loader" bug).
+    if (!_canUseBiometric || _isAuthenticating) return;
 
     setState(() {
       _isAuthenticating = true;
@@ -282,14 +280,9 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
       );
 
       if (authenticated && mounted) {
-        // Biometric authentication successful
-        if (widget.isAppLock) {
-          // Unlock the app
-          context.read<SecurityCubit>().unlockApp();
-        } else {
-          // Navigate to home (login flow)
-          context.go('/home');
-        }
+        // App-lock-only path now: existing session unlocks via SecurityCubit.
+        context.read<SecurityCubit>().unlockApp();
+        context.read<SecurityCubit>().recordActivity();
       } else {
         setState(() {
           _isAuthenticating = false;

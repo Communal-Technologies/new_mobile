@@ -583,11 +583,8 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
       _currentMethod = method;
     });
     
-    // If switching to biometric and user has it configured, attempt it
-    if (method == SignInMethod.fingerprint && 
-        _isBiometricAvailable && 
-        _user?.hasSecurityPin == true) {
-      // Trigger biometric authentication after a short delay
+    // If switching to biometric and the user is actually enrolled, attempt it.
+    if (method == SignInMethod.fingerprint && _canUseBiometric) {
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) {
           _attemptBiometricAuth();
@@ -1059,17 +1056,14 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
 
               vSpace(32),
 
-              // Content based on sign-in method
-              // Only show biometric if:
-              // 1. Device supports biometric
-              // 2. User has security pin configured (hasSecurityPin from backend)
-              // 3. Current method is fingerprint
-              if (_currentMethod == SignInMethod.fingerprint && 
-                  _isBiometricAvailable && 
-                  _user?.hasSecurityPin == true) ...[
+              // Content based on sign-in method. Biometric is only shown
+              // when truly enrolled (`_canUseBiometric` covers hardware,
+              // local Keystore key, the App Login pref, and the app-lock
+              // path). Otherwise we fall through to PIN.
+              if (_currentMethod == SignInMethod.fingerprint &&
+                  _canUseBiometric) ...[
                 _buildFingerprintContent(theme),
               ] else ...[
-                // Show password entry (PIN/Password)
                 _buildPasswordContent(theme),
               ],
 
@@ -1294,8 +1288,10 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
 
         vSpace(20),
 
-        // Alternative: Biometric (only show if available AND user has it configured)
-        if (_isBiometricAvailable && _user?.hasSecurityPin == true)
+        // Alternative: Biometric — only when actually enrolled. Stops
+        // the secondary button from popping in mid-screen for users who
+        // never went through the M38 enrolment flow.
+        if (_canUseBiometric)
           AppSecondaryButton(
             title: 'Use $_biometricName',
             isDark: false,

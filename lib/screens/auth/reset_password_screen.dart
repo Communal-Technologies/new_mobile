@@ -9,6 +9,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
+import 'package:communal_mobile/cubits/splash/splash_cubit.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({
@@ -37,6 +39,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   bool _isConfirming = false; // Track if we're on the confirmation step
   bool _hasSubmitted = false; // Prevent multiple submissions
   bool _isPasswordVisible = false; // Toggle password visibility
+
+  void _restartSplashColdStart() {
+    if (!mounted) return;
+    context.read<SplashCubit>().initApp();
+    context.go('/');
+  }
 
   /// Mask contact (email or phone) for display
   String _maskContact(String contact) {
@@ -267,6 +275,15 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           // User is authenticated, navigate to home
           context.go('/home');
         } else if (state is AuthFailure) {
+          if (shouldRedirectToSplashForAuthFailure(state.error)) {
+            setState(() {
+              _isSubmitting = false;
+              _hasSubmitted = false;
+              _passwordError = null;
+            });
+            _restartSplashColdStart();
+            return;
+          }
           setState(() {
             _isSubmitting = false;
             _hasSubmitted = false; // Allow retry on error

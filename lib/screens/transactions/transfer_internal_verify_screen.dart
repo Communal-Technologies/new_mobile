@@ -4,6 +4,7 @@ import 'package:communal_mobile/data/local/biometric_prefs.dart';
 import 'package:shared_preferences/shared_preferences.dart' as shared_prefs;
 import 'package:communal_mobile/core/utils/idempotency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
+import 'package:communal_mobile/core/utils/money_formatter.dart';
 import 'package:communal_mobile/core/utils/tap_debouncer.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
@@ -14,6 +15,12 @@ import 'package:communal_mobile/screens/transactions/models/transaction_details_
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+
+/// Three states the verify screen can be in. Backend M38 middleware
+/// requires a biometric signature on `transfer/initiate`, so PIN-only
+/// confirmation is no longer a valid auth path — `_AuthMode.notReady`
+/// surfaces a "set this up first" page instead.
+enum _AuthMode { checking, biometric, notReady }
 
 class TransferInternalVerifyScreen extends StatefulWidget {
   const TransferInternalVerifyScreen({
@@ -54,13 +61,57 @@ class _TransferInternalVerifyScreenState
   final _biometricSigner = getIt<BiometricSignerService>();
   // Audit M28: swallows rapid double-taps on Confirm Transfer.
   final TapDebouncer _confirmDebouncer = TapDebouncer();
-  String _pin = '';
   bool _submitting = false;
+
+  _AuthMode _authMode = _AuthMode.checking;
+  String? _notReadyReason;
 
   /// Audit M23: minted once per screen mount and reused across retries so a
   /// network drop + user retry on the Confirm button dedupes server-side.
   /// A fresh key is only generated when the user navigates away and re-enters.
   late final String _idempotencyKey = newIdempotencyKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthReadiness();
+  }
+
+  Future<void> _checkAuthReadiness() async {
+    try {
+      final shared = await shared_prefs.SharedPreferences.getInstance();
+      final prefs = BiometricPrefs(shared);
+      if (!prefs.transactionsEnabled) {
+        if (!mounted) return;
+        setState(() {
+          _authMode = _AuthMode.notReady;
+          _notReadyReason =
+              'Biometric authorization for transactions is turned off. '
+              'Re-enable it in Settings → Biometric Authentication.';
+        });
+        return;
+      }
+      final enrolled = await _biometricSigner.isEnrolled();
+      if (!mounted) return;
+      if (enrolled) {
+        setState(() => _authMode = _AuthMode.biometric);
+      } else {
+        setState(() {
+          _authMode = _AuthMode.notReady;
+          _notReadyReason =
+              'Biometric authorization is required for transfers on this account. '
+              'Set it up to continue.';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _authMode = _AuthMode.notReady;
+        _notReadyReason =
+            'Could not verify biometric setup: ${e.toString().replaceFirst('Exception: ', '')}';
+      });
+    }
+  }
 
   String _initials(String name) {
     final parts = name
@@ -76,47 +127,19 @@ class _TransferInternalVerifyScreenState
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
 
-  void _onDigit(String d) {
-    if (_submitting || _pin.length >= 4) return;
-    setState(() => _pin += d);
-  }
-
-  void _onBackspace() {
-    if (_submitting || _pin.isEmpty) return;
-    setState(() => _pin = _pin.substring(0, _pin.length - 1));
-  }
-
   Future<void> _confirm() async {
-    if (_pin.length != 4 || _submitting) return;
+    if (_submitting || _authMode != _AuthMode.biometric) return;
     final currencySymbol = currencySymbolForCode(widget.currency);
     final currencyCode = widget.currency;
 
     setState(() => _submitting = true);
     try {
-      await _repo.verifySecurityPin(_pin);
-
-      // Audit M38 Phase D: respect the user's "Transaction
-      // Authorization" pref. The backend gate enforces a valid
-      // signature on transfer endpoints, so if the user disabled
-      // biometric for transactions we surface the situation here
-      // instead of letting the request 403 with a generic error.
-      final shared = await shared_prefs.SharedPreferences.getInstance();
-      final prefs = BiometricPrefs(shared);
-      if (!prefs.transactionsEnabled) {
-        throw Exception(
-          'Biometric authorization is required for transactions. '
-          'Enable it in Settings → Biometric Authentication.',
-        );
-      }
-
-      // Audit M38: prove the biometric happened on this device for THIS
-      // transfer. Server mints a one-time nonce via /security/biometric/
+      // Audit M38: biometric IS the auth mechanism for transfers.
+      // Server mints a one-time nonce via /security/biometric/
       // challenge, we sign it with the Keystore-bound key, and the
       // headers travel with the initiate call. The backend's
       // RequireBiometricSignature middleware verifies before letting
-      // the request through. This runs AFTER the PIN check so the
-      // user's biometric prompt only fires for an otherwise-valid
-      // submission.
+      // the request through.
       final biometricHeaders = await _biometricSigner.signTransferIntent(
         promptTitle: 'Authorize transfer',
         promptSubtitle: 'Use biometrics to confirm this transfer',
@@ -192,7 +215,6 @@ class _TransferInternalVerifyScreenState
 
   @override
   Widget build(BuildContext context) {
-    final canSubmit = _pin.length == 4 && !_submitting;
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
@@ -209,13 +231,13 @@ class _TransferInternalVerifyScreenState
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              'Verify Transaction',
+              _headerForMode(),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 26.sp, fontWeight: FontWeight.w700),
             ),
             vSpace(6),
             Text(
-              'Enter your PIN to complete this transfer',
+              _subheaderForMode(),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14.sp,
@@ -286,66 +308,16 @@ class _TransferInternalVerifyScreenState
                 ],
               ),
             ),
-            vSpace(16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(4, (index) {
-                final filled = index < _pin.length;
-                return Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4.w),
-                  child: Container(
-                  width: 64.w,
-                  height: 62.h,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: filled ? Theme.of(context).primaryColor : Colors.white,
-                    borderRadius: BorderRadius.circular(10.r),
-                    border: Border.all(
-                      color: filled
-                          ? Theme.of(context).primaryColor
-                          : const Color(0xFFDADADA),
-                    ),
-                  ),
-                  child: Text(
-                    filled ? '*' : '',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24.sp,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                );
-              }),
-            ),
-            vSpace(30),
-            Expanded(
-              child: GridView.count(
-                crossAxisCount: 3,
-                mainAxisSpacing: 8.h,
-                crossAxisSpacing: 10.w,
-                childAspectRatio: 1.75,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  for (final d in ['1', '2', '3', '4', '5', '6', '7', '8', '9'])
-                    _keyButton(d, onTap: () => _onDigit(d)),
-                  const SizedBox.shrink(),
-                  _keyButton('0', onTap: () => _onDigit('0')),
-                  _keyIconButton(
-                    Icons.backspace_outlined,
-                    onTap: _onBackspace,
-                  ),
-                ],
-              ),
-            ),
+            vSpace(20),
+            _buildAmountBanner(),
+            vSpace(20),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.shield_outlined, size: 16.sp, color: Colors.black54),
                 hSpace(6),
                 Text(
-                  'End-toend encrypted transaction',
+                  'End-to-end encrypted transaction',
                   style: TextStyle(
                     fontSize: 13.sp,
                     color: Colors.black54,
@@ -354,95 +326,138 @@ class _TransferInternalVerifyScreenState
                 ),
               ],
             ),
-            vSpace(12),
-            SizedBox(
-              width: double.infinity,
-              height: 50.h,
-              child: InkWell(
-                onTap: canSubmit
-                    ? () => _confirmDebouncer.run(_confirm)
-                    : null,
-                borderRadius: BorderRadius.circular(12.r),
-                child: Ink(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12.r),
-                    gradient: canSubmit
-                        ? const LinearGradient(
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                            colors: [Color(0xFF8C66F5), Color(0xFF6A39F3)],
-                          )
-                        : null,
-                    color: canSubmit ? null : const Color(0xFFE0E0E0),
-                  ),
-                  child: Center(
-                    child: _submitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
-                            ),
-                          )
-                        : Text(
-                            'Confirm Transfer',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                  ),
-                ),
-              ),
-            ),
+            const Spacer(),
+            _buildPrimaryAction(),
           ],
         ),
       ),
     );
   }
 
-  Widget _keyButton(String label, {required VoidCallback onTap}) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12.r),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12.r),
-        onTap: onTap,
-        child: Container(
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: const Color(0xFFE4E4E4)),
+  String _headerForMode() {
+    switch (_authMode) {
+      case _AuthMode.checking:
+        return 'Verify Transaction';
+      case _AuthMode.biometric:
+        return 'Authorize with Biometrics';
+      case _AuthMode.notReady:
+        return 'Biometric Required';
+    }
+  }
+
+  String _subheaderForMode() {
+    switch (_authMode) {
+      case _AuthMode.checking:
+        return 'Preparing biometric…';
+      case _AuthMode.biometric:
+        return 'Tap below and scan your fingerprint or face to confirm.';
+      case _AuthMode.notReady:
+        return _notReadyReason ?? 'Biometric is not configured for this device.';
+    }
+  }
+
+  Widget _buildAmountBanner() {
+    final symbol = currencySymbolForCode(widget.currency);
+    final amountMajor = widget.amountMinor / factorFor(widget.currency);
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 18.h),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFE7FF),
+        borderRadius: BorderRadius.circular(18.r),
+      ),
+      child: Column(
+        children: [
+          Text(
+            "You're sending",
+            style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade700),
           ),
-          child: Text(
-            label,
-            style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.w600),
+          vSpace(4),
+          Text(
+            '$symbol${formatMoney(amountMajor)}',
+            style: TextStyle(
+              fontSize: 28.sp,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF7434FF),
+            ),
           ),
-        ),
+          vSpace(4),
+          Text(
+            'to ${widget.recipient.accountName}',
+            style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade700),
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }
 
-  Widget _keyIconButton(IconData icon, {required VoidCallback onTap}) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12.r),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12.r),
-        onTap: onTap,
-        child: Container(
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: const Color(0xFFE4E4E4)),
+  Widget _buildPrimaryAction() {
+    switch (_authMode) {
+      case _AuthMode.checking:
+        return SizedBox(
+          height: 52.h,
+          width: 52.h,
+          child: const CircularProgressIndicator(strokeWidth: 2),
+        );
+      case _AuthMode.biometric:
+        return SizedBox(
+          width: double.infinity,
+          height: 50.h,
+          child: ElevatedButton.icon(
+            onPressed: _submitting
+                ? null
+                : () => _confirmDebouncer.run(_confirm),
+            icon: const Icon(Icons.fingerprint, color: Colors.white),
+            label: _submitting
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : Text(
+                    'Confirm Transfer',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF7434FF),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+            ),
           ),
-          child: Icon(icon, size: 24.sp, color: Colors.black87),
-        ),
-      ),
-    );
+        );
+      case _AuthMode.notReady:
+        return SizedBox(
+          width: double.infinity,
+          height: 50.h,
+          child: ElevatedButton(
+            onPressed: () => context.pushNamed('biometric-enrollment'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF7434FF),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+            ),
+            child: Text(
+              'Set up Biometrics',
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        );
+    }
   }
 }

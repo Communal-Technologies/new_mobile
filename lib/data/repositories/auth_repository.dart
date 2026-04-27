@@ -199,6 +199,12 @@ class AuthRepository {
 
   /// Verify password/PIN for an already-authenticated session unlock.
   /// This avoids calling `/login` again (which can trigger session takeover OTP).
+  ///
+  /// Audit M7: parses the backend's 429 + Retry-After response (the
+  /// `/security/transaction/verify-password` route is rate-limited at 5
+  /// attempts per 5 minutes per user) and throws a friendly countdown
+  /// message so the welcome-back screen can render "Try again in N
+  /// minutes" rather than a vague "Too Many Requests".
   Future<bool> verifySessionUnlockPassword(String password) async {
     try {
       final response = await dioClient.post(
@@ -213,6 +219,12 @@ class AuthRepository {
 
       return false;
     } on DioException catch (e) {
+      if (e.response?.statusCode == 429) {
+        // Rate-limited: surface a countdown so the user knows when to retry.
+        final retryAfter = e.response?.headers.value('retry-after');
+        final seconds = int.tryParse(retryAfter ?? '') ?? 300;
+        throw Exception(_friendlyRetryAfter(seconds));
+      }
       if (e.response != null) {
         final responseData = e.response?.data;
         String errorMessage = 'Unable to verify PIN';
@@ -227,6 +239,18 @@ class AuthRepository {
     } catch (e) {
       rethrow;
     }
+  }
+
+  /// Renders a [Retry-After] seconds value as a user-facing countdown.
+  /// "Try again in 1 minute" / "Try again in 5 minutes" / "Try again in
+  /// 30 seconds".
+  String _friendlyRetryAfter(int seconds) {
+    if (seconds < 60) {
+      return 'Too many PIN attempts. Try again in $seconds seconds.';
+    }
+    final minutes = (seconds / 60).ceil();
+    return 'Too many PIN attempts. Try again in $minutes '
+        'minute${minutes > 1 ? 's' : ''}.';
   }
 
   Future<Map<String, dynamic>?> checkLogin(String login) async {

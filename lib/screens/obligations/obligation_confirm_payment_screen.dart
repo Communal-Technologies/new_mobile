@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
+import 'package:communal_mobile/core/utils/idempotency.dart';
+import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/utils/money_formatter.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
@@ -49,6 +51,11 @@ class _ObligationConfirmPaymentScreenState
   late final List<FocusNode> _pinFocusNodes;
   bool _obscurePin = true;
   bool _submitting = false;
+
+  /// Audit M23: minted once per screen mount; reused across user-initiated
+  /// retries of the Confirm action so a transient failure + retry dedupes
+  /// server-side instead of double-paying the obligation.
+  late final String _idempotencyKey = newIdempotencyKey();
 
   @override
   void initState() {
@@ -433,14 +440,17 @@ class _ObligationConfirmPaymentScreenState
       final currencySymbol = currencySymbolForUser(authState.user);
       final currencyCode = resolveCurrencyCode(authState.user);
       final narration = 'Obligation: ${widget.obligation.title}';
-      final amountKobo = (widget.amount * 100).round();
+      // Audit M20: integer minor units derived currency-agnostically rather
+      // than the legacy `(amount * 100).round()` (which was kobo-locked).
+      final amountMinor = Money.fromMajor(widget.amount, currencyCode).amountMinor;
 
       final result = await _transferRepo.initiateTransfer(
         type: 'NIPTransfer',
-        amountKobo: amountKobo,
+        amountMinor: amountMinor,
         narration: narration.trim().isEmpty ? 'Transfer' : narration,
         counterPartyId: fav.accountId,
         currencyCode: currencyCode,
+        idempotencyKey: _idempotencyKey,
       );
 
       if (!mounted) return;

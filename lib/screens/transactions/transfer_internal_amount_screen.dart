@@ -1,5 +1,6 @@
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/constants/constants.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/utils/tier_limit_check.dart';
@@ -26,17 +27,9 @@ class _TransferInternalAmountScreenState
   final _amountCtrl = TextEditingController();
   final _narrationCtrl = TextEditingController();
   bool _saveAsFavorite = false;
-  static const List<int> _quickAmounts = [
-    1000,
-    3000,
-    5000,
-    10000,
-    15000,
-    20000,
-    30000,
-    50000,
-    100000,
-  ];
+  // Audit M26: pulled from `AppConstants.defaultQuickAmounts` so a
+  // future server-driven swap is a single-line change.
+  static const List<int> _quickAmounts = AppConstants.defaultQuickAmounts;
 
   String _formatThousand(int value) {
     final s = value.toString();

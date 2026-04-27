@@ -13,6 +13,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
+import 'package:communal_mobile/cubits/splash/splash_cubit.dart';
+import 'package:dio/dio.dart';
 
 class VerifyResetScreen extends StatefulWidget {
   const VerifyResetScreen({
@@ -49,6 +52,12 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
   bool _isVerifying = false;
   bool _isResending = false;
 
+  void _restartSplashColdStart() {
+    if (!mounted) return;
+    context.read<SplashCubit>().initApp();
+    context.go('/');
+  }
+
   @override
   void initState() {
     super.initState();
@@ -69,6 +78,10 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
       }
     } catch (e) {
       if (!mounted) {
+        return;
+      }
+      if (e is DioException && isDioTransportFailure(e)) {
+        _restartSplashColdStart();
         return;
       }
       final message =
@@ -115,6 +128,10 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
           if (!mounted) {
             return;
           }
+          if (e is DioException && isDioTransportFailure(e)) {
+            _restartSplashColdStart();
+            return;
+          }
           final message =
               e is Exception ? e.toString().replaceFirst('Exception: ', '') : e.toString();
           AppToast.error(message);
@@ -132,6 +149,10 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
           }
         } catch (e) {
           if (!mounted) {
+            return;
+          }
+          if (e is DioException && isDioTransportFailure(e)) {
+            _restartSplashColdStart();
             return;
           }
           final message =
@@ -196,6 +217,10 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
         });
       } catch (e) {
         if (!mounted) return;
+        if (e is DioException && isDioTransportFailure(e)) {
+          _restartSplashColdStart();
+          return;
+        }
         final message =
             e is Exception ? e.toString().replaceFirst('Exception: ', '') : e.toString();
         AppToast.error(message);
@@ -387,6 +412,15 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                       'isInitialSetup': widget.isInitialSetup,
                     });
                   } else if (state is AuthFailure) {
+                    if (shouldRedirectToSplashForAuthFailure(state.error)) {
+                      setState(() {
+                        _isVerifying = false;
+                        _code = '';
+                        _otpFieldKey++;
+                      });
+                      _restartSplashColdStart();
+                      return;
+                    }
                     AppToast.error(state.error);
                     setState(() {
                       _isVerifying = false;

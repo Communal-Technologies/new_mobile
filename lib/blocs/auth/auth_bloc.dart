@@ -1,5 +1,6 @@
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/security/token_manager.dart';
 import 'package:communal_mobile/core/utils/app_logger.dart';
 import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
@@ -17,6 +18,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   final AuthRepository authRepository;
   final FlutterSecureStorage secureStorage;
+  final TokenManager tokenManager;
 
   // CRITICAL: Track if we just had a failed login attempt
   // This prevents AppStarted from unlocking with a cached token after password failure
@@ -28,8 +30,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   /// Increments on each successful [LoginRequested] so [AuthAuthenticated] is never == prior AppStarted.
   int _loginSessionGeneration = 0;
 
-  AuthBloc({required this.authRepository, required this.secureStorage})
-    : super(AuthInitial()) {
+  AuthBloc({
+    required this.authRepository,
+    required this.secureStorage,
+    required this.tokenManager,
+  }) : super(AuthInitial()) {
     on<AppStarted>(_onAppStarted);
     on<LoginRequested>(_onLoginRequested);
     on<LogoutRequested>(_onLogoutRequested);
@@ -62,6 +67,30 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       return dioTransportUserMessage(e);
     }
     return _extractErrorMessage(e);
+  }
+
+  /// Calls [AuthRepository.getUserInfo] with a small retry loop so a
+  /// transient backend blip after a successful login doesn't cost the user
+  /// a correctly-typed PIN. Retries on `null` returns and on
+  /// [DioException]; non-network exceptions propagate immediately.
+  ///
+  /// Three attempts total with a short backoff (~250ms then ~750ms) — fast
+  /// enough that the loader on the welcome-back screen still feels
+  /// responsive, generous enough to ride out a single packet drop on 4G.
+  Future<UserModel?> _getUserInfoWithRetry(String token) async {
+    const delays = [Duration(milliseconds: 250), Duration(milliseconds: 750)];
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        final user = await authRepository.getUserInfo(token);
+        if (user != null) return user;
+      } on DioException {
+        // Network blip — retry within budget.
+      }
+      if (attempt < delays.length) {
+        await Future.delayed(delays[attempt]);
+      }
+    }
+    return null;
   }
 
   Future<void> _hydrateKycResumeFromBackend(UserModel user) async {
@@ -107,7 +136,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
 
     try {
-      final token = await secureStorage.read(key: 'token');
+      // Audit M6: hydrate the access + refresh tokens into TokenManager
+      // before any request goes out. The dio refresh interceptor reads
+      // from this state to decide proactive vs reactive refresh.
+      await tokenManager.hydrate();
+      final token = tokenManager.accessToken;
       AppLogger.debug(_tag, 'AppStarted tokenPresent=${token != null}');
 
       if (token != null) {
@@ -115,21 +148,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           final user = await authRepository.getUserInfo(token);
           if (user != null) {
             await _hydrateKycResumeFromBackend(user);
-            final storedLogin = (await secureStorage.read(key: 'login'))?.trim() ?? '';
-            final sessionLogin =
-                storedLogin.isNotEmpty ? storedLogin : user.login.trim();
+            // Audit M5: session identifier is server-vouched on every cold
+            // start (`/get-loggedin-user`), never read from local storage.
             emit(AuthAuthenticated(
               userId: user.id,
-              login: sessionLogin,
+              login: user.login.trim(),
               user: user,
               sessionGeneration: 0,
             ));
           } else {
-            await secureStorage.delete(key: 'token');
+            await tokenManager.clear();
             emit(AuthUnauthenticated());
           }
         } catch (e) {
-          // Offline / transient network: do not clear token — splash will retry when online.
+          // Offline / transient network: do not clear tokens — splash will retry when online.
           if (e is DioException &&
               (e.type == DioExceptionType.connectionError ||
                   e.type == DioExceptionType.connectionTimeout ||
@@ -138,7 +170,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             emit(AuthUnauthenticated());
             return;
           }
-          await secureStorage.delete(key: 'token');
+          await tokenManager.clear();
           emit(AuthUnauthenticated());
         }
       } else {
@@ -147,7 +179,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     } catch (e, st) {
       AppLogger.error(_tag, 'AppStarted error', error: e, stackTrace: st);
       try {
-        await secureStorage.delete(key: 'token');
+        await tokenManager.clear();
       } catch (_) {}
       emit(AuthUnauthenticated());
     }
@@ -180,37 +212,67 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
 
       if (loginResponse != null && loginResponse.token != null) {
-        await secureStorage.write(key: 'token', value: loginResponse.token!);
-        await secureStorage.write(key: 'login', value: event.login);
+        // Audit M6: persist via TokenManager so the refresh interceptor
+        // sees the new access + refresh + expiry. Updates dio's default
+        // header too, so the immediate `getUserInfo` below uses it.
+        await tokenManager.updateTokens(
+          accessToken: loginResponse.token!,
+          refreshToken: loginResponse.refreshToken,
+          expiresIn: loginResponse.expiresIn,
+        );
 
-        final user = await authRepository.getUserInfo(loginResponse.token!);
+        // Login succeeded (token is persisted and valid). Fetching the
+        // profile is a separate request and can hit transient blips —
+        // retry a few times before deciding it's a real failure, so a
+        // momentary network hiccup doesn't waste a correctly-typed PIN.
+        final user = await _getUserInfoWithRetry(loginResponse.token!);
 
         if (user != null) {
+          // Audit M5: persist only the opaque user id, never the email/phone
+          // login. Email/phone in Keystore extracts to PII; the integer user
+          // id does not.
+          await secureStorage.write(key: 'user_id', value: user.id);
           await _hydrateKycResumeFromBackend(user);
           _hasRecentFailedLogin = false;
           emit(AuthAuthenticated(
             userId: user.id,
-            login: event.login.trim(),
+            login: user.login.trim(),
             user: user,
             sessionGeneration: ++_loginSessionGeneration,
           ));
         } else {
-          emit(AuthUnauthenticated());
+          // Profile fetch failed across all retries. The session token is
+          // still valid in secure storage; surface a user-visible error so
+          // the user gets explicit feedback instead of a silent reset
+          // (legacy behavior was to emit [AuthUnauthenticated] here, which
+          // the welcome-back screen's outer listener swallowed without a
+          // message, making a correct PIN look like it had been ignored).
+          emit(const AuthFailure(
+            'Could not load your profile. Please try again.',
+          ));
         }
       } else {
         emit(AuthFailure(
           loginResponse?.message ?? 'Invalid login response',
         ));
       }
-    } catch (e) {
+    } on DioException catch (e) {
+      // Audit M33: typed catch so the user-facing message goes through
+      // the transport-aware mapper.
       final errorMsg = _messageForAuthFailure(e);
-      final existingToken = await secureStorage.read(key: 'token');
-      final hasExistingToken = existingToken != null && existingToken.isNotEmpty;
+      final hasExistingToken = (tokenManager.accessToken?.isNotEmpty ?? false);
       if (!hasExistingToken) {
         AppLogger.debug(_tag, 'LoginFailed fresh attempt (no prior token)');
       }
       _hasRecentFailedLogin = true;
       emit(AuthFailure(errorMsg));
+    } catch (e, st) {
+      // Audit M33: anything else is unexpected — log with stack so the
+      // failure shape isn't lost, then surface a generic user message.
+      AppLogger.error(_tag, 'LoginRequested unexpected error',
+          error: e, stackTrace: st);
+      _hasRecentFailedLogin = true;
+      emit(AuthFailure(_extractErrorMessage(e)));
     }
   }
 
@@ -231,13 +293,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
 
       if (loginResponse != null && loginResponse.token != null) {
-        await secureStorage.write(key: 'token', value: loginResponse.token!);
-        if (loginToStore.isNotEmpty) {
-          await secureStorage.write(key: 'login', value: loginToStore);
-        }
+        // Audit M6: persist via TokenManager (access + refresh + expiry).
+        await tokenManager.updateTokens(
+          accessToken: loginResponse.token!,
+          refreshToken: loginResponse.refreshToken,
+          expiresIn: loginResponse.expiresIn,
+        );
         authRepository.updateToken(loginResponse.token!);
         final user = await authRepository.getUserInfo(loginResponse.token!);
         if (user != null) {
+          // Audit M5: opaque user id only — see `_onLoginRequested` notes.
+          await secureStorage.write(key: 'user_id', value: user.id);
           await _hydrateKycResumeFromBackend(user);
           _hasRecentFailedLogin = false;
           emit(AuthAuthenticated(
@@ -260,7 +326,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           message: error,
         ));
       }
-    } catch (e) {
+    } on DioException catch (e) {
+      // Audit M33: typed catch — transport-aware message.
+      final error = _messageForAuthFailure(e);
+      emit(AuthFailure(error));
+      emit(AuthSessionTakeoverPending(
+        takeoverChallengeId: pending.takeoverChallengeId,
+        maskedDestination: pending.maskedDestination,
+        otpChannel: pending.otpChannel,
+        login: pending.login,
+        message: error,
+      ));
+    } catch (e, st) {
+      // Audit M33: log unexpected exceptions with stack trace.
+      AppLogger.error(_tag, 'SessionTakeoverVerify unexpected error',
+          error: e, stackTrace: st);
       final error = _extractErrorMessage(e);
       emit(AuthFailure(error));
       emit(AuthSessionTakeoverPending(
@@ -300,7 +380,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     final s = state;
     if (s is! AuthAuthenticated) return;
-    final token = await secureStorage.read(key: 'token');
+    final token = tokenManager.accessToken;
     if (token == null || token.isEmpty) return;
     try {
       final user = await authRepository.getUserInfo(token);
@@ -325,7 +405,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     // Clear ALL user-related keys from secure storage (preserve app-level
     // settings like onboarding_completed). The onboarding flag persists
     // through logout but is cleared on app uninstall.
-    await secureStorage.delete(key: 'token');
+    await tokenManager.clear(); // access + refresh + expiry (audit M6)
+    await secureStorage.delete(key: 'user_id');
+    // Back-compat: clear the legacy 'login' key so devices upgrading from
+    // pre-audit-M5 builds don't carry forward the cached PII identifier.
     await secureStorage.delete(key: 'login');
     emit(AuthUnauthenticated());
   }
@@ -334,18 +417,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     CheckAuthStatus event,
     Emitter<AuthState> emit,
   ) async {
-    final token = await secureStorage.read(key: 'token');
+    final token = tokenManager.accessToken;
 
     if (token != null) {
       final user = await authRepository.getUserInfo(token);
       if (user != null) {
         await _hydrateKycResumeFromBackend(user);
-        final storedLogin = (await secureStorage.read(key: 'login'))?.trim() ?? '';
-        final sessionLogin =
-            storedLogin.isNotEmpty ? storedLogin : user.login.trim();
+        // Audit M5: server-vouched login only.
         emit(AuthAuthenticated(
           userId: user.id,
-          login: sessionLogin,
+          login: user.login.trim(),
           user: user,
           sessionGeneration: 0,
         ));
@@ -447,44 +528,45 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       if (loginResponse?.token != null) {
         // Token was returned, save it and authenticate
         final token = loginResponse!.token!;
-        await secureStorage.write(key: 'token', value: token);
+        // Audit M6: persist via TokenManager (access + refresh + expiry).
+        await tokenManager.updateTokens(
+          accessToken: token,
+          refreshToken: loginResponse.refreshToken,
+          expiresIn: loginResponse.expiresIn,
+        );
         authRepository.updateToken(token);
 
         try {
           final user = await authRepository.getUserInfo(token);
           if (user != null) {
-            // Prefer OTP / login-checker contact (email or phone as user used); API user.login favors email.
+            // Audit M5: opaque user id, never the contact identifier.
+            await secureStorage.write(key: 'user_id', value: user.id);
+            // Prefer OTP / login-checker contact for the in-memory session
+            // label (email or phone the user actually typed). API
+            // user.login favors email; this respects the user's choice.
             final fromContact = event.contact?.trim() ?? '';
-            final loginToStore = fromContact.isNotEmpty
+            final sessionLogin = fromContact.isNotEmpty
                 ? fromContact
-                : (user.login.trim().isNotEmpty ? user.login.trim() : '');
-            if (loginToStore.isNotEmpty) {
-              await secureStorage.write(key: 'login', value: loginToStore);
-            }
+                : user.login.trim();
             emit(CreatePasswordSuccess(token: token));
             emit(AuthAuthenticated(
               userId: user.id,
-              login: loginToStore.isNotEmpty ? loginToStore : user.login.trim(),
+              login: sessionLogin,
               user: user,
               sessionGeneration: ++_loginSessionGeneration,
             ));
           } else {
-            final fallbackLogin = event.contact?.trim() ?? '';
-            if (fallbackLogin.isNotEmpty) {
-              await secureStorage.write(key: 'login', value: fallbackLogin);
-            }
-            // Password was set, but couldn't get user info - still success
+            // Password was set, but couldn't get user info — still success.
+            // No identifier persisted (audit M5); the next launch will fetch
+            // fresh user info via /get-loggedin-user.
             emit(CreatePasswordSuccess(token: token));
           }
         } catch (userInfoError) {
           AppLogger.warn(_tag,
               'createPassword: getUserInfo failed (${userInfoError.runtimeType})');
-          final fallbackLogin = event.contact?.trim() ?? '';
-          if (fallbackLogin.isNotEmpty) {
-            await secureStorage.write(key: 'login', value: fallbackLogin);
-          }
-          // Password was set successfully, but user info fetch failed
-          // Still emit success since password creation worked
+          // Password was set successfully, but user info fetch failed.
+          // Still emit success since password creation worked. Audit M5:
+          // no identifier persisted on the failure path either.
           emit(CreatePasswordSuccess(token: token));
         }
       } else {
@@ -520,13 +602,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         );
 
         if (loginResponse != null && loginResponse.token != null) {
-          await secureStorage.write(key: 'token', value: loginResponse.token!);
-          // Store login for reference (password not stored).
-          await secureStorage.write(key: 'login', value: event.login);
+          // Audit M6: persist via TokenManager (access + refresh + expiry).
+          await tokenManager.updateTokens(
+            accessToken: loginResponse.token!,
+            refreshToken: loginResponse.refreshToken,
+            expiresIn: loginResponse.expiresIn,
+          );
 
           final user = await authRepository.getUserInfo(loginResponse.token!);
 
           if (user != null) {
+            // Audit M5: persist only the opaque user id.
+            await secureStorage.write(key: 'user_id', value: user.id);
             emit(ResetPasswordSuccess());
             emit(AuthAuthenticated(
               userId: user.id,

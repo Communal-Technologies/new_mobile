@@ -283,6 +283,68 @@ class MemberObligationsRepository {
     }
   }
 
+  /// Pay one obligation using the contributed balance of another. Hits the
+  /// same `members/pay-obligation` endpoint as the NIP path but with
+  /// `gateway: 'obligation'` — the backend atomically decrements the
+  /// source obligation's `amount_paid` and credits the target.
+  ///
+  /// Equities are blocked client-side from being a *source*: the picker
+  /// filters them out before this method is called. (The backend does
+  /// not enforce that constraint today; product rule lives in the UI.)
+  Future<void> payObligationFromObligation({
+    required UserModel user,
+    required String targetObligationAccountCode,
+    required String sourceObligationAccountCode,
+    required double amountNaira,
+    String? idempotencyKey,
+    Map<String, String>? biometricHeaders,
+  }) async {
+    final cooperativeId = user.cooperativeId?.trim() ?? '';
+    final ledgerNumber = user.ledgerNumber?.trim() ?? '';
+    final target = targetObligationAccountCode.trim();
+    final source = sourceObligationAccountCode.trim();
+    if (cooperativeId.isEmpty || ledgerNumber.isEmpty) {
+      throw Exception('Missing payment details');
+    }
+    if (target.isEmpty) throw Exception('Missing target obligation');
+    if (source.isEmpty) throw Exception('Missing source obligation');
+    if (target == source) {
+      throw Exception('Source and target obligations must differ');
+    }
+    final amountKobo = (amountNaira * 100).round();
+    if (amountKobo <= 0) {
+      throw Exception('Invalid amount');
+    }
+
+    try {
+      final response = await _dioClient.post(
+        ApiEndpoints.membersPayObligation,
+        data: {
+          'amount': amountKobo.toString(),
+          'obligation': target,
+          'ledger_number': ledgerNumber,
+          'gateway': 'obligation',
+          'gateway_id': source,
+          'cooperative': cooperativeId,
+        },
+        idempotencyKey: idempotencyKey,
+        extraHeaders: biometricHeaders,
+      );
+      final data = response.data;
+      if (response.statusCode == 200) return;
+      if (data is Map && data['message'] != null) {
+        throw Exception(data['message'].toString());
+      }
+      throw Exception('Unable to pay obligation from obligation');
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        throw Exception(data['message'].toString());
+      }
+      throw Exception('Unable to pay obligation from obligation');
+    }
+  }
+
   double _parseDouble(dynamic value) {
     if (value is num) return value.toDouble();
     return double.tryParse(value?.toString() ?? '') ?? 0;

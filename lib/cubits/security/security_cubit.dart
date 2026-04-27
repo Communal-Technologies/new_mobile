@@ -19,6 +19,21 @@ class SecurityCubit extends Cubit<SecurityState> {
   DateTime? _lastUnlockTime; // Track when app was last unlocked to prevent immediate re-lock
   bool _isLockedDueToIdleTimeout = false; // Track if app is locked due to idle timeout
 
+  /// In-app blur overlay rendered by [SecurityWrapper] on top of whatever it
+  /// would otherwise show. Toggled by [onAppPaused] / [onAppResumed].
+  ///
+  /// Composes with the locked/unlocked render — i.e. if the app pauses while
+  /// unlocked, [onAppPaused] also calls [lockApp], so the blur sits on top
+  /// of the lock screen. When the user resumes and the blur is removed, the
+  /// lock screen is already in place underneath, no flash of unlocked
+  /// content.
+  ///
+  /// Why a separate Listenable rather than a SecurityState value: the
+  /// existing enum is mutually exclusive (locked / unlocked / blurred /
+  /// idlePrompt). Keeping blur orthogonal lets it overlay any of the others
+  /// without needing a combinatorial enum or a Stream-of-tuple.
+  final ValueNotifier<bool> blurOverlay = ValueNotifier<bool>(false);
+
   /// When set by [beginExternalFilePickerGuard], the next [onAppResumed] skips PIN lock after
   /// [paused]/[hidden] (system gallery / document picker). Cleared on that resume or by
   /// [cancelExternalFilePickerGuard] if the OS never backgrounded the activity.
@@ -34,51 +49,69 @@ class SecurityCubit extends Cubit<SecurityState> {
     debugPrint('📊   Initialized _lastActivityTime to: $_lastActivityTime');
   }
 
-  /// Obscure content when the app is actually backgrounded ([AppLifecycleState.paused] / [hidden]).
+  /// Mark a real backgrounding transition ([AppLifecycleState.paused] /
+  /// [hidden]). Not tied to [AppLifecycleState.inactive] — that also runs
+  /// for the notification shade.
   ///
-  /// Not tied to [AppLifecycleState.inactive] — that also runs for the notification shade.
-  /// Multiple [paused]/[hidden] events in one transition share one [_backgroundTime] marker.
+  /// Lock the session immediately so it sits *behind* the blur overlay
+  /// during the background window. On resume the blur is dismissed and the
+  /// lock screen is already underneath — no flash of unlocked content
+  /// between the blur disappearing and the lock screen appearing.
+  ///
+  /// Recents-tile / app-switcher privacy is handled natively (Android
+  /// `FLAG_SECURE` in `MainActivity`; iOS overlay view in
+  /// `AppDelegate.applicationWillResignActive`). The Flutter blur is the
+  /// in-app cover (visible during the brief paused window before the OS
+  /// snapshot takes over, and during the resume frame before the OS hands
+  /// the live frame back).
   void onAppPaused() {
-    // Already showing the PIN lock — stay locked. Emitting [blurred] would make
-    // SecurityWrapper stack [widget.child] + blur instead of the lock surface.
-    if (state == SecurityState.locked) {
-      return;
-    }
     if (_externalPickerGuardActive) {
-      // File picker/gallery transition: treat as in-flow activity, not a true background lock trigger.
+      // File picker / gallery transition: treat as in-flow activity, not a
+      // true background lock trigger.
       _externalPickerPauseSeen = true;
       _backgroundTime = null;
       return;
     }
     _backgroundTime ??= DateTime.now();
-    emit(SecurityState.blurred);
+    // Cover the surface immediately so the brief paused-but-still-rendering
+    // window is opaque.
+    blurOverlay.value = true;
+    // Lock behind the blur (no-op if already locked) so the resume reveals
+    // a lock screen, not the dashboard.
+    if (state != SecurityState.locked) {
+      lockApp(isIdleTimeout: true);
+    }
   }
 
-  /// After [onAppPaused] (real background), every return to foreground requires PIN.
+  /// Called when the app returns to the foreground.
   ///
-  /// Invoked from [AppLifecycleState.resumed] when not already locked. [lockApp] with
-  /// [isIdleTimeout]: true keeps the session token and uses the PIN / welcome-back flow.
+  /// The lock state was already set in [onAppPaused], so on resume we just
+  /// dismiss the blur overlay — the lock screen is already underneath it.
   void onAppResumed() {
-    if (state == SecurityState.locked) {
-      debugPrint('📊   App resumed but is locked - NOT unlocking (user must enter PIN)');
-      return;
-    }
+    // Always remove the blur overlay on resume. The state underneath is
+    // the lock screen (set on pause) or the dashboard (the legitimate
+    // file-picker-guard or fast-resume cases below).
+    blurOverlay.value = false;
 
     if (_externalPickerGuardActive && _externalPickerPauseSeen) {
       _externalPickerGuardActive = false;
       _externalPickerPauseSeen = false;
       _backgroundTime = null;
       _isIdlePromptShown = false;
-      if (state == SecurityState.blurred) {
-        emit(SecurityState.unlocked);
-      }
       final now = DateTime.now();
       _lastActivityTime = now;
       _lastUnlockTime = now;
       return;
     }
 
-    if (_backgroundTime != null || state == SecurityState.blurred) {
+    if (state == SecurityState.locked) {
+      debugPrint('📊   App resumed but is locked - waiting for PIN entry');
+      return;
+    }
+
+    if (_backgroundTime != null) {
+      // Defensive: onAppPaused should have already locked, but if we get
+      // here unlocked, lock now (preserves idle-lock semantics).
       _backgroundTime = null;
       lockApp(isIdleTimeout: true);
       return;

@@ -14,6 +14,10 @@ import 'package:communal_mobile/core/di/cubit_module.dart' as _i588;
 import 'package:communal_mobile/core/di/local_storage_module.dart' as _i323;
 import 'package:communal_mobile/core/di/network_module.dart' as _i770;
 import 'package:communal_mobile/core/di/repository_module.dart' as _i620;
+import 'package:communal_mobile/core/security/biometric_key_service.dart'
+    as _i213;
+import 'package:communal_mobile/core/security/biometric_signer_service.dart'
+    as _i703;
 import 'package:communal_mobile/core/security/token_manager.dart' as _i94;
 import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart'
     as _i751;
@@ -72,6 +76,9 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i354.LoggingInterceptor>(
       () => networkModule.loggingInterceptor(),
     );
+    gh.lazySingleton<_i213.BiometricKeyService>(
+      () => _i213.BiometricKeyService(),
+    );
     gh.lazySingleton<_i94.TokenManager>(
       () => _i94.TokenManager(gh<_i558.FlutterSecureStorage>()),
     );
@@ -128,6 +135,13 @@ extension GetItInjectableX on _i174.GetIt {
         authRepository: gh<_i493.AuthRepository>(),
         secureStorage: gh<_i558.FlutterSecureStorage>(),
         tokenManager: gh<_i94.TokenManager>(),
+      ),
+    );
+    gh.lazySingleton<_i703.BiometricSignerService>(
+      () => _i703.BiometricSignerService(
+        gh<_i213.BiometricKeyService>(),
+        gh<_i558.FlutterSecureStorage>(),
+        gh<_i750.DioClient>(),
       ),
     );
     gh.lazySingleton<_i739.SplashCubit>(

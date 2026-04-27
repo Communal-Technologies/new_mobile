@@ -1,6 +1,7 @@
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/utils/money_formatter.dart';
+import 'package:communal_mobile/core/utils/tap_debouncer.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
@@ -49,6 +50,8 @@ class TransferInternalReviewScreen extends StatefulWidget {
 class _TransferInternalReviewScreenState
     extends State<TransferInternalReviewScreen> {
   bool _saveAsBeneficiary = false;
+  // Audit M28: swallows rapid double-taps on the Send Money button.
+  final TapDebouncer _sendDebouncer = TapDebouncer();
 
   @override
   void initState() {
@@ -169,6 +172,7 @@ class _TransferInternalReviewScreenState
       if (widget.obligationNipSettlement != null)
         'obligationNipSettlement': widget.obligationNipSettlement!.toJson(),
     };
+    // ignore: unawaited_futures
     context.pushNamed(
       widget.useExternalNipFlow
           ? 'transfer-external-verify'
@@ -432,7 +436,7 @@ class _TransferInternalReviewScreenState
           width: double.infinity,
           height: 50.h,
           child: InkWell(
-            onTap: _sendMoney,
+            onTap: () => _sendDebouncer.run(_sendMoney),
             borderRadius: BorderRadius.circular(12.r),
             child: Ink(
               decoration: BoxDecoration(

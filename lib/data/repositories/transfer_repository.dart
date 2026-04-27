@@ -358,6 +358,7 @@ class TransferRepository {
     String? counterPartyId,
     String? currencyCode,
     String? idempotencyKey,
+    Map<String, String>? biometricHeaders,
   }) async {
     try {
       var ccy = (currencyCode ?? 'NGN').trim().toUpperCase();
@@ -377,6 +378,7 @@ class TransferRepository {
         '/transfer/initiate',
         data: body,
         idempotencyKey: idempotencyKey,
+        extraHeaders: biometricHeaders,
       );
       final data = response.data;
       if (data is! Map || data['status'] != true) {

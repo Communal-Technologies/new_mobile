@@ -89,7 +89,7 @@ class PhoneNumberInputField extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
           ),
           onSaved: (PhoneNumber number) {
-            appLog('On Saved: $number');
+            AppLogger.debug('PhoneInput', 'onSaved isoCode=${number.isoCode}');
           },
         ),
       ],

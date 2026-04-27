@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import 'package:communal_mobile/core/security/biometric_key_service.dart';
 import 'package:communal_mobile/core/utils/app_logger.dart';
+import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 
 /// Audit M38: high-level biometric-sign flow used by the transfer-verify
@@ -77,7 +78,7 @@ class BiometricSignerService {
       final localPem = await _keys.getPublicKeyPem(id);
       if (localPem == null) return false;
       final response = await _dio.get(
-        '/security/biometric/status',
+        ApiEndpoints.biometricStatus,
         queryParameters: <String, dynamic>{'device_id': id},
       );
       final data = response.data;
@@ -100,7 +101,7 @@ class BiometricSignerService {
     final id = await deviceId();
     final pem = await _keys.generateKeyPair(id);
     final response = await _dio.post(
-      '/security/biometric/enroll',
+      ApiEndpoints.biometricEnroll,
       data: <String, dynamic>{
         'device_id': id,
         'public_key_pem': pem,
@@ -121,7 +122,7 @@ class BiometricSignerService {
     final id = await deviceId();
     try {
       await _dio.post(
-        '/security/biometric/revoke',
+        ApiEndpoints.biometricRevoke,
         data: <String, dynamic>{'device_id': id},
       );
     } catch (e) {
@@ -169,7 +170,7 @@ class BiometricSignerService {
 
     // 1. Mint a nonce server-side.
     final challengeResp = await _dio.post(
-      '/security/biometric/challenge',
+      ApiEndpoints.biometricChallenge,
       data: <String, dynamic>{'device_id': id, 'intent': intent},
     );
     final cdata = challengeResp.data;

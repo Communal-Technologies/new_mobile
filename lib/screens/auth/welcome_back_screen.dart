@@ -286,8 +286,16 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
     // takes a beat. For biometric the OS dialog is already the
     // foreground indicator — adding our own spinner + overlay
     // underneath was the user-reported double-loader bug.
-    if (!_canUseBiometric || _biometricInFlight) return;
+    if (!_canUseBiometric) {
+      debugPrint('🔐 biometric tap ignored: _canUseBiometric=false');
+      return;
+    }
+    if (_biometricInFlight) {
+      debugPrint('🔐 biometric tap ignored: already in-flight');
+      return;
+    }
     _biometricInFlight = true;
+    debugPrint('🔐 attempting local biometric auth…');
 
     try {
       final authenticated = await _localAuth.authenticate(
@@ -297,6 +305,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
           stickyAuth: true,
         ),
       );
+      debugPrint('🔐 local_auth returned: $authenticated');
 
       if (authenticated && mounted) {
         // App-lock-only path. Two important details:
@@ -321,9 +330,19 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
           });
         }
       }
-    } catch (_) {
-      // Local-auth threw (cancel, lockout, no biometrics enrolled). No
-      // app-side state to roll back; the OS surfaced its own message.
+    } catch (e) {
+      // Surface the failure instead of swallowing it — silently
+      // catching makes "I tapped biometric and nothing happened"
+      // impossible to diagnose. Common causes: too many failed
+      // attempts (lockout), user cancelled, OS biometrics disabled
+      // mid-session, hardware unavailable.
+      debugPrint('🔐 local_auth threw: $e');
+      if (mounted) {
+        final msg = e.toString().replaceFirst('PlatformException(', '').trim();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Biometric sign-in failed: $msg')),
+        );
+      }
     } finally {
       _biometricInFlight = false;
     }
@@ -616,7 +635,12 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
       _isPasswordVisible = false;
       _currentMethod = method;
     });
-    
+    // Defensively reset the biometric in-flight flag. A previous
+    // attempt that hung in `local_auth.authenticate` (e.g., the OS
+    // dialog never resolved before the screen rebuilt) would leave
+    // this stuck at `true` and silently swallow every subsequent tap.
+    _biometricInFlight = false;
+
     // If switching to biometric and the user is actually enrolled, attempt it.
     if (method == SignInMethod.fingerprint && _canUseBiometric) {
       Future.delayed(const Duration(milliseconds: 300), () {

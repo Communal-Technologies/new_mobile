@@ -1,7 +1,10 @@
 import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
+import 'package:communal_mobile/data/local/biometric_prefs.dart';
+import 'package:shared_preferences/shared_preferences.dart' as shared_prefs;
 import 'package:communal_mobile/core/utils/idempotency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
+import 'package:communal_mobile/core/utils/tap_debouncer.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
@@ -49,6 +52,8 @@ class _TransferInternalVerifyScreenState
   final _repo = getIt<TransferRepository>();
   final _favorites = getIt<TransferFavoritesPrefs>();
   final _biometricSigner = getIt<BiometricSignerService>();
+  // Audit M28: swallows rapid double-taps on Confirm Transfer.
+  final TapDebouncer _confirmDebouncer = TapDebouncer();
   String _pin = '';
   bool _submitting = false;
 
@@ -89,6 +94,20 @@ class _TransferInternalVerifyScreenState
     setState(() => _submitting = true);
     try {
       await _repo.verifySecurityPin(_pin);
+
+      // Audit M38 Phase D: respect the user's "Transaction
+      // Authorization" pref. The backend gate enforces a valid
+      // signature on transfer endpoints, so if the user disabled
+      // biometric for transactions we surface the situation here
+      // instead of letting the request 403 with a generic error.
+      final shared = await shared_prefs.SharedPreferences.getInstance();
+      final prefs = BiometricPrefs(shared);
+      if (!prefs.transactionsEnabled) {
+        throw Exception(
+          'Biometric authorization is required for transactions. '
+          'Enable it in Settings → Biometric Authentication.',
+        );
+      }
 
       // Audit M38: prove the biometric happened on this device for THIS
       // transfer. Server mints a one-time nonce via /security/biometric/
@@ -131,6 +150,7 @@ class _TransferInternalVerifyScreenState
       }
       if (!mounted) return;
       final mapped = transactionStatusFromApi(result.status);
+      // ignore: unawaited_futures
       context.pushNamed(
         'transaction-receipt',
         extra: {
@@ -339,7 +359,9 @@ class _TransferInternalVerifyScreenState
               width: double.infinity,
               height: 50.h,
               child: InkWell(
-                onTap: canSubmit ? _confirm : null,
+                onTap: canSubmit
+                    ? () => _confirmDebouncer.run(_confirm)
+                    : null,
                 borderRadius: BorderRadius.circular(12.r),
                 child: Ink(
                   decoration: BoxDecoration(

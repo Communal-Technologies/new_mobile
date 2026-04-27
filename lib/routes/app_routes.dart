@@ -1,5 +1,7 @@
-import 'package:go_router/go_router.dart';
 import 'package:flutter/foundation.dart';
+import 'package:go_router/go_router.dart';
+import 'package:communal_mobile/core/utils/app_logger.dart';
+import 'package:communal_mobile/routes/auth_status_notifier.dart';
 
 import 'package:communal_mobile/core/navigation/root_navigator_key.dart';
 
@@ -78,19 +80,48 @@ import 'package:communal_mobile/screens/account/delete_account_final_confirmatio
 import 'package:communal_mobile/screens/account/delete_account_success_screen.dart';
 // import 'package:communal_mobile/core/features/wallet/screens/pages/wallet_page.dart';
 
-String? _kycAnchorCustomerId(Object? extra) {
-  if (extra is Map) {
-    final v = extra['anchorCustomerId'];
-    if (v != null && v.toString().trim().isNotEmpty) {
-      return v.toString().trim();
-    }
-  }
-  return null;
+/// Routes the user can reach without an authenticated session.
+///
+/// Splash + onboarding + the full pre-login flow (signup, OTP, password set,
+/// password reset). Every other route is treated as protected and gated by
+/// the [redirect] callback below. Audit M29.
+const Set<String> _publicPaths = <String>{
+  '/',
+  '/onboarding',
+  '/welcome',
+  '/login',
+  '/welcome-back',
+  '/session-takeover',
+  '/signup',
+  '/verify-phone',
+  '/set-pin',
+  '/set-password',
+  '/account-success',
+  '/forgot-password',
+  '/verify-reset',
+  '/reset-password',
+  '/password-reset-success',
+};
+
+String? _authRedirect(Object _, GoRouterState state) {
+  // The router runs `redirect` on the very first build before AuthBloc has
+  // emitted anything beyond `AuthInitial`. Don't bounce anyone until we know
+  // for sure — splash will hold them on `/` until the first resolved state.
+  if (!appAuthStatusNotifier.isResolved) return null;
+
+  final loc = state.matchedLocation;
+  if (_publicPaths.contains(loc)) return null;
+  if (appAuthStatusNotifier.isAuthenticated) return null;
+
+  // Protected route, no session — back to login.
+  return '/login';
 }
 
 final GoRouter appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
   initialLocation: '/',
+  refreshListenable: appAuthStatusNotifier,
+  redirect: _authRedirect,
   routes: [
     GoRoute(
       path: '/',
@@ -156,14 +187,10 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final extra = state.extra as Map<String, dynamic>?;
         final preFilledContact = extra?['preFilledContact'] as String?;
-        if (kDebugMode) {
-          // ignore: avoid_print
-          print('🔵 ROUTE - forgot-password - extra: $extra');
-          // ignore: avoid_print
-          print(
-            '🔵 ROUTE - forgot-password - preFilledContact: $preFilledContact',
-          );
-        }
+        AppLogger.debug(
+          'Route',
+          'forgot-password preFilled=${preFilledContact != null}',
+        );
         return ForgotPasswordScreen(preFilledContact: preFilledContact);
       },
     ),
@@ -247,19 +274,20 @@ final GoRouter appRouter = GoRouter(
       name: 'kyc-profile-info',
       builder: (context, state) => const ProfileInformationScreen(),
     ),
+    // Audit M30: anchorCustomerId is no longer accepted from `state.extra`
+    // (a crafted intent could plant another user's id). The screens read
+    // it from KycProgressStorage keyed by the authenticated user's id —
+    // the trusted value written by `saveAfterProfileRegistered` after the
+    // /compliance/register call.
     GoRoute(
       path: '/kyc/bank-info',
       name: 'kyc-bank-info',
-      builder: (context, state) => BankInformationScreen(
-        anchorCustomerId: _kycAnchorCustomerId(state.extra),
-      ),
+      builder: (context, state) => const BankInformationScreen(),
     ),
     GoRoute(
       path: '/kyc/proof-of-identity',
       name: 'kyc-proof-of-identity',
-      builder: (context, state) => ProofOfIdentityScreen(
-        anchorCustomerId: _kycAnchorCustomerId(state.extra),
-      ),
+      builder: (context, state) => const ProofOfIdentityScreen(),
     ),
     GoRoute(
       path: '/kyc/verifying',
@@ -291,6 +319,14 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/community-detail',
       name: 'community-detail',
+      // Audit M31: SampleCommunityDetails / SampleCommunityLocations are dev
+      // fixtures. In release we redirect missing-extra navigations back to
+      // the listing rather than render fake content; in debug the fallback
+      // stays on so screen previews keep working.
+      redirect: (context, state) {
+        if (state.extra is CommunityLocation) return null;
+        return kReleaseMode ? '/community' : null;
+      },
       builder: (context, state) {
         final extra = state.extra;
         final location = extra is CommunityLocation
@@ -303,6 +339,11 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/community-application-status',
       name: 'community-application-status',
+      // Audit M31: same gating as `/community-detail`.
+      redirect: (context, state) {
+        if (state.extra is CommunityLocation) return null;
+        return kReleaseMode ? '/community' : null;
+      },
       builder: (context, state) {
         final extra = state.extra;
         final location = extra is CommunityLocation
@@ -327,14 +368,19 @@ final GoRouter appRouter = GoRouter(
       name: 'loan-calculator',
       builder: (context, state) => const LoanCalculatorScreen(),
     ),
+    // Audit M27: route extras are type-checked before any numeric conversion.
+    // The previous `extra?['amount']?.toDouble()` form crashed with
+    // NoSuchMethodError when a caller passed a String or other non-num value.
     GoRoute(
       path: '/loan-application',
       name: 'loan-application',
       builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>?;
+        final extra = state.extra is Map<String, dynamic>
+            ? state.extra as Map<String, dynamic>
+            : const <String, dynamic>{};
         return LoanApplicationScreen(
-          initialAmount: extra?['amount']?.toDouble(),
-          initialDuration: extra?['duration']?.toInt(),
+          initialAmount: (extra['amount'] as num?)?.toDouble(),
+          initialDuration: (extra['duration'] as num?)?.toInt(),
         );
       },
     ),
@@ -342,11 +388,15 @@ final GoRouter appRouter = GoRouter(
       path: '/loan-application-step2',
       name: 'loan-application-step2',
       builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>?;
+        final extra = state.extra is Map<String, dynamic>
+            ? state.extra as Map<String, dynamic>
+            : const <String, dynamic>{};
         return LoanApplicationStep2Screen(
-          loanAmount: extra?['amount']?.toDouble(),
-          loanDuration: extra?['duration']?.toInt(),
-          loanPurpose: extra?['purpose'] as String?,
+          loanAmount: (extra['amount'] as num?)?.toDouble(),
+          loanDuration: (extra['duration'] as num?)?.toInt(),
+          loanPurpose: extra['purpose'] is String
+              ? extra['purpose'] as String
+              : null,
         );
       },
     ),
@@ -354,13 +404,21 @@ final GoRouter appRouter = GoRouter(
       path: '/loan-application-step3',
       name: 'loan-application-step3',
       builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>?;
+        final extra = state.extra is Map<String, dynamic>
+            ? state.extra as Map<String, dynamic>
+            : const <String, dynamic>{};
         return LoanApplicationStep3Screen(
-          loanAmount: extra?['amount']?.toDouble(),
-          loanDuration: extra?['duration']?.toInt(),
-          loanPurpose: extra?['purpose'] as String?,
-          firstGuarantor: extra?['firstGuarantor'] as Guarantor?,
-          secondGuarantor: extra?['secondGuarantor'] as Guarantor?,
+          loanAmount: (extra['amount'] as num?)?.toDouble(),
+          loanDuration: (extra['duration'] as num?)?.toInt(),
+          loanPurpose: extra['purpose'] is String
+              ? extra['purpose'] as String
+              : null,
+          firstGuarantor: extra['firstGuarantor'] is Guarantor
+              ? extra['firstGuarantor'] as Guarantor
+              : null,
+          secondGuarantor: extra['secondGuarantor'] is Guarantor
+              ? extra['secondGuarantor'] as Guarantor
+              : null,
         );
       },
     ),
@@ -368,10 +426,14 @@ final GoRouter appRouter = GoRouter(
       path: '/loan-application-success',
       name: 'loan-application-success',
       builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>?;
+        final extra = state.extra is Map<String, dynamic>
+            ? state.extra as Map<String, dynamic>
+            : const <String, dynamic>{};
         return LoanApplicationSuccessScreen(
-          loanAmount: extra?['amount']?.toDouble() ?? 0,
-          applicationId: extra?['applicationId'] as String?,
+          loanAmount: (extra['amount'] as num?)?.toDouble() ?? 0,
+          applicationId: extra['applicationId'] is String
+              ? extra['applicationId'] as String
+              : null,
         );
       },
     ),
@@ -638,46 +700,31 @@ final GoRouter appRouter = GoRouter(
         );
       },
     ),
+    // Audit M20 (leaves): the review / verify / external-verify routes
+    // consume `amountMinor + currency` from extras; the legacy `amountKobo`
+    // shim is gone. `_extraAsMap` and `_extraAmountMinor` keep parsing
+    // type-safe and isolated from the screen builders.
     GoRoute(
       path: '/transfer/internal-review',
       name: 'transfer-internal-review',
       builder: (context, state) {
-        final extra = state.extra;
-        if (extra is Map && extra['favorite'] is Map) {
-          final fav = TransferFavorite.fromJson(
-            Map<String, dynamic>.from(extra['favorite'] as Map),
-          );
-          final amountKobo = int.tryParse('${extra['amountKobo']}') ?? 0;
-          final narration = (extra['narration']?.toString() ?? '').trim();
-          final saveAsBeneficiary = extra['saveAsBeneficiary'] == true;
-          final useExternalNipFlow = extra['useExternalNipFlow'] == true;
-          final settlementRaw = extra['obligationNipSettlement'];
-          final obligationNipSettlement = settlementRaw is Map
-              ? ObligationNipSettlement.tryFromJson(
-                  Map<String, dynamic>.from(settlementRaw),
-                )
-              : null;
-          return TransferInternalReviewScreen(
-            recipient: fav,
-            amountKobo: amountKobo,
-            narration: narration,
-            saveAsBeneficiary: saveAsBeneficiary,
-            useExternalNipFlow: useExternalNipFlow,
-            obligationNipSettlement: obligationNipSettlement,
-          );
-        }
+        final extra = _extraAsMap(state.extra);
+        final fav = _extraTransferFavorite(extra) ??
+            const TransferFavorite(
+              source: 'internal',
+              accountId: '',
+              bank: 'Communal',
+              accountNumber: '',
+              accountName: 'Recipient',
+            );
         return TransferInternalReviewScreen(
-          recipient: const TransferFavorite(
-            source: 'internal',
-            accountId: '',
-            bank: 'Communal',
-            accountNumber: '',
-            accountName: 'Recipient',
-          ),
-          amountKobo: 0,
-          narration: '',
-          saveAsBeneficiary: false,
-          obligationNipSettlement: null,
+          recipient: fav,
+          amountMinor: _extraAmountMinor(extra),
+          currency: _extraCurrency(extra),
+          narration: (extra['narration']?.toString() ?? '').trim(),
+          saveAsBeneficiary: extra['saveAsBeneficiary'] == true,
+          useExternalNipFlow: extra['useExternalNipFlow'] == true,
+          obligationNipSettlement: _extraObligationNipSettlement(extra),
         );
       },
     ),
@@ -685,42 +732,23 @@ final GoRouter appRouter = GoRouter(
       path: '/transfer/internal-verify',
       name: 'transfer-internal-verify',
       builder: (context, state) {
-        final extra = state.extra;
-        if (extra is Map && extra['favorite'] is Map) {
-          final fav = TransferFavorite.fromJson(
-            Map<String, dynamic>.from(extra['favorite'] as Map),
-          );
-          final amountKobo = int.tryParse('${extra['amountKobo']}') ?? 0;
-          final narration = (extra['narration']?.toString() ?? '').trim();
-          final saveAsBeneficiary = extra['saveAsBeneficiary'] == true;
-          final useExternalNipFlow = extra['useExternalNipFlow'] == true;
-          final settlementRaw = extra['obligationNipSettlement'];
-          final obligationNipSettlement = settlementRaw is Map
-              ? ObligationNipSettlement.tryFromJson(
-                  Map<String, dynamic>.from(settlementRaw),
-                )
-              : null;
-          return TransferInternalVerifyScreen(
-            recipient: fav,
-            amountKobo: amountKobo,
-            narration: narration,
-            saveAsBeneficiary: saveAsBeneficiary,
-            useExternalNipFlow: useExternalNipFlow,
-            obligationNipSettlement: obligationNipSettlement,
-          );
-        }
+        final extra = _extraAsMap(state.extra);
+        final fav = _extraTransferFavorite(extra) ??
+            const TransferFavorite(
+              source: 'internal',
+              accountId: '',
+              bank: 'Communal',
+              accountNumber: '',
+              accountName: 'Recipient',
+            );
         return TransferInternalVerifyScreen(
-          recipient: const TransferFavorite(
-            source: 'internal',
-            accountId: '',
-            bank: 'Communal',
-            accountNumber: '',
-            accountName: 'Recipient',
-          ),
-          amountKobo: 0,
-          narration: '',
-          saveAsBeneficiary: false,
-          obligationNipSettlement: null,
+          recipient: fav,
+          amountMinor: _extraAmountMinor(extra),
+          currency: _extraCurrency(extra),
+          narration: (extra['narration']?.toString() ?? '').trim(),
+          saveAsBeneficiary: extra['saveAsBeneficiary'] == true,
+          useExternalNipFlow: extra['useExternalNipFlow'] == true,
+          obligationNipSettlement: _extraObligationNipSettlement(extra),
         );
       },
     ),
@@ -728,42 +756,23 @@ final GoRouter appRouter = GoRouter(
       path: '/transfer/external-verify',
       name: 'transfer-external-verify',
       builder: (context, state) {
-        final extra = state.extra;
-        if (extra is Map && extra['favorite'] is Map) {
-          final fav = TransferFavorite.fromJson(
-            Map<String, dynamic>.from(extra['favorite'] as Map),
-          );
-          final amountKobo = int.tryParse('${extra['amountKobo']}') ?? 0;
-          final narration = (extra['narration']?.toString() ?? '').trim();
-          final saveAsBeneficiary = extra['saveAsBeneficiary'] == true;
-          final settlementRaw = extra['obligationNipSettlement'];
-          final obligationNipSettlement = settlementRaw is Map
-              ? ObligationNipSettlement.tryFromJson(
-                  Map<String, dynamic>.from(settlementRaw),
-                )
-              : null;
-          return TransferInternalVerifyScreen(
-            recipient: fav,
-            amountKobo: amountKobo,
-            narration: narration,
-            saveAsBeneficiary: saveAsBeneficiary,
-            useExternalNipFlow: true,
-            obligationNipSettlement: obligationNipSettlement,
-          );
-        }
+        final extra = _extraAsMap(state.extra);
+        final fav = _extraTransferFavorite(extra) ??
+            const TransferFavorite(
+              source: 'external',
+              accountId: '',
+              bank: '',
+              accountNumber: '',
+              accountName: 'Recipient',
+            );
         return TransferInternalVerifyScreen(
-          recipient: const TransferFavorite(
-            source: 'external',
-            accountId: '',
-            bank: '',
-            accountNumber: '',
-            accountName: 'Recipient',
-          ),
-          amountKobo: 0,
-          narration: '',
-          saveAsBeneficiary: false,
+          recipient: fav,
+          amountMinor: _extraAmountMinor(extra),
+          currency: _extraCurrency(extra),
+          narration: (extra['narration']?.toString() ?? '').trim(),
+          saveAsBeneficiary: extra['saveAsBeneficiary'] == true,
           useExternalNipFlow: true,
-          obligationNipSettlement: null,
+          obligationNipSettlement: _extraObligationNipSettlement(extra),
         );
       },
     ),
@@ -848,6 +857,50 @@ ReceiptAction? _parseReceiptAction(dynamic value) {
       case 'preview':
         return ReceiptAction.preview;
     }
+  }
+  return null;
+}
+
+// --- Type-safe `state.extra` helpers (audit M20 + M27) ----------------------
+
+Map<String, dynamic> _extraAsMap(Object? extra) {
+  if (extra is Map<String, dynamic>) return extra;
+  if (extra is Map) return Map<String, dynamic>.from(extra);
+  return const <String, dynamic>{};
+}
+
+TransferFavorite? _extraTransferFavorite(Map<String, dynamic> extra) {
+  final raw = extra['favorite'];
+  if (raw is Map) {
+    return TransferFavorite.fromJson(Map<String, dynamic>.from(raw));
+  }
+  return null;
+}
+
+/// Reads `amountMinor` from extras. Falls back to `0` for an unset / invalid
+/// value (the screen's "default" path) — never crashes on a non-num.
+int _extraAmountMinor(Map<String, dynamic> extra) {
+  final v = extra['amountMinor'];
+  if (v is num) return v.toInt();
+  return 0;
+}
+
+/// Reads `currency` from extras. Falls back to `NGN` so a missing extra
+/// matches the legacy NGN-only behavior.
+String _extraCurrency(Map<String, dynamic> extra) {
+  final v = extra['currency'];
+  if (v is String && v.trim().length == 3) return v.trim().toUpperCase();
+  return 'NGN';
+}
+
+ObligationNipSettlement? _extraObligationNipSettlement(
+  Map<String, dynamic> extra,
+) {
+  final raw = extra['obligationNipSettlement'];
+  if (raw is Map) {
+    return ObligationNipSettlement.tryFromJson(
+      Map<String, dynamic>.from(raw),
+    );
   }
   return null;
 }

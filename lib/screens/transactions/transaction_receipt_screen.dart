@@ -362,16 +362,15 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
     }
 
     if (Platform.isAndroid) {
+      // Android 10+: image_gallery_saver_plus uses MediaStore — no permission
+      // needed for the photo library. Only the legacy ≤Android 9 storage
+      // permission is requested as a fallback for older devices.
       if (await hasPermission(Permission.photos) ||
-          await hasPermission(Permission.storage) ||
-          await hasPermission(Permission.manageExternalStorage)) {
+          await hasPermission(Permission.storage)) {
         return true;
       }
       if (await requestPermission(Permission.photos)) return true;
       if (await requestPermission(Permission.storage)) return true;
-      if (await requestPermission(Permission.manageExternalStorage)) {
-        return true;
-      }
       return false;
     }
 

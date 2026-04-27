@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
+import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/constants/images.dart';
 import 'package:communal_mobile/core/widgets/custom_text_field.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
@@ -283,17 +284,28 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     }
   }
 
-  int? _amountKobo() {
+  /// User's resolved currency from the auth profile (defaults to NGN when
+  /// pre-auth or undeterminable). Audit M20 leaf migration — replaces the
+  /// hardcoded `* 100` kobo math.
+  String _resolvedCurrency() {
+    final auth = context.read<AuthBloc>().state;
+    if (auth is AuthAuthenticated) {
+      return resolveCurrencyCode(auth.user);
+    }
+    return 'NGN';
+  }
+
+  int? _amountMinor(String currency) {
     final digits = _amountCtrl.text.replaceAll(RegExp(r'[^0-9]'), '');
     if (digits.isEmpty) return null;
     final n = int.tryParse(digits);
     if (n == null || n <= 0) return null;
-    return n * 100;
+    return n * factorFor(currency);
   }
 
   bool get _continueEnabled {
     if (_verifiedRecipient == null) return false;
-    return _amountKobo() != null;
+    return _amountMinor(_resolvedCurrency()) != null;
   }
 
   void _applyQuickAmount(int v) {
@@ -308,13 +320,15 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
   void _continue() {
     final v = _verifiedRecipient;
     if (v == null || !_continueEnabled) return;
-    final kobo = _amountKobo();
-    if (kobo == null) return;
+    final currency = _resolvedCurrency();
+    final amountMinor = _amountMinor(currency);
+    if (amountMinor == null) return;
     context.pushNamed(
       'transfer-internal-review',
       extra: {
         'favorite': v.toJson(),
-        'amountKobo': kobo,
+        'amountMinor': amountMinor,
+        'currency': currency,
         'narration': _narrationCtrl.text.trim(),
         'saveAsBeneficiary': _saveAsFavorite,
         'useExternalNipFlow': true,

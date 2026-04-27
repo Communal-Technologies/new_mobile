@@ -12,6 +12,7 @@ import 'package:communal_mobile/data/models/region_model.dart';
 import 'package:communal_mobile/data/models/state_model.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
+import 'package:communal_mobile/core/utils/idempotency.dart';
 import 'package:communal_mobile/data/repositories/kyc_repository.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/data/repositories/locations_repository.dart';
@@ -72,6 +73,10 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
   bool _statesLoading = true;
   bool _lgasLoading = false;
   bool _submitting = false;
+
+  /// Audit M23: minted once per screen mount; reused across user retries so
+  /// double-submission of the profile / Anchor customer is deduped server-side.
+  late final String _idempotencyKey = newIdempotencyKey();
 
   String? _selectedCountryName;
   int? _selectedStateId;
@@ -512,6 +517,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
       final customerId = await getIt<KycRepository>().registerProfile(
         userId: authState.userId,
         body: body,
+        idempotencyKey: _idempotencyKey,
       );
       await getIt<KycProgressStorage>().saveAfterProfileRegistered(
         authState.userId,

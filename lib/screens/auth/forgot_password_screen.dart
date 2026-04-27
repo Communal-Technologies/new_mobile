@@ -147,6 +147,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     try {
       await getIt<AuthRepository>().requestPasswordReset(contact);
       if (!mounted) return;
+      // Fire-and-forget — context.push returns a Future that resolves on
+      // pop; we don't need that here.
+      // ignore: unawaited_futures
       context.push('/verify-reset', extra: {
         'contact': contact,
         'isEmail': isEmail,

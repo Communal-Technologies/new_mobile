@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:communal_mobile/injection.dart';
@@ -173,12 +174,25 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
 
     _obligationNipPosted = true;
     try {
+      // Audit M38: pay-obligation is biometric-gated server-side. Even
+      // though the upstream transfer was already biometric-signed, the
+      // bookkeeping call is a separate request and gets its own
+      // signature triple. UX shows a second biometric prompt — accepted
+      // trade-off for keeping the security model strict (every gated
+      // endpoint requires its own signature, no cross-call reuse).
+      final biometricHeaders =
+          (await getIt<BiometricSignerService>().signObligationIntent(
+        promptTitle: 'Record obligation payment',
+        promptSubtitle: 'Use biometrics to record this payment',
+      ))
+              .toHeaders();
       await _obligationsRepo.recordNipObligationPayment(
         user: auth.user,
         obligationAccountCode: settlement.obligationAccountCode,
         transferId: _details.id.trim(),
         cashRepositoryId: settlement.cashRepositoryId,
         amountNaira: settlement.amountNaira,
+        biometricHeaders: biometricHeaders,
       );
       if (!mounted) return;
       final ref = _details.reference.trim().isNotEmpty

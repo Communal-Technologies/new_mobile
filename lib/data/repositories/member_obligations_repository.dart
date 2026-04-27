@@ -1,3 +1,4 @@
+import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
 import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
@@ -70,8 +71,9 @@ class MemberObligationsRepository {
 
     try {
       final responses = await Future.wait([
-        _dioClient.get('/members/financial-obligations/$ledgerNumber/$cooperativeId'),
-        _dioClient.get('/fetch-internal-accounts/$cooperativeId'),
+        _dioClient.get(ApiEndpoints.membersFinancialObligations(
+            ledgerNumber, cooperativeId)),
+        _dioClient.get(ApiEndpoints.fetchInternalAccounts(cooperativeId)),
       ]);
 
       final obligationsData = responses[0].data;
@@ -123,7 +125,8 @@ class MemberObligationsRepository {
     }
 
     try {
-      final response = await _dioClient.get('/members/fetch-member-transactions/$ledgerNumber');
+      final response = await _dioClient.get(
+          ApiEndpoints.membersFetchMemberTransactions(ledgerNumber));
       final data = response.data;
       final raw = data is Map ? (data['data'] ?? data['transactions']) : null;
       if (raw is! List) return const [];
@@ -174,7 +177,8 @@ class MemberObligationsRepository {
 
   Future<List<CooperativeCashBankAccount>> fetchCooperativeCashBankAccounts() async {
     try {
-      final response = await _dioClient.get('/members/cooperative-cash-repositories');
+      final response = await _dioClient.get(
+          ApiEndpoints.membersCooperativeCashRepositories);
       final data = response.data;
       if (data is! Map || data['status'] != true) {
         return const [];
@@ -205,7 +209,7 @@ class MemberObligationsRepository {
   Future<void> verifySecurityPin(String pin) async {
     try {
       final response = await _dioClient.post(
-        '/members/verify-security-pin',
+        ApiEndpoints.membersVerifySecurityPin,
         data: {'security_pin': pin},
       );
       final data = response.data;
@@ -251,7 +255,7 @@ class MemberObligationsRepository {
 
     try {
       final response = await _dioClient.post(
-        '/members/pay-obligation',
+        ApiEndpoints.membersPayObligation,
         data: {
           'amount': amountKobo.toString(),
           'obligation': code,

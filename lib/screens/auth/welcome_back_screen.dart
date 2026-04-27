@@ -67,6 +67,11 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
   bool _canUseBiometric = false;
   String _biometricName = 'Fingerprint';
   bool _isAuthenticating = false;
+  // Separate from `_isAuthenticating` so the biometric prompt doesn't
+  // light up both the button spinner AND the full-screen overlay (the
+  // OS dialog is already the user-visible indicator). This flag only
+  // de-dupes accidental re-triggers of the prompt.
+  bool _biometricInFlight = false;
   UserModel? _user;
   SignInMethod _currentMethod = SignInMethod.pin; // Track current method
   String? _lastProcessedError; // Track last processed error message to prevent duplicates
@@ -273,14 +278,16 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
     // `_canUseBiometric` already collapses every precondition: hardware
     // present, M38 enrolment recorded locally, App Login pref on, and
     // we're in the app-lock path (where a token + session exist for
-    // SecurityCubit to flip). Without these, the prior code would
-    // local-auth → context.go('/home') → router redirect bounces back
-    // → loader spins forever (the "infinite loader" bug).
-    if (!_canUseBiometric || _isAuthenticating) return;
-
-    setState(() {
-      _isAuthenticating = true;
-    });
+    // SecurityCubit to flip).
+    //
+    // Deliberately does NOT touch `_isAuthenticating`. That flag drives
+    // both the PIN-button spinner and the full-screen overlay loader,
+    // which are designed for the PIN path where backend validation
+    // takes a beat. For biometric the OS dialog is already the
+    // foreground indicator — adding our own spinner + overlay
+    // underneath was the user-reported double-loader bug.
+    if (!_canUseBiometric || _biometricInFlight) return;
+    _biometricInFlight = true;
 
     try {
       final authenticated = await _localAuth.authenticate(
@@ -293,22 +300,16 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
 
       if (authenticated && mounted) {
         // App-lock-only path. Two important details:
-        //   1. Clear `_isAuthenticating` synchronously so the button
-        //      spinner stops the moment the user lifts their finger —
-        //      relying on the SecurityCubit BlocListener (which fires
-        //      only on the locked→unlocked transition) is fragile when
-        //      the cubit was already in `unlocked` (the emit becomes a
-        //      no-op and no listener fires; the spinner sticks).
-        //   2. After `unlockApp()`, fall back to an explicit
-        //      `context.go('/home')` when no transition happened —
-        //      otherwise SecurityWrapper's BlocBuilder never rebuilds
-        //      and the lock screen stays mounted (the user-reported
-        //      "still on the welcome screen" symptom).
+        //   1. Capture `wasLocked` BEFORE `unlockApp()` — when the
+        //      cubit is already unlocked, `emit` is a no-op so the
+        //      SecurityWrapper rebuild that swaps lock screen for
+        //      dashboard never fires. The fallback `context.go('/home')`
+        //      covers that case (the user-reported "still on welcome
+        //      screen" symptom).
+        //   2. No setState calls — `_isAuthenticating` was never set,
+        //      so there's nothing to clear.
         final securityCubit = context.read<SecurityCubit>();
         final wasLocked = securityCubit.state == SecurityState.locked;
-        setState(() {
-          _isAuthenticating = false;
-        });
         securityCubit.unlockApp();
         securityCubit.recordActivity();
         if (!wasLocked && mounted) {
@@ -319,17 +320,12 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
             } catch (_) {}
           });
         }
-      } else {
-        setState(() {
-          _isAuthenticating = false;
-        });
       }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isAuthenticating = false;
-        });
-      }
+    } catch (_) {
+      // Local-auth threw (cancel, lockout, no biometrics enrolled). No
+      // app-side state to roll back; the OS surfaced its own message.
+    } finally {
+      _biometricInFlight = false;
     }
   }
 
@@ -1175,11 +1171,12 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
 
         vSpace(40),
 
-        // Sign in with fingerprint button
+        // Sign in with fingerprint button. No `isLoading` — the OS
+        // biometric dialog is the indicator. `_biometricInFlight`
+        // disables the button so a re-tap during the prompt is a no-op.
         AppElevatedButton(
           title: 'Sign in with $_biometricName',
-          onPressed: _isAuthenticating ? null : _attemptBiometricAuth,
-          isLoading: _isAuthenticating,
+          onPressed: _biometricInFlight ? null : _attemptBiometricAuth,
         ),
 
         vSpace(16),

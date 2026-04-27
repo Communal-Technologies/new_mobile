@@ -1,6 +1,6 @@
-import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
-import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
+import 'package:communal_mobile/core/utils/idempotency.dart';
+import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
@@ -8,7 +8,6 @@ import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/obligations/data/obligation_nip_settlement.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
@@ -16,7 +15,8 @@ class TransferInternalVerifyScreen extends StatefulWidget {
   const TransferInternalVerifyScreen({
     super.key,
     required this.recipient,
-    required this.amountKobo,
+    required this.amountMinor,
+    required this.currency,
     required this.narration,
     required this.saveAsBeneficiary,
     this.useExternalNipFlow = false,
@@ -24,7 +24,12 @@ class TransferInternalVerifyScreen extends StatefulWidget {
   });
 
   final TransferFavorite recipient;
-  final int amountKobo;
+
+  /// Integer count of the smallest unit of [currency]. Audit M20 leaf migration.
+  final int amountMinor;
+
+  /// ISO 4217 alpha-3 code.
+  final String currency;
   final String narration;
   final bool saveAsBeneficiary;
 
@@ -44,6 +49,11 @@ class _TransferInternalVerifyScreenState
   final _favorites = getIt<TransferFavoritesPrefs>();
   String _pin = '';
   bool _submitting = false;
+
+  /// Audit M23: minted once per screen mount and reused across retries so a
+  /// network drop + user retry on the Confirm button dedupes server-side.
+  /// A fresh key is only generated when the user navigates away and re-enters.
+  late final String _idempotencyKey = newIdempotencyKey();
 
   String _initials(String name) {
     final parts = name
@@ -71,13 +81,8 @@ class _TransferInternalVerifyScreenState
 
   Future<void> _confirm() async {
     if (_pin.length != 4 || _submitting) return;
-    final authState = context.read<AuthBloc>().state;
-    final currencySymbol = authState is AuthAuthenticated
-        ? currencySymbolForUser(authState.user)
-        : currencySymbolForCode('NGN');
-    final currencyCode = authState is AuthAuthenticated
-        ? resolveCurrencyCode(authState.user)
-        : 'NGN';
+    final currencySymbol = currencySymbolForCode(widget.currency);
+    final currencyCode = widget.currency;
 
     setState(() => _submitting = true);
     try {
@@ -86,18 +91,20 @@ class _TransferInternalVerifyScreenState
       if (widget.useExternalNipFlow) {
         result = await _repo.initiateTransfer(
           type: 'NIPTransfer',
-          amountKobo: widget.amountKobo,
+          amountMinor: widget.amountMinor,
           narration: widget.narration.trim().isEmpty ? 'Transfer' : widget.narration,
           counterPartyId: widget.recipient.accountId,
           currencyCode: currencyCode,
+          idempotencyKey: _idempotencyKey,
         );
       } else {
         result = await _repo.initiateTransfer(
           type: 'BookTransfer',
-          amountKobo: widget.amountKobo,
+          amountMinor: widget.amountMinor,
           narration: widget.narration.trim().isEmpty ? 'Transfer' : widget.narration,
           destinationAccountId: widget.recipient.accountId,
           currencyCode: currencyCode,
+          idempotencyKey: _idempotencyKey,
         );
       }
       if (widget.saveAsBeneficiary) {
@@ -113,7 +120,9 @@ class _TransferInternalVerifyScreenState
             counterpartyName: widget.recipient.accountName,
             counterpartyBank: widget.recipient.bank,
             counterpartyAccount: widget.recipient.accountNumber,
-            amount: widget.amountKobo / 100,
+            // TransactionDetailsData.amount remains a `double` for now
+            // (audit M20 follow-up — receipt screen migration).
+            amount: widget.amountMinor / factorFor(widget.currency),
             currencySymbol: currencySymbol,
             transactionType:
                 widget.useExternalNipFlow ? 'NIP Transfer' : 'Book Transfer',

@@ -578,6 +578,8 @@ final GoRouter appRouter = GoRouter(
         String method = 'Wallet';
         CooperativeCashBankAccount? cashAccount;
         String? cashRepositoryId;
+        String? sourceObligationCode;
+        String? sourceObligationTitle;
 
         final extra = state.extra;
         if (extra is Map) {
@@ -604,6 +606,16 @@ final GoRouter appRouter = GoRouter(
             final rid = rawRid.toString().trim();
             cashRepositoryId = rid.isEmpty ? null : rid;
           }
+          final rawSrcCode = extra['source_obligation_code'];
+          if (rawSrcCode != null) {
+            final code = rawSrcCode.toString().trim();
+            sourceObligationCode = code.isEmpty ? null : code;
+          }
+          final rawSrcTitle = extra['source_obligation_title'];
+          if (rawSrcTitle != null) {
+            final title = rawSrcTitle.toString().trim();
+            sourceObligationTitle = title.isEmpty ? null : title;
+          }
         }
 
         return ObligationConfirmPaymentScreen(
@@ -612,6 +624,8 @@ final GoRouter appRouter = GoRouter(
           method: method,
           cashAccount: cashAccount,
           cashRepositoryId: cashRepositoryId,
+          sourceObligationCode: sourceObligationCode,
+          sourceObligationTitle: sourceObligationTitle,
         );
       },
     ),

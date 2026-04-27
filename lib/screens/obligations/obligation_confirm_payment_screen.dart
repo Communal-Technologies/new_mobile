@@ -29,15 +29,28 @@ class ObligationConfirmPaymentScreen extends StatefulWidget {
     required this.method,
     this.cashAccount,
     this.cashRepositoryId,
+    this.sourceObligationCode,
+    this.sourceObligationTitle,
   });
 
   final Obligation obligation;
   final double amount;
+
+  /// `'NIP transfer'` triggers the wallet → cooperative-bank flow.
+  /// `'Obligation'` triggers the obligation → obligation flow (no NIP
+  /// transfer); `sourceObligationCode` must be set in that case.
   final String method;
   final CooperativeCashBankAccount? cashAccount;
 
   /// When [cashAccount] is missing (e.g. route extra dropped), resolve via API using this id.
   final String? cashRepositoryId;
+
+  /// Source obligation's `account_code` for the obligation-funded path.
+  /// Equity obligations are filtered out by the picker — never set here.
+  final String? sourceObligationCode;
+
+  /// Pretty title for the source obligation, shown in receipts / summaries.
+  final String? sourceObligationTitle;
 
   @override
   State<ObligationConfirmPaymentScreen> createState() =>
@@ -388,6 +401,9 @@ class _ObligationConfirmPaymentScreenState
     try {
       await _repository.verifySecurityPin(pin);
 
+      // Equity *target* cap still applies under both gateways — the
+      // backend rejects over-cap payments either way; this gives a
+      // friendlier message before we round-trip.
       if (widget.obligation.category == 'Equity' &&
           widget.amount > widget.obligation.balance + 0.009) {
         throw Exception(
@@ -395,106 +411,11 @@ class _ObligationConfirmPaymentScreenState
         );
       }
 
-      CooperativeCashBankAccount? cash = widget.cashAccount;
-      if (cash == null || cash.id.isEmpty) {
-        final accounts = await _repository.fetchCooperativeCashBankAccounts();
-        final rid = widget.cashRepositoryId?.trim() ?? '';
-        if (rid.isNotEmpty) {
-          for (final a in accounts) {
-            if (a.id == rid) {
-              cash = a;
-              break;
-            }
-          }
-        }
-        cash ??= accounts.length == 1 ? accounts.first : null;
+      if (widget.method == 'Obligation') {
+        await _confirmObligationFundedPayment(authState);
+      } else {
+        await _confirmNipFundedPayment(authState);
       }
-      if (cash == null || cash.id.isEmpty) {
-        throw Exception(
-          'No cooperative bank account is available. Please go back, wait for accounts to load, or contact your cooperative administrator.',
-        );
-      }
-
-      final verified = await _transferRepo.verifyAccount(
-        bankCode: cash.bankCode,
-        accountNumber: cash.accountNumber,
-      );
-      final counterpartyId = await _transferRepo.createCounterParty(
-        bankCode: cash.bankCode,
-        accountNumber: cash.accountNumber,
-        accountName: verified.accountName,
-      );
-
-      final fav = TransferFavorite(
-        source: 'external',
-        accountId: counterpartyId,
-        bank: verified.bankName ?? 'Bank',
-        accountNumber: cash.accountNumber,
-        accountName: verified.accountName,
-        nipCode: cash.bankCode,
-      );
-
-      final coopId = authState.user.cooperativeId?.trim() ?? '';
-      final settlement = ObligationNipSettlement(
-        cashRepositoryId: cash.id,
-        cooperativeId: coopId,
-        obligationAccountCode: widget.obligation.accountCode,
-        obligationTitle: widget.obligation.title,
-        obligationCategory: widget.obligation.category,
-        amountNaira: widget.amount,
-      );
-
-      final currencySymbol = currencySymbolForUser(authState.user);
-      final currencyCode = resolveCurrencyCode(authState.user);
-      final narration = 'Obligation: ${widget.obligation.title}';
-      // Audit M20: integer minor units derived currency-agnostically rather
-      // than the legacy `(amount * 100).round()` (which was kobo-locked).
-      final amountMinor = Money.fromMajor(widget.amount, currencyCode).amountMinor;
-
-      // Audit M38: biometric proof for the transfer that backs this
-      // obligation payment. Same shape as the user-driven transfer flow.
-      final biometricHeaders = (await _biometricSigner.signTransferIntent(
-        promptTitle: 'Authorize payment',
-        promptSubtitle: 'Use biometrics to confirm this obligation payment',
-      )).toHeaders();
-
-      final result = await _transferRepo.initiateTransfer(
-        type: 'NIPTransfer',
-        amountMinor: amountMinor,
-        narration: narration.trim().isEmpty ? 'Transfer' : narration,
-        counterPartyId: fav.accountId,
-        currencyCode: currencyCode,
-        idempotencyKey: _idempotencyKey,
-        biometricHeaders: biometricHeaders,
-      );
-
-      if (!mounted) return;
-      final mapped = transactionStatusFromApi(result.status);
-      // ignore: unawaited_futures
-      context.pushNamed(
-        'transaction-receipt',
-        extra: {
-          'details': TransactionDetailsData(
-            id: result.transferId,
-            counterpartyName: fav.accountName,
-            counterpartyBank: fav.bank,
-            counterpartyAccount: fav.accountNumber,
-            amount: widget.amount,
-            currencySymbol: currencySymbol,
-            transactionType: 'NIP Transfer',
-            dateTime: DateTime.now(),
-            sessionId: result.transferId,
-            reference: result.reference,
-            description: narration,
-            paymentMethod: 'Wallet',
-            fees: 0,
-            isIncoming: false,
-            status: mapped,
-            failureReason: result.failureReason,
-          ),
-          'obligationNipSettlement': settlement.toJson(),
-        },
-      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -503,5 +424,179 @@ class _ObligationConfirmPaymentScreenState
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  /// Wallet → cooperative-bank NIP transfer, then record the payment.
+  Future<void> _confirmNipFundedPayment(AuthAuthenticated authState) async {
+    CooperativeCashBankAccount? cash = widget.cashAccount;
+    if (cash == null || cash.id.isEmpty) {
+      final accounts = await _repository.fetchCooperativeCashBankAccounts();
+      final rid = widget.cashRepositoryId?.trim() ?? '';
+      if (rid.isNotEmpty) {
+        for (final a in accounts) {
+          if (a.id == rid) {
+            cash = a;
+            break;
+          }
+        }
+      }
+      cash ??= accounts.length == 1 ? accounts.first : null;
+    }
+    if (cash == null || cash.id.isEmpty) {
+      throw Exception(
+        'No cooperative bank account is available. Please go back, wait for accounts to load, or contact your cooperative administrator.',
+      );
+    }
+
+    final verified = await _transferRepo.verifyAccount(
+      bankCode: cash.bankCode,
+      accountNumber: cash.accountNumber,
+    );
+    final counterpartyId = await _transferRepo.createCounterParty(
+      bankCode: cash.bankCode,
+      accountNumber: cash.accountNumber,
+      accountName: verified.accountName,
+    );
+
+    final fav = TransferFavorite(
+      source: 'external',
+      accountId: counterpartyId,
+      bank: verified.bankName ?? 'Bank',
+      accountNumber: cash.accountNumber,
+      accountName: verified.accountName,
+      nipCode: cash.bankCode,
+    );
+
+    final coopId = authState.user.cooperativeId?.trim() ?? '';
+    final settlement = ObligationNipSettlement(
+      cashRepositoryId: cash.id,
+      cooperativeId: coopId,
+      obligationAccountCode: widget.obligation.accountCode,
+      obligationTitle: widget.obligation.title,
+      obligationCategory: widget.obligation.category,
+      amountNaira: widget.amount,
+    );
+
+    final currencySymbol = currencySymbolForUser(authState.user);
+    final currencyCode = resolveCurrencyCode(authState.user);
+    final narration = 'Obligation: ${widget.obligation.title}';
+    // Audit M20: integer minor units derived currency-agnostically rather
+    // than the legacy `(amount * 100).round()` (which was kobo-locked).
+    final amountMinor = Money.fromMajor(widget.amount, currencyCode).amountMinor;
+
+    // Audit M38: biometric proof for the transfer that backs this
+    // obligation payment. Same shape as the user-driven transfer flow.
+    final biometricHeaders = (await _biometricSigner.signTransferIntent(
+      promptTitle: 'Authorize payment',
+      promptSubtitle: 'Use biometrics to confirm this obligation payment',
+    )).toHeaders();
+
+    final result = await _transferRepo.initiateTransfer(
+      type: 'NIPTransfer',
+      amountMinor: amountMinor,
+      narration: narration.trim().isEmpty ? 'Transfer' : narration,
+      counterPartyId: fav.accountId,
+      currencyCode: currencyCode,
+      idempotencyKey: _idempotencyKey,
+      biometricHeaders: biometricHeaders,
+    );
+
+    if (!mounted) return;
+    final mapped = transactionStatusFromApi(result.status);
+    // ignore: unawaited_futures
+    context.pushNamed(
+      'transaction-receipt',
+      extra: {
+        'details': TransactionDetailsData(
+          id: result.transferId,
+          counterpartyName: fav.accountName,
+          counterpartyBank: fav.bank,
+          counterpartyAccount: fav.accountNumber,
+          amount: widget.amount,
+          currencySymbol: currencySymbol,
+          transactionType: 'NIP Transfer',
+          dateTime: DateTime.now(),
+          sessionId: result.transferId,
+          reference: result.reference,
+          description: narration,
+          paymentMethod: 'Wallet',
+          fees: 0,
+          isIncoming: false,
+          status: mapped,
+          failureReason: result.failureReason,
+        ),
+        'obligationNipSettlement': settlement.toJson(),
+      },
+    );
+  }
+
+  /// Source-obligation balance → target obligation. No NIP transfer; the
+  /// backend `pay-obligation` endpoint with `gateway: 'obligation'`
+  /// atomically decrements the source's `amount_paid` and credits the
+  /// target. Equity sources were filtered out of the picker upstream.
+  Future<void> _confirmObligationFundedPayment(AuthAuthenticated authState) async {
+    final sourceCode = widget.sourceObligationCode?.trim() ?? '';
+    if (sourceCode.isEmpty) {
+      throw Exception('Missing source obligation. Please go back and pick one.');
+    }
+    if (sourceCode == widget.obligation.accountCode.trim()) {
+      throw Exception('Source and target obligations must differ.');
+    }
+
+    // Audit M38: biometric proof for the obligation-funded path uses
+    // the `pay-obligation` intent (matches the backend gate on this
+    // endpoint, which the NIP path satisfies via the upstream transfer).
+    final biometricHeaders = (await _biometricSigner.signObligationIntent(
+      promptTitle: 'Authorize payment',
+      promptSubtitle:
+          'Use biometrics to confirm paying ${widget.obligation.title}',
+    )).toHeaders();
+
+    await _repository.payObligationFromObligation(
+      user: authState.user,
+      targetObligationAccountCode: widget.obligation.accountCode,
+      sourceObligationAccountCode: sourceCode,
+      amountNaira: widget.amount,
+      idempotencyKey: _idempotencyKey,
+      biometricHeaders: biometricHeaders,
+    );
+
+    if (!mounted) return;
+    final currencySymbol = currencySymbolForUser(authState.user);
+    final receiptReference = _idempotencyKey.length > 12
+        ? _idempotencyKey.substring(0, 12)
+        : _idempotencyKey;
+    final sourceTitle =
+        (widget.sourceObligationTitle?.trim().isNotEmpty ?? false)
+            ? widget.sourceObligationTitle!.trim()
+            : 'Obligation';
+    final narration = 'Obligation: ${widget.obligation.title}';
+    // ignore: unawaited_futures
+    context.pushNamed(
+      'transaction-receipt',
+      extra: {
+        'details': TransactionDetailsData(
+          id: receiptReference,
+          counterpartyName: widget.obligation.title,
+          counterpartyBank: '—',
+          counterpartyAccount: widget.obligation.accountCode,
+          amount: widget.amount,
+          currencySymbol: currencySymbol,
+          transactionType: 'Obligation transfer',
+          dateTime: DateTime.now(),
+          sessionId: receiptReference,
+          reference: receiptReference,
+          description: narration,
+          paymentMethod: 'From: $sourceTitle',
+          fees: 0,
+          isIncoming: false,
+          status: transactionStatusFromApi('successful'),
+          failureReason: null,
+        ),
+        // No `obligationNipSettlement` — the backend already recorded
+        // the payment in the same call; the receipt page would
+        // otherwise re-trigger a NIP-settlement record-keeper.
+      },
+    );
   }
 }

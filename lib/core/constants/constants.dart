@@ -19,6 +19,19 @@ class AppConstants {
   /// this constant is the only mobile change required if it ever changes.
   static const int otpLength = 6;
 
+  /// Audit M26: quick-amount chips on the transfer-amount screen. Backend
+  /// doesn't expose a `/transfer/quick-amounts` endpoint today; this list
+  /// is the local fallback. When the backend ships the endpoint, swap the
+  /// `transfer_internal_amount_screen.dart` reference to a future-fetched
+  /// `List<int>` from `SettingsCubit` and treat this constant as the
+  /// fallback when the cubit value is empty.
+  ///
+  /// Values are the **major** unit of NGN (Naira) — the screen multiplies
+  /// by `factorFor(currency)` before submitting.
+  static const List<int> defaultQuickAmounts = <int>[
+    1000, 3000, 5000, 10000, 15000, 20000, 30000, 50000, 100000,
+  ];
+
   /// Staging API (used when `APP_ENV` is `staging`).
   static const String stagingApiBaseUrl =
       'https://api-staging.communalhq.com/api/v1';

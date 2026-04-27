@@ -201,46 +201,59 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
   Future<void> _checkBiometricAvailability() async {
     final isAvailable = await BiometricService.isBiometricAvailable();
     final biometricName = await BiometricService.getBiometricName();
-    
-    if (mounted) {
-      // CRITICAL: For app lock, minimize setState calls to prevent flicker
-      // Only update if values actually changed
-      final shouldUpdate = _isBiometricAvailable != isAvailable || _biometricName != biometricName;
-      
-      if (shouldUpdate) {
-        if (widget.isAppLock) {
-          // For app lock, NEVER call setState during authentication to prevent flicker
-          // Just update values - they'll be used on next natural rebuild
+
+    // Real M38 enrollment check: a Keystore / Secure-Enclave key must
+    // exist for this install's device_id, AND the user must have left
+    // the "App Login" pref on. Fresh-login is also off-limits — we
+    // have no token to attach, so a local biometric pass would just
+    // bounce off the router redirect (the loader-spin bug).
+    bool canUseBiometric = false;
+    if (isAvailable && widget.isAppLock) {
+      try {
+        final shared = await shared_prefs.SharedPreferences.getInstance();
+        final prefs = BiometricPrefs(shared);
+        if (prefs.appLoginEnabled) {
+          final signer = getIt<BiometricSignerService>();
+          final keys = getIt<BiometricKeyService>();
+          final deviceId = await signer.deviceId();
+          final localPem = await keys.getPublicKeyPem(deviceId);
+          canUseBiometric = localPem != null && localPem.isNotEmpty;
+        }
+      } catch (_) {
+        // If any of the enrollment plumbing fails, treat as not enrolled
+        // — the user can still PIN-unlock.
+        canUseBiometric = false;
+      }
+    }
+
+    if (!mounted) return;
+
+    final shouldUpdate = _isBiometricAvailable != isAvailable ||
+        _biometricName != biometricName ||
+        _canUseBiometric != canUseBiometric;
+    if (shouldUpdate) {
+      if (widget.isAppLock) {
+        // For app lock, NEVER call setState during authentication to prevent flicker.
+        // Update fields directly — they'll be picked up on the next natural rebuild.
+        _isBiometricAvailable = isAvailable;
+        _biometricName = biometricName;
+        _canUseBiometric = canUseBiometric;
+      } else {
+        setState(() {
           _isBiometricAvailable = isAvailable;
           _biometricName = biometricName;
-          // CRITICAL: Don't call setState - prevents email flicker during PIN entry/validation
-        } else {
-          // Fresh login - always update with setState
-          setState(() {
-            _isBiometricAvailable = isAvailable;
-            _biometricName = biometricName;
-          });
-        }
+          _canUseBiometric = canUseBiometric;
+        });
       }
-      
-      // CRITICAL: For app lock, we don't have hasSecurityPin info (no API call)
-      // So we can't auto-attempt biometric - user must manually choose it
-      // Only auto-attempt biometric for fresh login where we have full user info
-      if (!widget.isAppLock) {
-        // Only auto-attempt biometric if:
-        // 1. Biometric is available on device
-        // 2. User has security pin set (hasSecurityPin from backend)
-        // 3. We're not already authenticating
-        // 4. This is fresh login (not app lock)
-        if (isAvailable && _user?.hasSecurityPin == true && !_isAuthenticating) {
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (mounted && !_isAuthenticating) {
-              _attemptBiometricAuth();
-            }
-          });
+    }
+
+    // Auto-prompt biometric only when actually enrolled (app-lock path).
+    if (canUseBiometric && !_isAuthenticating) {
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted && !_isAuthenticating) {
+          _attemptBiometricAuth();
         }
-      }
-      // For app lock: Don't auto-attempt biometric (no hasSecurityPin info)
+      });
     }
   }
 

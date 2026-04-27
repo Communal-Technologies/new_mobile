@@ -87,9 +87,6 @@ class _TransferInternalAmountScreenState
         'favorite': widget.recipient.toJson(),
         'amountMinor': amountMinor,
         'currency': currency,
-        // Backwards-compatible field for the review screen until that screen
-        // is migrated to read `amountMinor` + `currency`.
-        'amountKobo': amountMinor,
         'narration': _narrationCtrl.text.trim(),
         'saveAsBeneficiary': _saveAsFavorite,
       },

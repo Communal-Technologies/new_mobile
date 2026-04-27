@@ -213,6 +213,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
       try {
         await getIt<AuthRepository>().verifyPasswordResetPin(widget.contact, _code);
         if (!mounted) return;
+        // ignore: unawaited_futures
         context.push('/reset-password', extra: {
           'contact': widget.contact,
           'isEmail': widget.isEmail,

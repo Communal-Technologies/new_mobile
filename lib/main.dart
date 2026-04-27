@@ -1,10 +1,13 @@
+import 'package:communal_mobile/core/constants/constants.dart';
 import 'package:communal_mobile/core/theme/colors.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/routes/app_routes.dart';
+import 'package:communal_mobile/routes/auth_status_notifier.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/cubits/splash/splash_cubit.dart';
@@ -14,7 +17,6 @@ import 'package:communal_mobile/cubits/security/security_cubit.dart';
 import 'package:communal_mobile/core/widgets/connectivity_listener.dart';
 import 'package:communal_mobile/core/services/push_notification_service.dart';
 import 'package:communal_mobile/core/widgets/security_wrapper.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:toastification/toastification.dart';
@@ -23,7 +25,7 @@ import 'package:communal_mobile/data/repositories/auth_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
+  _assertBuildTimeConfig();
   await configureDependencies();
 
   // Set system UI style (status bar)
@@ -52,6 +54,25 @@ void main() async {
       ),
     ),
   );
+}
+
+/// Surfaces missing build-time `--dart-define` values at startup instead of
+/// letting features (Maps, geocoding) fail silently the first time they run.
+/// Hard-asserts in debug; logs a warning in release so the rest of the app
+/// (login, transfers, etc.) still works without map features.
+void _assertBuildTimeConfig() {
+  final mapsKey = AppConstants.googleMapsApiKey;
+  if (mapsKey.isEmpty) {
+    assert(
+      false,
+      'GOOGLE_MAPS_API_KEY is not set. Pass it via '
+      '--dart-define-from-file=tool/dart_defines.json (see README).',
+    );
+    if (kReleaseMode) {
+      // ignore: avoid_print
+      debugPrint('WARNING: GOOGLE_MAPS_API_KEY missing — map features disabled.');
+    }
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -83,15 +104,35 @@ class MyApp extends StatelessWidget {
                   create: (_) => SecurityCubit(snapshot.data!, const FlutterSecureStorage()),
                 ),
               ],
-              child: BlocListener<AuthBloc, AuthState>(
-                listenWhen: (previous, current) =>
-                    current is AuthAuthenticated && previous != current,
-                listener: (context, state) async {
-                  if (state is! AuthAuthenticated) return;
-                  await PushNotificationService.instance.initializeAndSync(
-                    getIt<AuthRepository>(),
-                  );
-                },
+              child: MultiBlocListener(
+                listeners: [
+                  // Audit M29: bridge AuthBloc state into the listenable that
+                  // appRouter's `redirect` consults. Fires on every state
+                  // transition (resolved vs. unresolved, authed vs. not) so a
+                  // logout immediately bounces protected routes back to /login.
+                  BlocListener<AuthBloc, AuthState>(
+                    listenWhen: (previous, current) =>
+                        previous.runtimeType != current.runtimeType,
+                    listener: (context, state) {
+                      final resolved = state is AuthAuthenticated ||
+                          state is AuthUnauthenticated;
+                      appAuthStatusNotifier.update(
+                        isAuthenticated: state is AuthAuthenticated,
+                        isResolved: resolved,
+                      );
+                    },
+                  ),
+                  BlocListener<AuthBloc, AuthState>(
+                    listenWhen: (previous, current) =>
+                        current is AuthAuthenticated && previous != current,
+                    listener: (context, state) async {
+                      if (state is! AuthAuthenticated) return;
+                      await PushNotificationService.instance.initializeAndSync(
+                        getIt<AuthRepository>(),
+                      );
+                    },
+                  ),
+                ],
                 child: ToastificationWrapper(
                   // Must sit above [SecurityWrapper]: the lock UI swaps in a nested
                   // [MaterialApp] and must not mount a second [ToastificationWrapper]

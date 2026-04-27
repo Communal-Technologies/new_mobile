@@ -1,4 +1,6 @@
 import 'package:communal_mobile/core/utils/app_currency.dart';
+import 'package:communal_mobile/core/utils/money.dart';
+import 'package:communal_mobile/core/utils/money_formatter.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
@@ -14,7 +16,8 @@ class TransferInternalReviewScreen extends StatefulWidget {
   const TransferInternalReviewScreen({
     super.key,
     required this.recipient,
-    required this.amountKobo,
+    required this.amountMinor,
+    required this.currency,
     required this.narration,
     required this.saveAsBeneficiary,
     this.useExternalNipFlow = false,
@@ -22,7 +25,13 @@ class TransferInternalReviewScreen extends StatefulWidget {
   });
 
   final TransferFavorite recipient;
-  final int amountKobo;
+
+  /// Integer count of the smallest unit of [currency] (kobo for NGN, cents
+  /// for USD, no fractional unit for JPY). Audit M20 leaf migration.
+  final int amountMinor;
+
+  /// ISO 4217 alpha-3 code (`NGN`, `USD`, `BHD`, ...).
+  final String currency;
   final String narration;
   final bool saveAsBeneficiary;
 
@@ -48,21 +57,26 @@ class _TransferInternalReviewScreenState
   }
 
   String _amountText(String currencySymbol) {
-    final value = widget.amountKobo / 100;
-    return '$currencySymbol${NumberFormat('#,##0.00').format(value)}';
+    final formatted = formatMinor(widget.amountMinor, widget.currency);
+    return '$currencySymbol$formatted';
   }
 
   String _amountInWords(String currencyCode) {
-    final major = widget.amountKobo ~/ 100;
+    // Whole-major part for the words form; fractional minor units (kobo,
+    // cents, ...) are rendered numerically by [_amountText] above.
+    final major = widget.amountMinor ~/ factorFor(widget.currency);
     final name = majorCurrencyNameForCode(currencyCode);
     if (major <= 0) return 'Zero $name only';
     return '${_toWords(major)} $name only';
   }
 
-  String _balanceAfterTransferText(int currentBalanceKobo, String currencySymbol) {
-    final after = currentBalanceKobo - widget.amountKobo;
+  String _balanceAfterTransferText(
+    int currentBalanceMinor,
+    String currencySymbol,
+  ) {
+    final after = currentBalanceMinor - widget.amountMinor;
     final safeAfter = after < 0 ? 0 : after;
-    return '$currencySymbol${NumberFormat('#,##0.00').format(safeAfter / 100)}';
+    return '$currencySymbol${formatMinor(safeAfter, widget.currency)}';
   }
 
   String _toWords(int value) {
@@ -147,7 +161,8 @@ class _TransferInternalReviewScreenState
   Future<void> _sendMoney() async {
     final extra = <String, dynamic>{
       'favorite': widget.recipient.toJson(),
-      'amountKobo': widget.amountKobo,
+      'amountMinor': widget.amountMinor,
+      'currency': widget.currency,
       'narration': widget.narration,
       'saveAsBeneficiary': _saveAsBeneficiary,
       if (widget.useExternalNipFlow) 'useExternalNipFlow': true,

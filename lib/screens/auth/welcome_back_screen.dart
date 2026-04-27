@@ -7,6 +7,8 @@ import 'package:communal_mobile/core/widgets/numeric_keypad.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/loader_overlay.dart';
 import 'package:communal_mobile/core/utils/biometric_service.dart';
+import 'package:communal_mobile/data/local/biometric_prefs.dart';
+import 'package:shared_preferences/shared_preferences.dart' as shared_prefs;
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
@@ -157,7 +159,9 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
               _user = user;
             });
             // Re-check biometric availability after user is loaded
-            // to see if user has security pin set
+            // to see if user has security pin set. Fire-and-forget;
+            // setState inside the call surfaces results when ready.
+            // ignore: unawaited_futures
             _checkBiometricAvailability();
           }
           _isLoadingUserInfo = false;
@@ -230,7 +234,15 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
 
   Future<void> _attemptBiometricAuth() async {
     if (!_isBiometricAvailable || _isAuthenticating) return;
-    
+
+    // Audit M38 Phase D: respect the user's "App Login" pref. If the
+    // user disabled biometric for app-login in Settings (but kept it on
+    // for transactions, or disabled it altogether), skip the prompt and
+    // require PIN entry.
+    final shared = await shared_prefs.SharedPreferences.getInstance();
+    final prefs = BiometricPrefs(shared);
+    if (!prefs.appLoginEnabled) return;
+
     setState(() {
       _isAuthenticating = true;
     });
@@ -519,6 +531,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
             _password = '';
             _pinController.clear();
           });
+          // ignore: unawaited_futures
           context.read<SplashCubit>().initApp();
           context.go('/');
         }
@@ -1234,6 +1247,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                 }
 
                 if (!mounted) return;
+                // ignore: unawaited_futures
                 context.push('/forgot-password', extra: extra);
             },
             style: TextButton.styleFrom(

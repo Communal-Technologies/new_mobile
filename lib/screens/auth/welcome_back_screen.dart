@@ -917,21 +917,22 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
           }
         },
         child: BlocBuilder<SecurityCubit, SecurityState>(
-          // Rebuild on every security state change so loader tracks lock/unlock.
-          // Parent setState (PIN submit) already rebuilds this subtree; omitting a narrow
-          // buildWhen avoids missing frames when only local auth flags change.
+          // Watching SecurityCubit purely so the overlay disappears the
+          // instant the cubit flips to unlocked (the BlocBuilder rebuild
+          // is the trigger; we don't read `securityState` in the gate).
           builder: (context, securityState) {
-            // Rebuild when AuthBloc hits verifying / result so loader appears even if the first
-            // setState frame is skipped before the bloc processes LoginRequested.
-            final authState = context.watch<AuthBloc>().state;
-            // [LoginRequested] emits [AuthVerifyingCredentials], not [AuthAuthenticated].
-            // Treat both as an active session so the PIN loader stays visible during the API call.
-            final hasAuthSession = authState is AuthAuthenticated ||
-                authState is AuthVerifyingCredentials;
-            final shouldShowLoader = hasAuthSession &&
-                (_waitingForBackendValidation ||
-                    (_isAuthenticating &&
-                        securityState == SecurityState.locked));
+            // Watch AuthBloc so the overlay paints on the same frame
+            // as `LoginRequested` reaches the bloc — without it we
+            // could miss the first frame between `setState` and the
+            // bloc emitting `AuthVerifyingCredentials`.
+            context.watch<AuthBloc>().state;
+            // Single source of truth: only show the full-screen loader
+            // while the Laravel backend round-trip is in flight. PIN
+            // entry sets this to true right before dispatching
+            // `LoginRequested`, and the AuthBloc listeners below clear
+            // it on success / failure / takeover. Biometric path never
+            // sets it (the OS dialog is the indicator there).
+            final shouldShowLoader = _waitingForBackendValidation;
             
             return Stack(
             fit: StackFit.expand,

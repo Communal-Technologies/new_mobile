@@ -28,11 +28,20 @@ class NetworkInterceptor extends Interceptor {
             ),
           );
         }
-      } catch (e) {
+      } catch (e, stackTrace) {
+        // Audit M34: preserve the original cause inside the wrapping
+        // DioException so error handlers / Crashlytics see the actual
+        // failure type (e.g. SocketException vs PlatformException) and
+        // can branch accordingly. Previously the wrapped exception
+        // collapsed every connectivity-wait failure into the same
+        // string-typed error.
         return handler.reject(
           DioException(
             requestOptions: options,
-            error: 'Failed to connect. Please check your internet connection.',
+            error: e,
+            stackTrace: stackTrace,
+            message:
+                'Failed to connect. Please check your internet connection.',
             type: DioExceptionType.connectionTimeout,
           ),
         );

@@ -480,6 +480,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
       }
 
       if (!mounted) return;
+      // ignore: unawaited_futures
       context.push(
         '/kyc/verifying',
         extra: <String, dynamic>{'anchorCustomerId': id},

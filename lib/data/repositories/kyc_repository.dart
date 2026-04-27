@@ -12,11 +12,13 @@ class KycRepository {
   Future<String> registerProfile({
     required String userId,
     required Map<String, dynamic> body,
+    String? idempotencyKey,
   }) async {
     try {
       final response = await _dioClient.post(
         '/compliance/register/$userId',
         data: body,
+        idempotencyKey: idempotencyKey,
       );
       final data = response.data;
       if (data is Map && (data['status'] == true || data['status'] == 'true')) {
@@ -39,6 +41,7 @@ class KycRepository {
     required String bvn,
     required String dateOfBirth,
     required String gender,
+    String? idempotencyKey,
   }) async {
     try {
       final response = await _dioClient.post(
@@ -48,6 +51,7 @@ class KycRepository {
           'date_of_birth': dateOfBirth,
           'gender': gender,
         },
+        idempotencyKey: idempotencyKey,
       );
       final data = response.data;
       if (data is Map && (data['status'] == true || data['status'] == 'true')) {
@@ -80,6 +84,7 @@ class KycRepository {
     String? fileBackPath,
     Uint8List? fileBackBytes,
     String? fileBackName,
+    String? idempotencyKey,
   }) async {
     try {
       final MultipartFile frontMultipart;

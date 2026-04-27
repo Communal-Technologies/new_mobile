@@ -362,8 +362,10 @@ class _SecurityWrapperState extends State<SecurityWrapper>
               
               // Check if login exists in secure storage
               final secureStorage = securityCubit.secureStorage;
-              secureStorage.read(key: 'login').then((login) {
-                final hasLogin = login != null && login.isNotEmpty;
+              // Audit M5: use the opaque user id sentinel (not the email/phone
+              // identifier) to decide "did the user previously sign in?".
+              secureStorage.read(key: 'user_id').then((userId) {
+                final hasLogin = userId != null && userId.isNotEmpty;
                 
                 // Reset all security flags
                 _hasInitializedLock = false;
@@ -443,9 +445,11 @@ class _SecurityWrapperState extends State<SecurityWrapper>
               // For fresh install, check if login exists asynchronously
               // If no login, unlock and return widget.child to let router handle it
               final secureStorage = securityCubit.secureStorage;
-              secureStorage.read(key: 'login').then((login) {
-                final hasLogin = login != null && login.isNotEmpty;
-                if (!hasLogin && securityCubit.state == SecurityState.locked) {
+              // Audit M5: use the opaque user id sentinel (not the email/phone
+              // identifier) to decide "did the user previously sign in?".
+              secureStorage.read(key: 'user_id').then((userId) {
+                final hasPriorSession = userId != null && userId.isNotEmpty;
+                if (!hasPriorSession && securityCubit.state == SecurityState.locked) {
                   // Fresh install but locked - unlock it
                   securityCubit.unlockApp();
                 }
@@ -935,6 +939,34 @@ class _SecurityWrapperState extends State<SecurityWrapper>
       ),
     );
 
+    final securityCubit = context.read<SecurityCubit>();
+
+    // Compose order, outermost → innermost:
+    //   session-invalidation overlay
+    //     → background blur overlay (audit + bug-fix: shown on app pause,
+    //       removed on resume; lock state below it is set on pause too,
+    //       so the resume reveals the lock screen with no flash)
+    //         → underlying security content (locked / unlocked / etc.)
+    final withBlurOverlay = ValueListenableBuilder<bool>(
+      valueListenable: securityCubit.blurOverlay,
+      builder: (context, isBlurred, child) {
+        if (!isBlurred) return child!;
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            child!,
+            Positioned.fill(
+              child: AbsorbPointer(
+                absorbing: true,
+                child: const BlurOverlay(),
+              ),
+            ),
+          ],
+        );
+      },
+      child: securityContent,
+    );
+
     return ValueListenableBuilder<String?>(
       valueListenable: sessionInvalidationMessage,
       builder: (context, message, child) {
@@ -943,7 +975,7 @@ class _SecurityWrapperState extends State<SecurityWrapper>
         }
         return _buildSessionInvalidationOverlay(child!, message.trim());
       },
-      child: securityContent,
+      child: withBlurOverlay,
     );
   }
 }

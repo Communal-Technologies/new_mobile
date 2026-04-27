@@ -535,6 +535,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
       } catch (_) {}
       if (!mounted) return;
       setState(() => _submitting = false);
+      // ignore: unawaited_futures
       context.push(
         '/kyc/bank-info',
         extra: <String, dynamic>{'anchorCustomerId': customerId},

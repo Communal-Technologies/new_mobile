@@ -1,58 +1,43 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 
+import 'package:communal_mobile/core/utils/app_logger.dart';
+
+/// Network logging interceptor.
+///
+/// Audit M16: previously logged `options.headers` (including
+/// `Authorization: Bearer …`) and full response bodies. Now logs method +
+/// path + status only, and redacts headers before they ever hit the logger.
+/// Bodies are never logged here — if you need to inspect a body during
+/// development, do it at the call site behind a `kDebugMode` guard with the
+/// fields you actually need.
 class LoggingInterceptor extends Interceptor {
-  final int maxCharactersPerLine;
+  LoggingInterceptor();
 
-  LoggingInterceptor({this.maxCharactersPerLine = 200});
+  static const String _tag = 'Net';
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    if (kDebugMode) {
-      debugPrint('--> ${options.method} ${options.uri}');
-      debugPrint('Headers: ${options.headers}');
-      if (options.data != null) debugPrint('Body: ${options.data}');
-    }
-
+    AppLogger.debug(_tag, '--> ${options.method} ${options.uri.path}');
     super.onRequest(options, handler);
   }
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
-    if (kDebugMode) {
-      debugPrint('<-- ${response.statusCode} ${response.requestOptions.method} ${response.requestOptions.uri}');
-
-      final responseStr = response.data.toString();
-      if (responseStr.length > maxCharactersPerLine) {
-        final iterations = (responseStr.length / maxCharactersPerLine).ceil();
-        for (int i = 0; i < iterations; i++) {
-          final start = i * maxCharactersPerLine;
-          final end = (i + 1) * maxCharactersPerLine;
-          debugPrint(responseStr.substring(start, end > responseStr.length ? responseStr.length : end));
-        }
-      } else {
-        debugPrint(responseStr);
-      }
-
-      debugPrint('<-- END HTTP');
-    }
-
+    AppLogger.debug(
+      _tag,
+      '<-- ${response.statusCode} ${response.requestOptions.method} ${response.requestOptions.uri.path}',
+    );
     super.onResponse(response, handler);
   }
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    if (kDebugMode) {
-      debugPrint('*** DioError ***');
-      debugPrint('URI: ${err.requestOptions.uri}');
-      debugPrint('Message: ${err.message}');
-      if (err.response != null) {
-        debugPrint('Status Code: ${err.response?.statusCode}');
-        debugPrint('Response: ${err.response?.data}');
-      }
-      debugPrint('*** End DioError ***');
-    }
-
+    AppLogger.warn(
+      _tag,
+      'xx ${err.response?.statusCode ?? '???'} '
+      '${err.requestOptions.method} ${err.requestOptions.uri.path} '
+      '(${err.type.name})',
+    );
     super.onError(err, handler);
   }
 }

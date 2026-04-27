@@ -114,6 +114,7 @@ class DioClient {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
     bool requireAuth = true,
+    String? idempotencyKey,
   }) async {
     try {
       final options = Options();
@@ -123,6 +124,14 @@ class DioClient {
           HttpHeaders.contentTypeHeader: 'application/json; charset=UTF-8',
           'X-localization': AppConstants.defaultLanguage,
         };
+      }
+      // Audit M23: caller-supplied Idempotency-Key threads to the backend so
+      // a network drop + retry on a non-idempotent operation (transfer, loan,
+      // KYC submission) dedupes server-side instead of double-processing.
+      if (idempotencyKey != null && idempotencyKey.isNotEmpty) {
+        final headers = options.headers ?? <String, dynamic>{};
+        headers['Idempotency-Key'] = idempotencyKey;
+        options.headers = headers;
       }
       return await dio.post(
         uri,
@@ -156,6 +165,7 @@ class DioClient {
     CancelToken? cancelToken,
     ProgressCallback? onSendProgress,
     bool requireAuth = true,
+    String? idempotencyKey,
   }) async {
     final headers = <String, dynamic>{
       'X-localization': AppConstants.defaultLanguage,
@@ -165,6 +175,9 @@ class DioClient {
       if (auth != null && auth.toString().isNotEmpty) {
         headers[HttpHeaders.authorizationHeader] = auth;
       }
+    }
+    if (idempotencyKey != null && idempotencyKey.isNotEmpty) {
+      headers['Idempotency-Key'] = idempotencyKey;
     }
     try {
       return await dio.post(
@@ -187,6 +200,7 @@ class DioClient {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
     bool requireAuth = true,
+    String? idempotencyKey,
   }) async {
     try {
       final options = Options();
@@ -196,6 +210,11 @@ class DioClient {
           HttpHeaders.contentTypeHeader: 'application/json; charset=UTF-8',
           'X-localization': AppConstants.defaultLanguage,
         };
+      }
+      if (idempotencyKey != null && idempotencyKey.isNotEmpty) {
+        final headers = options.headers ?? <String, dynamic>{};
+        headers['Idempotency-Key'] = idempotencyKey;
+        options.headers = headers;
       }
       return await dio.put(
         uri,

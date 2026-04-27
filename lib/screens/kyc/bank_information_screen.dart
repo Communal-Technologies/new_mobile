@@ -1,6 +1,7 @@
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/utils/idempotency.dart';
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/data/repositories/kyc_repository.dart';
@@ -36,10 +37,7 @@ final Map<String, String> _kycDayPadded = {
 };
 
 class BankInformationScreen extends StatefulWidget {
-  const BankInformationScreen({super.key, this.anchorCustomerId});
-
-  /// From KYC step 1 (`POST /compliance/register/{id}`) — required for tier upgrades.
-  final String? anchorCustomerId;
+  const BankInformationScreen({super.key});
 
   @override
   State<BankInformationScreen> createState() => _BankInformationScreenState();
@@ -48,18 +46,29 @@ class BankInformationScreen extends StatefulWidget {
 class _BankInformationScreenState extends State<BankInformationScreen> {
   final _bvnController = TextEditingController();
 
-  /// From route [extra] or [KycProgressStorage] after app restart.
+  /// Resolved from one of two trusted sources (audit M30 — route extras are
+  /// no longer accepted):
+  ///
+  /// 1. [AuthAuthenticated.user.kycAnchorCustomerId] — server-vouched, comes
+  ///    straight from `/get-loggedin-user` (`kyc.anchor_customer_id`). This
+  ///    is the cross-device-resume path: a fresh sign-in on a new device
+  ///    has no local storage but the backend still knows the anchor.
+  /// 2. [KycProgressStorage.getAnchor] — per-user-keyed local cache written
+  ///    by [KycProgressStorage.saveAfterProfileRegistered] right after the
+  ///    `/compliance/register/{id}` response. Same-device resume.
   String? _resolvedAnchor;
 
   String? _effectiveAnchor() {
-    final auth = context.read<AuthBloc>().state;
-    final fromRoute = widget.anchorCustomerId?.trim();
-    if (fromRoute != null && fromRoute.isNotEmpty) return fromRoute;
-    if (auth is AuthAuthenticated) {
-      return _resolvedAnchor ??
-          getIt<KycProgressStorage>().getAnchor(auth.userId);
+    if (_resolvedAnchor != null && _resolvedAnchor!.isNotEmpty) {
+      return _resolvedAnchor;
     }
-    return _resolvedAnchor;
+    final auth = context.read<AuthBloc>().state;
+    if (auth is AuthAuthenticated) {
+      final fromUser = auth.user.kycAnchorCustomerId?.trim();
+      if (fromUser != null && fromUser.isNotEmpty) return fromUser;
+      return getIt<KycProgressStorage>().getAnchor(auth.userId);
+    }
+    return null;
   }
 
   String? _bvnError;
@@ -75,6 +84,10 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
 
   bool _isSubmitting = false;
 
+  /// Audit M23: minted once per screen mount; reused across user retries so
+  /// a transient 5xx + retry doesn't trigger duplicate Anchor BVN submissions.
+  late final String _idempotencyKey = newIdempotencyKey();
+
   @override
   void initState() {
     super.initState();
@@ -86,15 +99,19 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
   void _syncAnchorFromStorage() {
     final auth = context.read<AuthBloc>().state;
     if (auth is! AuthAuthenticated) return;
-    final fromRoute = widget.anchorCustomerId?.trim();
-    final fromDisk = getIt<KycProgressStorage>().getAnchor(auth.userId);
-    final id = (fromRoute != null && fromRoute.isNotEmpty)
-        ? fromRoute
+    final storage = getIt<KycProgressStorage>();
+    final fromUser = auth.user.kycAnchorCustomerId?.trim();
+    final fromDisk = storage.getAnchor(auth.userId);
+    final resolved = (fromUser != null && fromUser.isNotEmpty)
+        ? fromUser
         : fromDisk;
     if (!mounted) return;
-    setState(() => _resolvedAnchor = id);
-    if (fromRoute != null && fromRoute.isNotEmpty) {
-      getIt<KycProgressStorage>().ensureAnchorSynced(auth.userId, fromRoute);
+    setState(() => _resolvedAnchor = resolved);
+    // Mirror the server-vouched value into local storage so the next launch
+    // (or any flow that consults storage first) stays consistent without
+    // needing another /get-loggedin-user round-trip.
+    if (fromUser != null && fromUser.isNotEmpty) {
+      storage.ensureAnchorSynced(auth.userId, fromUser);
     }
   }
 
@@ -246,6 +263,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
         bvn: _bvnController.text.trim(),
         dateOfBirth: _formatDobForApi(),
         gender: _genderForApi(),
+        idempotencyKey: _idempotencyKey,
       );
 
       try {

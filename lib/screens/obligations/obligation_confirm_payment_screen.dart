@@ -9,6 +9,7 @@ import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/idempotency.dart';
+import 'package:communal_mobile/core/utils/tap_debouncer.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/utils/money_formatter.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
@@ -49,6 +50,8 @@ class _ObligationConfirmPaymentScreenState
       MemberObligationsRepository(getIt());
   final TransferRepository _transferRepo = getIt<TransferRepository>();
   final BiometricSignerService _biometricSigner = getIt<BiometricSignerService>();
+  // Audit M28: swallows rapid double-taps on the Confirm button.
+  final TapDebouncer _confirmDebouncer = TapDebouncer();
   late final List<TextEditingController> _pinControllers;
   late final List<FocusNode> _pinFocusNodes;
   bool _obscurePin = true;
@@ -181,7 +184,9 @@ class _ObligationConfirmPaymentScreenState
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _submitting ? null : _onConfirm,
+                onPressed: _submitting
+                    ? null
+                    : () => _confirmDebouncer.run(_onConfirm),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF7434FF),
                   minimumSize: Size(double.infinity, 52.h),
@@ -465,6 +470,7 @@ class _ObligationConfirmPaymentScreenState
 
       if (!mounted) return;
       final mapped = transactionStatusFromApi(result.status);
+      // ignore: unawaited_futures
       context.pushNamed(
         'transaction-receipt',
         extra: {

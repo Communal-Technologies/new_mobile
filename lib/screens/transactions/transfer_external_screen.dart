@@ -4,6 +4,7 @@ import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
+import 'package:communal_mobile/core/utils/tier_limit_check.dart';
 import 'package:communal_mobile/core/constants/images.dart';
 import 'package:communal_mobile/core/widgets/custom_text_field.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
@@ -323,6 +324,26 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     final currency = _resolvedCurrency();
     final amountMinor = _amountMinor(currency);
     if (amountMinor == null) return;
+
+    // Audit M21: bail before navigating if the amount can't possibly
+    // succeed given the user's tier (KYC not done, or amount > daily
+    // cap). Saves a wasted round-trip and gives the user a clearer
+    // message than the backend's generic 4xx.
+    final auth = context.read<AuthBloc>().state;
+    if (auth is AuthAuthenticated) {
+      final tierError = checkTransferAgainstTierLimits(
+        user: auth.user,
+        amountMinor: amountMinor,
+        currency: currency,
+      );
+      if (tierError != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(tierError)));
+        return;
+      }
+    }
+
     context.pushNamed(
       'transfer-internal-review',
       extra: {

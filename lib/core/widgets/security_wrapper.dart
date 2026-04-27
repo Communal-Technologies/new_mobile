@@ -244,7 +244,11 @@ class _SecurityWrapperState extends State<SecurityWrapper>
   }
 
   Widget _buildSessionInvalidationOverlay(Widget child, String message) {
-    return Stack(
+    // SecurityWrapper sits above MaterialApp, so the Stack here cannot
+    // resolve AlignmentDirectional without an ambient Directionality.
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Stack(
       fit: StackFit.expand,
       children: [
         child,
@@ -302,6 +306,7 @@ class _SecurityWrapperState extends State<SecurityWrapper>
           ),
         ),
       ],
+    ),
     );
   }
 
@@ -951,17 +956,23 @@ class _SecurityWrapperState extends State<SecurityWrapper>
       valueListenable: securityCubit.blurOverlay,
       builder: (context, isBlurred, child) {
         if (!isBlurred) return child!;
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            child!,
-            Positioned.fill(
-              child: AbsorbPointer(
-                absorbing: true,
-                child: const BlurOverlay(),
+        // SecurityWrapper sits above MaterialApp, so there's no ambient
+        // Directionality. Stack uses AlignmentDirectional by default,
+        // which throws without one — wrap explicitly here.
+        return Directionality(
+          textDirection: TextDirection.ltr,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              child!,
+              Positioned.fill(
+                child: AbsorbPointer(
+                  absorbing: true,
+                  child: const BlurOverlay(),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
       child: securityContent,

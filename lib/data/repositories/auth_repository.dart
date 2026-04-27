@@ -1,4 +1,5 @@
 // auth_repository.dart
+import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
 import 'package:communal_mobile/data/models/login_response.dart';
@@ -22,7 +23,7 @@ class AuthRepository {
     try {
       // This endpoint doesn't require authentication (public login endpoint)
       final response = await dioClient.post(
-        '/login',
+        ApiEndpoints.login,
         data: {
           'login': login,
           'password': password,
@@ -115,7 +116,7 @@ class AuthRepository {
   ) async {
     try {
       final response = await dioClient.post(
-        '/login/session-takeover/verify',
+        ApiEndpoints.sessionTakeoverVerify,
         data: {
           'takeover_challenge_id': takeoverChallengeId,
           'otp': otp,
@@ -147,7 +148,7 @@ class AuthRepository {
   Future<void> resendSessionTakeoverOtp(String takeoverChallengeId) async {
     try {
       final response = await dioClient.post(
-        '/login/session-takeover/resend-otp',
+        ApiEndpoints.sessionTakeoverResendOtp,
         data: {'takeover_challenge_id': takeoverChallengeId},
         requireAuth: false,
       );
@@ -170,7 +171,7 @@ class AuthRepository {
     // Ensure token is set in DioClient before making the request.
     updateToken(token);
     try {
-      final response = await dioClient.get('/get-loggedin-user');
+      final response = await dioClient.get(ApiEndpoints.getLoggedInUser);
       if (response.statusCode == 200) {
         return UserModel.fromJson(response.data);
       }
@@ -192,7 +193,7 @@ class AuthRepository {
     final token = deviceToken.trim();
     if (token.isEmpty) return;
     await dioClient.post(
-      '/profile/device-token',
+      ApiEndpoints.profileDeviceToken,
       data: {'device_token': token},
     );
   }
@@ -208,7 +209,7 @@ class AuthRepository {
   Future<bool> verifySessionUnlockPassword(String password) async {
     try {
       final response = await dioClient.post(
-        '/security/transaction/verify-password',
+        ApiEndpoints.securityVerifyPassword,
         data: {'password': password},
       );
 
@@ -257,7 +258,7 @@ class AuthRepository {
     try {
       // This endpoint doesn't require authentication
       final response = await dioClient.post(
-        '/login-checker',
+        ApiEndpoints.loginChecker,
         data: {'login': login, 'user': 'member'},
         requireAuth: false, // No auth required for login check
       );
@@ -313,7 +314,7 @@ class AuthRepository {
       };
 
       final response = await dioClient.post(
-        '/otp/verify',
+        ApiEndpoints.otpVerify,
         data: body,
         requireAuth: false,
       );
@@ -347,7 +348,7 @@ class AuthRepository {
       };
 
       final response = await dioClient.post(
-        '/otp/send',
+        ApiEndpoints.otpSend,
         data: body,
         requireAuth: false,
       );
@@ -375,7 +376,7 @@ class AuthRepository {
     try {
       // This endpoint doesn't require authentication (user doesn't have password yet)
       final response = await dioClient.post(
-        '/create-account-password',
+        ApiEndpoints.createAccountPassword,
         data: {
           'user': userId,
           'password': password,
@@ -441,7 +442,7 @@ class AuthRepository {
   Future<void> requestPasswordReset(String login) async {
     try {
       final response = await dioClient.post(
-        '/generate-password-reset-link',
+        ApiEndpoints.generatePasswordResetLink,
         data: {'login': login},
         requireAuth: false,
       );
@@ -463,7 +464,7 @@ class AuthRepository {
   Future<void> verifyPasswordResetPin(String login, String pin) async {
     try {
       final response = await dioClient.post(
-        '/verify-password-reset-pin',
+        ApiEndpoints.verifyPasswordResetPin,
         data: {'login': login, 'pin': pin},
         requireAuth: false,
       );
@@ -486,7 +487,7 @@ class AuthRepository {
     try {
       // Note: Backend uses PUT method.
       final response = await dioClient.put(
-        '/reset-password',
+        ApiEndpoints.resetPassword,
         data: {
           'login': login,
           'pin': pin,
@@ -545,7 +546,7 @@ class AuthRepository {
   Future<void> requestAccountUnfreeze(String reason) async {
     try {
       final response = await dioClient.post(
-        '/members/account/request-unfreeze',
+        ApiEndpoints.membersRequestUnfreeze,
         data: <String, dynamic>{'reason': reason},
       );
       final data = response.data;

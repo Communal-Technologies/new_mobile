@@ -352,7 +352,7 @@ class TransferRepository {
 
   Future<TransferInitiationResult> initiateTransfer({
     required String type,
-    required int amountKobo,
+    required int amountMinor,
     required String narration,
     String? destinationAccountId,
     String? counterPartyId,
@@ -363,7 +363,7 @@ class TransferRepository {
       if (ccy.length != 3) ccy = 'NGN';
       final body = <String, dynamic>{
         'type': type,
-        'amount': amountKobo,
+        'amount': amountMinor,
         'currency': ccy,
         'narration': narration.trim(),
         if (destinationAccountId != null &&

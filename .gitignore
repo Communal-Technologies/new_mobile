@@ -4,6 +4,9 @@
 *.pyc
 *.swp
 *.env
+tool/dart_defines.json
+tool/dart_defines.*.json
+!tool/dart_defines.example.json
 .DS_Store
 .atom/
 .build/

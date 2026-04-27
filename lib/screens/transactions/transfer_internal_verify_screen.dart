@@ -1,3 +1,4 @@
+import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/idempotency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
@@ -47,6 +48,7 @@ class _TransferInternalVerifyScreenState
     extends State<TransferInternalVerifyScreen> {
   final _repo = getIt<TransferRepository>();
   final _favorites = getIt<TransferFavoritesPrefs>();
+  final _biometricSigner = getIt<BiometricSignerService>();
   String _pin = '';
   bool _submitting = false;
 
@@ -87,6 +89,21 @@ class _TransferInternalVerifyScreenState
     setState(() => _submitting = true);
     try {
       await _repo.verifySecurityPin(_pin);
+
+      // Audit M38: prove the biometric happened on this device for THIS
+      // transfer. Server mints a one-time nonce via /security/biometric/
+      // challenge, we sign it with the Keystore-bound key, and the
+      // headers travel with the initiate call. The backend's
+      // RequireBiometricSignature middleware verifies before letting
+      // the request through. This runs AFTER the PIN check so the
+      // user's biometric prompt only fires for an otherwise-valid
+      // submission.
+      final biometricHeaders = await _biometricSigner.signTransferIntent(
+        promptTitle: 'Authorize transfer',
+        promptSubtitle: 'Use biometrics to confirm this transfer',
+      );
+      final biometricMap = biometricHeaders.toHeaders();
+
       final TransferInitiationResult result;
       if (widget.useExternalNipFlow) {
         result = await _repo.initiateTransfer(
@@ -96,6 +113,7 @@ class _TransferInternalVerifyScreenState
           counterPartyId: widget.recipient.accountId,
           currencyCode: currencyCode,
           idempotencyKey: _idempotencyKey,
+          biometricHeaders: biometricMap,
         );
       } else {
         result = await _repo.initiateTransfer(
@@ -105,6 +123,7 @@ class _TransferInternalVerifyScreenState
           destinationAccountId: widget.recipient.accountId,
           currencyCode: currencyCode,
           idempotencyKey: _idempotencyKey,
+          biometricHeaders: biometricMap,
         );
       }
       if (widget.saveAsBeneficiary) {

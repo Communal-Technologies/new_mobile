@@ -7,6 +7,7 @@ import 'package:injectable/injectable.dart';
 import 'package:communal_mobile/core/security/session_invalidation_notifier.dart';
 import 'package:communal_mobile/core/security/token_manager.dart';
 import 'package:communal_mobile/core/utils/app_logger.dart';
+import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 
 /// Pre-request and on-401 token refresh for the dio HTTP client (audit M6).
 ///
@@ -167,7 +168,7 @@ class RefreshTokenInterceptor extends Interceptor {
       },
     ));
     final response = await bare.post(
-      '/refresh-token',
+      ApiEndpoints.refreshToken,
       data: {'refresh_token': refresh},
     );
     final data = response.data;
@@ -190,7 +191,7 @@ class RefreshTokenInterceptor extends Interceptor {
 
   bool _isRefreshEndpoint(RequestOptions options) {
     final path = options.path;
-    return path == '/refresh-token' ||
-        path.endsWith('/refresh-token');
+    return path == ApiEndpoints.refreshToken ||
+        path.endsWith(ApiEndpoints.refreshToken);
   }
 }

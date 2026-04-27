@@ -1,51 +1,18 @@
 // auth_repository.dart
-import 'dart:developer' as developer;
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
 import 'package:communal_mobile/data/models/login_response.dart';
-import 'package:communal_mobile/core/utils/app_logger.dart' as app_logger;
+import 'package:communal_mobile/core/utils/app_logger.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 
 class AuthRepository {
+  static const String _tag = 'AuthRepository';
+
   final DioClient dioClient;
   static const String _platform = 'mobile_app'; // Platform identifier for mobile app
 
   AuthRepository(this.dioClient);
 
-  void _devLog(
-    String message, {
-    Object? error,
-    StackTrace? stackTrace,
-  }) {
-    if (!kDebugMode) return;
-    developer.log(
-      message,
-      name: 'AuthRepository',
-      error: error,
-      stackTrace: stackTrace,
-    );
-  }
-
-  // Keep legacy call sites but ensure release builds never log.
-  void appLog(String title, String message) {
-    if (!kDebugMode) return;
-    app_logger.appLog(title, message);
-  }
-
-  // Keep legacy call sites but ensure release builds never print.
-  void print(Object? object) {
-    if (!kDebugMode) return;
-    developer.log((object ?? '').toString(), name: 'AuthRepository');
-  }
-
-  // Keep legacy call sites but ensure release builds never print.
-  void debugPrint(String? message, {int? wrapWidth}) {
-    if (!kDebugMode) return;
-    if (message == null) return;
-    developer.log(message, name: 'AuthRepository');
-  }
-  
   /// Update the token in DioClient for authenticated requests
   void updateToken(String token) {
     dioClient.updateToken(token);
@@ -200,36 +167,22 @@ class AuthRepository {
   }
 
   Future<UserModel?> getUserInfo(String token) async {
-    print('🔵 GET USER INFO - Token: ${token.substring(0, 20)}...');
-    // Ensure token is set in DioClient before making the request
+    // Ensure token is set in DioClient before making the request.
     updateToken(token);
     try {
       final response = await dioClient.get('/get-loggedin-user');
-      print('🔵 GET USER INFO - Status: ${response.statusCode}');
-      print('🔵 GET USER INFO - Data: ${response.data}');
-
       if (response.statusCode == 200) {
-        try {
-          // The response structure is {user: {...}} or just {...}
-          final user = UserModel.fromJson(response.data);
-          print('✅ GET USER INFO - User parsed: ${user.id}');
-          print('✅ GET USER INFO - Has security pin: ${user.hasSecurityPin}');
-          print('✅ GET USER INFO - Avatar: ${user.avatar}');
-          return user;
-        } catch (parseError) {
-          print('❌ GET USER INFO - Parse error: $parseError');
-          print('❌ GET USER INFO - Data: ${response.data}');
-          rethrow;
-        }
+        return UserModel.fromJson(response.data);
       }
     } on DioException catch (e) {
-      print('❌ GET USER INFO - DioException');
-      print('❌ Status: ${e.response?.statusCode}');
-      print('❌ Data: ${e.response?.data}');
+      AppLogger.warn(
+        _tag,
+        'getUserInfo failed (status=${e.response?.statusCode}, type=${e.type.name})',
+      );
       rethrow;
     } catch (e, stackTrace) {
-      print('❌ GET USER INFO - Error: $e');
-      print('❌ Stack: $stackTrace');
+      AppLogger.error(_tag, 'getUserInfo unexpected error',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
     return null;
@@ -395,23 +348,7 @@ class AuthRepository {
   }
 
   Future<LoginResponse?> createPassword(String userId, String password) async {
-    _devLog('🚀🚀🚀 CREATE PASSWORD METHOD CALLED 🚀🚀🚀');
-    _devLog('🚀 User ID: $userId');
-    appLog('CREATE PASSWORD METHOD CALLED', 'User ID: $userId');
     try {
-      _devLog('=== CREATE PASSWORD REQUEST ===');
-      _devLog('User ID: $userId');
-      _devLog('Request URL: /create-account-password');
-      appLog('CREATE PASSWORD REQUEST', 'User ID: $userId, URL: /create-account-password');
-      print('=== CREATE PASSWORD REQUEST ===');
-      print('User ID: $userId');
-      print('Request URL: /create-account-password');
-      print('Request Data: {user: $userId, password: ***, new_password: ***}');
-      debugPrint('=== CREATE PASSWORD REQUEST ===');
-      debugPrint('User ID: $userId');
-      debugPrint('Request URL: /create-account-password');
-      debugPrint('Request Data: {user: $userId, password: ***, new_password: ***}');
-      
       // This endpoint doesn't require authentication (user doesn't have password yet)
       final response = await dioClient.post(
         '/create-account-password',
@@ -419,149 +356,60 @@ class AuthRepository {
           'user': userId,
           'password': password,
           'new_password': password,
-          'platform': 'mobile_app', // Indicate this is from mobile app
+          'platform': 'mobile_app',
         },
-        requireAuth: false, // No auth required for password creation
+        requireAuth: false,
       );
 
-      print('=== CREATE PASSWORD RESPONSE ===');
-      print('Status Code: ${response.statusCode}');
-      print('Response Data: ${response.data}');
-      print('Response Data Type: ${response.data.runtimeType}');
-      debugPrint('=== CREATE PASSWORD RESPONSE ===');
-      debugPrint('Status Code: ${response.statusCode}');
-      debugPrint('Response Headers: ${response.headers}');
-      debugPrint('Response Data: ${response.data}');
-      debugPrint('Response Data Type: ${response.data.runtimeType}');
-      
-      if (response.statusCode == 200) {
-        print('✅ Response is 200 OK');
-        print('✅ Full response data: ${response.data}');
-        debugPrint('Response is 200 OK');
-        debugPrint('Full response data: ${response.data}');
-        
-        // Check if token is returned
-        if (response.data != null && response.data is Map) {
-          final responseData = response.data as Map<String, dynamic>;
-          print('✅ Response data is Map');
-          print('✅ Response keys: ${responseData.keys.toList()}');
-          debugPrint('Response data is Map, checking for token...');
-          debugPrint('Response keys: ${responseData.keys.toList()}');
-          
-          if (responseData['token'] != null) {
-            print('✅ Token found in response');
-            print('✅ Token value: ${responseData['token']}');
-            debugPrint('Token found in response: ${responseData['token']}');
-            
-            try {
-              // Try to parse user if available
-              UserModel? user;
-              if (responseData['user'] != null && responseData['user'] is Map) {
-                try {
-                  user = UserModel.fromJson(responseData['user'] as Map<String, dynamic>);
-                  print('✅ User parsed successfully');
-                } catch (userParseError) {
-                  print('⚠️ User parsing failed: $userParseError');
-                  print('⚠️ User data: ${responseData['user']}');
-                  // Continue without user, will fetch separately
-                }
-              }
-              
-              final loginResponse = LoginResponse(
-                token: responseData['token'] as String?,
-                user: user,
-              );
-              print('✅ LoginResponse created successfully');
-              debugPrint('LoginResponse created successfully');
-              return loginResponse;
-            } catch (parseError, stackTrace) {
-              print('❌ Error parsing LoginResponse: $parseError');
-              print('❌ Stack trace: $stackTrace');
-              print('❌ Response data structure: $responseData');
-              debugPrint('Error parsing LoginResponse: $parseError');
-              debugPrint('Response data structure: $responseData');
-              // Even if parsing fails, return a response with the token
-              return LoginResponse(
-                token: responseData['token'] as String?,
-                user: null, // Will be fetched separately
-              );
-            }
-          } else {
-            print('⚠️ No token in response, will login separately');
-            print('⚠️ Available keys: ${responseData.keys.toList()}');
-            debugPrint('No token in response, will login separately');
-            debugPrint('Available keys: ${responseData.keys.toList()}');
-            // If no token, return null and we'll login separately
-            return null;
-          }
-        } else {
-          print('❌ Response data is not a Map, type: ${response.data.runtimeType}');
-          debugPrint('Response data is not a Map, type: ${response.data.runtimeType}');
-          return null;
-        }
-      } else {
-        print('❌ Unexpected status code: ${response.statusCode}');
-        debugPrint('Unexpected status code: ${response.statusCode}');
+      if (response.statusCode != 200) return null;
+      if (response.data is! Map) return null;
+
+      final responseData = response.data as Map<String, dynamic>;
+      if (responseData['token'] == null) {
+        // No token returned — caller will fall back to a separate login.
         return null;
       }
+
+      UserModel? user;
+      if (responseData['user'] is Map) {
+        try {
+          user = UserModel.fromJson(
+            responseData['user'] as Map<String, dynamic>,
+          );
+        } catch (userParseError, stackTrace) {
+          AppLogger.warn(_tag, 'createPassword: user parse failed',
+              error: userParseError);
+          AppLogger.debug(_tag, 'stack', stackTrace: stackTrace);
+        }
+      }
+
+      return LoginResponse(
+        token: responseData['token'] as String?,
+        user: user,
+      );
     } on DioException catch (e) {
-      _devLog('❌ === CREATE PASSWORD DIO ERROR ===');
-      _devLog('❌ Error Type: ${e.type}');
-      _devLog('❌ Error Message: ${e.message}');
-      _devLog('❌ Status Code: ${e.response?.statusCode}');
-      _devLog('❌ Response Data: ${e.response?.data}');
-      appLog('CREATE PASSWORD DIO ERROR', 'Type: ${e.type}, Message: ${e.message}, Status: ${e.response?.statusCode}');
-      print('❌ === CREATE PASSWORD DIO ERROR ===');
-      print('❌ Error Type: ${e.type}');
-      print('❌ Error Message: ${e.message}');
-      print('❌ Status Code: ${e.response?.statusCode}');
-      print('❌ Response Data: ${e.response?.data}');
-      debugPrint('=== CREATE PASSWORD ERROR ===');
-      debugPrint('Error Type: ${e.type}');
-      debugPrint('Error Message: ${e.message}');
-      debugPrint('Status Code: ${e.response?.statusCode}');
-      debugPrint('Response Data: ${e.response?.data}');
-      
-      // Extract error message from response
+      AppLogger.warn(
+        _tag,
+        'createPassword failed (status=${e.response?.statusCode}, type=${e.type.name})',
+      );
       if (e.response != null) {
-        print('❌ Response Status Code: ${e.response?.statusCode}');
-        print('❌ Response Data: ${e.response?.data}');
-        print('❌ Response Data Type: ${e.response?.data.runtimeType}');
-        debugPrint('Response Status Code: ${e.response?.statusCode}');
-        debugPrint('Response Headers: ${e.response?.headers}');
-        debugPrint('Response Data: ${e.response?.data}');
-        debugPrint('Response Data Type: ${e.response?.data.runtimeType}');
-        
         final responseData = e.response?.data;
         String errorMessage = 'Failed to create password';
-        
         if (responseData is Map) {
-          errorMessage = responseData['message'] ?? 
-                        responseData['error'] ?? 
-                        (responseData['errors'] != null 
-                          ? responseData['errors'].toString() 
-                          : errorMessage);
+          errorMessage = responseData['message'] ??
+              responseData['error'] ??
+              (responseData['errors'] != null
+                  ? responseData['errors'].toString()
+                  : errorMessage);
         } else if (responseData is String) {
           errorMessage = responseData;
         }
-        
-        print('❌ Extracted Error Message: $errorMessage');
-        debugPrint('Extracted Error Message: $errorMessage');
         throw Exception(errorMessage);
-      } else {
-        print('❌ No response in error, network issue');
-        debugPrint('No response in error, network issue');
-        throw Exception('Network error. Please check your connection.');
       }
+      throw Exception('Network error. Please check your connection.');
     } catch (e, stackTrace) {
-      print('❌ === CREATE PASSWORD UNEXPECTED ERROR ===');
-      print('❌ Error: $e');
-      print('❌ Error Type: ${e.runtimeType}');
-      print('❌ Stack Trace: $stackTrace');
-      debugPrint('=== CREATE PASSWORD UNEXPECTED ERROR ===');
-      debugPrint('Error: $e');
-      debugPrint('Error Type: ${e.runtimeType}');
-      debugPrint('Stack Trace: $stackTrace');
+      AppLogger.error(_tag, 'createPassword unexpected error',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -612,92 +460,58 @@ class AuthRepository {
 
   Future<bool> resetPassword(String login, String newPassword, String pin) async {
     try {
-      _devLog('=== RESET PASSWORD REQUEST ===');
-      _devLog('Login: $login');
-      _devLog('Password length: ${newPassword.length}');
-      appLog('RESET PASSWORD REQUEST', 'Login: $login, Password length: ${newPassword.length}');
-      print('=== RESET PASSWORD REQUEST ===');
-      print('Login: $login');
-      print('Password length: ${newPassword.length}');
-      print('Request URL: /reset-password');
-      print('Request method: PUT');
-      
-      // This endpoint doesn't require authentication (user is resetting password)
-      // Note: Backend uses PUT method
+      // Note: Backend uses PUT method.
       final response = await dioClient.put(
         '/reset-password',
         data: {
           'login': login,
           'pin': pin,
           'new_password': newPassword,
-          'platform': _platform, // Indicate this is from mobile app
+          'platform': _platform,
         },
-        requireAuth: false, // No auth required for password reset
+        requireAuth: false,
       );
 
-      print('=== RESET PASSWORD RESPONSE ===');
-      print('Status Code: ${response.statusCode}');
-      print('Response Data: ${response.data}');
-      
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final responseData = response.data;
-        // Check for success message or just status code 200/201
-        if (responseData is Map) {
-          final message = responseData['message']?.toString().toLowerCase() ?? '';
-          if (message.contains('success') || message.contains('updated') || responseData['status'] == true) {
-            _devLog('✅ Password reset successful');
-            appLog('RESET PASSWORD SUCCESS', responseData['message'] ?? 'Password updated');
-            return true;
-          } else if (responseData['message'] != null) {
-            // Has a message but might not contain "success" - still consider it success if status is 200
-            _devLog('✅ Password reset successful (status 200)');
-            appLog('RESET PASSWORD SUCCESS', responseData['message']);
-            return true;
-          }
-        } else {
-          // If response is not a map but status is 200, consider it success
-          _devLog('✅ Password reset successful (status 200, non-map response)');
-          appLog('RESET PASSWORD SUCCESS', 'Status: ${response.statusCode}');
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        return false;
+      }
+
+      final responseData = response.data;
+      if (responseData is Map) {
+        final message =
+            responseData['message']?.toString().toLowerCase() ?? '';
+        if (message.contains('success') ||
+            message.contains('updated') ||
+            responseData['status'] == true ||
+            responseData['message'] != null) {
           return true;
         }
+        return false;
       }
-      print('⚠️ RESET PASSWORD: Unexpected response format or status code');
-      return false;
+      return true;
     } on DioException catch (e) {
-      _devLog('❌ === RESET PASSWORD DIO ERROR ===');
-      _devLog('❌ Error Type: ${e.type}');
-      _devLog('❌ Error Message: ${e.message}');
-      _devLog('❌ Status Code: ${e.response?.statusCode}');
-      _devLog('❌ Response Data: ${e.response?.data}');
-      appLog('RESET PASSWORD DIO ERROR', 'Type: ${e.type}, Message: ${e.message}, Status: ${e.response?.statusCode}');
-      print('❌ === RESET PASSWORD DIO ERROR ===');
-      print('❌ Error Type: ${e.type}');
-      print('❌ Error Message: ${e.message}');
-      print('❌ Status Code: ${e.response?.statusCode}');
-      print('❌ Response Data: ${e.response?.data}');
-      
-      // Extract error message from response
+      AppLogger.warn(
+        _tag,
+        'resetPassword failed (status=${e.response?.statusCode}, type=${e.type.name})',
+      );
       if (e.response != null) {
         final responseData = e.response?.data;
         String errorMessage = 'Unable to reset password. Please try again.';
-        
         if (responseData is Map) {
-          errorMessage = responseData['message'] ?? 
-                        responseData['error'] ?? 
-                        (responseData['errors'] != null 
-                          ? responseData['errors'].toString() 
-                          : errorMessage);
+          errorMessage = responseData['message'] ??
+              responseData['error'] ??
+              (responseData['errors'] != null
+                  ? responseData['errors'].toString()
+                  : errorMessage);
         } else if (responseData is String) {
           errorMessage = responseData;
         }
-        
         throw Exception(errorMessage);
       }
-      
       throw Exception('Network error: ${e.message}');
-    } catch (e) {
-      _devLog('❌ RESET PASSWORD ERROR: $e');
-      appLog('RESET PASSWORD ERROR', e.toString());
+    } catch (e, stackTrace) {
+      AppLogger.error(_tag, 'resetPassword unexpected error',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
   }

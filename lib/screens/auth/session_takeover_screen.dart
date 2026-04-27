@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/constants/constants.dart';
 import 'package:communal_mobile/core/constants/images.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
@@ -27,7 +28,8 @@ class SessionTakeoverScreen extends StatefulWidget {
 }
 
 class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
-  static const int _otpLength = 6;
+  // Audit M25: single source of truth in [AppConstants.otpLength].
+  static int get _otpLength => AppConstants.otpLength;
 
   int _otpFieldKey = 0;
   String _code = '';

@@ -1,3 +1,4 @@
+import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:dio/dio.dart';
 
@@ -211,7 +212,7 @@ class TransferRepository {
 
   Future<List<TransferBank>> fetchBanks() async {
     try {
-      final response = await _dioClient.get('/transfer/banks');
+      final response = await _dioClient.get(ApiEndpoints.transferBanks);
       final data = response.data;
       if (data is! Map || data['status'] != true) {
         throw Exception('Could not load bank list.');
@@ -231,7 +232,7 @@ class TransferRepository {
   Future<List<TransferSuggestion>> fetchBankSuggestions({String? query}) async {
     try {
       final response = await _dioClient.get(
-        '/transfer/bank-suggestions',
+        ApiEndpoints.transferBankSuggestions,
         queryParameters: {
           if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
         },
@@ -263,7 +264,7 @@ class TransferRepository {
   }) async {
     try {
       final response = await _dioClient.post(
-        '/transfer/verify-account/${bankCode.trim()}/${accountNumber.trim()}',
+        ApiEndpoints.transferVerifyAccount(bankCode, accountNumber),
         data: const <String, dynamic>{},
       );
       final data = response.data;
@@ -291,7 +292,7 @@ class TransferRepository {
   }) async {
     try {
       final response = await _dioClient.post(
-        '/transfer/create-counter-parties',
+        ApiEndpoints.transferCreateCounterParties,
         data: {
           'bankCode': bankCode.trim(),
           'accountNumber': accountNumber.trim(),
@@ -319,7 +320,7 @@ class TransferRepository {
   Future<void> verifySecurityPin(String pin) async {
     try {
       final response = await _dioClient.post(
-        '/members/verify-security-pin',
+        ApiEndpoints.membersVerifySecurityPin,
         data: {'security_pin': pin},
       );
       final data = response.data;
@@ -334,7 +335,7 @@ class TransferRepository {
   Future<void> updateSecurityPin(String pin) async {
     try {
       final response = await _dioClient.put(
-        '/members/update-security-pin',
+        ApiEndpoints.membersUpdateSecurityPin,
         data: {'security_pin': pin.trim()},
       );
       final data = response.data;
@@ -375,7 +376,7 @@ class TransferRepository {
           'counterPartyId': counterPartyId.trim(),
       };
       final response = await _dioClient.post(
-        '/transfer/initiate',
+        ApiEndpoints.transferInitiate,
         data: body,
         idempotencyKey: idempotencyKey,
         extraHeaders: biometricHeaders,
@@ -404,7 +405,7 @@ class TransferRepository {
     }
     try {
       final response = await _dioClient.get(
-        '/members/transfer/transactions/$id/status',
+        ApiEndpoints.membersTransferStatus(id),
       );
       final data = response.data;
       if (data is! Map || data['status'] != true) {
@@ -424,7 +425,7 @@ class TransferRepository {
 
   Future<List<TransferBeneficiary>> fetchBeneficiaries() async {
     try {
-      final response = await _dioClient.get('/members/transfer/beneficiaries');
+      final response = await _dioClient.get(ApiEndpoints.membersTransferBeneficiaries);
       final data = response.data;
       if (data is! Map || data['status'] != true) {
         throw Exception('Could not load beneficiaries.');

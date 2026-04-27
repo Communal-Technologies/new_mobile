@@ -1,6 +1,7 @@
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
+import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:flutter/material.dart';
@@ -59,15 +60,21 @@ class _TransferInternalAmountScreenState
     super.dispose();
   }
 
-  int? _amountToKobo(String value) {
-    final n = double.tryParse(value.replaceAll(',', '').trim());
-    if (n == null || n <= 0) return null;
-    return (n * 100).round();
+  /// Parse the typed major-unit amount into integer minor units of [currency].
+  /// Returns null when input is empty / non-numeric / non-positive.
+  int? _amountToMinor(String value, String currency) {
+    final money = Money.tryParseMajor(value, currency);
+    if (money == null || money.amountMinor <= 0) return null;
+    return money.amountMinor;
   }
 
   Future<void> _submit() async {
-    final amountKobo = _amountToKobo(_amountCtrl.text);
-    if (amountKobo == null) {
+    final auth = context.read<AuthBloc>().state;
+    final currency = auth is AuthAuthenticated
+        ? resolveCurrencyCode(auth.user)
+        : 'NGN';
+    final amountMinor = _amountToMinor(_amountCtrl.text, currency);
+    if (amountMinor == null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Enter valid amount.')));
@@ -78,7 +85,11 @@ class _TransferInternalAmountScreenState
       'transfer-internal-review',
       extra: {
         'favorite': widget.recipient.toJson(),
-        'amountKobo': amountKobo,
+        'amountMinor': amountMinor,
+        'currency': currency,
+        // Backwards-compatible field for the review screen until that screen
+        // is migrated to read `amountMinor` + `currency`.
+        'amountKobo': amountMinor,
         'narration': _narrationCtrl.text.trim(),
         'saveAsBeneficiary': _saveAsFavorite,
       },

@@ -230,6 +230,7 @@ class MemberObligationsRepository {
     required String transferId,
     required String cashRepositoryId,
     required double amountNaira,
+    String? idempotencyKey,
   }) async {
     final cooperativeId = user.cooperativeId?.trim() ?? '';
     final ledgerNumber = user.ledgerNumber?.trim() ?? '';

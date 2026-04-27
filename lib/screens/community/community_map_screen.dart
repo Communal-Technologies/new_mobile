@@ -9,6 +9,8 @@ import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
 import 'package:communal_mobile/core/widgets/bottomsheet_handlebar.dart';
 import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/screens/community/community_map/community_card.dart';
+import 'package:communal_mobile/screens/community/community_map/join_community_bottom_sheet.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_locations.dart';
 
 class CommunityMapScreen extends StatefulWidget {
@@ -555,212 +557,26 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
   }
 
   Widget _buildCommunityCard(CommunityLocation community) {
-    final isSelected = community.id == _selectedCommunityId;
-    final accentColor = _markerColorFromHue(community.markerHue);
-
-    return GestureDetector(
+    return CommunityCard(
+      community: community,
+      isSelected: community.id == _selectedCommunityId,
+      accentColor: _markerColorFromHue(community.markerHue),
       onTap: () => _focusOnCommunity(community),
-      child: Container(
-        padding: EdgeInsets.all(16.w),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF7434FF) : Colors.transparent,
-            width: isSelected ? 1.5 : 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                _buildCommunityAvatar(accentColor),
-                hSpace(12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    community.name,
-                                    style: TextStyle(
-                                      fontSize: 16.sp,
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFF0F1D40),
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                if (_isVerified(community)) ...[
-                                  hSpace(6),
-                                  Icon(
-                                    Icons.verified,
-                                    size: 18.sp,
-                                    color: const Color(0xFF4CAF50),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          const Spacer(),
-                        ],
-                      ),
-                      vSpace(4),
-                      Text(
-                        community.category,
-                        style: TextStyle(
-                          fontSize: 13.sp,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF4D9),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.star,
-                        color: Color(0xFFFFA426),
-                        size: 14,
-                      ),
-                      hSpace(4),
-                      Text(
-                        community.rating.toStringAsFixed(1),
-                        style: TextStyle(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFFB46A00),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            vSpace(12),
-            Row(
-              children: [
-                Icon(
-                  Icons.people_alt,
-                  size: 16.sp,
-                  color: Colors.grey.shade600,
-                ),
-                hSpace(4),
-                Text(
-                  community.membersLabel,
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-                hSpace(12),
-                Icon(
-                  Icons.place_outlined,
-                  size: 16.sp,
-                  color: Colors.grey.shade600,
-                ),
-                hSpace(4),
-                Text(
-                  community.distanceLabel,
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-            vSpace(12),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Min. Contribution',
-                        style: TextStyle(
-                          fontSize: 12.sp,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                      vSpace(4),
-                      Text(
-                        community.minContributionLabel,
-                        style: TextStyle(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF0F1D40),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  width: 140.w,
-                  child: ElevatedButton(
-                    onPressed: () => _handleCommunityAction(community),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF7434FF),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      minimumSize: Size(double.infinity, 38.h),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 6.w,
-                        vertical: 8.h,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.r),
-                      ),
-                    ),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        'Join Community',
-                        style: TextStyle(
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+      onJoinPressed: () => _handleCommunityAction(community),
     );
   }
 
+  /// Used by the featured banner; mirrors `CommunityCard`'s isVerified
+  /// guard for the banner case.
   bool _isVerified(CommunityLocation community) {
     try {
       return community.isVerified;
-    } catch (e) {
+    } catch (_) {
       return false;
     }
   }
 
+  /// Floating round icon-button used by the map's top controls.
   Widget _roundIconButton({
     required IconData icon,
     required VoidCallback onTap,
@@ -771,7 +587,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
         borderRadius: BorderRadius.circular(10.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -784,272 +600,9 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
     );
   }
 
-  Widget _buildCommunityAvatar(Color accentColor) {
-    return Container(
-      height: 48.w,
-      width: 48.w,
-      decoration: BoxDecoration(
-        color: accentColor.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(10.r),
-      ),
-      child: Icon(Icons.apartment_rounded, color: accentColor, size: 24.sp),
-    );
-  }
-
   Color _markerColorFromHue(double hue) {
     return HSVColor.fromAHSV(1, hue, 0.6, 0.9).toColor();
   }
 }
 
-class JoinCommunityBottomSheet extends StatefulWidget {
-  const JoinCommunityBottomSheet({super.key, required this.community});
 
-  final CommunityLocation community;
-
-  @override
-  State<JoinCommunityBottomSheet> createState() =>
-      _JoinCommunityBottomSheetState();
-}
-
-class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
-  late final TextEditingController _messageController;
-  bool _isSubmitting = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _messageController = TextEditingController();
-  }
-
-  @override
-  void dispose() {
-    _messageController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    setState(() => _isSubmitting = true);
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
-    Navigator.of(
-      context,
-    ).pop({'status': 'pending', 'community': widget.community});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: EdgeInsets.only(
-                left: 24.w,
-                right: 24.w,
-                top: 12.h,
-                bottom: 24.h,
-              ),
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const BottomSheetHandlebar(),
-                    _buildHeader(),
-                    vSpace(16),
-                    _buildMessageField(),
-                    vSpace(16),
-                    _buildAlertCard(),
-                    vSpace(16),
-                    _buildActions(),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Column(
-      children: [
-        Container(
-          height: 64.w,
-          width: 64.w,
-          decoration: BoxDecoration(
-            color: const Color(0xFFEDE5FF),
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-          child: Icon(
-            Icons.store_mall_directory_outlined,
-            color: const Color(0xFF7434FF),
-            size: 30.sp,
-          ),
-        ),
-        vSpace(12),
-        Text(
-          'Join ${widget.community.name}?',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF0F1D40),
-          ),
-        ),
-        vSpace(8),
-        Text(
-          'By joining, you agree to the community guidelines and contribution requirements.',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMessageField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Add a message (optional)',
-          style: TextStyle(
-            fontSize: 13.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF0F1D40),
-          ),
-        ),
-        vSpace(8),
-        TextField(
-          controller: _messageController,
-          maxLines: 3,
-          decoration: InputDecoration(
-            hintText: 'Hi, my name is ... I would like to join because...',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: const BorderSide(color: Color(0xFFE6E6F0)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: const BorderSide(color: Color(0xFF7434FF)),
-            ),
-            filled: true,
-            fillColor: const Color(0xFFF8F8FB),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAlertCard() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF4E9),
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: const Color(0xFFFFD9B3)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.error_outline, color: Color(0xFFEE7B00)),
-          hSpace(12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Application Review Required',
-                  style: TextStyle(
-                    fontSize: 13.sp,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF9A4F00),
-                  ),
-                ),
-                vSpace(4),
-                Text(
-                  'Your application will be reviewed by the community coordinator. You’ll receive a response within 2-3 business days.',
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: const Color(0xFF9A4F00),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActions() {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: OutlinedButton.styleFrom(
-              minimumSize: Size(double.infinity, 52.h),
-              side: const BorderSide(color: Color(0xFFE0E0EC)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-            ),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                fontSize: 15.sp,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF0F1D40),
-              ),
-            ),
-          ),
-        ),
-        hSpace(12),
-        Expanded(
-          child: ElevatedButton(
-            onPressed: _isSubmitting ? null : _submit,
-            style: ElevatedButton.styleFrom(
-              minimumSize: Size(double.infinity, 52.h),
-              backgroundColor: const Color(0xFF7434FF),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-            ),
-            child: _isSubmitting
-                ? SizedBox(
-                    height: 20.sp,
-                    width: 20.sp,
-                    child: const CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation(Colors.white),
-                    ),
-                  )
-                : Text(
-                    'Submit Request',
-                    style: TextStyle(
-                      fontSize: 15.sp,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-          ),
-        ),
-      ],
-    );
-  }
-}

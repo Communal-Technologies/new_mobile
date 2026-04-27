@@ -1,11 +1,13 @@
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-
-/// Environment-driven API base URLs.
+/// Build-time configuration.
 ///
-/// - **Development** — always read from `.env` as `BASE_URL` (required when
-///   `APP_ENV` is `development`).
-/// - **Staging / production** — fixed app URLs; pick which applies via
-///   `APP_ENV=staging` or `APP_ENV=production` in `.env` (or your CI/build).
+/// Values come from `--dart-define` flags (or `--dart-define-from-file`),
+/// not from a bundled `.env` asset — bundling secrets into the APK was M2 in
+/// the audit. Use `tool/dart_defines.example.json` as a template:
+///
+///     flutter run --dart-define-from-file=tool/dart_defines.json
+///
+/// `BASE_URL` is only consulted when `APP_ENV` is `development` / `dev`;
+/// staging and production hit the fixed URLs below.
 class AppConstants {
   AppConstants._();
 
@@ -20,22 +22,29 @@ class AppConstants {
   static const String productionApiBaseUrl =
       'https://api.communalhq.com/api/v1';
 
-  /// Development API from `.env` only (`BASE_URL`). Not used as [baseUrl]
+  static const String _baseUrlDefine =
+      String.fromEnvironment('BASE_URL');
+  static const String _googleMapsApiKeyDefine =
+      String.fromEnvironment('GOOGLE_MAPS_API_KEY');
+  static const String _appEnvDefine =
+      String.fromEnvironment('APP_ENV', defaultValue: 'development');
+
+  /// Development API from `--dart-define=BASE_URL=...`. Not used as [baseUrl]
   /// until `APP_ENV` is development.
   static String get developmentApiBaseUrl {
-    final raw = dotenv.env['BASE_URL'];
-    if (raw == null || raw.trim().isEmpty) return '';
-    return _stripOptionalQuotes(raw.trim());
+    final raw = _baseUrlDefine.trim();
+    if (raw.isEmpty) return '';
+    return _stripOptionalQuotes(raw);
   }
 
   static String get googleMapsApiKey =>
-      _stripOptionalQuotes(dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '');
+      _stripOptionalQuotes(_googleMapsApiKeyDefine.trim());
 
-  /// Current `APP_ENV` from `.env` (missing or blank → `development`).
+  /// Current `APP_ENV` (missing or blank → `development`).
   static String get appEnvironment {
-    final raw = dotenv.env['APP_ENV'];
-    if (raw == null || raw.trim().isEmpty) return 'development';
-    return raw.trim().toLowerCase();
+    final raw = _appEnvDefine.trim();
+    if (raw.isEmpty) return 'development';
+    return raw.toLowerCase();
   }
 
   /// Resolved API base for [appEnvironment].
@@ -46,7 +55,7 @@ class AppConstants {
         final url = developmentApiBaseUrl;
         if (url.isEmpty) {
           throw StateError(
-            'BASE_URL must be set in .env when APP_ENV is development.',
+            'BASE_URL must be passed via --dart-define when APP_ENV is development.',
           );
         }
         return url;
@@ -57,7 +66,7 @@ class AppConstants {
         return productionApiBaseUrl;
       default:
         throw StateError(
-          'Unknown APP_ENV "${dotenv.env['APP_ENV']}". '
+          'Unknown APP_ENV "$_appEnvDefine". '
           'Use development, staging, or production.',
         );
     }

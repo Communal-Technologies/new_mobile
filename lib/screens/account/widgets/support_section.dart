@@ -52,7 +52,7 @@ class SupportSection extends StatelessWidget {
           child: Text(
             'Support',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F1D40),
             ),

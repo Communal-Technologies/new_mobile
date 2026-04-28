@@ -134,7 +134,7 @@ class _HelpCategoryCard extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF0F1D40),
                   ),
@@ -145,7 +145,7 @@ class _HelpCategoryCard extends StatelessWidget {
                 Text(
                   description,
                   style: TextStyle(
-                    fontSize: 11.sp,
+                    fontSize: 13.sp,
                     color: Colors.grey.shade600,
                     height: 1.2,
                   ),

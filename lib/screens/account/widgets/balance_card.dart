@@ -39,7 +39,7 @@ class _BalanceCardState extends State<BalanceCard> {
               Text(
                 'Total Balance',
                 style: TextStyle(
-                  fontSize: 14.sp,
+                  fontSize: 15.sp,
                   color: Colors.white.withOpacity(0.9),
                 ),
               ),
@@ -85,7 +85,7 @@ class _BalanceCardState extends State<BalanceCard> {
                 child: Text(
                   'Withdraw Funds',
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

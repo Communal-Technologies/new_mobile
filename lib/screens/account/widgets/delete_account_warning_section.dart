@@ -31,7 +31,7 @@ class DeleteAccountWarningSection extends StatelessWidget {
         Text(
           'Are you sure you want to Delete your Account?',
           style: TextStyle(
-            fontSize: 18.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF0F1D40),
           ),
@@ -41,7 +41,7 @@ class DeleteAccountWarningSection extends StatelessWidget {
         Text(
           'This action is permanent and cannot be undone. All your data will be permanently deleted.',
           style: TextStyle(
-            fontSize: 14.sp,
+            fontSize: 15.sp,
             color: Colors.grey.shade600,
             height: 1.5,
           ),

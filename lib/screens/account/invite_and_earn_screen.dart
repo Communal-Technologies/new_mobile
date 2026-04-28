@@ -34,7 +34,7 @@ class InviteAndEarnScreen extends StatelessWidget {
           title: Text(
             'Invite and Earn',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),

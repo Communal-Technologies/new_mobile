@@ -43,7 +43,7 @@ class AddressInfoFormSection extends StatelessWidget {
                 Text(
                   'Address Information',
                   style: TextStyle(
-                    fontSize: 16.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF0F1D40),
                   ),
@@ -135,7 +135,7 @@ class _FormTextField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(
-          fontSize: 14.sp,
+          fontSize: 15.sp,
           color: Colors.grey.shade600,
         ),
         filled: true,

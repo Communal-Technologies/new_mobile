@@ -37,7 +37,7 @@ class FreezeAccountHeader extends StatelessWidget {
           title,
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 20.sp,
+            fontSize: 22.sp,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF0F1D40),
           ),
@@ -47,7 +47,7 @@ class FreezeAccountHeader extends StatelessWidget {
           description,
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 14.sp,
+            fontSize: 15.sp,
             color: Colors.grey.shade600,
             height: 1.5,
           ),

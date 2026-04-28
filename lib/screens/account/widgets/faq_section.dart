@@ -108,7 +108,7 @@ class _FaqSectionState extends State<FaqSection> {
         child: Text(
           _tabs[index],
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
             color: isSelected ? const Color(0xFF7434FF) : Colors.grey.shade600,
           ),
@@ -165,7 +165,7 @@ class _FaqItemWidgetState extends State<_FaqItemWidget> {
                     child: Text(
                       widget.faq.question,
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 15.sp,
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF0F1D40),
                       ),
@@ -187,7 +187,7 @@ class _FaqItemWidgetState extends State<_FaqItemWidget> {
               child: Text(
                 widget.faq.answer,
                 style: TextStyle(
-                  fontSize: 13.sp,
+                  fontSize: 15.sp,
                   color: Colors.grey.shade700,
                   height: 1.5,
                 ),

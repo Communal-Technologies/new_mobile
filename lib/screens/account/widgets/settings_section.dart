@@ -17,7 +17,7 @@ class SettingsSection extends StatelessWidget {
           child: Text(
             'Settings',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F1D40),
             ),
@@ -100,7 +100,7 @@ class _PreferenceItemState extends State<_PreferenceItem> {
                 Text(
                   'Toggle dark/light theme',
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 15.sp,
                     color: Colors.grey.shade600,
                   ),
                 ),

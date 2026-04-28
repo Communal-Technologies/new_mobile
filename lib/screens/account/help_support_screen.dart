@@ -48,7 +48,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
           title: Text(
             'Help & Support',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
@@ -142,7 +142,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
           decoration: InputDecoration(
             hintText: 'Search for help...',
             hintStyle: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 15.sp,
               color: Colors.grey.shade500,
             ),
             prefixIcon: Icon(
@@ -167,7 +167,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
       child: Text(
         title,
         style: TextStyle(
-          fontSize: 16.sp,
+          fontSize: 17.sp,
           fontWeight: FontWeight.w700,
           color: const Color(0xFF0F1D40),
         ),
@@ -187,7 +187,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
               Text(
                 'Frequently Asked Questions',
                 style: TextStyle(
-                  fontSize: 16.sp,
+                  fontSize: 17.sp,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF0F1D40),
                 ),
@@ -199,7 +199,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                 child: Text(
                   'See more',
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 15.sp,
                     color: const Color(0xFF7434FF),
                     fontWeight: FontWeight.w600,
                   ),

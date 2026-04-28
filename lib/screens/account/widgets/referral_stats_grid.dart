@@ -99,7 +99,7 @@ class _StatCard extends StatelessWidget {
           Text(
             title,
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: 15.sp,
               color: Colors.grey.shade600,
             ),
           ),
@@ -107,7 +107,7 @@ class _StatCard extends StatelessWidget {
           Text(
             value,
             style: TextStyle(
-              fontSize: 20.sp,
+              fontSize: 22.sp,
               fontWeight: FontWeight.w700,
               color: valueColor,
             ),

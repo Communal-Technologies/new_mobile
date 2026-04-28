@@ -50,7 +50,7 @@ class FaqCategorySection extends StatelessWidget {
                     child: Text(
                       '?',
                       style: TextStyle(
-                        fontSize: 18.sp,
+                        fontSize: 19.sp,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                       ),
@@ -62,7 +62,7 @@ class FaqCategorySection extends StatelessWidget {
                   child: Text(
                     title,
                     style: TextStyle(
-                      fontSize: 16.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF0F1D40),
                     ),
@@ -110,7 +110,7 @@ class _FaqQuestionItemState extends State<_FaqQuestionItem> {
                   child: Text(
                     widget.question.question,
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 15.sp,
                       fontWeight: FontWeight.w600,
                       color: const Color(0xFF0F1D40),
                     ),
@@ -134,7 +134,7 @@ class _FaqQuestionItemState extends State<_FaqQuestionItem> {
             child: Text(
               widget.question.answer,
               style: TextStyle(
-                fontSize: 13.sp,
+                fontSize: 15.sp,
                 color: Colors.grey.shade700,
                 height: 1.5,
               ),

@@ -31,7 +31,7 @@ class FreezeActionButtons extends StatelessWidget {
             child: Text(
               'No, Don\'t Freeze',
               style: TextStyle(
-                fontSize: 16.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -61,7 +61,7 @@ class FreezeActionButtons extends StatelessWidget {
             child: Text(
               'Yes, Freeze my Account',
               style: TextStyle(
-                fontSize: 16.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w700,
               ),
             ),

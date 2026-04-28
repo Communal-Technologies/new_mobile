@@ -47,7 +47,7 @@ class _DeleteAccountConfirmationScreenState
           title: Text(
             'Delete Account',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
@@ -111,7 +111,7 @@ class _DeleteAccountConfirmationScreenState
       child: Text(
         'Are you sure you want to Delete your Account?',
         style: TextStyle(
-          fontSize: 18.sp,
+          fontSize: 19.sp,
           fontWeight: FontWeight.w700,
           color: const Color(0xFF0F1D40),
         ),
@@ -129,7 +129,7 @@ class _DeleteAccountConfirmationScreenState
           Text(
             'Agree to continue',
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F1D40),
             ),
@@ -208,7 +208,7 @@ class _DeleteAccountConfirmationScreenState
           child: Text(
             'I understand, Delete my Account',
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w600,
             ),
           ),

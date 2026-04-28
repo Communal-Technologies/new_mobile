@@ -52,7 +52,7 @@ class _FaqScreenState extends State<FaqScreen> {
           title: Text(
             'Frequently Asked Questions',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
@@ -244,7 +244,7 @@ class _FaqScreenState extends State<FaqScreen> {
         child: Text(
           _tabs[index],
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
             color: isSelected ? const Color(0xFF7434FF) : Colors.grey.shade600,
           ),
@@ -273,7 +273,7 @@ class _FaqScreenState extends State<FaqScreen> {
           decoration: InputDecoration(
             hintText: 'Search for help...',
             hintStyle: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 15.sp,
               color: Colors.grey.shade500,
             ),
             prefixIcon: Icon(

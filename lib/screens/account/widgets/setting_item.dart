@@ -58,7 +58,7 @@ class SettingItem extends StatelessWidget {
                   Text(
                     description,
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 15.sp,
                       color: Colors.grey.shade600,
                     ),
                   ),

@@ -62,7 +62,7 @@ class DeleteReasonItem extends StatelessWidget {
               child: Text(
                 reason,
                 style: TextStyle(
-                  fontSize: 14.sp,
+                  fontSize: 15.sp,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   color: isSelected
                       ? const Color(0xFF0F1D40)

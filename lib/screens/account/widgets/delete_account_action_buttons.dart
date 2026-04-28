@@ -48,7 +48,7 @@ class DeleteAccountActionButtons extends StatelessWidget {
                 child: Text(
                   'No, Freeze Account instead',
                   style: TextStyle(
-                    fontSize: 16.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.black,
                   ),
@@ -74,7 +74,7 @@ class DeleteAccountActionButtons extends StatelessWidget {
                 child: Text(
                   'Yes, Delete my Account',
                   style: TextStyle(
-                    fontSize: 16.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

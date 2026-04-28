@@ -28,7 +28,7 @@ class VerificationDetailsCard extends StatelessWidget {
               Text(
                 'Verification Details',
                 style: TextStyle(
-                  fontSize: 16.sp,
+                  fontSize: 17.sp,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF0F1D40),
                 ),
@@ -64,7 +64,7 @@ class VerificationDetailsCard extends StatelessWidget {
                   child: Text(
                     'For security reasons, only the last 2 digits are shown',
                     style: TextStyle(
-                      fontSize: 12.sp,
+                      fontSize: 13.sp,
                       color: Colors.grey.shade600,
                     ),
                   ),
@@ -97,7 +97,7 @@ class _DetailRow extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: 15.sp,
               color: Colors.grey.shade600,
             ),
           ),
@@ -105,7 +105,7 @@ class _DetailRow extends StatelessWidget {
         Text(
           value,
           style: TextStyle(
-            fontSize: 13.sp,
+            fontSize: 15.sp,
             fontWeight: FontWeight.w600,
             color: const Color(0xFF0F1D40),
           ),

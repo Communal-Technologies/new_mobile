@@ -89,7 +89,7 @@ class AccountLimitsScreen extends StatelessWidget {
           title: Text(
             'Account limits',
             style: TextStyle(
-              fontSize: 20.sp,
+              fontSize: 22.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
@@ -105,7 +105,7 @@ class AccountLimitsScreen extends StatelessWidget {
                   child: Text(
                     'Sign in to view your account limits and verification status.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade700),
+                    style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade700),
                   ),
                 ),
               );
@@ -165,7 +165,7 @@ class AccountLimitsScreen extends StatelessWidget {
                       child: Text(
                         'Tier limits will appear here after your profile syncs with the server.',
                         style: TextStyle(
-                          fontSize: 15.sp,
+                          fontSize: 17.sp,
                           color: Colors.grey.shade600,
                         ),
                       ),
@@ -220,7 +220,7 @@ class AccountLimitsScreen extends StatelessWidget {
           Text(
             'Verification levels',
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w600,
               color: Colors.grey.shade700,
             ),
@@ -229,7 +229,7 @@ class AccountLimitsScreen extends StatelessWidget {
           Text(
             'Higher verification unlocks higher daily transaction and balance limits.',
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               height: 1.4,
               color: Colors.grey.shade600,
             ),

@@ -35,7 +35,7 @@ class CancelDeletionBox extends StatelessWidget {
                   child: Text(
                     'i',
                     style: TextStyle(
-                      fontSize: 16.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
@@ -47,7 +47,7 @@ class CancelDeletionBox extends StatelessWidget {
                 child: Text(
                   'Changed your mind?',
                   style: TextStyle(
-                    fontSize: 16.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF2196F3),
                   ),
@@ -59,7 +59,7 @@ class CancelDeletionBox extends StatelessWidget {
           Text(
             'You can cancel now and keep your account.',
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 15.sp,
               color: const Color(0xFF2196F3),
               height: 1.5,
             ),
@@ -93,7 +93,7 @@ class CancelDeletionBox extends StatelessWidget {
               child: Text(
                 'Cancel Deletion',
                 style: TextStyle(
-                  fontSize: 14.sp,
+                  fontSize: 15.sp,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF2196F3),
                 ),

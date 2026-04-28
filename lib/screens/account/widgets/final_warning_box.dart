@@ -24,7 +24,7 @@ class FinalWarningBox extends StatelessWidget {
           Text(
             'Are You Absolutely Sure?',
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFFD32F2F),
             ),
@@ -33,7 +33,7 @@ class FinalWarningBox extends StatelessWidget {
           Text(
             'Once you click "Delete My Account permanently", your account and all data will be permanently deleted. This action cannot be reversed.',
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 15.sp,
               color: const Color(0xFF0F1D40),
               height: 1.5,
             ),

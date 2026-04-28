@@ -60,7 +60,7 @@ class _FreezeAccountPinScreenState extends State<FreezeAccountPinScreen> {
           title: Text(
             'Freeze Account',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
@@ -105,7 +105,7 @@ class _FreezeAccountPinScreenState extends State<FreezeAccountPinScreen> {
                   'Enter your transaction PIN to confirm freezing of your account',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 15.sp,
                     color: Colors.grey.shade600,
                     height: 1.5,
                   ),
@@ -135,7 +135,7 @@ class _FreezeAccountPinScreenState extends State<FreezeAccountPinScreen> {
                       Text(
                         'Show PIN',
                         style: TextStyle(
-                          fontSize: 14.sp,
+                          fontSize: 15.sp,
                           color: Colors.grey.shade600,
                         ),
                       ),
@@ -162,7 +162,7 @@ class _FreezeAccountPinScreenState extends State<FreezeAccountPinScreen> {
                           child: Text(
                             'Incorrect PIN entered, please try again',
                             style: TextStyle(
-                              fontSize: 14.sp,
+                              fontSize: 15.sp,
                               color: const Color(0xFFD32F2F),
                             ),
                           ),

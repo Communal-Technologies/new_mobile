@@ -85,7 +85,7 @@ class ProfileHeader extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 11.sp,
+          fontSize: 13.sp,
           fontWeight: FontWeight.w600,
           color: color,
         ),
@@ -110,7 +110,7 @@ class _AccountNumberCard extends StatelessWidget {
           Text(
             'Bullion Crib Account Number',
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: 15.sp,
               color: Colors.white.withOpacity(0.9),
             ),
           ),

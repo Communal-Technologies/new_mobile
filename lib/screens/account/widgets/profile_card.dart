@@ -98,7 +98,7 @@ class _ProfileCardState extends State<ProfileCard> {
                       Text(
                         displayName,
                         style: TextStyle(
-                          fontSize: 20.sp,
+                          fontSize: 22.sp,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),
@@ -116,7 +116,7 @@ class _ProfileCardState extends State<ProfileCard> {
                             child: Text(
                               _tierStatusChipLabel(user),
                               style: TextStyle(
-                                fontSize: 14.sp,
+                                fontSize: 15.sp,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
                               ),
@@ -138,7 +138,7 @@ class _ProfileCardState extends State<ProfileCard> {
                                 child: Text(
                                   _upgradeChipLabel(user),
                                   style: TextStyle(
-                                    fontSize: 14.sp,
+                                    fontSize: 15.sp,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white,
                                   ),
@@ -154,7 +154,7 @@ class _ProfileCardState extends State<ProfileCard> {
                           Text(
                             'Total Balance',
                             style: TextStyle(
-                              fontSize: 15.sp,
+                              fontSize: 17.sp,
                               color: Colors.white.withValues(alpha: 0.9),
                             ),
                           ),

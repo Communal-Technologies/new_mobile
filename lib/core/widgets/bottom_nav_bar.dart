@@ -1,7 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 
+/// App-wide bottom navigation. Indices are stable across the app:
+///
+/// - 0 = Home
+/// - 1 = Obligations *(cooperative members only)*
+/// - 2 = Community
+/// - 3 = Loans *(cooperative members only)*
+/// - 4 = Account
+///
+/// The two cooperative-only items are filtered out when the signed-in
+/// user has no `cooperativeId`. Indices are NOT renumbered — every
+/// caller still passes its own stable index — so a non-coop user who
+/// happens to be on a screen that reports `currentIndex: 1` (e.g. an
+/// obligation detail reached via deep link before the router gate
+/// kicked in) simply won't see any tab as active, and the tap handler
+/// can ignore the missing indices.
 class BottomNavBar extends StatelessWidget {
   const BottomNavBar({
     super.key,
@@ -15,6 +34,47 @@ class BottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Read the auth state once. We use `watch` so the bar rebuilds when
+    // the user joins / leaves a cooperative without a manual refresh.
+    final authState = context.watch<AuthBloc>().state;
+    final hasCooperative = authState is AuthAuthenticated
+        ? authState.user.hasCooperativeMembership
+        : false;
+
+    final items = <_NavItem>[
+      const _NavItem(
+        index: 0,
+        icon: Icons.home_outlined,
+        activeIcon: Icons.home,
+        label: 'Home',
+      ),
+      if (hasCooperative)
+        const _NavItem(
+          index: 1,
+          icon: Icons.wallet_outlined,
+          activeIcon: Icons.wallet,
+          label: 'Obligations',
+        ),
+      const _NavItem(
+        index: 2,
+        icon: Icons.people_outline,
+        activeIcon: Icons.people,
+        label: 'Community',
+      ),
+      if (hasCooperative)
+        const _NavItem(
+          index: 3,
+          icon: Icons.trending_up_outlined,
+          activeIcon: Icons.trending_up,
+          label: 'Loans',
+        ),
+      const _NavItem(
+        index: 4,
+        icon: Icons.settings_outlined,
+        activeIcon: Icons.settings,
+        label: 'Account',
+      ),
+    ];
 
     return Container(
       decoration: BoxDecoration(
@@ -36,43 +96,9 @@ class BottomNavBar extends StatelessWidget {
           padding: EdgeInsets.symmetric(vertical: 12.h),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(
-                icon: Icons.home_outlined,
-                activeIcon: Icons.home,
-                label: 'Home',
-                index: 0,
-                theme: theme,
-              ),
-              _buildNavItem(
-                icon: Icons.wallet_outlined,
-                activeIcon: Icons.wallet,
-                label: 'Obligations',
-                index: 1,
-                theme: theme,
-              ),
-              _buildNavItem(
-                icon: Icons.people_outline,
-                activeIcon: Icons.people,
-                label: 'Community',
-                index: 2,
-                theme: theme,
-              ),
-              _buildNavItem(
-                icon: Icons.trending_up_outlined,
-                activeIcon: Icons.trending_up,
-                label: 'Loans',
-                index: 3,
-                theme: theme,
-              ),
-              _buildNavItem(
-                icon: Icons.settings_outlined,
-                activeIcon: Icons.settings,
-                label: 'Account',
-                index: 4,
-                theme: theme,
-              ),
-            ],
+            children: items
+                .map((item) => _buildNavItem(item: item, theme: theme))
+                .toList(),
           ),
         ),
       ),
@@ -80,27 +106,24 @@ class BottomNavBar extends StatelessWidget {
   }
 
   Widget _buildNavItem({
-    required IconData icon,
-    required IconData activeIcon,
-    required String label,
-    required int index,
+    required _NavItem item,
     required ThemeData theme,
   }) {
-    final isActive = currentIndex == index;
+    final isActive = currentIndex == item.index;
 
     return InkWell(
-      onTap: () => onTap(index),
+      onTap: () => onTap(item.index),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isActive ? activeIcon : icon,
+            isActive ? item.activeIcon : item.icon,
             color: isActive ? theme.primaryColor : Colors.grey.shade600,
             size: 24.sp,
           ),
           vSpace(4),
           Text(
-            label,
+            item.label,
             style: TextStyle(
               fontSize: 13.sp,
               fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
@@ -124,3 +147,16 @@ class BottomNavBar extends StatelessWidget {
   }
 }
 
+class _NavItem {
+  const _NavItem({
+    required this.index,
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+  });
+
+  final int index;
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+}

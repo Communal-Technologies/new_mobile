@@ -114,7 +114,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
           title: Text(
             'Guarantor Requests',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
@@ -147,7 +147,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
             _error!,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 15.sp,
               color: const Color(0xFFE74C3C),
             ),
           ),
@@ -173,7 +173,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
             'No guarantor requests',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F1D40),
             ),
@@ -182,7 +182,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
           Text(
             'When a fellow member asks you to stand as guarantor for their loan, the request will show up here.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
           ),
         ],
       );
@@ -225,7 +225,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
                           ? req.applicantName
                           : 'Member',
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF0F1D40),
                       ),
@@ -234,7 +234,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
                     Text(
                       'Asked you to guarantor • ${req.createdAtLabel}',
                       style: TextStyle(
-                        fontSize: 12.sp,
+                        fontSize: 13.sp,
                         color: Colors.grey.shade600,
                       ),
                     ),
@@ -260,7 +260,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
                 Text(
                   'Loan amount',
                   style: TextStyle(
-                    fontSize: 12.sp,
+                    fontSize: 13.sp,
                     color: Colors.grey.shade700,
                   ),
                 ),
@@ -268,7 +268,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
                 Text(
                   req.amountLabel,
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF0F1D40),
                   ),
@@ -294,7 +294,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
                     child: Text(
                       'Decline',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 15.sp,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFFE74C3C),
                       ),
@@ -327,7 +327,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
                         : Text(
                             'Accept',
                             style: TextStyle(
-                              fontSize: 14.sp,
+                              fontSize: 15.sp,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -363,7 +363,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
       child: Text(
         req.statusLabel,
         style: TextStyle(
-          fontSize: 11.sp,
+          fontSize: 13.sp,
           fontWeight: FontWeight.w700,
           color: fg,
         ),

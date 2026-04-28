@@ -51,7 +51,7 @@ class CustomTextField extends StatelessWidget {
           Text(
             labelText!,
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w500,
               color: Colors.black87,
             ),
@@ -70,7 +70,7 @@ class CustomTextField extends StatelessWidget {
           inputFormatters: inputFormatters,
           onChanged: onChanged,
           style: TextStyle(
-            fontSize: 18.sp,
+            fontSize: 19.sp,
             color: Colors.black,
           ),
           decoration: InputDecoration(
@@ -136,7 +136,7 @@ class CustomTextField extends StatelessWidget {
               errorText!,
               style: TextStyle(
                 color: Colors.red,
-                fontSize: 15.sp,
+                fontSize: 17.sp,
               ),
             ),
           ),

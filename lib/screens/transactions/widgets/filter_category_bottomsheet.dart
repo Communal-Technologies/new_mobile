@@ -164,7 +164,7 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w500,
             color: isSelected ? Colors.white : Colors.grey.shade700,
           ),
@@ -191,7 +191,7 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w500,
             color: isSelected ? Colors.white : Colors.grey.shade700,
           ),

@@ -106,7 +106,7 @@ class _TransferExternalBankPickerScreenState
                     child: Text(
                       'Choose Recipient Bank',
                       style: TextStyle(
-                        fontSize: 20.sp,
+                        fontSize: 22.sp,
                         fontWeight: FontWeight.w800,
                         color: const Color(0xFF0F1D40),
                       ),
@@ -120,10 +120,10 @@ class _TransferExternalBankPickerScreenState
               child: TextField(
                 controller: _searchCtrl,
                 onChanged: (_) => setState(() {}),
-                style: TextStyle(fontSize: 16.sp, color: Colors.black87),
+                style: TextStyle(fontSize: 17.sp, color: Colors.black87),
                 decoration: InputDecoration(
                   hintText: 'Search banks',
-                  hintStyle: TextStyle(fontSize: 16.sp, color: Colors.grey.shade500),
+                  hintStyle: TextStyle(fontSize: 17.sp, color: Colors.grey.shade500),
                   prefixIcon: Icon(Icons.search, color: Colors.grey.shade600, size: 24.sp),
                   filled: true,
                   fillColor: Colors.white,
@@ -186,7 +186,7 @@ class _TransferExternalBankPickerScreenState
                                       overflow: TextOverflow.ellipsis,
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
-                                        fontSize: 13.sp,
+                                        fontSize: 15.sp,
                                         fontWeight: FontWeight.w600,
                                         height: 1.25,
                                         color: const Color(0xFF0F1D40),

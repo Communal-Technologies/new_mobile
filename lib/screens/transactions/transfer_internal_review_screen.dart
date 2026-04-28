@@ -223,7 +223,7 @@ class _TransferInternalReviewScreenState
                     'Transfer Amount',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 16.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -242,7 +242,7 @@ class _TransferInternalReviewScreenState
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white70,
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -263,7 +263,7 @@ class _TransferInternalReviewScreenState
                 children: [
                   Text(
                     'Recipient Details',
-                    style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w700),
+                    style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w700),
                   ),
                   vSpace(10),
                   Row(
@@ -275,7 +275,7 @@ class _TransferInternalReviewScreenState
                           _initials(widget.recipient.accountName),
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 13.sp,
+                            fontSize: 15.sp,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -288,7 +288,7 @@ class _TransferInternalReviewScreenState
                             Text(
                               widget.recipient.accountName,
                               style: TextStyle(
-                                fontSize: 16.sp,
+                                fontSize: 17.sp,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -306,7 +306,7 @@ class _TransferInternalReviewScreenState
                                     '${widget.recipient.bank} • ${widget.recipient.accountNumber}',
                                     style: TextStyle(
                                       color: Colors.black54,
-                                      fontSize: 13.sp,
+                                      fontSize: 15.sp,
                                       fontWeight: FontWeight.w600,
                                     ),
                                     overflow: TextOverflow.ellipsis,
@@ -362,13 +362,13 @@ class _TransferInternalReviewScreenState
                   Expanded(
                     child: Text(
                       'Balance After Transfer',
-                      style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w600),
+                      style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w600),
                     ),
                   ),
                   Text(
                     _balanceAfterTransferText(walletBalanceKobo, currencySymbol),
                     style: TextStyle(
-                      fontSize: 16.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w800,
                       color: const Color(0xFF1AAE70),
                     ),
@@ -393,7 +393,7 @@ class _TransferInternalReviewScreenState
                 Expanded(
                   child: Text(
                     'Save as beneficiary',
-                    style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w600),
+                    style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -417,7 +417,7 @@ class _TransferInternalReviewScreenState
                     child: Text(
                       "You'll need to confirm this transfer with your secure PIN or biometrics",
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 15.sp,
                         color: Colors.black87,
                         fontWeight: FontWeight.w500,
                       ),
@@ -452,7 +452,7 @@ class _TransferInternalReviewScreenState
                   'Send Money',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 16.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -475,7 +475,7 @@ class _TransferInternalReviewScreenState
               label,
               style: TextStyle(
                 color: Colors.black54,
-                fontSize: 14.sp,
+                fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -487,7 +487,7 @@ class _TransferInternalReviewScreenState
               textAlign: TextAlign.right,
               style: TextStyle(
                 color: Colors.black87,
-                fontSize: 14.sp,
+                fontSize: 15.sp,
                 fontWeight: FontWeight.w700,
               ),
             ),

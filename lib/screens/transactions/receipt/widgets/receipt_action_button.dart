@@ -41,7 +41,7 @@ class ReceiptActionButton extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w700,
                 color: foreground,
               ),

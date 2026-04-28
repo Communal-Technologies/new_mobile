@@ -240,7 +240,7 @@ class _TransferInternalVerifyScreenState
               _subheaderForMode(),
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 15.sp,
                 color: Colors.black54,
                 fontWeight: FontWeight.w500,
               ),
@@ -264,7 +264,7 @@ class _TransferInternalVerifyScreenState
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
-                        fontSize: 12.sp,
+                        fontSize: 13.sp,
                       ),
                     ),
                   ),
@@ -276,7 +276,7 @@ class _TransferInternalVerifyScreenState
                         Text(
                           widget.recipient.accountName,
                           style: TextStyle(
-                            fontSize: 15.sp,
+                            fontSize: 17.sp,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -294,7 +294,7 @@ class _TransferInternalVerifyScreenState
                                 '${widget.recipient.bank} • ${widget.recipient.accountNumber}',
                                 style: TextStyle(
                                   color: Colors.black54,
-                                  fontSize: 12.sp,
+                                  fontSize: 13.sp,
                                   fontWeight: FontWeight.w500,
                                 ),
                                 overflow: TextOverflow.ellipsis,
@@ -319,7 +319,7 @@ class _TransferInternalVerifyScreenState
                 Text(
                   'End-to-end encrypted transaction',
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 15.sp,
                     color: Colors.black54,
                     fontWeight: FontWeight.w500,
                   ),
@@ -370,7 +370,7 @@ class _TransferInternalVerifyScreenState
         children: [
           Text(
             "You're sending",
-            style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade700),
           ),
           vSpace(4),
           Text(
@@ -384,7 +384,7 @@ class _TransferInternalVerifyScreenState
           vSpace(4),
           Text(
             'to ${widget.recipient.accountName}',
-            style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade700),
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
           ),
@@ -424,7 +424,7 @@ class _TransferInternalVerifyScreenState
                     'Confirm Transfer',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 16.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -452,7 +452,7 @@ class _TransferInternalVerifyScreenState
             child: Text(
               'Set up Biometrics',
               style: TextStyle(
-                fontSize: 16.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w600,
               ),
             ),

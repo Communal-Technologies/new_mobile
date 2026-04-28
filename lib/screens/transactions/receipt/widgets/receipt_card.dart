@@ -121,7 +121,7 @@ class _ReceiptStatusHero extends StatelessWidget {
           style.subtitle,
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 14.sp,
+            fontSize: 15.sp,
             fontWeight: FontWeight.w500,
             color: Colors.grey.shade600,
           ),
@@ -149,7 +149,7 @@ class _ReceiptCardHeader extends StatelessWidget {
         Text(
           headerTitle,
           style: TextStyle(
-            fontSize: 14.sp,
+            fontSize: 15.sp,
             fontWeight: FontWeight.w600,
             color: Colors.grey.shade600,
           ),
@@ -185,7 +185,7 @@ class _ReceiptAmountPill extends StatelessWidget {
             'Transfer Amount',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 13.sp,
+              fontSize: 15.sp,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -302,7 +302,7 @@ class _ReceiptInfoRow extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: 15.sp,
               fontWeight: FontWeight.w600,
               color: Colors.grey.shade500,
             ),
@@ -314,7 +314,7 @@ class _ReceiptInfoRow extends StatelessWidget {
             value,
             textAlign: TextAlign.right,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 15.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black87,
               height: 1.2,

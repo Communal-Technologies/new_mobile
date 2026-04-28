@@ -174,7 +174,7 @@ class TransactionDetailsScreen extends StatelessWidget {
                     Text(
                       details.counterpartLabel,
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 15.sp,
                         color: Colors.grey.shade600,
                         fontWeight: FontWeight.w600,
                       ),
@@ -183,7 +183,7 @@ class TransactionDetailsScreen extends StatelessWidget {
                     Text(
                       details.counterpartyName,
                       style: TextStyle(
-                        fontSize: 18.sp,
+                        fontSize: 19.sp,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF0F1D40),
                         height: 1.25,
@@ -223,7 +223,7 @@ class TransactionDetailsScreen extends StatelessWidget {
                 Text(
                   _statusLabel(details.status),
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.w700,
                     color: statusColor,
                   ),
@@ -252,7 +252,7 @@ class TransactionDetailsScreen extends StatelessWidget {
                     child: Text(
                       failure,
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 15.sp,
                         height: 1.35,
                         color: Colors.grey.shade900,
                         fontWeight: FontWeight.w500,
@@ -329,7 +329,7 @@ class TransactionDetailsScreen extends StatelessWidget {
             child: Text(
               details.note!,
               style: TextStyle(
-                fontSize: 13.sp,
+                fontSize: 15.sp,
                 color: Colors.grey.shade700,
                 height: 1.4,
               ),
@@ -386,7 +386,7 @@ class TransactionDetailsScreen extends StatelessWidget {
         Text(
           'Tap an option below',
           style: TextStyle(
-            fontSize: 14.sp,
+            fontSize: 15.sp,
             color: Colors.grey.shade600,
             fontWeight: FontWeight.w500,
           ),
@@ -480,7 +480,7 @@ class _TransactionInfoRow extends StatelessWidget {
             child: Text(
               data.label,
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
                 color: Colors.grey.shade600,
                 height: 1.25,
@@ -493,7 +493,7 @@ class _TransactionInfoRow extends StatelessWidget {
               data.value,
               textAlign: TextAlign.right,
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF0F1D40),
                 height: data.isMultiline ? 1.45 : 1.25,
@@ -565,7 +565,7 @@ class _ActionTile extends StatelessWidget {
                     Text(
                       data.label,
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF0F1D40),
                       ),
@@ -574,7 +574,7 @@ class _ActionTile extends StatelessWidget {
                     Text(
                       data.subtitle,
                       style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: 15.sp,
                         color: Colors.grey.shade600,
                         fontWeight: FontWeight.w500,
                       ),
@@ -629,7 +629,7 @@ class _BottomCtaButton extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontSize: 16.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w700,
                 color: foregroundColor,
               ),
@@ -675,7 +675,7 @@ class _BankAvatar extends StatelessWidget {
       child: Text(
         initials,
         style: TextStyle(
-          fontSize: 16.sp,
+          fontSize: 17.sp,
           fontWeight: FontWeight.w800,
           color: const Color(0xFFD7263D),
         ),

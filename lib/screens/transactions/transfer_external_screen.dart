@@ -439,7 +439,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                   child: Text(
                     'Continue',
                     style: TextStyle(
-                      fontSize: 16.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -504,7 +504,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                             suggestion.bank,
                                             style: TextStyle(
                                               fontWeight: FontWeight.w700,
-                                              fontSize: 15.sp,
+                                              fontSize: 17.sp,
                                             ),
                                           ),
                                           subtitle: Text(
@@ -512,7 +512,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
-                                              fontSize: 12.sp,
+                                              fontSize: 13.sp,
                                               color: Colors.black87,
                                             ),
                                           ),
@@ -531,7 +531,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                             bank.name,
                                             style: TextStyle(
                                               fontWeight: FontWeight.w700,
-                                              fontSize: 15.sp,
+                                              fontSize: 17.sp,
                                             ),
                                           ),
                                           onTap: () => _onPickBankRow(bank),
@@ -562,7 +562,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                                 'Show all Banks',
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.w700,
-                                                  fontSize: 14.sp,
+                                                  fontSize: 15.sp,
                                                   color: const Color(0xFF0F1D40),
                                                 ),
                                               ),
@@ -583,7 +583,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                         Text(
                           'Select Bank',
                           style: TextStyle(
-                            fontSize: 14.sp,
+                            fontSize: 15.sp,
                             fontWeight: FontWeight.w600,
                             color: Colors.black54,
                           ),
@@ -616,7 +616,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                     _selectedBank?.name ??
                                         (_loadingBanks ? 'Loading banks…' : "Select Recipient's Bank"),
                                     style: TextStyle(
-                                      fontSize: 16.sp,
+                                      fontSize: 17.sp,
                                       color: _selectedBank == null
                                           ? Colors.grey.shade500
                                           : Colors.black87,
@@ -649,7 +649,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                     child: Text(
                                       _verifiedRecipient!.bank,
                                       style: TextStyle(
-                                        fontSize: 13.sp,
+                                        fontSize: 15.sp,
                                         fontWeight: FontWeight.w700,
                                         color: Colors.black87,
                                       ),
@@ -660,7 +660,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                   Text(
                                     'verified',
                                     style: TextStyle(
-                                      fontSize: 13.sp,
+                                      fontSize: 15.sp,
                                       fontWeight: FontWeight.w700,
                                       color: _verifiedGreen,
                                     ),
@@ -671,7 +671,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                               Text(
                                 '${_verifiedRecipient!.accountName} • ${_verifiedRecipient!.accountNumber}',
                                 style: TextStyle(
-                                  fontSize: 15.sp,
+                                  fontSize: 17.sp,
                                   fontWeight: FontWeight.w800,
                                   color: const Color(0xFF0F1D40),
                                 ),
@@ -691,7 +691,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                       Text(
                         'Amount',
                         style: TextStyle(
-                          fontSize: 14.sp,
+                          fontSize: 15.sp,
                           color: Colors.black54,
                           fontWeight: FontWeight.w600,
                         ),
@@ -746,7 +746,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                 child: Text(
                                   '$currencySymbol${v >= 1000 ? '${v ~/ 1000}k' : v}',
                                   style: TextStyle(
-                                    fontSize: 14.sp,
+                                    fontSize: 15.sp,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),

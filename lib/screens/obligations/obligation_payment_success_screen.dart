@@ -58,7 +58,7 @@ class ObligationPaymentSuccessScreen extends StatelessWidget {
         title: Text(
           'Payment Successful',
           style: TextStyle(
-            fontSize: 18.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w700,
             color: Colors.black,
           ),
@@ -85,7 +85,7 @@ class ObligationPaymentSuccessScreen extends StatelessWidget {
             Text(
               'Payment Successful!',
               style: TextStyle(
-                fontSize: 20.sp,
+                fontSize: 22.sp,
                 fontWeight: FontWeight.w700,
                 color: Colors.black,
               ),
@@ -94,7 +94,7 @@ class ObligationPaymentSuccessScreen extends StatelessWidget {
             Text(
               'Your obligation payment has been processed successfully',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
             ),
             vSpace(18),
             Text(
@@ -108,7 +108,7 @@ class ObligationPaymentSuccessScreen extends StatelessWidget {
             vSpace(4),
             Text(
               'Paid to $paidTo',
-              style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
             ),
             vSpace(24),
             _DetailsCard(
@@ -155,7 +155,7 @@ class ObligationPaymentSuccessScreen extends StatelessWidget {
                 child: Text(
                   'Done',
                   style: TextStyle(
-                    fontSize: 16.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),
@@ -232,7 +232,7 @@ class _DetailRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
             ),
           ),
           Expanded(
@@ -241,7 +241,7 @@ class _DetailRow extends StatelessWidget {
               child: Text(
                 value,
                 style: TextStyle(
-                  fontSize: 14.sp,
+                  fontSize: 15.sp,
                   fontWeight: FontWeight.w600,
                   color: isLink ? const Color(0xFF7434FF) : Colors.black,
                 ),
@@ -285,7 +285,7 @@ class _ActionButton extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
                 color: Colors.black,
               ),
@@ -319,7 +319,7 @@ class _NextStepsCard extends StatelessWidget {
                 Text(
                   "What's Next?",
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
                     color: Colors.black87,
                   ),
@@ -328,7 +328,7 @@ class _NextStepsCard extends StatelessWidget {
                 Text(
                   'Your payment will reflect in your obligation history within a few minutes. You can view all your payments in the obligation details.',
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 15.sp,
                     color: Colors.grey.shade700,
                   ),
                 ),

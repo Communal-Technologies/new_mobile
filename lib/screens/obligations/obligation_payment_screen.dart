@@ -100,7 +100,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                 Text(
                   'Transfer (NIP)',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
                     color: Colors.black,
                   ),
@@ -111,7 +111,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                       ? 'Payment is sent from your Communal account to your cooperative’s bank account. Anchor settles this as an outbound NIP transfer.'
                       : 'Your cooperative has not published an active bank account to receive this payment yet.',
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 15.sp,
                     color: Colors.grey.shade600,
                   ),
                 ),
@@ -119,7 +119,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                 Text(
                   'Available in Communal: $walletLine',
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF0F1D40),
                   ),
@@ -285,13 +285,13 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
               vSpace(4),
               Text(
                 'Suggested: ${widget.obligation.perInstallmentLabel}',
-                style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
+                style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
               ),
               vSpace(24),
               Text(
                 'Payment Method',
                 style: TextStyle(
-                  fontSize: 15.sp,
+                  fontSize: 17.sp,
                   fontWeight: FontWeight.w700,
                   color: Colors.black,
                 ),
@@ -300,7 +300,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                 vSpace(6),
                 Text(
                   bankSubtitleExtra,
-                  style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
+                  style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
                 ),
               ],
               vSpace(12),
@@ -313,7 +313,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                   Text(
                     'Cooperative account',
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 15.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.black,
                     ),
@@ -350,7 +350,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                   vSpace(10),
                   Text(
                     'Paying into: ${_cashRepos.first.accountName} • ${_cashRepos.first.accountNumber}',
-                    style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade700),
+                    style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade700),
                   ),
                 ],
               ] else ...[
@@ -360,7 +360,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
               Text(
                 'Narration (Optional)',
                 style: TextStyle(
-                  fontSize: 15.sp,
+                  fontSize: 17.sp,
                   fontWeight: FontWeight.w700,
                   color: Colors.black,
                 ),
@@ -385,7 +385,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
               child: Text(
                 'Continue',
                 style: TextStyle(
-                  fontSize: 16.sp,
+                  fontSize: 17.sp,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                 ),
@@ -429,20 +429,20 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
         children: [
           Text(
             'Paying for',
-            style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade500),
+            style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade500),
           ),
           vSpace(6),
           Text(
             widget.obligation.title,
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
           ),
           Text(
             _cooperativeSubtitle(auth),
-            style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
           ),
           vSpace(16),
           Divider(color: Colors.grey.shade200),
@@ -480,7 +480,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
         Text(
           'Amount to Pay',
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w700,
             color: Colors.black,
           ),
@@ -512,7 +512,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
             ),
           ),
           style: TextStyle(
-            fontSize: 18.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w600,
             color: Colors.black,
           ),
@@ -627,13 +627,13 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
               hintText: 'Add a note for this payment...',
               counterText: '',
             ),
-            style: TextStyle(fontSize: 14.sp),
+            style: TextStyle(fontSize: 15.sp),
           ),
           Align(
             alignment: Alignment.centerRight,
             child: Text(
               '${_noteController.text.length}/$_noteLimit',
-              style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
             ),
           ),
         ],
@@ -795,7 +795,7 @@ class _MethodChip extends StatelessWidget {
                   Text(
                     label,
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 15.sp,
                       fontWeight: FontWeight.w700,
                       color: Colors.black,
                     ),
@@ -803,7 +803,7 @@ class _MethodChip extends StatelessWidget {
                   Text(
                     sublabel,
                     style: TextStyle(
-                      fontSize: 11.sp,
+                      fontSize: 13.sp,
                       color: Colors.grey.shade600,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -870,7 +870,7 @@ class _SourceObligationTile extends StatelessWidget {
                   Text(
                     obligation.title,
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 15.sp,
                       fontWeight: FontWeight.w700,
                       color: Colors.black,
                     ),
@@ -879,7 +879,7 @@ class _SourceObligationTile extends StatelessWidget {
                   Text(
                     '${obligation.category} • Available ${obligation.paidAmountLabel}',
                     style: TextStyle(
-                      fontSize: 12.sp,
+                      fontSize: 13.sp,
                       color: Colors.grey.shade700,
                     ),
                   ),
@@ -945,7 +945,7 @@ class _PickerCard extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.w700,
                     color: Colors.black,
                   ),
@@ -954,7 +954,7 @@ class _PickerCard extends StatelessWidget {
                 Text(
                   body,
                   style: TextStyle(
-                    fontSize: 12.sp,
+                    fontSize: 13.sp,
                     color: Colors.grey.shade700,
                   ),
                 ),
@@ -993,13 +993,13 @@ class _MetricBlock extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
         ),
         vSpace(4),
         Text(
           value,
           style: TextStyle(
-            fontSize: 16.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w700,
             color: Colors.black,
           ),

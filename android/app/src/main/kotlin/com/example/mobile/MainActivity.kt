@@ -122,11 +122,14 @@ class MainActivity : FlutterFragmentActivity() {
         val decor = window.decorView as? ViewGroup ?: return
         val overlay = ImageView(this).apply {
             scaleType = ImageView.ScaleType.FIT_XY
-            // Frosted-default background. Used directly when the cached
-            // capture isn't ready yet (cold pause before the first
-            // capture has completed) and shows under the captured
-            // bitmap as a tinted backstop.
-            setBackgroundColor(Color.argb(0xE6, 0xF2, 0xF2, 0xF6))
+            // Fully opaque frosted-default background. Used directly
+            // when the cached capture isn't ready yet (cold pause
+            // before the first PixelCopy completes) and shows under
+            // the captured bitmap as a backstop in case any pixels of
+            // that bitmap come through transparent. 0xFF alpha matters
+            // — at 0xE6 (~90 %) the underlying activity bled through
+            // and the cover looked see-through.
+            setBackgroundColor(Color.argb(0xFF, 0xF2, 0xF2, 0xF6))
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -150,9 +153,16 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (!hasFocus) {
-            applyPrivacyShield()
-        } else {
+        // Important: do NOT apply the shield on focus loss. The OS
+        // biometric prompt and other in-process system sheets (e.g.
+        // notification shade pulldown) take the activity's window
+        // focus *without* backgrounding the app — if we shield here,
+        // the user sees the privacy cover under the biometric dialog.
+        // Real backgrounding is caught by onUserLeaveHint and onPause.
+        //
+        // We still defensively remove the shield on focus regain, in
+        // case onResume / onUserLeaveHint state got desynced.
+        if (hasFocus) {
             removePrivacyShield()
         }
     }

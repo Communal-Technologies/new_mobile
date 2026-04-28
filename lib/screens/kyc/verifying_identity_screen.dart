@@ -128,7 +128,7 @@ class _VerifyingIdentityScreenState extends State<VerifyingIdentityScreen> {
                       'Checking your documents and information',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 17.sp,
                         color: Colors.white.withValues(alpha: 0.85),
                       ),
                     ),
@@ -222,7 +222,7 @@ class _VerifyingIdentityScreenState extends State<VerifyingIdentityScreen> {
             child: Text(
               title,
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                 color: Colors.white.withValues(alpha: isActive ? 1.0 : 0.7),
               ),

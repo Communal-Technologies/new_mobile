@@ -28,7 +28,7 @@ class IdlePromptDialog extends StatelessWidget {
             Text(
               'Are you still there?',
               style: TextStyle(
-                fontSize: 20.sp,
+                fontSize: 22.sp,
                 fontWeight: FontWeight.w700,
                 color: Colors.black,
               ),
@@ -38,7 +38,7 @@ class IdlePromptDialog extends StatelessWidget {
               'You\'ve been idle for a while. Tap Stay to continue, or Leave to lock the app.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 15.sp,
                 color: Colors.grey.shade600,
               ),
             ),

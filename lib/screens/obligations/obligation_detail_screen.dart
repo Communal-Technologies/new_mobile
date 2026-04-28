@@ -6,9 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/models/obligation.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
 import 'package:communal_mobile/injection.dart';
-import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
 
 class ObligationDetailScreen extends StatefulWidget {
   const ObligationDetailScreen({super.key, required this.obligation});
@@ -217,7 +217,7 @@ class _SummaryCard extends StatelessWidget {
                     ),
                     vSpace(4),
                     Text(
-                      obligation.amountBreakdown.split(' of ').last,
+                      obligation.totalAmountLabel,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 24.sp,
@@ -234,8 +234,8 @@ class _SummaryCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _AmountColumn(label: 'Paid', value: obligation.paidAmount),
-              _AmountColumn(label: 'Balance', value: obligation.balance),
+              _AmountColumn(label: 'Paid', value: obligation.paidAmountLabel),
+              _AmountColumn(label: 'Balance', value: obligation.balanceLabel),
             ],
           ),
           vSpace(16),
@@ -268,7 +268,7 @@ class _AmountColumn extends StatelessWidget {
   const _AmountColumn({required this.label, required this.value});
 
   final String label;
-  final double value;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
@@ -281,7 +281,7 @@ class _AmountColumn extends StatelessWidget {
         ),
         vSpace(4),
         Text(
-          '₦${_fmt(value)}',
+          value,
           style: TextStyle(
             color: Colors.white,
             fontSize: 19.sp,
@@ -290,17 +290,6 @@ class _AmountColumn extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  String _fmt(double value) {
-    final fixed = value.toStringAsFixed(2);
-    final parts = fixed.split('.');
-    final whole = parts.first.replaceAllMapped(
-      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-      (m) => '${m[1]},',
-    );
-    if (parts.length < 2 || parts[1] == '00') return whole;
-    return '$whole.${parts[1]}';
   }
 }
 
@@ -596,6 +585,10 @@ class _PaymentTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final outflow = record.isOutflow;
+    final iconData = outflow ? Icons.arrow_upward_rounded : Icons.check_circle;
+    final iconColor = outflow ? const Color(0xFFD64545) : const Color(0xFF7B61FF);
+    final amountColor = outflow ? const Color(0xFFD64545) : Colors.black;
     return Container(
       padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
@@ -604,7 +597,7 @@ class _PaymentTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.check_circle, color: const Color(0xFF7B61FF), size: 22.sp),
+          Icon(iconData, color: iconColor, size: 22.sp),
           hSpace(12),
           Expanded(
             child: Column(
@@ -641,7 +634,7 @@ class _PaymentTile extends StatelessWidget {
             style: TextStyle(
               fontSize: 15.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: amountColor,
             ),
           ),
         ],

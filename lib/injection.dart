@@ -1,3 +1,6 @@
+import 'package:communal_mobile/cubits/server_status/server_status_cubit.dart';
+import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
+import 'package:communal_mobile/data/datasources/remote/dio/server_status_interceptor.dart';
 import 'package:communal_mobile/data/local/home_wallet_prefs.dart';
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
@@ -33,5 +36,25 @@ Future<void> configureDependencies() async {
     getIt.registerLazySingleton<TransferFavoritesPrefs>(
       () => TransferFavoritesPrefs(getIt<SharedPreferences>()),
     );
+  }
+
+  // Server-status: registered manually so this checkout doesn't need a
+  // build_runner pass to wire up the new cubit/interceptor. The
+  // interceptor is attached to the live DioClient.dio AFTER the
+  // refresh interceptor (so it observes the *final* outcome of a
+  // request — refreshed retries are visible to it as success, not the
+  // original 401).
+  if (!getIt.isRegistered<ServerStatusCubit>()) {
+    getIt.registerLazySingleton<ServerStatusCubit>(() => ServerStatusCubit());
+  }
+  if (!getIt.isRegistered<ServerStatusInterceptor>()) {
+    getIt.registerLazySingleton<ServerStatusInterceptor>(
+      () => ServerStatusInterceptor(getIt<ServerStatusCubit>()),
+    );
+  }
+  final dioClient = getIt<DioClient>();
+  final statusInterceptor = getIt<ServerStatusInterceptor>();
+  if (!dioClient.dio.interceptors.contains(statusInterceptor)) {
+    dioClient.dio.interceptors.add(statusInterceptor);
   }
 }

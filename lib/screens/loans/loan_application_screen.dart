@@ -592,7 +592,8 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           ),
           vSpace(4),
           Text(
-            'Your maximum is the sum of your EPC holdings with this cooperative.',
+            _eligibility?.maxExplanation ??
+                'Your maximum is the sum of your EPC holdings with this cooperative.',
             style: TextStyle(
                 fontSize: 13.sp, color: Colors.grey.shade500),
           ),

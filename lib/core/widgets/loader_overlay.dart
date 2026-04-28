@@ -3,9 +3,16 @@ import 'package:communal_mobile/core/constants/images.dart';
 
 /// Full-screen tap shield + centered loader.
 ///
-/// Default scrim is a light dark dim. Set [scrimColor] for a frosted / soft veil
-/// (e.g. off-white at low opacity) instead of black.
-class LoaderOverlay extends StatelessWidget {
+/// The loader icon zoom-pulses continuously. Previously this widget just
+/// rendered an `Image.asset` of `loader.gif` and relied on Flutter's
+/// built-in GIF playback to provide motion — that worked inconsistently
+/// on some devices, leaving a static icon during auth-in-progress. The
+/// explicit [ScaleTransition] guarantees the pulse regardless of GIF
+/// decoder behaviour.
+///
+/// Default scrim is a light dark dim. Set [scrimColor] for a frosted /
+/// soft veil (e.g. off-white at low opacity) instead of black.
+class LoaderOverlay extends StatefulWidget {
   const LoaderOverlay({
     super.key,
     this.loaderSize = 52,
@@ -22,19 +29,49 @@ class LoaderOverlay extends StatelessWidget {
   final Color? scrimColor;
 
   @override
+  State<LoaderOverlay> createState() => _LoaderOverlayState();
+}
+
+class _LoaderOverlayState extends State<LoaderOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 850),
+    )..repeat(reverse: true);
+    _scale = Tween<double>(begin: 0.82, end: 1.18).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final Color scrim = scrimColor ??
-        Colors.black.withValues(alpha: scrimAlpha.clamp(0.0, 1.0));
+    final Color scrim = widget.scrimColor ??
+        Colors.black.withValues(alpha: widget.scrimAlpha.clamp(0.0, 1.0));
     return AbsorbPointer(
       child: ColoredBox(
         color: scrim,
         child: SizedBox.expand(
           child: Center(
-            child: Image.asset(
-              Images.loader,
-              width: loaderSize,
-              height: loaderSize,
-              fit: BoxFit.contain,
+            child: ScaleTransition(
+              scale: _scale,
+              child: Image.asset(
+                Images.loader,
+                width: widget.loaderSize,
+                height: widget.loaderSize,
+                fit: BoxFit.contain,
+              ),
             ),
           ),
         ),

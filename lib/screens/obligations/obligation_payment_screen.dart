@@ -1,11 +1,11 @@
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
-import 'package:communal_mobile/core/utils/money_formatter.dart';
+import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/models/obligation.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
 import 'package:communal_mobile/injection.dart';
-import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -53,7 +53,10 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
 
   Widget _buildNipTransferInfo(AuthState auth) {
     final walletLine = auth is AuthAuthenticated
-        ? '${currencySymbolForUser(auth.user)}${formatMoney(auth.user.walletBalanceKobo / 100)}'
+        ? Money(
+            auth.user.walletBalanceKobo,
+            resolveCurrencyCode(auth.user),
+          ).format()
         : '—';
     final hasRepo = _cashRepos.isNotEmpty;
     return Container(
@@ -132,8 +135,15 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
   @override
   void initState() {
     super.initState();
+    // Default the amount input to the per-installment in major units —
+    // formatted with the right number of decimals for the obligation's
+    // currency (e.g. "5000.00" for NGN, "5000" for JPY) so the input
+    // already parses cleanly via Money.tryParseMajor on submit.
     _amountController = TextEditingController(
-      text: widget.obligation.perInstallment.round().toString(),
+      text: Money(
+        widget.obligation.perInstallmentMinor,
+        widget.obligation.currency,
+      ).toMajorString(),
     );
     _noteController.addListener(() => setState(() {}));
     _loadCashRepos();
@@ -162,8 +172,8 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
       // Filter rules:
       //   - Drop equities (product rule: equity can never be a source).
       //   - Drop the obligation being paid (no self-payment).
-      //   - Drop ones with no contributed balance to spend (`paidAmount`
-      //     is what the backend will decrement from).
+      //   - Drop ones with no contributed balance to spend
+      //     (`paidAmountMinor` is what the backend will decrement from).
       final filtered = all.where((o) {
         if (o.category.toLowerCase() == 'equity') return false;
         final code = o.accountCode.trim();
@@ -171,7 +181,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
           return false;
         }
         if (code.isEmpty) return false; // can't reference it on the API
-        return o.paidAmount > 0;
+        return o.paidAmountMinor > 0;
       }).toList();
       setState(() {
         _sourceObligations = filtered;
@@ -230,7 +240,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final outstanding = formatMoney(widget.obligation.balance);
+    final outstanding = widget.obligation.balanceLabel;
 
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, auth) {
@@ -274,7 +284,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
               _buildAmountInput(),
               vSpace(4),
               Text(
-                'Suggested: ₦${formatMoney(widget.obligation.perInstallment)}',
+                'Suggested: ${widget.obligation.perInstallmentLabel}',
                 style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
               ),
               vSpace(24),
@@ -442,14 +452,13 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
               Expanded(
                 child: _MetricBlock(
                   label: 'Installment Amount',
-                  value:
-                      '₦${formatMoney(widget.obligation.perInstallment)}',
+                  value: widget.obligation.perInstallmentLabel,
                 ),
               ),
               Expanded(
                 child: _MetricBlock(
                   label: 'Outstanding Balance',
-                  value: '₦$outstanding',
+                  value: outstanding,
                   alignRight: true,
                 ),
               ),
@@ -461,6 +470,10 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
   }
 
   Widget _buildAmountInput() {
+    final currency = widget.obligation.currency;
+    final decimals = decimalsFor(currency);
+    final allowDecimal = decimals > 0;
+    final decimalSeparators = allowDecimal ? r'\.,' : '';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -475,11 +488,18 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
         vSpace(10),
         TextField(
           controller: _amountController,
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          keyboardType: TextInputType.numberWithOptions(decimal: allowDecimal),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(
+              RegExp('[0-9$decimalSeparators]'),
+            ),
+          ],
           decoration: InputDecoration(
-            prefixText: '₦ ',
-            hintText: '50000',
+            prefixText: '${currencySymbolForCode(currency)} ',
+            hintText: Money(
+              widget.obligation.perInstallmentMinor,
+              currency,
+            ).toMajorString(),
             filled: true,
             fillColor: Colors.white,
             border: OutlineInputBorder(
@@ -622,10 +642,11 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
   }
 
   void _onContinue() {
-    final amount =
-        double.tryParse(_amountController.text) ??
-        widget.obligation.perInstallment;
-    if (amount <= 0) {
+    final currency = widget.obligation.currency;
+    final parsed = Money.tryParseMajor(_amountController.text, currency);
+    final amountMinor =
+        parsed?.amountMinor ?? widget.obligation.perInstallmentMinor;
+    if (amountMinor <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Enter a valid amount to continue.')),
       );
@@ -633,12 +654,13 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
     }
 
     if (widget.obligation.category == 'Equity') {
-      final maxPay = widget.obligation.balance;
-      if (amount > maxPay + 0.009) {
+      final maxPayMinor = widget.obligation.balanceMinor;
+      if (amountMinor > maxPayMinor) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Equity payments cannot exceed your remaining cap (₦${formatMoney(maxPay)}).',
+              'Equity payments cannot exceed your remaining cap '
+              '(${widget.obligation.balanceLabel}).',
             ),
           ),
         );
@@ -666,11 +688,11 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
         );
         return;
       }
-      if (source.paidAmount + 0.009 < amount) {
+      if (source.paidAmountMinor < amountMinor) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '${source.title} only has ₦${formatMoney(source.paidAmount)} '
+              '${source.title} only has ${source.paidAmountLabel} '
               'available. Reduce the amount or pick another obligation.',
             ),
           ),
@@ -681,11 +703,10 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
         'obligation-confirm-payment',
         extra: {
           'obligation': widget.obligation,
-          'amount': amount,
+          'amountMinor': amountMinor,
           'method': 'Obligation',
           'source_obligation_code': source.accountCode,
           'source_obligation_title': source.title,
-          'source_obligation_balance': source.paidAmount,
         },
       );
       return;
@@ -713,7 +734,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
       'obligation-confirm-payment',
       extra: {
         'obligation': widget.obligation,
-        'amount': amount,
+        'amountMinor': amountMinor,
         'method': 'NIP transfer',
         'cash_account': cash.toJson(),
         'cash_repository_id': cash.id,
@@ -856,7 +877,7 @@ class _SourceObligationTile extends StatelessWidget {
                   ),
                   vSpace(2),
                   Text(
-                    '${obligation.category} • Available ₦${formatMoney(obligation.paidAmount)}',
+                    '${obligation.category} • Available ${obligation.paidAmountLabel}',
                     style: TextStyle(
                       fontSize: 12.sp,
                       color: Colors.grey.shade700,

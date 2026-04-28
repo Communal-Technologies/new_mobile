@@ -6,22 +6,24 @@ import 'package:intl/intl.dart';
 
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
-import 'package:communal_mobile/core/utils/money_formatter.dart';
+import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
-import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
+import 'package:communal_mobile/data/models/obligation.dart';
 
 class ObligationPaymentSuccessScreen extends StatelessWidget {
   const ObligationPaymentSuccessScreen({
     super.key,
     required this.obligation,
-    required this.amount,
+    required this.amountMinor,
     required this.method,
     required this.reference,
     required this.date,
   });
 
   final Obligation obligation;
-  final double amount;
+
+  /// Integer minor units of [obligation.currency] (e.g. kobo for NGN).
+  final int amountMinor;
   final String method;
   final String reference;
   final DateTime date;
@@ -39,7 +41,7 @@ class ObligationPaymentSuccessScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formattedAmount = '₦${formatMoney(amount)}';
+    final formattedAmount = Money(amountMinor, obligation.currency).format();
     final dateLabel = DateFormat('MMM dd, yyyy, hh:mm a').format(date);
     final paidTo = _paidToLine(context);
 

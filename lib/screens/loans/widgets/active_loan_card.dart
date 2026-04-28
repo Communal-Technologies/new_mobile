@@ -72,7 +72,7 @@ class ActiveLoanCard extends StatelessWidget {
                     Text(
                       loan.loanCode.isNotEmpty ? loan.loanCode : 'Loan',
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF0F1D40),
                       ),
@@ -83,7 +83,7 @@ class ActiveLoanCard extends StatelessWidget {
                           ? loan.referenceId
                           : loan.id,
                       style: TextStyle(
-                        fontSize: 12.sp,
+                        fontSize: 13.sp,
                         color: Colors.grey.shade600,
                       ),
                     ),
@@ -99,7 +99,7 @@ class ActiveLoanCard extends StatelessWidget {
                 child: Text(
                   loan.status.label,
                   style: TextStyle(
-                    fontSize: 11.sp,
+                    fontSize: 13.sp,
                     fontWeight: FontWeight.w600,
                     color: _statusColor,
                   ),
@@ -112,7 +112,7 @@ class ActiveLoanCard extends StatelessWidget {
             Text(
               'Repayment Progress',
               style: TextStyle(
-                fontSize: 13.sp,
+                fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
                 color: Colors.grey.shade700,
               ),
@@ -145,7 +145,7 @@ class ActiveLoanCard extends StatelessWidget {
               child: Text(
                 loan.progressLabel,
                 style: TextStyle(
-                  fontSize: 12.sp,
+                  fontSize: 13.sp,
                   fontWeight: FontWeight.w600,
                   color: Colors.grey.shade700,
                 ),
@@ -185,7 +185,7 @@ class ActiveLoanCard extends StatelessWidget {
                 Text(
                   'Due ${loan.dueDateLabel}',
                   style: TextStyle(
-                    fontSize: 12.sp,
+                    fontSize: 13.sp,
                     color: Colors.grey.shade700,
                   ),
                 ),
@@ -208,7 +208,7 @@ class ActiveLoanCard extends StatelessWidget {
                   child: Text(
                     'View Details',
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 15.sp,
                       fontWeight: FontWeight.w600,
                       color: const Color(0xFF0F1D40),
                     ),
@@ -232,7 +232,7 @@ class ActiveLoanCard extends StatelessWidget {
                     child: Text(
                       'Make Payment',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 15.sp,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -251,14 +251,14 @@ class ActiveLoanCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600)),
+            style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600)),
         vSpace(4),
         Text(
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            fontSize: 14.sp,
+            fontSize: 15.sp,
             fontWeight: FontWeight.w700,
             color: highlight
                 ? const Color(0xFFE67E22)

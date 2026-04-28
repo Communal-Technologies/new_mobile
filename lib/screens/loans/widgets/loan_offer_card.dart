@@ -34,7 +34,7 @@ class LoanOfferCard extends StatelessWidget {
                 child: Text(
                   scheme.title.isNotEmpty ? scheme.title : scheme.loanCode,
                   style: TextStyle(
-                    fontSize: 18.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF0F1D40),
                   ),
@@ -50,7 +50,7 @@ class LoanOfferCard extends StatelessWidget {
                   child: Text(
                     scheme.category,
                     style: TextStyle(
-                      fontSize: 11.sp,
+                      fontSize: 13.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
@@ -64,7 +64,7 @@ class LoanOfferCard extends StatelessWidget {
                 ? 'Needs ${scheme.numberOfGuarantors} guarantor${scheme.numberOfGuarantors == 1 ? '' : 's'}'
                 : 'No guarantors required',
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 15.sp,
               color: Colors.grey.shade700,
             ),
           ),
@@ -102,7 +102,7 @@ class LoanOfferCard extends StatelessWidget {
                   Text(
                     'Apply Now',
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -126,7 +126,7 @@ class LoanOfferCard extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 13.sp,
+            fontSize: 15.sp,
             fontWeight: FontWeight.w600,
             color: const Color(0xFF0F1D40),
           ),

@@ -10,16 +10,24 @@ import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/models/loan_eligibility.dart';
 import 'package:communal_mobile/data/models/loan_scheme.dart';
 import 'package:communal_mobile/data/repositories/loan_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/loans/data/loan_application_draft.dart';
 
-/// Step 1 of the loan apply flow — pick a scheme, enter amount + reason,
-/// choose interest treatment when the scheme leaves it open. Scheme
-/// duration / interest rate / guarantor count come from the backend;
-/// the slider's min and max bounds are still UI-side defaults until
-/// the cooperative-settings endpoint exposes member-specific limits.
+/// Step 1 of the apply flow. The slider's min and max bounds, plus the
+/// interest treatment that gets stamped on the application, all come
+/// from the cooperative — the member is *not* the source of truth for
+/// any of these:
+///
+/// - **Min**: cooperative's `loan_min_amount` setting.
+/// - **Max**: sum of the member's holdings across the obligation
+///   categories the cooperative configured for loan eligibility
+///   (`loan_access_obligations` — typically Equity + Patronage +
+///   Custom). Computed server-side.
+/// - **Interest treatment**: locked to the cooperative's enabled +
+///   default interest type. Shown read-only.
 class LoanApplicationScreen extends StatefulWidget {
   const LoanApplicationScreen({
     super.key,
@@ -27,11 +35,7 @@ class LoanApplicationScreen extends StatefulWidget {
     this.initialAmount,
   });
 
-  /// When the user taps "Apply Now" on a specific scheme card from the
-  /// loans hub, the scheme is pre-selected and the picker is hidden.
   final LoanScheme? preselectedScheme;
-
-  /// Optional initial amount in major currency units.
   final double? initialAmount;
 
   @override
@@ -43,41 +47,23 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _reasonController = TextEditingController();
 
-  // UI-side bounds for the slider. The backend does not yet surface
-  // per-scheme caps, so we keep these as the same defaults the screen
-  // shipped with originally — tighten / wire to settings later.
-  static const double _minAmount = 50000;
-  static const double _maxAmount = 2000000;
-
-  double _loanAmount = _minAmount;
   bool _loading = false;
   String? _error;
   List<LoanScheme> _schemes = const [];
   LoanScheme? _selectedScheme;
+  LoanEligibility? _eligibility;
 
-  /// `'1'` deduct-now, `'2'` add-to-principal. Default to deduct-now —
-  /// matches the most common cooperative behavior. Locked when the
-  /// scheme has a fixed `interest_type`.
-  String _interestType = '1';
+  double _loanAmount = 0;
 
   @override
   void initState() {
     super.initState();
     _selectedScheme = widget.preselectedScheme;
-    final initial = widget.initialAmount;
-    if (initial != null) {
-      _loanAmount = initial.clamp(_minAmount, _maxAmount).toDouble();
-    } else {
-      _loanAmount = (_minAmount + _maxAmount) / 2;
+    if (widget.initialAmount != null) {
+      _loanAmount = widget.initialAmount!;
+      _amountController.text = _formatNoDecimals(_loanAmount);
     }
-    _amountController.text = _formatNoDecimals(_loanAmount);
-    if (widget.preselectedScheme?.interestType != null &&
-        widget.preselectedScheme!.interestType!.isNotEmpty) {
-      _interestType = widget.preselectedScheme!.interestType!;
-    }
-    if (widget.preselectedScheme == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _loadSchemes());
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadAll());
   }
 
   @override
@@ -87,7 +73,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     super.dispose();
   }
 
-  Future<void> _loadSchemes() async {
+  Future<void> _loadAll() async {
     final auth = context.read<AuthBloc>().state;
     if (auth is! AuthAuthenticated) return;
     final coopId = auth.user.cooperativeId?.trim();
@@ -100,14 +86,37 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       _error = null;
     });
     try {
-      final schemes = await _repo.fetchSchemes(coopId);
+      // Schemes only when no scheme was preselected from the loans hub.
+      // Eligibility is always needed — drives slider bounds + interest
+      // treatment.
+      final results = await Future.wait([
+        if (widget.preselectedScheme == null)
+          _repo.fetchSchemes(coopId)
+        else
+          Future.value(<LoanScheme>[]),
+        _repo.fetchEligibility(coopId),
+      ]);
       if (!mounted) return;
+      final schemes = results[0] as List<LoanScheme>;
+      final eligibility = results[1] as LoanEligibility?;
       setState(() {
         _schemes = schemes;
+        _eligibility = eligibility;
         _selectedScheme ??= schemes.isNotEmpty ? schemes.first : null;
-        if (_selectedScheme?.interestType != null &&
-            _selectedScheme!.interestType!.isNotEmpty) {
-          _interestType = _selectedScheme!.interestType!;
+        // Pin amount to a sensible value within the eligibility band.
+        if (eligibility != null) {
+          final min = eligibility.minAmountMinor / factorFor(eligibility.currency);
+          final max = eligibility.maxAmountMinor / factorFor(eligibility.currency);
+          if (_loanAmount <= 0 || _loanAmount < min || _loanAmount > max) {
+            // Default to the midpoint when nothing was carried in;
+            // clamp into range when something was.
+            if (_loanAmount <= 0) {
+              _loanAmount = max <= min ? min : (min + max) / 2;
+            } else {
+              _loanAmount = _loanAmount.clamp(min, max).toDouble();
+            }
+            _amountController.text = _formatNoDecimals(_loanAmount);
+          }
         }
         _loading = false;
       });
@@ -120,13 +129,27 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     }
   }
 
-  String _formatNoDecimals(double amount) {
-    final formatter = NumberFormat('#,##0', 'en_NG');
-    return formatter.format(amount.round());
+  String _formatNoDecimals(double amount) =>
+      NumberFormat('#,##0', 'en_NG').format(amount.round());
+
+  double get _minAmount {
+    final el = _eligibility;
+    if (el == null) return 0;
+    return el.minAmountMinor / factorFor(el.currency);
   }
 
+  double get _maxAmount {
+    final el = _eligibility;
+    if (el == null) return 0;
+    return el.maxAmountMinor / factorFor(el.currency);
+  }
+
+  bool get _hasEligibility => _eligibility != null && _maxAmount > _minAmount;
+
   void _setAmount(double value) {
-    final clamped = value.clamp(_minAmount, _maxAmount).toDouble();
+    if (!_hasEligibility) return;
+    final clamped =
+        value.clamp(_minAmount, _maxAmount).toDouble();
     setState(() => _loanAmount = clamped);
     _amountController.value = TextEditingValue(
       text: _formatNoDecimals(clamped),
@@ -138,9 +161,18 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
 
   String? _validate() {
     if (_selectedScheme == null) return 'Pick a loan product to continue';
-    if (_loanAmount <= 0) return 'Enter how much you want to borrow';
+    if (_eligibility == null) return 'Loan limits not loaded yet';
+    if (_loanAmount < _minAmount) {
+      return 'Minimum loan amount is ${_eligibility!.minLabel}';
+    }
+    if (_loanAmount > _maxAmount) {
+      return 'You can borrow at most ${_eligibility!.maxLabel} based on your holdings';
+    }
     if (_reasonController.text.trim().isEmpty) {
       return 'Tell us why you need this loan';
+    }
+    if (_eligibility!.defaultInterestType == null) {
+      return 'Your cooperative has not configured loan interest treatments yet';
     }
     return null;
   }
@@ -149,7 +181,10 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthBloc>().state;
     final user = auth is AuthAuthenticated ? auth.user : null;
-    final currency = user != null ? resolveCurrencyCode(user) : 'NGN';
+    // Prefer the cooperative's currency (from eligibility) over the
+    // member's wallet currency — money limits are coop-side decisions.
+    final currency = _eligibility?.currency ??
+        (user != null ? resolveCurrencyCode(user) : 'NGN');
     final symbol = currencySymbolForCode(currency);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -170,7 +205,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           title: Text(
             'Loan Application',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
@@ -193,13 +228,12 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                     else
                       _buildSchemeSummary(_selectedScheme!),
                     vSpace(24),
-                    _buildLoanAmountSection(symbol),
+                    _buildLoanAmountSection(symbol, currency),
                     vSpace(24),
-                    if (_selectedScheme != null)
-                      _buildRepaymentSummarySection(currency, symbol),
+                    if (_selectedScheme != null && _hasEligibility)
+                      _buildRepaymentSummarySection(currency),
                     vSpace(24),
-                    if ((_selectedScheme?.interestType?.isEmpty ?? true))
-                      _buildInterestTypeSection(),
+                    _buildInterestTypeReadOnly(),
                     vSpace(24),
                     _buildReasonSection(),
                     if (_error != null) ...[
@@ -207,7 +241,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                       Text(
                         _error!,
                         style: TextStyle(
-                          fontSize: 13.sp,
+                          fontSize: 15.sp,
                           color: const Color(0xFFE74C3C),
                         ),
                       ),
@@ -245,7 +279,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             Text(
               'Loan Details',
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF7434FF),
               ),
@@ -253,7 +287,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             Text(
               'Step 1 of 3',
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF7434FF),
               ),
@@ -309,7 +343,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             Text(
               'No loan products available right now',
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 15.sp,
                 color: const Color(0xFF0F1D40),
               ),
             ),
@@ -318,7 +352,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
               'Ask your cooperative admin to publish one.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 12.sp,
+                fontSize: 13.sp,
                 color: Colors.grey.shade600,
               ),
             ),
@@ -332,7 +366,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         Text(
           'Loan Product',
           style: TextStyle(
-            fontSize: 14.sp,
+            fontSize: 15.sp,
             fontWeight: FontWeight.w600,
             color: const Color(0xFF0F1D40),
           ),
@@ -362,15 +396,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                     ),
                   )
                   .toList(),
-              onChanged: (s) {
-                setState(() {
-                  _selectedScheme = s;
-                  if (s?.interestType != null &&
-                      s!.interestType!.isNotEmpty) {
-                    _interestType = s.interestType!;
-                  }
-                });
-              },
+              onChanged: (s) => setState(() => _selectedScheme = s),
             ),
           ),
         ),
@@ -391,7 +417,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           Text(
             scheme.title.isNotEmpty ? scheme.title : scheme.loanCode,
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F1D40),
             ),
@@ -423,7 +449,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 12.sp,
+          fontSize: 13.sp,
           fontWeight: FontWeight.w600,
           color: const Color(0xFF0F1D40),
         ),
@@ -431,127 +457,154 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     );
   }
 
-  Widget _buildLoanAmountSection(String symbol) {
+  Widget _buildLoanAmountSection(String symbol, String currency) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'How much do you need?',
           style: TextStyle(
-            fontSize: 18.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF0F1D40),
           ),
         ),
         vSpace(20),
-        Row(
-          children: [
-            Text(
-              '$symbol${_formatNoDecimals(_minAmount)}',
-              style:
-                  TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
+        if (!_hasEligibility)
+          Container(
+            padding: EdgeInsets.all(12.w),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(10.r),
+              border: Border.all(color: Colors.grey.shade200),
             ),
-            Expanded(
-              child: SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  activeTrackColor: const Color(0xFF7434FF),
-                  inactiveTrackColor: Colors.grey.shade300,
-                  thumbColor: const Color(0xFF7434FF),
-                  thumbShape:
-                      RoundSliderThumbShape(enabledThumbRadius: 12.r),
-                  overlayShape:
-                      RoundSliderOverlayShape(overlayRadius: 24.r),
-                  trackHeight: 4.h,
-                ),
-                child: Slider(
-                  value: _loanAmount,
-                  min: _minAmount,
-                  max: _maxAmount,
-                  divisions: 39,
-                  onChanged: _setAmount,
-                ),
+            child: Text(
+              _loading
+                  ? 'Loading your eligibility…'
+                  : (_eligibility != null && _maxAmount <= _minAmount
+                      ? 'You don\'t qualify for a loan yet — your EPC holdings are below your cooperative\'s minimum loan amount.'
+                      : 'Loan limits unavailable. Pull to refresh.'),
+              style: TextStyle(
+                fontSize: 15.sp,
+                color: Colors.grey.shade700,
               ),
             ),
-            Text(
-              '$symbol${_formatNoDecimals(_maxAmount)}',
-              style:
-                  TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
-            ),
-          ],
-        ),
-        vSpace(16),
-        TextField(
-          controller: _amountController,
-          keyboardType: TextInputType.number,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 24.sp,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF7434FF),
+          )
+        else ...[
+          Row(
+            children: [
+              Text(
+                '$symbol${_formatNoDecimals(_minAmount)}',
+                style:
+                    TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
+              ),
+              Expanded(
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: const Color(0xFF7434FF),
+                    inactiveTrackColor: Colors.grey.shade300,
+                    thumbColor: const Color(0xFF7434FF),
+                    thumbShape:
+                        RoundSliderThumbShape(enabledThumbRadius: 12.r),
+                    overlayShape:
+                        RoundSliderOverlayShape(overlayRadius: 24.r),
+                    trackHeight: 4.h,
+                  ),
+                  child: Slider(
+                    value: _loanAmount.clamp(_minAmount, _maxAmount).toDouble(),
+                    min: _minAmount,
+                    max: _maxAmount,
+                    onChanged: _setAmount,
+                  ),
+                ),
+              ),
+              Text(
+                '$symbol${_formatNoDecimals(_maxAmount)}',
+                style:
+                    TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
+              ),
+            ],
           ),
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[\d,]')),
-          ],
-          decoration: InputDecoration(
-            prefixText: '$symbol ',
-            prefixStyle: TextStyle(
+          vSpace(16),
+          TextField(
+            controller: _amountController,
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            style: TextStyle(
               fontSize: 24.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF7434FF),
             ),
-            filled: true,
-            fillColor: Colors.grey.shade50,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(color: Colors.grey.shade200),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[\d,]')),
+            ],
+            decoration: InputDecoration(
+              prefixText: '$symbol ',
+              prefixStyle: TextStyle(
+                fontSize: 24.sp,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF7434FF),
+              ),
+              filled: true,
+              fillColor: Colors.grey.shade50,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: BorderSide(color: Colors.grey.shade200),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: BorderSide(color: Colors.grey.shade200),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide:
+                    const BorderSide(color: Color(0xFF7434FF), width: 2),
+              ),
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide:
-                  const BorderSide(color: Color(0xFF7434FF), width: 2),
-            ),
-            contentPadding:
-                EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+            onChanged: (value) {
+              final numeric = value.replaceAll(RegExp(r'[^\d]'), '');
+              if (numeric.isEmpty) {
+                setState(() => _loanAmount = _minAmount);
+                return;
+              }
+              final parsed = double.tryParse(numeric);
+              if (parsed == null) return;
+              final clamped =
+                  parsed.clamp(_minAmount, _maxAmount).toDouble();
+              setState(() => _loanAmount = clamped);
+              if (clamped != parsed) {
+                final formatted = _formatNoDecimals(clamped);
+                _amountController.value = TextEditingValue(
+                  text: formatted,
+                  selection:
+                      TextSelection.collapsed(offset: formatted.length),
+                );
+              }
+            },
           ),
-          onChanged: (value) {
-            final numeric = value.replaceAll(RegExp(r'[^\d]'), '');
-            if (numeric.isEmpty) {
-              setState(() => _loanAmount = _minAmount);
-              return;
-            }
-            final parsed = double.tryParse(numeric);
-            if (parsed == null) return;
-            final clamped =
-                parsed.clamp(_minAmount, _maxAmount).toDouble();
-            setState(() => _loanAmount = clamped);
-            // If the user typed beyond the max (or below min), reflect
-            // the clamped value back into the field so they see the cap
-            // they're held to.
-            if (clamped != parsed) {
-              final formatted = _formatNoDecimals(clamped);
-              _amountController.value = TextEditingValue(
-                text: formatted,
-                selection:
-                    TextSelection.collapsed(offset: formatted.length),
-              );
-            }
-          },
-        ),
-        vSpace(8),
-        Text(
-          'Minimum: $symbol${_formatNoDecimals(_minAmount)} | Maximum: $symbol${_formatNoDecimals(_maxAmount)}',
-          style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
-        ),
+          vSpace(8),
+          Text(
+            'Minimum: $symbol${_formatNoDecimals(_minAmount)} | Maximum: $symbol${_formatNoDecimals(_maxAmount)}',
+            style:
+                TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
+          ),
+          vSpace(4),
+          Text(
+            'Your maximum is the sum of your EPC holdings with this cooperative.',
+            style: TextStyle(
+                fontSize: 13.sp, color: Colors.grey.shade500),
+          ),
+        ],
       ],
     );
   }
 
-  Widget _buildRepaymentSummarySection(String currency, String symbol) {
+  Widget _buildRepaymentSummarySection(String currency) {
     final scheme = _selectedScheme!;
+    final interestType =
+        _eligibility?.defaultInterestType?.value ?? '1';
     final principalMinor =
         (_loanAmount * factorFor(currency)).round();
     final interestMinor =
@@ -559,10 +612,10 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     final monthlyMinor = estimatedMonthlyRepaymentMinor(
       principalMinor: principalMinor,
       scheme: scheme,
-      interestType: _interestType,
+      interestType: interestType,
       currency: currency,
     );
-    final totalMinor = _interestType == '1'
+    final totalMinor = interestType == '1'
         ? principalMinor
         : principalMinor + interestMinor;
 
@@ -578,7 +631,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           Text(
             'Repayment Summary',
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F1D40),
             ),
@@ -594,7 +647,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                     Text(
                       Money(monthlyMinor, currency).format(),
                       style: TextStyle(
-                        fontSize: 20.sp,
+                        fontSize: 22.sp,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF7434FF),
                       ),
@@ -603,7 +656,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                     Text(
                       'monthly in ${scheme.durationMonths} installment${scheme.durationMonths == 1 ? '' : 's'}',
                       style: TextStyle(
-                        fontSize: 12.sp,
+                        fontSize: 13.sp,
                         color: Colors.grey.shade600,
                       ),
                     ),
@@ -617,7 +670,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                     Text(
                       Money(totalMinor, currency).format(),
                       style: TextStyle(
-                        fontSize: 20.sp,
+                        fontSize: 22.sp,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF7434FF),
                       ),
@@ -626,7 +679,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                     Text(
                       'Total Repayment',
                       style: TextStyle(
-                        fontSize: 12.sp,
+                        fontSize: 13.sp,
                         color: Colors.grey.shade600,
                       ),
                     ),
@@ -648,14 +701,14 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                 Text(
                   'Total Interest',
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 15.sp,
                     color: Colors.grey.shade700,
                   ),
                 ),
                 Text(
                   Money(interestMinor, currency).format(),
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF0F1D40),
                   ),
@@ -667,7 +720,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           Text(
             'At ${scheme.interestRateLabel} interest rate',
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: 15.sp,
               fontWeight: FontWeight.w600,
               color: const Color(0xFFE67E22),
             ),
@@ -677,84 +730,65 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     );
   }
 
-  Widget _buildInterestTypeSection() {
+  Widget _buildInterestTypeReadOnly() {
+    final defaultType = _eligibility?.defaultInterestType;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Interest treatment',
           style: TextStyle(
-            fontSize: 14.sp,
+            fontSize: 15.sp,
             fontWeight: FontWeight.w600,
             color: const Color(0xFF0F1D40),
           ),
         ),
         vSpace(8),
-        Row(
-          children: [
-            Expanded(
-              child: _interestOption(
-                value: '1',
-                label: 'Deduct now',
-                hint: 'Receive principal − interest',
+        Container(
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEEE5FF),
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: const Color(0xFF7434FF), width: 1.5),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.lock_outline,
+                  size: 18.sp, color: const Color(0xFF7434FF)),
+              hSpace(10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      defaultType?.title.isNotEmpty == true
+                          ? defaultType!.title
+                          : (_loading
+                              ? 'Loading…'
+                              : 'Not configured'),
+                      style: TextStyle(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF7434FF),
+                      ),
+                    ),
+                    vSpace(4),
+                    Text(
+                      defaultType?.note.isNotEmpty == true
+                          ? defaultType!.note
+                          : 'Set by your cooperative — not member-selectable.',
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            hSpace(8),
-            Expanded(
-              child: _interestOption(
-                value: '2',
-                label: 'Add to balance',
-                hint: 'Repay principal + interest',
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _interestOption({
-    required String value,
-    required String label,
-    required String hint,
-  }) {
-    final selected = _interestType == value;
-    return InkWell(
-      borderRadius: BorderRadius.circular(12.r),
-      onTap: () => setState(() => _interestType = value),
-      child: Container(
-        padding: EdgeInsets.all(12.w),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFFEEE5FF) : Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(
-            color:
-                selected ? const Color(0xFF7434FF) : Colors.grey.shade200,
-            width: selected ? 1.5 : 1,
+            ],
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w700,
-                color: selected
-                    ? const Color(0xFF7434FF)
-                    : const Color(0xFF0F1D40),
-              ),
-            ),
-            vSpace(4),
-            Text(
-              hint,
-              style:
-                  TextStyle(fontSize: 11.sp, color: Colors.grey.shade600),
-            ),
-          ],
-        ),
-      ),
+      ],
     );
   }
 
@@ -765,7 +799,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         Text(
           'What will you use this loan for?',
           style: TextStyle(
-            fontSize: 18.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF0F1D40),
           ),
@@ -778,7 +812,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           decoration: InputDecoration(
             hintText: 'e.g., upgrade my business, buy equipment',
             hintStyle:
-                TextStyle(fontSize: 14.sp, color: Colors.grey.shade400),
+                TextStyle(fontSize: 15.sp, color: Colors.grey.shade400),
             filled: true,
             fillColor: Colors.grey.shade50,
             border: OutlineInputBorder(
@@ -797,7 +831,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             contentPadding:
                 EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
           ),
-          style: TextStyle(fontSize: 14.sp, color: const Color(0xFF0F1D40)),
+          style: TextStyle(fontSize: 15.sp, color: const Color(0xFF0F1D40)),
         ),
       ],
     );
@@ -807,27 +841,32 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () {
-          final err = _validate();
-          if (err != null) {
-            setState(() => _error = err);
-            return;
-          }
-          final draft = LoanApplicationDraft(
-            scheme: _selectedScheme!,
-            amountMajor: _loanAmount,
-            currency: currency,
-            interestType: _interestType,
-            reasonForLoan: _reasonController.text.trim(),
-          );
-          context.pushNamed(
-            'loan-application-step2',
-            extra: {'draft': draft},
-          );
-        },
+        onPressed: _hasEligibility
+            ? () {
+                final err = _validate();
+                if (err != null) {
+                  setState(() => _error = err);
+                  return;
+                }
+                final draft = LoanApplicationDraft(
+                  scheme: _selectedScheme!,
+                  amountMajor: _loanAmount,
+                  currency: currency,
+                  interestType:
+                      _eligibility!.defaultInterestType!.value,
+                  reasonForLoan: _reasonController.text.trim(),
+                );
+                context.pushNamed(
+                  'loan-application-step2',
+                  extra: {'draft': draft},
+                );
+              }
+            : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF7434FF),
           foregroundColor: Colors.white,
+          disabledBackgroundColor: Colors.grey.shade300,
+          disabledForegroundColor: Colors.grey.shade600,
           elevation: 0,
           padding: EdgeInsets.symmetric(vertical: 16.h),
           shape: RoundedRectangleBorder(
@@ -836,7 +875,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         ),
         child: Text(
           'Continue',
-          style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w700),
+          style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w700),
         ),
       ),
     );

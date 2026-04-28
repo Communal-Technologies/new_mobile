@@ -48,6 +48,8 @@ class LoanEligibility {
     required this.currency,
     required this.minAmountMinor,
     required this.maxAmountMinor,
+    required this.holdingsMinor,
+    required this.accessMultiplier,
     required this.interestTypes,
   });
 
@@ -57,10 +59,21 @@ class LoanEligibility {
   /// Cooperative-set minimum loan amount, in integer minor units.
   final int minAmountMinor;
 
-  /// Maximum the member is currently eligible for — sum of their
-  /// holdings across the cooperative's loan-eligible obligation
-  /// categories. In integer minor units.
+  /// Maximum the member is currently eligible for. Equals
+  /// [holdingsMinor] × [accessMultiplier] — the cooperative's
+  /// "Loan Access Control" lever applied to the sum of the member's
+  /// holdings across its `loan_access_obligations` setting.
   final int maxAmountMinor;
+
+  /// Raw sum of the member's holdings across the eligible obligation
+  /// categories, before the access multiplier is applied. Useful for
+  /// the UI sub-line that explains where the cap comes from.
+  final int holdingsMinor;
+
+  /// Cooperative's `loan_access` multiplier (e.g. `2.0` means a member
+  /// can borrow up to twice their holdings). Defaults server-side to
+  /// `1.0` when the setting is missing.
+  final double accessMultiplier;
 
   final List<InterestTypeOption> interestTypes;
 

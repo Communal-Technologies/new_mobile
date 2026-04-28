@@ -1,0 +1,315 @@
+import 'package:intl/intl.dart';
+
+import 'package:communal_mobile/core/utils/money.dart';
+
+/// One row in an obligation's payment history. Amounts are integer minor
+/// units of [currency] (kobo for NGN, cents for USD…) — same convention as
+/// the backend ledger and the cooperative dashboard.
+class PaymentRecord {
+  PaymentRecord({
+    required this.title,
+    required this.date,
+    required this.amountMinor,
+    required this.currency,
+    required this.method,
+    required this.reference,
+    this.isOutflow = false,
+  });
+
+  final String title;
+  final DateTime date;
+  final int amountMinor;
+  final String currency;
+  final String method;
+  final String reference;
+
+  /// True when this row represents money leaving the obligation (i.e. the
+  /// obligation was used as a *source* to pay another). Inflows from
+  /// wallet, NIP transfer, etc. set this to false. Drives the sign on
+  /// the formatted amount and is what tells the obligation-detail screen
+  /// to render the row in the outflow palette.
+  final bool isOutflow;
+
+  String get dateLabel => DateFormat('MMM dd, yyyy').format(date);
+
+  /// Signed, currency-symbol-prefixed amount label (e.g. `-₦5,000.00`).
+  String get amountLabel {
+    final formatted = Money(amountMinor, currency).format();
+    return isOutflow ? '-$formatted' : formatted;
+  }
+}
+
+/// Late-payment / penalty entry attached to an obligation. The backend
+/// today does not yet populate this list — the structure exists so the
+/// auto-fine cron (see `StartCommunalJobs`) can wire its output through
+/// without UI changes when it ships.
+class FineRecord {
+  FineRecord({
+    required this.amountMinor,
+    required this.currency,
+    required this.description,
+    required this.status,
+    required this.type,
+    required this.date,
+  });
+
+  final int amountMinor;
+  final String currency;
+  final String description;
+  final String status;
+  final String type;
+  final DateTime date;
+
+  String get amountLabel => Money(amountMinor, currency).format();
+  String get dateLabel => DateFormat('MMM dd, yyyy').format(date);
+}
+
+/// Member-facing financial obligation. Money is stored as integer minor
+/// units (kobo for NGN); use [Money] / `format*` helpers to display.
+class Obligation {
+  Obligation({
+    this.id,
+    this.accountCode = '',
+    this.cooperativeId = '',
+    this.currency = 'NGN',
+    this.createdAt,
+    this.updatedAt,
+    required this.category,
+    required this.status,
+    required this.title,
+    required this.description,
+    required this.paidAmountMinor,
+    required this.totalAmountMinor,
+    required this.perInstallmentMinor,
+    required this.installmentsPaid,
+    required this.totalInstallments,
+    required this.startDate,
+    required this.endDate,
+    required this.nextDueDate,
+    required this.frequency,
+    required this.payments,
+    this.fines = const [],
+    this.infoNote,
+  });
+
+  final String? id;
+  final String accountCode;
+  final String cooperativeId;
+  final String currency;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+  final String category;
+  final String status;
+  final String title;
+  final String description;
+  final int paidAmountMinor;
+  final int totalAmountMinor;
+  final int perInstallmentMinor;
+  final int installmentsPaid;
+  final int totalInstallments;
+  final DateTime startDate;
+  final DateTime endDate;
+  final DateTime nextDueDate;
+  final String frequency;
+  final List<PaymentRecord> payments;
+  final List<FineRecord> fines;
+  final String? infoNote;
+
+  int get balanceMinor {
+    final remaining = totalAmountMinor - paidAmountMinor;
+    if (remaining < 0) return 0;
+    if (remaining > totalAmountMinor) return totalAmountMinor;
+    return remaining;
+  }
+
+  double get progress =>
+      totalAmountMinor == 0 ? 0 : paidAmountMinor / totalAmountMinor;
+
+  String get progressLabel => '${(progress * 100).toStringAsFixed(0)}%';
+
+  String get paidAmountLabel => Money(paidAmountMinor, currency).format();
+  String get totalAmountLabel => Money(totalAmountMinor, currency).format();
+  String get balanceLabel => Money(balanceMinor, currency).format();
+  String get perInstallmentLabel =>
+      Money(perInstallmentMinor, currency).format();
+
+  String get amountBreakdown => '$paidAmountLabel of $totalAmountLabel';
+
+  String get installmentsLabel =>
+      'Installments paid: $installmentsPaid of $totalInstallments';
+
+  /// Minimal instance for success / receipt flows that only need title +
+  /// category. Everything else is zeroed out — callers should not read
+  /// money fields off this.
+  factory Obligation.forSuccessSummary({
+    required String title,
+    required String category,
+    String currency = 'NGN',
+  }) {
+    final now = DateTime.now();
+    return Obligation(
+      currency: currency,
+      category: category,
+      status: 'Completed',
+      title: title,
+      description: '',
+      paidAmountMinor: 0,
+      totalAmountMinor: 0,
+      perInstallmentMinor: 0,
+      installmentsPaid: 0,
+      totalInstallments: 0,
+      startDate: now,
+      endDate: now,
+      nextDueDate: now,
+      frequency: '',
+      payments: const [],
+    );
+  }
+
+  String get nextDueDateLabel => DateFormat('MMM dd, yyyy').format(nextDueDate);
+  String get startDateLabel => DateFormat('MMM dd, yyyy').format(startDate);
+  String get endDateLabel => DateFormat('MMM dd, yyyy').format(endDate);
+  String get createdAtLabel =>
+      createdAt == null ? 'N/A' : DateFormat('MMM dd, yyyy').format(createdAt!);
+  String get updatedAtLabel =>
+      updatedAt == null ? 'N/A' : DateFormat('MMM dd, yyyy').format(updatedAt!);
+
+  /// Build from the backend `financial_obligations` row plus the matching
+  /// `internal_accounts` row. Money columns on both tables are integer
+  /// minor units (see the `FinancialObligation` and `InternalAccount`
+  /// Eloquent models — `cast: integer` with the comment "Integer minor
+  /// units of `currency`"). We keep them in minor units here so display
+  /// and arithmetic stay on integers, mirroring the dashboard's
+  /// `convertMinorToMajor` boundary.
+  factory Obligation.fromBackend({
+    required Map<String, dynamic> obligation,
+    Map<String, dynamic>? account,
+    String? fallbackCurrency,
+  }) {
+    final amountMinor = _asInt(obligation['amount']);
+    final amountPaidMinor = _asInt(obligation['amount_paid']);
+    final month = _asInt(obligation['month']);
+    final year = _asInt(obligation['year']);
+    final now = DateTime.now();
+    final createdAt = _parseDate(obligation['created_at']);
+    final hasPeriod = month > 0 && year > 0;
+    final dueDate = hasPeriod
+        ? DateTime(year, month, 1)
+        : DateTime(
+            createdAt?.year ?? now.year,
+            createdAt?.month ?? now.month,
+            createdAt?.day ?? 1,
+          );
+    final minPayableMinor = _asInt(account?['min_amount_payable']);
+    final totalShares = _asInt(account?['total_shares']);
+    final costPerShareMinor = _asInt(account?['cost_per_share']);
+    final category = _resolveCategory(account?['account_type']?.toString());
+    final title = account?['account_name']?.toString().trim().isNotEmpty == true
+        ? account!['account_name'].toString()
+        : '$category Obligation';
+    final status = _resolveStatus(
+      paidMinor: amountPaidMinor,
+      totalMinor: amountMinor,
+      dueDate: dueDate,
+    );
+
+    var totalInstallments = 1;
+    if (totalShares > 0) {
+      totalInstallments = totalShares.clamp(1, 9999);
+    } else if (minPayableMinor > 0 && amountMinor > 0) {
+      totalInstallments =
+          (amountMinor / minPayableMinor).ceil().clamp(1, 9999);
+    }
+
+    var perInstallmentMinor = minPayableMinor;
+    if (perInstallmentMinor <= 0 && totalShares > 0 && costPerShareMinor > 0) {
+      perInstallmentMinor = costPerShareMinor;
+    } else if (perInstallmentMinor <= 0 &&
+        totalInstallments > 0 &&
+        amountMinor > 0) {
+      perInstallmentMinor = (amountMinor / totalInstallments).round();
+    } else if (perInstallmentMinor <= 0 && amountMinor > 0) {
+      perInstallmentMinor = amountMinor;
+    }
+
+    var installmentsPaid = 0;
+    if (perInstallmentMinor > 0) {
+      installmentsPaid = (amountPaidMinor / perInstallmentMinor).floor();
+    } else if (amountMinor > 0) {
+      installmentsPaid = (amountPaidMinor / amountMinor).floor();
+    }
+    installmentsPaid = installmentsPaid.clamp(0, totalInstallments);
+
+    final startDate = createdAt != null
+        ? DateTime(createdAt.year, createdAt.month, createdAt.day)
+        : dueDate;
+
+    final currency = (obligation['currency']?.toString().trim().isNotEmpty == true
+            ? obligation['currency'].toString()
+            : (fallbackCurrency ?? 'NGN'))
+        .toUpperCase();
+
+    return Obligation(
+      id: obligation['id']?.toString(),
+      accountCode: obligation['account_code']?.toString() ?? '',
+      cooperativeId: obligation['cooperative_id']?.toString() ?? '',
+      currency: currency,
+      createdAt: createdAt,
+      updatedAt: _parseDate(obligation['updated_at']),
+      category: category,
+      status: status,
+      title: title,
+      description:
+          account?['account_name']?.toString() ?? 'Member financial obligation',
+      paidAmountMinor: amountPaidMinor,
+      totalAmountMinor: amountMinor,
+      perInstallmentMinor: perInstallmentMinor,
+      installmentsPaid: installmentsPaid,
+      totalInstallments: totalInstallments,
+      startDate: startDate,
+      endDate: dueDate,
+      nextDueDate: dueDate,
+      frequency: 'Monthly',
+      payments: const [],
+      fines: const [],
+    );
+  }
+
+  static int _asInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value == null) return 0;
+    return int.tryParse(value.toString()) ??
+        double.tryParse(value.toString())?.toInt() ??
+        0;
+  }
+
+  static String _resolveCategory(String? accountType) {
+    switch ((accountType ?? '').trim()) {
+      case '1523':
+        return 'Equity';
+      case '1524':
+        return 'Patronage';
+      case '1525':
+        return 'Custom';
+      default:
+        return 'Custom';
+    }
+  }
+
+  static String _resolveStatus({
+    required int paidMinor,
+    required int totalMinor,
+    required DateTime dueDate,
+  }) {
+    if (totalMinor > 0 && paidMinor >= totalMinor) return 'Completed';
+    if (dueDate.isBefore(DateTime.now())) return 'Overdue';
+    return 'Active';
+  }
+
+  static DateTime? _parseDate(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is DateTime) return raw;
+    return DateTime.tryParse(raw.toString());
+  }
+}

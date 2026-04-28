@@ -60,7 +60,7 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
           title: Text(
             'Delete your Account',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
@@ -103,7 +103,7 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
                   'Enter your transaction PIN to confirm deleting of your account.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 15.sp,
                     color: Colors.grey.shade600,
                     height: 1.5,
                   ),
@@ -135,7 +135,7 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
                       Text(
                         'Show PIN',
                         style: TextStyle(
-                          fontSize: 14.sp,
+                          fontSize: 15.sp,
                           color: Colors.grey.shade600,
                         ),
                       ),
@@ -163,7 +163,7 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
                             child: Text(
                               '!',
                               style: TextStyle(
-                                fontSize: 14.sp,
+                                fontSize: 15.sp,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white,
                               ),
@@ -175,7 +175,7 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
                           child: Text(
                             'Incorrect PIN entered, please try again',
                             style: TextStyle(
-                              fontSize: 14.sp,
+                              fontSize: 15.sp,
                               color: const Color(0xFFD32F2F),
                             ),
                           ),

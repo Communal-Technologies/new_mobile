@@ -13,7 +13,7 @@ class FreezeConsequencesSection extends StatelessWidget {
         Text(
           'What Happens When You Freeze?',
           style: TextStyle(
-            fontSize: 16.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF0F1D40),
           ),
@@ -90,7 +90,7 @@ class _ConsequenceItem extends StatelessWidget {
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 15.sp,
+                  fontSize: 17.sp,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF0F1D40),
                 ),
@@ -99,7 +99,7 @@ class _ConsequenceItem extends StatelessWidget {
               Text(
                 description,
                 style: TextStyle(
-                  fontSize: 13.sp,
+                  fontSize: 15.sp,
                   color: Colors.grey.shade600,
                   height: 1.4,
                 ),

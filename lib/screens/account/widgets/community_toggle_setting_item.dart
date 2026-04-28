@@ -63,7 +63,7 @@ class CommunityToggleSettingItem extends StatelessWidget {
                 Text(
                   description,
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 15.sp,
                     color: enabled
                         ? Colors.grey.shade600
                         : Colors.grey.shade400,

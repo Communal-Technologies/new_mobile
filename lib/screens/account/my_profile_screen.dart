@@ -33,7 +33,7 @@ class MyProfileScreen extends StatelessWidget {
           title: Text(
             'My Profile',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),

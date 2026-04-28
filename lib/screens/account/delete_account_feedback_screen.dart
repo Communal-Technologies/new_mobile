@@ -56,7 +56,7 @@ class _DeleteAccountFeedbackScreenState
           title: Text(
             'Delete Account',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
@@ -106,7 +106,7 @@ class _DeleteAccountFeedbackScreenState
         Text(
           'We\'d love to know why you\'re leaving.',
           style: TextStyle(
-            fontSize: 14.sp,
+            fontSize: 15.sp,
             color: Colors.grey.shade600,
           ),
         ),
@@ -121,7 +121,7 @@ class _DeleteAccountFeedbackScreenState
         Text(
           'Why are you deleting your account?',
           style: TextStyle(
-            fontSize: 16.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF0F1D40),
           ),
@@ -148,7 +148,7 @@ class _DeleteAccountFeedbackScreenState
         Text(
           'Additional feedback (optional)',
           style: TextStyle(
-            fontSize: 16.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF0F1D40),
           ),
@@ -166,7 +166,7 @@ class _DeleteAccountFeedbackScreenState
             decoration: InputDecoration(
               hintText: 'Tell us more about your experience...',
               hintStyle: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 15.sp,
                 color: Colors.grey.shade500,
               ),
               border: InputBorder.none,
@@ -219,7 +219,7 @@ class _DeleteAccountFeedbackScreenState
         child: Text(
           'Verify and Continue',
           style: TextStyle(
-            fontSize: 16.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w600,
           ),
         ),

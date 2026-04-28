@@ -29,7 +29,7 @@ class AddressInformationCard extends StatelessWidget {
               Text(
                 'Address Information',
                 style: TextStyle(
-                  fontSize: 16.sp,
+                  fontSize: 17.sp,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF0F1D40),
                 ),
@@ -85,7 +85,7 @@ class _AddressRow extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 14.sp,
+            fontSize: 15.sp,
             color: Colors.grey.shade600,
           ),
         ),
@@ -94,7 +94,7 @@ class _AddressRow extends StatelessWidget {
             value,
             textAlign: TextAlign.right,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 15.sp,
               fontWeight: FontWeight.w600,
               color: const Color(0xFF0F1D40),
             ),

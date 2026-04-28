@@ -34,7 +34,7 @@ class WhatHappensNextItem extends StatelessWidget {
           child: Text(
             text,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 15.sp,
               color: Colors.grey.shade600,
               height: 1.5,
             ),

@@ -39,7 +39,7 @@ class BottomActionBar extends StatelessWidget {
                 label: Text(
                   'Report Scam',
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.red,
                   ),
@@ -89,7 +89,7 @@ class BottomActionBar extends StatelessWidget {
                     Text(
                       'Live Chat',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 15.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
@@ -97,7 +97,7 @@ class BottomActionBar extends StatelessWidget {
                     Text(
                       'AVG. Response time: 1 min',
                       style: TextStyle(
-                        fontSize: 11.sp,
+                        fontSize: 13.sp,
                         color: Colors.white.withOpacity(0.9),
                       ),
                     ),

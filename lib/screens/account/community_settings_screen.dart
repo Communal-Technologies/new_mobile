@@ -155,7 +155,7 @@ class _CommunitySettingsScreenState extends State<CommunitySettingsScreen> {
               Text(
                 _error!,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade800),
+                style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade800),
               ),
               vSpace(16),
               FilledButton(
@@ -174,7 +174,7 @@ class _CommunitySettingsScreenState extends State<CommunitySettingsScreen> {
           child: Text(
             'You are not a member of any cooperative yet. Join a cooperative to manage community settings.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade800),
+            style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade800),
           ),
         ),
       );
@@ -185,7 +185,7 @@ class _CommunitySettingsScreenState extends State<CommunitySettingsScreen> {
       return Center(
         child: Text(
           'Select a cooperative',
-          style: TextStyle(fontSize: 16.sp),
+          style: TextStyle(fontSize: 17.sp),
         ),
       );
     }
@@ -206,7 +206,7 @@ class _CommunitySettingsScreenState extends State<CommunitySettingsScreen> {
                   filled: true,
                   fillColor: Colors.white,
                   labelText: 'Cooperative',
-                  labelStyle: TextStyle(fontSize: 15.sp),
+                  labelStyle: TextStyle(fontSize: 17.sp),
                   contentPadding: EdgeInsets.symmetric(
                     horizontal: 12.w,
                     vertical: 4.h,
@@ -220,7 +220,7 @@ class _CommunitySettingsScreenState extends State<CommunitySettingsScreen> {
                     isExpanded: true,
                     value: _selectedCooperativeId,
                     style: TextStyle(
-                      fontSize: 16.sp,
+                      fontSize: 17.sp,
                       color: const Color(0xFF0F1D40),
                     ),
                     items: _memberships
@@ -414,7 +414,7 @@ class _CommunitySettingsScreenState extends State<CommunitySettingsScreen> {
       child: Text(
         title,
         style: TextStyle(
-          fontSize: 18.sp,
+          fontSize: 19.sp,
           fontWeight: FontWeight.w700,
           color: const Color(0xFF0F1D40),
         ),
@@ -428,16 +428,16 @@ class _CommunitySettingsScreenState extends State<CommunitySettingsScreen> {
       builder: (context) => AlertDialog(
         title: Text(
           'Report Community',
-          style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w700),
+          style: TextStyle(fontSize: 19.sp, fontWeight: FontWeight.w700),
         ),
         content: Text(
           'Are you sure you want to report this community?',
-          style: TextStyle(fontSize: 15.sp),
+          style: TextStyle(fontSize: 17.sp),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(fontSize: 15.sp)),
+            child: Text('Cancel', style: TextStyle(fontSize: 17.sp)),
           ),
           TextButton(
             onPressed: () {
@@ -448,7 +448,7 @@ class _CommunitySettingsScreenState extends State<CommunitySettingsScreen> {
             },
             child: Text(
               'Report',
-              style: TextStyle(color: Colors.orange, fontSize: 15.sp),
+              style: TextStyle(color: Colors.orange, fontSize: 17.sp),
             ),
           ),
         ],
@@ -462,16 +462,16 @@ class _CommunitySettingsScreenState extends State<CommunitySettingsScreen> {
       builder: (context) => AlertDialog(
         title: Text(
           'Exit Community',
-          style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w700),
+          style: TextStyle(fontSize: 19.sp, fontWeight: FontWeight.w700),
         ),
         content: Text(
           'Are you sure you want to leave this cooperative? This action cannot be undone.',
-          style: TextStyle(fontSize: 15.sp),
+          style: TextStyle(fontSize: 17.sp),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(fontSize: 15.sp)),
+            child: Text('Cancel', style: TextStyle(fontSize: 17.sp)),
           ),
           TextButton(
             onPressed: () {
@@ -486,7 +486,7 @@ class _CommunitySettingsScreenState extends State<CommunitySettingsScreen> {
             },
             child: Text(
               'Exit',
-              style: TextStyle(color: Colors.red, fontSize: 15.sp),
+              style: TextStyle(color: Colors.red, fontSize: 17.sp),
             ),
           ),
         ],

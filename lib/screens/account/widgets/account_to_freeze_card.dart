@@ -13,7 +13,7 @@ class AccountToFreezeCard extends StatelessWidget {
         Text(
           'Account to be frozen',
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w600,
             color: const Color(0xFF0F1D40),
           ),
@@ -38,7 +38,7 @@ class AccountToFreezeCard extends StatelessWidget {
                   child: Text(
                     'PL',
                     style: TextStyle(
-                      fontSize: 18.sp,
+                      fontSize: 19.sp,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
@@ -53,7 +53,7 @@ class AccountToFreezeCard extends StatelessWidget {
                     Text(
                       'Pado Lebari',
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF0F1D40),
                       ),
@@ -62,7 +62,7 @@ class AccountToFreezeCard extends StatelessWidget {
                     Text(
                       '7037334888',
                       style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: 15.sp,
                         color: Colors.grey.shade600,
                       ),
                     ),

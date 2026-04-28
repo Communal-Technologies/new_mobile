@@ -32,7 +32,7 @@ class DeleteAgreementItem extends StatelessWidget {
             child: Text(
               text,
               style: TextStyle(
-                fontSize: 13.sp,
+                fontSize: 15.sp,
                 color: Colors.grey.shade700,
                 height: 1.5,
               ),

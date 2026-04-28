@@ -67,7 +67,7 @@ class NotificationToggleItem extends StatelessWidget {
                       child: Text(
                         title,
                         style: TextStyle(
-                          fontSize: 15.sp,
+                          fontSize: 17.sp,
                           fontWeight: FontWeight.w600,
                           color: isDisabled
                               ? Colors.grey.shade400
@@ -85,7 +85,7 @@ class NotificationToggleItem extends StatelessWidget {
                 Text(
                   description,
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 15.sp,
                     color: isDisabled
                         ? Colors.grey.shade400
                         : Colors.grey.shade600,

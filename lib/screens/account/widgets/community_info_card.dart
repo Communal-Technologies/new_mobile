@@ -65,7 +65,7 @@ class CommunityInfoCard extends StatelessWidget {
                 Text(
                   communityName,
                   style: TextStyle(
-                    fontSize: 20.sp,
+                    fontSize: 22.sp,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                   ),
@@ -74,7 +74,7 @@ class CommunityInfoCard extends StatelessWidget {
                 Text(
                   '$memberCount members • $role',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: Colors.white.withValues(alpha: 0.9),
                   ),
                 ),

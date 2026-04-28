@@ -28,7 +28,7 @@ class FreezeAccountSuccessScreen extends StatelessWidget {
           title: Text(
             'Freeze Account',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
@@ -80,7 +80,7 @@ class FreezeAccountSuccessScreen extends StatelessWidget {
                   'Your account has been temporarily disabled.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: Colors.grey.shade600,
                     height: 1.5,
                   ),
@@ -90,7 +90,7 @@ class FreezeAccountSuccessScreen extends StatelessWidget {
                   'All transactions are blocked.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: Colors.grey.shade600,
                     height: 1.5,
                   ),
@@ -117,7 +117,7 @@ class FreezeAccountSuccessScreen extends StatelessWidget {
                     child: Text(
                       'Okay, Go back to settings',
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -159,7 +159,7 @@ class FreezeAccountSuccessScreen extends StatelessWidget {
             child: RichText(
               text: TextSpan(
                 style: TextStyle(
-                  fontSize: 14.sp,
+                  fontSize: 15.sp,
                   color: Colors.grey.shade700,
                 ),
                 children: [

@@ -59,7 +59,7 @@ class SecurityBanner extends StatelessWidget {
                 Text(
                   'Security Check is ON',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF0F1D40),
                   ),
@@ -68,7 +68,7 @@ class SecurityBanner extends StatelessWidget {
                 Text(
                   'Do safety check again to ensure your account\'s security.',
                   style: TextStyle(
-                    fontSize: 12.sp,
+                    fontSize: 13.sp,
                     color: Colors.grey.shade700,
                   ),
                 ),
@@ -94,7 +94,7 @@ class SecurityBanner extends StatelessWidget {
             child: Text(
               'Review',
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
               ),
             ),

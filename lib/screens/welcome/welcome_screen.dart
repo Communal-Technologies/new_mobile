@@ -109,7 +109,7 @@ class WelcomeScreen extends StatelessWidget {
           'A network of people building wealth together through cooperative saving, investments, and community support.',
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.95),
-            fontSize: 16.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w400,
             height: 1.6,
             letterSpacing: 0.2,
@@ -147,7 +147,7 @@ class WelcomeScreen extends StatelessWidget {
       text: TextSpan(
         style: TextStyle(
           color: Colors.grey.shade400,
-          fontSize: 12.sp,
+          fontSize: 13.sp,
           height: 1.4,
         ),
         children: [

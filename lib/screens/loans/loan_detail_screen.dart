@@ -141,7 +141,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           title: Text(
             'Loan Details',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
@@ -174,7 +174,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                       Text(
                         _cancelError!,
                         style: TextStyle(
-                          fontSize: 13.sp,
+                          fontSize: 15.sp,
                           color: const Color(0xFFE74C3C),
                         ),
                       ),
@@ -207,7 +207,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                 child: Text(
                   _loan.loanCode.isNotEmpty ? _loan.loanCode : 'Loan',
                   style: TextStyle(
-                    fontSize: 16.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                   ),
@@ -223,7 +223,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                 child: Text(
                   _loan.status.label,
                   style: TextStyle(
-                    fontSize: 11.sp,
+                    fontSize: 13.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),
@@ -235,7 +235,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           Text(
             isApproved ? 'Outstanding Balance' : 'Amount Requested',
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: 15.sp,
               color: Colors.white.withOpacity(0.85),
             ),
           ),
@@ -275,7 +275,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
             Text(
               '${_loan.progressLabel} repaid (${_loan.amountLabel} principal)',
               style: TextStyle(
-                fontSize: 12.sp,
+                fontSize: 13.sp,
                 color: Colors.white.withOpacity(0.85),
               ),
             ),
@@ -299,7 +299,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           Text(
             'Loan Details',
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F1D40),
             ),
@@ -345,7 +345,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
             child: Text(
               label,
               style:
-                  TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
+                  TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
             ),
           ),
           Expanded(
@@ -354,7 +354,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
               value,
               textAlign: TextAlign.right,
               style: TextStyle(
-                fontSize: 13.sp,
+                fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF0F1D40),
               ),
@@ -379,7 +379,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           Text(
             'Guarantors (${_loan.guarantors.length})',
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F1D40),
             ),
@@ -397,7 +397,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                     child: Text(
                       ledger,
                       style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: 15.sp,
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF0F1D40),
                       ),
@@ -426,7 +426,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           Text(
             'Repayment History',
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F1D40),
             ),
@@ -441,7 +441,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
             Text(
               _historyError!,
               style: TextStyle(
-                fontSize: 13.sp,
+                fontSize: 15.sp,
                 color: const Color(0xFFE74C3C),
               ),
             )
@@ -453,7 +453,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                     ? 'No repayments yet. Your cooperative draws repayments from your obligations and wallet.'
                     : 'No payments recorded yet.',
                 style:
-                    TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
+                    TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
               ),
             )
           else
@@ -491,7 +491,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                 Text(
                   'Repayment',
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF0F1D40),
                   ),
@@ -502,7 +502,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                       ? DateFormat('MMM dd, yyyy').format(date)
                       : '${DateFormat('MMM dd, yyyy').format(date)} • $mode',
                   style:
-                      TextStyle(fontSize: 11.sp, color: Colors.grey.shade600),
+                      TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
                 ),
               ],
             ),
@@ -510,7 +510,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           Text(
             Money(amountMinor, _loan.currency).format(),
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: 15.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F1D40),
             ),
@@ -544,7 +544,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
             : Text(
                 'Cancel Application',
                 style: TextStyle(
-                  fontSize: 14.sp,
+                  fontSize: 15.sp,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFFE74C3C),
                 ),

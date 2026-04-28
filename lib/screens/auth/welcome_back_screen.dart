@@ -326,7 +326,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
       debugPrint('🔐 local_auth returned: $authenticated');
 
       if (authenticated && mounted) {
-        // App-lock-only path. Three important details:
+        // App-lock-only path.
         //   1. Capture `wasLocked` BEFORE `unlockApp()` — when the
         //      cubit is already unlocked, `emit` is a no-op so the
         //      SecurityWrapper rebuild that swaps lock screen for
@@ -336,18 +336,25 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
         //   2. Flip `_waitingForBackendValidation` AFTER the OS dialog
         //      has resolved (we're past the `await authenticate()`).
         //      That avoids the prior double-loader bug (overlay under
-        //      the OS prompt) while still painting the full-screen
-        //      loader for the brief window between unlock and nav.
-        //      Cleared by the SecurityCubit listener below when the
-        //      app becomes unlocked.
-        //   3. The fallback `context.go('/home')` post-frame call is
+        //      the OS prompt) while painting the LoaderOverlay during
+        //      the unlock → navigate window.
+        //   3. The biometric flow has no backend round-trip, so the
+        //      SecurityCubit listener that clears
+        //      `_waitingForBackendValidation` on `unlocked` would fire
+        //      on the same frame the loader appeared — the user sees
+        //      no overlay at all. Park here briefly so the
+        //      LoaderOverlay (with the app icon) is actually visible
+        //      before we unlock and the dashboard takes over. Matches
+        //      the visible duration the PIN flow gets naturally from
+        //      backend latency.
+        //   4. The fallback `context.go('/home')` post-frame call is
         //      a defensive nav that runs only when `wasLocked` was
         //      already false.
-        if (mounted) {
-          setState(() {
-            _waitingForBackendValidation = true;
-          });
-        }
+        setState(() {
+          _waitingForBackendValidation = true;
+        });
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (!mounted) return;
         final securityCubit = context.read<SecurityCubit>();
         final wasLocked = securityCubit.state == SecurityState.locked;
         securityCubit.unlockApp();

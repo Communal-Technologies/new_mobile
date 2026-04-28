@@ -143,7 +143,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 child: Text(
                   'Enter your phone number to get started',
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 15.sp,
                     color: Colors.grey.shade600,
                   ),
                 ),
@@ -225,7 +225,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       child: RichText(
                         text: TextSpan(
                           style: TextStyle(
-                            fontSize: 13.sp,
+                            fontSize: 15.sp,
                             color: Colors.black87,
                             height: 1.4,
                           ),
@@ -273,7 +273,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     Text(
                       'Already have a Communal account?',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 15.sp,
                         color: Colors.grey.shade700,
                       ),
                     ),
@@ -304,7 +304,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     Text(
                       'Licensed by CBN',
                       style: TextStyle(
-                        fontSize: 11.sp,
+                        fontSize: 13.sp,
                         color: Colors.grey.shade600,
                       ),
                     ),
@@ -332,7 +332,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     Text(
                       '|',
                       style: TextStyle(
-                        fontSize: 11.sp,
+                        fontSize: 13.sp,
                         color: Colors.grey.shade400,
                       ),
                     ),
@@ -340,7 +340,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     Text(
                       'Deposits insured by',
                       style: TextStyle(
-                        fontSize: 11.sp,
+                        fontSize: 13.sp,
                         color: Colors.grey.shade600,
                       ),
                     ),

@@ -121,7 +121,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                   'Set a password to sign in, for account security.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 15.sp,
                     color: Colors.grey.shade600,
                     height: 1.5,
                   ),
@@ -207,7 +207,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                 child: Text(
                   'Or sign in with',
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 15.sp,
                     color: Colors.grey.shade600,
                   ),
                 ),
@@ -235,7 +235,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                     child: Text(
                       '6-digit PIN (numbers)',
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.black87,
                       ),
@@ -259,7 +259,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                     Text(
                       'Licensed by CBN',
                       style: TextStyle(
-                        fontSize: 11.sp,
+                        fontSize: 13.sp,
                         color: Colors.grey.shade600,
                       ),
                     ),
@@ -286,7 +286,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                     Text(
                       '|',
                       style: TextStyle(
-                        fontSize: 11.sp,
+                        fontSize: 13.sp,
                         color: Colors.grey.shade400,
                       ),
                     ),
@@ -294,7 +294,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                     Text(
                       'Deposits insured by',
                       style: TextStyle(
-                        fontSize: 11.sp,
+                        fontSize: 13.sp,
                         color: Colors.grey.shade600,
                       ),
                     ),

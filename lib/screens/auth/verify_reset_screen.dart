@@ -298,7 +298,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                   textAlign: TextAlign.center,
                   text: TextSpan(
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 15.sp,
                       color: Colors.grey.shade600,
                       height: 1.5,
                     ),
@@ -343,7 +343,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                     ? Text(
                         'Resend code in ${_resendTimer}s',
                         style: TextStyle(
-                          fontSize: 14.sp,
+                          fontSize: 15.sp,
                           color: Colors.grey.shade600,
                         ),
                       )
@@ -363,7 +363,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                               Text(
                                 'Sending code…',
                                 style: TextStyle(
-                                  fontSize: 14.sp,
+                                  fontSize: 15.sp,
                                   color: Colors.grey.shade600,
                                 ),
                               ),
@@ -375,7 +375,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                               Text(
                                 'Didn\'t receive the code?',
                                 style: TextStyle(
-                                  fontSize: 14.sp,
+                                  fontSize: 15.sp,
                                   color: Colors.grey.shade600,
                                 ),
                               ),
@@ -390,7 +390,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                                 child: Text(
                                   'Resend',
                                   style: TextStyle(
-                                    fontSize: 14.sp,
+                                    fontSize: 15.sp,
                                     color: theme.primaryColor,
                                     fontWeight: FontWeight.w600,
                                   ),

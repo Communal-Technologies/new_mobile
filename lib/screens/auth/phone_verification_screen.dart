@@ -233,7 +233,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                   textAlign: TextAlign.center,
                   text: TextSpan(
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 15.sp,
                       color: Colors.grey.shade600,
                       height: 1.5,
                     ),
@@ -271,7 +271,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                     ? Text(
                         'Resend code in ${_resendTimer}s',
                         style: TextStyle(
-                          fontSize: 14.sp,
+                          fontSize: 15.sp,
                           color: Colors.grey.shade600,
                         ),
                       )
@@ -281,7 +281,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                           Text(
                             'Didn\'t receive the code?',
                             style: TextStyle(
-                              fontSize: 14.sp,
+                              fontSize: 15.sp,
                               color: Colors.grey.shade600,
                             ),
                           ),
@@ -296,7 +296,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                             child: Text(
                               'Resend',
                               style: TextStyle(
-                                fontSize: 14.sp,
+                                fontSize: 15.sp,
                                 color: theme.primaryColor,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -339,7 +339,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                             ? 'Check the Code'
                             : 'How to check the Code',
                         style: TextStyle(
-                          fontSize: 15.sp,
+                          fontSize: 17.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.black,
                         ),
@@ -353,7 +353,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                                 Text(
                                   '• ',
                                   style: TextStyle(
-                                    fontSize: 14.sp,
+                                    fontSize: 15.sp,
                                     color: Colors.grey.shade700,
                                   ),
                                 ),
@@ -361,7 +361,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                                   child: Text(
                                     step,
                                     style: TextStyle(
-                                      fontSize: 14.sp,
+                                      fontSize: 15.sp,
                                       color: Colors.grey.shade700,
                                       height: 1.4,
                                     ),
@@ -383,7 +383,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                   child: Text(
                     'Or Send Code via',
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 15.sp,
                       color: Colors.grey.shade600,
                     ),
                   ),
@@ -414,7 +414,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                     Text(
                       'Licensed by CBN',
                       style: TextStyle(
-                        fontSize: 11.sp,
+                        fontSize: 13.sp,
                         color: Colors.grey.shade600,
                       ),
                     ),
@@ -441,7 +441,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                     Text(
                       '|',
                       style: TextStyle(
-                        fontSize: 11.sp,
+                        fontSize: 13.sp,
                         color: Colors.grey.shade400,
                       ),
                     ),
@@ -449,7 +449,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                     Text(
                       'Deposits insured by',
                       style: TextStyle(
-                        fontSize: 11.sp,
+                        fontSize: 13.sp,
                         color: Colors.grey.shade600,
                       ),
                     ),
@@ -523,7 +523,7 @@ class _MethodButton extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w500,
                 color: Colors.black87,
               ),

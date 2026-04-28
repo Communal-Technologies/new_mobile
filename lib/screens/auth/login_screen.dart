@@ -184,7 +184,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ? 'Enter your phone number to get started'
                       : 'Enter your email to get started',
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 15.sp,
                     color: Colors.grey.shade600,
                   ),
                 ),
@@ -255,7 +255,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ? 'Use email instead'
                         : 'Use phone number instead',
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 15.sp,
                       color: Theme.of(context).primaryColor,
                       fontWeight: FontWeight.w600,
                     ),
@@ -346,7 +346,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text(
                       'Don\'t have a Communal account?',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 15.sp,
                         color: Colors.grey.shade700,
                       ),
                     ),
@@ -377,7 +377,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text(
                       'Licensed by CBN',
                       style: TextStyle(
-                        fontSize: 11.sp,
+                        fontSize: 13.sp,
                         color: Colors.grey.shade600,
                       ),
                     ),
@@ -404,7 +404,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text(
                       '|',
                       style: TextStyle(
-                        fontSize: 11.sp,
+                        fontSize: 13.sp,
                         color: Colors.grey.shade400,
                       ),
                     ),
@@ -412,7 +412,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text(
                       'Deposits insured by',
                       style: TextStyle(
-                        fontSize: 11.sp,
+                        fontSize: 13.sp,
                         color: Colors.grey.shade600,
                       ),
                     ),

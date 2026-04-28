@@ -11,14 +11,13 @@ import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/idempotency.dart';
 import 'package:communal_mobile/core/utils/tap_debouncer.dart';
 import 'package:communal_mobile/core/utils/money.dart';
-import 'package:communal_mobile/core/utils/money_formatter.dart';
 import 'package:communal_mobile/data/local/biometric_prefs.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
+import 'package:communal_mobile/data/models/obligation.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/obligations/data/obligation_nip_settlement.dart';
-import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 
@@ -32,7 +31,7 @@ class ObligationConfirmPaymentScreen extends StatefulWidget {
   const ObligationConfirmPaymentScreen({
     super.key,
     required this.obligation,
-    required this.amount,
+    required this.amountMinor,
     required this.method,
     this.cashAccount,
     this.cashRepositoryId,
@@ -41,7 +40,9 @@ class ObligationConfirmPaymentScreen extends StatefulWidget {
   });
 
   final Obligation obligation;
-  final double amount;
+
+  /// Integer minor units of [obligation.currency] (e.g. kobo for NGN).
+  final int amountMinor;
 
   /// `'NIP transfer'` triggers the wallet → cooperative-bank flow.
   /// `'Obligation'` triggers the obligation → obligation flow (no NIP
@@ -281,7 +282,7 @@ class _ObligationConfirmPaymentScreenState
           ),
           vSpace(4),
           Text(
-            '₦${formatMoney(widget.amount)}',
+            Money(widget.amountMinor, widget.obligation.currency).format(),
             style: TextStyle(
               fontSize: 30.sp,
               fontWeight: FontWeight.w800,
@@ -362,9 +363,10 @@ class _ObligationConfirmPaymentScreenState
       // backend rejects over-cap payments either way; this gives a
       // friendlier message before we round-trip.
       if (widget.obligation.category == 'Equity' &&
-          widget.amount > widget.obligation.balance + 0.009) {
+          widget.amountMinor > widget.obligation.balanceMinor) {
         throw Exception(
-          'Equity payments cannot exceed your remaining cap (₦${formatMoney(widget.obligation.balance)}).',
+          'Equity payments cannot exceed your remaining cap '
+          '(${widget.obligation.balanceLabel}).',
         );
       }
 
@@ -431,15 +433,13 @@ class _ObligationConfirmPaymentScreenState
       obligationAccountCode: widget.obligation.accountCode,
       obligationTitle: widget.obligation.title,
       obligationCategory: widget.obligation.category,
-      amountNaira: widget.amount,
+      amountMinor: widget.amountMinor,
+      currency: widget.obligation.currency,
     );
 
     final currencySymbol = currencySymbolForUser(authState.user);
     final currencyCode = resolveCurrencyCode(authState.user);
     final narration = 'Obligation: ${widget.obligation.title}';
-    // Audit M20: integer minor units derived currency-agnostically rather
-    // than the legacy `(amount * 100).round()` (which was kobo-locked).
-    final amountMinor = Money.fromMajor(widget.amount, currencyCode).amountMinor;
 
     // Audit M38: biometric proof for the transfer that backs this
     // obligation payment. Same shape as the user-driven transfer flow.
@@ -450,7 +450,7 @@ class _ObligationConfirmPaymentScreenState
 
     final result = await _transferRepo.initiateTransfer(
       type: 'NIPTransfer',
-      amountMinor: amountMinor,
+      amountMinor: widget.amountMinor,
       narration: narration.trim().isEmpty ? 'Transfer' : narration,
       counterPartyId: fav.accountId,
       currencyCode: currencyCode,
@@ -460,6 +460,7 @@ class _ObligationConfirmPaymentScreenState
 
     if (!mounted) return;
     final mapped = transactionStatusFromApi(result.status);
+    final amountMajor = widget.amountMinor / factorFor(widget.obligation.currency);
     // ignore: unawaited_futures
     context.pushNamed(
       'transaction-receipt',
@@ -469,7 +470,7 @@ class _ObligationConfirmPaymentScreenState
           counterpartyName: fav.accountName,
           counterpartyBank: fav.bank,
           counterpartyAccount: fav.accountNumber,
-          amount: widget.amount,
+          amount: amountMajor,
           currencySymbol: currencySymbol,
           transactionType: 'NIP Transfer',
           dateTime: DateTime.now(),
@@ -513,7 +514,7 @@ class _ObligationConfirmPaymentScreenState
       user: authState.user,
       targetObligationAccountCode: widget.obligation.accountCode,
       sourceObligationAccountCode: sourceCode,
-      amountNaira: widget.amount,
+      amountMinor: widget.amountMinor,
       idempotencyKey: _idempotencyKey,
       biometricHeaders: biometricHeaders,
     );
@@ -528,6 +529,7 @@ class _ObligationConfirmPaymentScreenState
             ? widget.sourceObligationTitle!.trim()
             : 'Obligation';
     final narration = 'Obligation: ${widget.obligation.title}';
+    final amountMajor = widget.amountMinor / factorFor(widget.obligation.currency);
     // ignore: unawaited_futures
     context.pushNamed(
       'transaction-receipt',
@@ -537,7 +539,7 @@ class _ObligationConfirmPaymentScreenState
           counterpartyName: widget.obligation.title,
           counterpartyBank: '—',
           counterpartyAccount: widget.obligation.accountCode,
-          amount: widget.amount,
+          amount: amountMajor,
           currencySymbol: currencySymbol,
           transactionType: 'Obligation transfer',
           dateTime: DateTime.now(),

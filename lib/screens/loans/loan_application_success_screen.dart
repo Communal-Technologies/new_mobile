@@ -2,35 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
+import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 
 class LoanApplicationSuccessScreen extends StatelessWidget {
   const LoanApplicationSuccessScreen({
     super.key,
-    required this.loanAmount,
-    this.applicationId,
+    required this.amountMinor,
+    required this.currency,
+    this.referenceId,
+    this.message,
   });
 
-  final double loanAmount;
-  final String? applicationId;
+  /// Loan principal in integer minor units of [currency] (kobo for NGN).
+  final int amountMinor;
+  final String currency;
 
-  String get _applicationId => applicationId ?? _generateApplicationId();
-  String get _formattedAmount {
-    final formatter = NumberFormat('#,##0', 'en_NG');
-    return '₦${formatter.format(loanAmount.round())}';
-  }
+  /// Backend `reference_id` for the new application. Null when the
+  /// store endpoint didn't include it in the response — in that case
+  /// the screen surfaces "pending review" without an id.
+  final String? referenceId;
 
-  String _generateApplicationId() {
-    final now = DateTime.now();
-    final year = now.year;
-    final random = (now.millisecondsSinceEpoch % 10000).toString().padLeft(4, '0');
-    return 'LNA-$year-$random';
-  }
+  /// Optional success message from the server (e.g. "your guarantors
+  /// have been notified for approval").
+  final String? message;
 
   @override
   Widget build(BuildContext context) {
+    final formattedAmount = Money(amountMinor, currency).format();
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(
         statusBarColor: Colors.transparent,
@@ -42,10 +42,7 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
         appBar: AppBar(
           backgroundColor: Colors.grey.shade50,
           elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
-            onPressed: () => context.pop(),
-          ),
+          automaticallyImplyLeading: false,
           title: Text(
             'Loan Application',
             style: TextStyle(
@@ -66,13 +63,30 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
                 children: [
                   _buildSuccessIndicator(),
                   vSpace(24),
-                  _buildHeading(),
+                  Text(
+                    'Application Submitted!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 22.sp,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87,
+                    ),
+                  ),
                   vSpace(16),
-                  _buildDescription(),
+                  Text(
+                    message ??
+                        'Your loan application for $formattedAmount has been submitted. Your guarantors will review it and your cooperative will reach out with a decision.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      color: Colors.grey.shade800,
+                      height: 1.4,
+                    ),
+                  ),
                   vSpace(24),
-                  _buildApplicationDetails(),
+                  _buildDetails(formattedAmount),
                   vSpace(24),
-                  _buildActionButtons(context),
+                  _buildActions(context),
                 ],
               ),
             ),
@@ -90,39 +104,11 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
         color: Color(0xFF4CAF50),
         shape: BoxShape.circle,
       ),
-      child: const Icon(
-        Icons.check,
-        color: Colors.white,
-        size: 60,
-      ),
+      child: const Icon(Icons.check, color: Colors.white, size: 60),
     );
   }
 
-  Widget _buildHeading() {
-    return Text(
-      'Application Submitted!',
-      textAlign: TextAlign.center,
-      style: TextStyle(
-        fontSize: 22.sp,
-        fontWeight: FontWeight.w700,
-        color: Colors.black87,
-      ),
-    );
-  }
-
-  Widget _buildDescription() {
-    return Text(
-      'Your loan application for $_formattedAmount has been submitted successfully. You\'ll receive a response within 24-48 hours.',
-      textAlign: TextAlign.center,
-      style: TextStyle(
-        fontSize: 13.sp,
-        color: Colors.grey.shade800,
-        height: 1.4,
-      ),
-    );
-  }
-
-  Widget _buildApplicationDetails() {
+  Widget _buildDetails(String formattedAmount) {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
@@ -133,21 +119,23 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildDetailRow('Application ID', _applicationId),
+          if (referenceId != null && referenceId!.isNotEmpty) ...[
+            _detailRow('Reference', referenceId!),
+            vSpace(20),
+            Divider(height: 1, color: Colors.grey.shade300),
+            vSpace(20),
+          ],
+          _detailRow('Amount Requested', formattedAmount),
           vSpace(20),
           Divider(height: 1, color: Colors.grey.shade300),
           vSpace(20),
-          _buildDetailRow('Amount Requested', _formattedAmount),
-          vSpace(20),
-          Divider(height: 1, color: Colors.grey.shade300),
-          vSpace(20),
-          _buildDetailRow('Status', 'Under Review', isStatus: true),
+          _detailRow('Status', 'Under Review', isStatus: true),
         ],
       ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value, {bool isStatus = false}) {
+  Widget _detailRow(String label, String value, {bool isStatus = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,16 +163,14 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildActions(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: () {
-              context.goNamed('loans');
-            },
+            onPressed: () => context.goNamed('loans'),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF7434FF),
               foregroundColor: Colors.white,
@@ -196,10 +182,7 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
             ),
             child: Text(
               'Go to Loans',
-              style: TextStyle(
-                fontSize: 15.sp,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w700),
             ),
           ),
         ),
@@ -207,9 +190,7 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: () {
-              context.goNamed('home');
-            },
+            onPressed: () => context.goNamed('home'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.grey.shade300,
               foregroundColor: Colors.black87,
@@ -221,10 +202,7 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
             ),
             child: Text(
               'Back to Home',
-              style: TextStyle(
-                fontSize: 15.sp,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w600),
             ),
           ),
         ),
@@ -232,4 +210,3 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
     );
   }
 }
-

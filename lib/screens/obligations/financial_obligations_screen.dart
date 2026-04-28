@@ -168,7 +168,7 @@ class _FinancialObligationsScreenState
                 'Financial Obligations',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 20.sp,
+                  fontSize: 22.sp,
                   fontWeight: FontWeight.w700,
                   color: Colors.black,
                 ),
@@ -176,7 +176,7 @@ class _FinancialObligationsScreenState
               vSpace(4),
               Text(
                 coopLine,
-                style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
+                style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
               ),
             ],
           ),
@@ -361,7 +361,7 @@ class _FinancialObligationsScreenState
               Text(
                 _error!,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13.sp, color: Colors.red.shade400),
+                style: TextStyle(fontSize: 15.sp, color: Colors.red.shade400),
               ),
               vSpace(8),
               TextButton(onPressed: _loadObligations, child: const Text('Retry')),
@@ -387,7 +387,7 @@ class _FinancialObligationsScreenState
         Center(
           child: Text(
             'No obligations found for $_selectedCategory.',
-            style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
           ),
         ),
       ];
@@ -460,13 +460,13 @@ class _SummaryCard extends StatelessWidget {
           vSpace(12),
           Text(
             card.label,
-            style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade700),
           ),
           vSpace(4),
           Text(
             card.value,
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w700,
               color: card.valueColor,
             ),

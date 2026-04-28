@@ -151,7 +151,7 @@ class _DetailAppBar extends StatelessWidget implements PreferredSizeWidget {
           vSpace(4),
           Text(
             subtitle,
-            style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
           ),
         ],
       ),
@@ -213,7 +213,7 @@ class _SummaryCard extends StatelessWidget {
                   children: [
                     Text(
                       'Total Amount',
-                      style: TextStyle(color: Colors.white70, fontSize: 13.sp),
+                      style: TextStyle(color: Colors.white70, fontSize: 15.sp),
                     ),
                     vSpace(4),
                     Text(
@@ -254,7 +254,7 @@ class _SummaryCard extends StatelessWidget {
               const Spacer(),
               Text(
                 'Next: ${obligation.nextDueDateLabel}',
-                style: TextStyle(color: Colors.white, fontSize: 13.sp),
+                style: TextStyle(color: Colors.white, fontSize: 15.sp),
               ),
             ],
           ),
@@ -277,7 +277,7 @@ class _AmountColumn extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(color: Colors.white70, fontSize: 13.sp),
+          style: TextStyle(color: Colors.white70, fontSize: 15.sp),
         ),
         vSpace(4),
         Text(
@@ -308,7 +308,7 @@ class _Badge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(color: Colors.white, fontSize: 12.sp),
+        style: TextStyle(color: Colors.white, fontSize: 13.sp),
       ),
     );
   }
@@ -355,7 +355,7 @@ class _AboutSection extends StatelessWidget {
           Text(
             obligation.description,
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               color: Colors.grey.shade700,
               height: 1.4,
             ),
@@ -436,7 +436,7 @@ class _InfoCard extends StatelessWidget {
           Text(
             title,
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
@@ -462,13 +462,13 @@ class _InfoTile extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
         ),
         vSpace(4),
         Text(
           value,
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w600,
             color: Colors.black,
           ),
@@ -507,7 +507,7 @@ class _FinesSection extends StatelessWidget {
                 Text(
                   fine.amountLabel,
                   style: TextStyle(
-                    fontSize: 16.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFFD7263D),
                   ),
@@ -519,12 +519,12 @@ class _FinesSection extends StatelessWidget {
             vSpace(8),
             Text(
               fine.description,
-              style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade700),
+              style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade700),
             ),
             vSpace(8),
             Text(
               'Type: ${fine.type}   ${fine.dateLabel}',
-              style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
             ),
           ],
         ),
@@ -553,7 +553,7 @@ class _PaymentHistorySection extends StatelessWidget {
           else if (payments.isEmpty)
             Text(
               'No payment history yet.',
-              style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
             )
           else
             for (int i = 0; i < payments.length; i++) ...[
@@ -566,7 +566,7 @@ class _PaymentHistorySection extends StatelessWidget {
             child: Text(
               'Total records (${payments.length})',
               style: TextStyle(
-                fontSize: 13.sp,
+                fontSize: 15.sp,
                 color: const Color(0xFF5B5CE2),
                 fontWeight: FontWeight.w600,
               ),
@@ -606,7 +606,7 @@ class _PaymentTile extends StatelessWidget {
                 Text(
                   record.title,
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.black,
                   ),
@@ -615,14 +615,14 @@ class _PaymentTile extends StatelessWidget {
                 Text(
                   '${record.dateLabel}  •  ${record.method}',
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 15.sp,
                     color: Colors.grey.shade600,
                   ),
                 ),
                 Text(
                   record.reference,
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 15.sp,
                     color: Colors.grey.shade500,
                   ),
                 ),
@@ -632,7 +632,7 @@ class _PaymentTile extends StatelessWidget {
           Text(
             record.amountLabel,
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w700,
               color: amountColor,
             ),
@@ -674,7 +674,7 @@ class _LoanPromoCard extends StatelessWidget {
               Text(
                 'Need a Loan?',
                 style: TextStyle(
-                  fontSize: 16.sp,
+                  fontSize: 17.sp,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF0F1D40),
                 ),
@@ -685,7 +685,7 @@ class _LoanPromoCard extends StatelessWidget {
           Text(
             note ??
                 'Your consistent payments qualify you for cooperative loans at competitive rates.',
-            style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade700),
           ),
           vSpace(12),
           ElevatedButton(
@@ -738,7 +738,7 @@ class _BottomActions extends StatelessWidget {
                 label: Text(
                   'Contact Admin',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.black87,
                   ),
@@ -768,7 +768,7 @@ class _BottomActions extends StatelessWidget {
                 child: Text(
                   'Pay Now',
                   style: TextStyle(
-                    fontSize: 16.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),

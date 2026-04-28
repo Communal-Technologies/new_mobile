@@ -249,7 +249,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                 child: Text(
                   'Select ID type',
                   style: TextStyle(
-                    fontSize: 18.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -317,7 +317,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                     child: Text(
                       display,
                       style: TextStyle(
-                        fontSize: 18.sp,
+                        fontSize: 19.sp,
                         color: _selectedIdType == null
                             ? Colors.grey.shade400
                             : Colors.black87,
@@ -338,7 +338,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
           SizedBox(height: 4.h),
           Text(
             _idTypeError!,
-            style: TextStyle(color: Colors.red, fontSize: 15.sp),
+            style: TextStyle(color: Colors.red, fontSize: 17.sp),
           ),
         ],
       ],
@@ -592,7 +592,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                   file?.name ?? title,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 20.sp,
+                    fontSize: 22.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.black87,
                   ),
@@ -724,7 +724,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                       Text(
                         'Identity Document',
                         style: TextStyle(
-                          fontSize: 20.sp,
+                          fontSize: 22.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.black,
                         ),
@@ -751,7 +751,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                         Text(
                           'Document Expiry Date',
                           style: TextStyle(
-                            fontSize: 20.sp,
+                            fontSize: 22.sp,
                             fontWeight: FontWeight.w600,
                             color: Colors.black,
                           ),
@@ -836,7 +836,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                         SizedBox(height: 4.h),
                         Text(
                           _documentError!,
-                          style: TextStyle(color: Colors.red, fontSize: 15.sp),
+                          style: TextStyle(color: Colors.red, fontSize: 17.sp),
                         ),
                       ],
 
@@ -989,10 +989,10 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
               isExpanded: true,
               menuMaxHeight: 280.h,
               dropdownColor: Colors.white,
-              style: TextStyle(fontSize: 18.sp, color: Colors.black87),
+              style: TextStyle(fontSize: 19.sp, color: Colors.black87),
               hint: Text(
                 label,
-                style: TextStyle(color: Colors.grey.shade400, fontSize: 18.sp),
+                style: TextStyle(color: Colors.grey.shade400, fontSize: 19.sp),
               ),
               icon: Icon(
                 Icons.keyboard_arrow_down,
@@ -1006,7 +1006,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                   value: item,
                   child: Text(
                     item,
-                    style: TextStyle(fontSize: 18.sp, color: Colors.black87),
+                    style: TextStyle(fontSize: 19.sp, color: Colors.black87),
                   ),
                 );
               }).toList(),
@@ -1018,7 +1018,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
           SizedBox(height: 4.h),
           Text(
             errorText,
-            style: TextStyle(color: Colors.red, fontSize: 15.sp),
+            style: TextStyle(color: Colors.red, fontSize: 17.sp),
           ),
         ],
       ],

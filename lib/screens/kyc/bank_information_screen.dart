@@ -397,7 +397,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                       Text(
                         'Connect your BVN',
                         style: TextStyle(
-                          fontSize: 20.sp,
+                          fontSize: 22.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.black,
                         ),
@@ -426,7 +426,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                       Text(
                         'Date of Birth',
                         style: TextStyle(
-                          fontSize: 20.sp,
+                          fontSize: 22.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.black,
                         ),
@@ -503,7 +503,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                       Text(
                         'Gender',
                         style: TextStyle(
-                          fontSize: 20.sp,
+                          fontSize: 22.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.black,
                         ),
@@ -602,7 +602,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                       child: Text(
                         label,
                         style: TextStyle(
-                          fontSize: 18.sp,
+                          fontSize: 19.sp,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -663,7 +663,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                           color: (value != null && value.isNotEmpty)
                               ? Colors.black87
                               : Colors.grey.shade400,
-                          fontSize: 18.sp,
+                          fontSize: 19.sp,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -684,7 +684,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
           SizedBox(height: 4.h),
           Text(
             errorText,
-            style: TextStyle(color: Colors.red, fontSize: 15.sp),
+            style: TextStyle(color: Colors.red, fontSize: 17.sp),
           ),
         ],
       ],

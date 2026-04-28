@@ -638,7 +638,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                       Text(
                         'Personal Information',
                         style: TextStyle(
-                          fontSize: 20.sp,
+                          fontSize: 22.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.black,
                         ),
@@ -737,7 +737,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                       Text(
                         'Address Information',
                         style: TextStyle(
-                          fontSize: 20.sp,
+                          fontSize: 22.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.black,
                         ),
@@ -918,7 +918,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                       child: Text(
                         label,
                         style: TextStyle(
-                          fontSize: 18.sp,
+                          fontSize: 19.sp,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -974,7 +974,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                           loadingHint,
                           style: TextStyle(
                             color: Colors.grey.shade600,
-                            fontSize: 18.sp,
+                            fontSize: 19.sp,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -1009,7 +1009,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                                 color: (value != null && value.isNotEmpty)
                                     ? Colors.black87
                                     : Colors.grey.shade400,
-                                fontSize: 18.sp,
+                                fontSize: 19.sp,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -1030,7 +1030,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
           SizedBox(height: 4.h),
           Text(
             errorText,
-            style: TextStyle(color: Colors.red, fontSize: 15.sp),
+            style: TextStyle(color: Colors.red, fontSize: 17.sp),
           ),
         ],
       ],

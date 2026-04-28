@@ -56,7 +56,7 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                       child: Text(
                         'Join Cooperative',
                         style: TextStyle(
-                          fontSize: 20.sp,
+                          fontSize: 22.sp,
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFF0F1D40),
                         ),
@@ -68,7 +68,7 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                       child: Text(
                         'Enter the invite code provided by your community administrator to join their cooperative.',
                         style: TextStyle(
-                          fontSize: 13.sp,
+                          fontSize: 15.sp,
                           color: Colors.grey.shade600,
                         ),
                       ),
@@ -79,7 +79,7 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                       child: Text(
                         'Enter Invite Code',
                         style: TextStyle(
-                          fontSize: 13.sp,
+                          fontSize: 15.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF0F1D40),
                         ),
@@ -143,7 +143,7 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                                 Text(
                                   'How to get an invite code?',
                                   style: TextStyle(
-                                    fontSize: 13.sp,
+                                    fontSize: 15.sp,
                                     fontWeight: FontWeight.w600,
                                     color: const Color(0xFF3F2B8F),
                                   ),
@@ -152,7 +152,7 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                                 Text(
                                   'Contact your cooperative admin to get an invite code. Each code is unique and can only be used once.',
                                   style: TextStyle(
-                                    fontSize: 12.sp,
+                                    fontSize: 13.sp,
                                     color: const Color(0xFF4D3C8A),
                                   ),
                                 ),
@@ -178,7 +178,7 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                             child: Text(
                               'Cancel',
                               style: TextStyle(
-                                fontSize: 15.sp,
+                                fontSize: 17.sp,
                                 fontWeight: FontWeight.w600,
                                 color: const Color(0xFF0F1D40),
                               ),
@@ -212,7 +212,7 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                                 : Text(
                                     'Join Community',
                                     style: TextStyle(
-                                      fontSize: 15.sp,
+                                      fontSize: 17.sp,
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),

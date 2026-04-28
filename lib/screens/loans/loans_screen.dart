@@ -151,7 +151,7 @@ class _LoansScreenState extends State<LoansScreen> {
             'Loans',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 20.sp,
+              fontSize: 22.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
@@ -187,7 +187,7 @@ class _LoansScreenState extends State<LoansScreen> {
           Text(
             'Outstanding Loan Balance',
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 15.sp,
               fontWeight: FontWeight.w600,
               color: Colors.white.withOpacity(0.9),
             ),
@@ -222,7 +222,7 @@ class _LoansScreenState extends State<LoansScreen> {
                     user.cooperativeDisplayName,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 13.sp,
+                      fontSize: 15.sp,
                       color: Colors.white.withOpacity(0.9),
                     ),
                   ),
@@ -245,7 +245,7 @@ class _LoansScreenState extends State<LoansScreen> {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 12.sp,
+          fontSize: 13.sp,
           fontWeight: FontWeight.w600,
           color: Colors.white,
         ),
@@ -260,7 +260,7 @@ class _LoansScreenState extends State<LoansScreen> {
         Text(
           'Quick Actions',
           style: TextStyle(
-            fontSize: 18.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF0F1D40),
           ),
@@ -327,7 +327,7 @@ class _LoansScreenState extends State<LoansScreen> {
               label,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 12.sp,
+                fontSize: 13.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF0F1D40),
               ),
@@ -368,7 +368,7 @@ class _LoansScreenState extends State<LoansScreen> {
         Text(
           'My Loans',
           style: TextStyle(
-            fontSize: 18.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF0F1D40),
           ),
@@ -413,7 +413,7 @@ class _LoansScreenState extends State<LoansScreen> {
         Text(
           'Available for You',
           style: TextStyle(
-            fontSize: 18.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF0F1D40),
           ),
@@ -452,7 +452,7 @@ class _LoansScreenState extends State<LoansScreen> {
             child: Text(
               message,
               style: TextStyle(
-                fontSize: 13.sp,
+                fontSize: 15.sp,
                 color: const Color(0xFFE74C3C),
               ),
             ),
@@ -486,7 +486,7 @@ class _LoansScreenState extends State<LoansScreen> {
           Text(
             title,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 15.sp,
               fontWeight: FontWeight.w600,
               color: const Color(0xFF0F1D40),
             ),
@@ -496,7 +496,7 @@ class _LoansScreenState extends State<LoansScreen> {
             subtitle,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 12.sp,
+              fontSize: 13.sp,
               color: Colors.grey.shade600,
             ),
           ),

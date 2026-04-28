@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:communal_mobile/core/widgets/space.dart';
-import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
+import 'package:communal_mobile/data/models/obligation.dart';
 
 class ObligationCard extends StatelessWidget {
   const ObligationCard({super.key, required this.obligation, this.onTap});

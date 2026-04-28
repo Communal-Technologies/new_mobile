@@ -68,6 +68,24 @@ class ApiEndpoints {
       '/members/fetch-transactions/$userId';
   static const String membersPayObligation = '/members/pay-obligation';
 
+  // --- Loans --------------------------------------------------------------
+  static String membersFetchLoanSchemes(String cooperativeId) =>
+      '/members/fetch-loan-schemes/$cooperativeId';
+  static String membersFetchUserLoans(String ledgerNumber, [String? status]) =>
+      status == null || status.trim().isEmpty
+          ? '/members/loan/fetch-requested/$ledgerNumber'
+          : '/members/loan/fetch-requested/$ledgerNumber/${status.trim()}';
+  static String membersFetchLoanBalance(String ledgerNumber) =>
+      '/members/loan/fetch-balances/$ledgerNumber';
+  static String membersFetchGuarantorRequests(String ledgerNumber) =>
+      '/members/loan/fetch-approval-requests/$ledgerNumber';
+  static const String membersLoanApplication = '/members/loan/application';
+  static const String membersLoanCancelRequest = '/members/loan/cancel-request';
+  static const String membersUpdateGuarantorApproval =
+      '/members/loan/update-guarantor-approval';
+  static const String membersLoanSearchGuarantors =
+      '/members/loan/search-guarantors';
+
   // --- KYC / compliance ---------------------------------------------------
   static String complianceRegister(String userId) =>
       '/compliance/register/$userId';

@@ -308,15 +308,28 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
       debugPrint('🔐 local_auth returned: $authenticated');
 
       if (authenticated && mounted) {
-        // App-lock-only path. Two important details:
+        // App-lock-only path. Three important details:
         //   1. Capture `wasLocked` BEFORE `unlockApp()` — when the
         //      cubit is already unlocked, `emit` is a no-op so the
         //      SecurityWrapper rebuild that swaps lock screen for
         //      dashboard never fires. The fallback `context.go('/home')`
         //      covers that case (the user-reported "still on welcome
         //      screen" symptom).
-        //   2. No setState calls — `_isAuthenticating` was never set,
-        //      so there's nothing to clear.
+        //   2. Flip `_waitingForBackendValidation` AFTER the OS dialog
+        //      has resolved (we're past the `await authenticate()`).
+        //      That avoids the prior double-loader bug (overlay under
+        //      the OS prompt) while still painting the full-screen
+        //      loader for the brief window between unlock and nav.
+        //      Cleared by the SecurityCubit listener below when the
+        //      app becomes unlocked.
+        //   3. The fallback `context.go('/home')` post-frame call is
+        //      a defensive nav that runs only when `wasLocked` was
+        //      already false.
+        if (mounted) {
+          setState(() {
+            _waitingForBackendValidation = true;
+          });
+        }
         final securityCubit = context.read<SecurityCubit>();
         final wasLocked = securityCubit.state == SecurityState.locked;
         securityCubit.unlockApp();
@@ -931,11 +944,16 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
           return previous == SecurityState.locked && current == SecurityState.unlocked;
         },
         listener: (context, securityState) {
-          // CRITICAL: When app becomes unlocked, force clear loader immediately
-          if (securityState == SecurityState.unlocked && _isAuthenticating) {
+          // CRITICAL: When app becomes unlocked, force clear both auth
+          // flags so any in-flight loader (PIN spinner OR the post-
+          // biometric overlay we now flip on) drops on the same frame
+          // SecurityWrapper rebuilds the dashboard.
+          if (securityState == SecurityState.unlocked &&
+              (_isAuthenticating || _waitingForBackendValidation)) {
             if (mounted) {
               setState(() {
-                _isAuthenticating = false; // Force clear loader
+                _isAuthenticating = false;
+                _waitingForBackendValidation = false;
               });
             }
           }
@@ -950,12 +968,14 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
             // could miss the first frame between `setState` and the
             // bloc emitting `AuthVerifyingCredentials`.
             context.watch<AuthBloc>().state;
-            // Single source of truth: only show the full-screen loader
-            // while the Laravel backend round-trip is in flight. PIN
-            // entry sets this to true right before dispatching
-            // `LoginRequested`, and the AuthBloc listeners below clear
-            // it on success / failure / takeover. Biometric path never
-            // sets it (the OS dialog is the indicator there).
+            // Single source of truth for the full-screen loader.
+            // - PIN flow: set to true right before dispatching
+            //   `LoginRequested`; the AuthBloc listeners below clear
+            //   it on success / failure / takeover.
+            // - Biometric flow: set to true *after* `authenticate()`
+            //   resolves (so it doesn't paint under the OS dialog),
+            //   bridging the unlock → navigate window. The
+            //   SecurityCubit listener above clears it on unlock.
             final shouldShowLoader = _waitingForBackendValidation;
             
             return Stack(

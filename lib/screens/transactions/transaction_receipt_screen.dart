@@ -16,7 +16,7 @@ import 'package:communal_mobile/data/repositories/member_obligations_repository.
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/obligations/data/obligation_nip_settlement.dart';
-import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
+import 'package:communal_mobile/data/models/obligation.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 import 'package:communal_mobile/screens/transactions/receipt/receipt_export_helper.dart';
 import 'package:communal_mobile/screens/transactions/receipt/widgets/receipt_action_button.dart';
@@ -195,7 +195,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
         obligationAccountCode: settlement.obligationAccountCode,
         transferId: _details.id.trim(),
         cashRepositoryId: settlement.cashRepositoryId,
-        amountNaira: settlement.amountNaira,
+        amountMinor: settlement.amountMinor,
         biometricHeaders: biometricHeaders,
       );
       if (!mounted) return;
@@ -208,8 +208,9 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
           'obligation': Obligation.forSuccessSummary(
             title: settlement.obligationTitle,
             category: settlement.obligationCategory,
+            currency: settlement.currency,
           ),
-          'amount': settlement.amountNaira,
+          'amountMinor': settlement.amountMinor,
           'method': 'Bank transfer',
           'reference': ref,
           'date': DateTime.now(),

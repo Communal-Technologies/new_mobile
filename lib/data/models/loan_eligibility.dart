@@ -95,6 +95,20 @@ class LoanEligibility {
 
   String get minLabel => Money(minAmountMinor, currency).format();
   String get maxLabel => Money(maxAmountMinor, currency).format();
+  String get holdingsLabel => Money(holdingsMinor, currency).format();
+
+  /// One-line explanation for the sub-text under the slider. Mentions
+  /// the multiplier only when it actually changes the math, otherwise
+  /// stays terse.
+  String get maxExplanation {
+    if (accessMultiplier == 1) {
+      return 'Your maximum is the sum of your EPC holdings with this cooperative.';
+    }
+    final mult = accessMultiplier == accessMultiplier.truncateToDouble()
+        ? accessMultiplier.toStringAsFixed(0)
+        : accessMultiplier.toStringAsFixed(2);
+    return 'Your maximum = $holdingsLabel (your EPC holdings) × $mult (your cooperative\'s loan access multiplier).';
+  }
 
   factory LoanEligibility.fromJson(Map<String, dynamic> m) {
     final raw = m['interest_types'];
@@ -115,6 +129,8 @@ class LoanEligibility {
           .toUpperCase(),
       minAmountMinor: _asInt(m['min_amount_minor']),
       maxAmountMinor: _asInt(m['max_amount_minor']),
+      holdingsMinor: _asInt(m['holdings_minor']),
+      accessMultiplier: _asDouble(m['access_multiplier'], fallback: 1.0),
       interestTypes: list,
     );
   }
@@ -125,5 +141,11 @@ class LoanEligibility {
     return int.tryParse(v?.toString().trim() ?? '') ??
         double.tryParse(v?.toString().trim() ?? '')?.toInt() ??
         0;
+  }
+
+  static double _asDouble(dynamic v, {double fallback = 0.0}) {
+    if (v is double) return v;
+    if (v is num) return v.toDouble();
+    return double.tryParse(v?.toString().trim() ?? '') ?? fallback;
   }
 }

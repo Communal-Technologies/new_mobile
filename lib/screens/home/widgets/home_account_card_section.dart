@@ -194,7 +194,7 @@ class _FinanceTabsRow extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 16.sp,
+                            fontSize: 17.sp,
                             fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
                             color: sel ? primary : Colors.grey.shade600,
                           ),
@@ -265,7 +265,7 @@ class _SavingsTabContent extends StatelessWidget {
                           Text(
                             'Total balance',
                             style: TextStyle(
-                              fontSize: 13.sp,
+                              fontSize: 15.sp,
                               fontWeight: FontWeight.w600,
                               color: Colors.white.withValues(alpha: 0.92),
                             ),
@@ -315,7 +315,7 @@ class _SavingsTabContent extends StatelessWidget {
                         child: Text(
                           'Add Money',
                           style: TextStyle(
-                            fontSize: 13.sp,
+                            fontSize: 15.sp,
                             fontWeight: FontWeight.w700,
                             color: primary,
                           ),
@@ -338,7 +338,7 @@ class _SavingsTabContent extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 text: TextSpan(
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 15.sp,
                     color: Colors.grey.shade700,
                     fontWeight: FontWeight.w500,
                   ),
@@ -388,7 +388,7 @@ class _SavingsTabContent extends StatelessWidget {
                       Text(
                         'Copy Acc. No.',
                         style: TextStyle(
-                          fontSize: 12.sp,
+                          fontSize: 13.sp,
                           fontWeight: FontWeight.w700,
                           color: primary,
                         ),
@@ -428,7 +428,7 @@ class _PlaceholderTab extends StatelessWidget {
             '$title — coming soon',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 15.sp,
               color: Colors.grey.shade600,
               height: 1.35,
             ),

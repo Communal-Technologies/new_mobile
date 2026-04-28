@@ -19,7 +19,7 @@ class QuickActionsSection extends StatelessWidget {
           Text(
             'Quick actions',
             style: TextStyle(
-              fontSize: 20.sp,
+              fontSize: 22.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),

@@ -86,7 +86,7 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
                 Text(
                   'Recent transactions',
                   style: TextStyle(
-                    fontSize: 20.sp,
+                    fontSize: 22.sp,
                     fontWeight: FontWeight.w700,
                     color: Colors.black,
                   ),
@@ -101,7 +101,7 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
                   child: Text(
                     'See all',
                     style: TextStyle(
-                      fontSize: 20.sp,
+                      fontSize: 22.sp,
                       color: Colors.grey.shade700,
                       fontWeight: FontWeight.w500,
                     ),
@@ -131,7 +131,7 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
                       child: Text(
                         _error!,
                         style: TextStyle(
-                          fontSize: 13.sp,
+                          fontSize: 15.sp,
                           color: Colors.red.shade700,
                         ),
                       ),
@@ -146,7 +146,7 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
                 child: Text(
                   'No recent transactions',
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 15.sp,
                     color: Colors.grey.shade600,
                   ),
                 ),

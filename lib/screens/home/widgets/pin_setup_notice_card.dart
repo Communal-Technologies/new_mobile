@@ -32,7 +32,7 @@ class PinSetupNoticeCard extends StatelessWidget {
                   Text(
                     'Set your transaction PIN',
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 15.sp,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF0F1D40),
                     ),
@@ -41,7 +41,7 @@ class PinSetupNoticeCard extends StatelessWidget {
                   Text(
                     'Protect transfers and sensitive actions by setting your 4-digit PIN.',
                     style: TextStyle(
-                      fontSize: 12.sp,
+                      fontSize: 13.sp,
                       fontWeight: FontWeight.w500,
                       color: Colors.black54,
                     ),
@@ -52,7 +52,7 @@ class PinSetupNoticeCard extends StatelessWidget {
                     child: Text(
                       'Set PIN now',
                       style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: 15.sp,
                         fontWeight: FontWeight.w700,
                         color: primary,
                       ),

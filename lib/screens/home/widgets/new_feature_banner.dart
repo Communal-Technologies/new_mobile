@@ -46,7 +46,7 @@ class NewFeatureBanner extends StatelessWidget {
                   child: Text(
                     'New Feature',
                     style: TextStyle(
-                      fontSize: 12.sp,
+                      fontSize: 13.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
@@ -66,7 +66,7 @@ class NewFeatureBanner extends StatelessWidget {
                 Text(
                   'Earn up to 15% interest on\nfixed deposits',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: Colors.white.withValues(alpha: 0.95),
                     height: 1.4,
                   ),

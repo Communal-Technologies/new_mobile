@@ -7,6 +7,7 @@ import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/models/guarantor_request.dart';
 import 'package:communal_mobile/data/models/loan_application.dart';
+import 'package:communal_mobile/data/models/loan_eligibility.dart';
 import 'package:communal_mobile/data/models/loan_scheme.dart';
 import 'package:communal_mobile/data/models/member_search_result.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
@@ -59,6 +60,24 @@ class LoanRepository {
           .toList(growable: false);
     } on DioException catch (e) {
       throw _wrap(e, 'Unable to fetch loans');
+    }
+  }
+
+  /// Cooperative-driven eligibility envelope for the apply screen:
+  /// min/max bounds (kobo) and the configured interest treatment.
+  Future<LoanEligibility?> fetchEligibility(String cooperativeId) async {
+    final coop = cooperativeId.trim();
+    if (coop.isEmpty) return null;
+    try {
+      final response =
+          await _dio.get(ApiEndpoints.membersLoanEligibility(coop));
+      final data = response.data;
+      if (data is Map) {
+        return LoanEligibility.fromJson(Map<String, dynamic>.from(data));
+      }
+      return null;
+    } on DioException catch (e) {
+      throw _wrap(e, 'Unable to fetch loan eligibility');
     }
   }
 

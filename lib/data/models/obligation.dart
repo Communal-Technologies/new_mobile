@@ -271,8 +271,39 @@ class Obligation {
       nextDueDate: dueDate,
       frequency: 'Monthly',
       payments: const [],
-      fines: const [],
+      fines: _parseFines(obligation['fines'], currency),
     );
+  }
+
+  static List<FineRecord> _parseFines(dynamic raw, String fallbackCurrency) {
+    if (raw is! List) return const [];
+    final out = <FineRecord>[];
+    for (final entry in raw) {
+      if (entry is! Map) continue;
+      final m = Map<String, dynamic>.from(entry);
+      final amount = _asInt(m['amount']);
+      if (amount <= 0) continue;
+      final currency =
+          (m['currency']?.toString().trim().isNotEmpty == true
+                  ? m['currency'].toString()
+                  : fallbackCurrency)
+              .toUpperCase();
+      final source = m['source']?.toString() ?? 'auto';
+      final description = m['description']?.toString().trim() ?? '';
+      final status = m['status']?.toString().trim();
+      final date = _parseDate(m['created_at']) ??
+          _parseDate(m['due_date']) ??
+          DateTime.now();
+      out.add(FineRecord(
+        amountMinor: amount,
+        currency: currency,
+        description: description.isEmpty ? 'Late payment fine' : description,
+        status: (status == null || status.isEmpty) ? 'pending' : status,
+        type: source == 'auto' ? 'Auto charge' : 'Manual',
+        date: date,
+      ));
+    }
+    return out;
   }
 
   static int _asInt(dynamic value) {

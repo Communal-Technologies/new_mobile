@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/utils/app_currency.dart';
+import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
 import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
-import 'package:communal_mobile/screens/loans/data/sample_loans.dart';
+import 'package:communal_mobile/data/models/loan_application.dart';
+import 'package:communal_mobile/data/models/loan_scheme.dart';
+import 'package:communal_mobile/data/repositories/loan_repository.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/loans/widgets/active_loan_card.dart';
 import 'package:communal_mobile/screens/loans/widgets/loan_offer_card.dart';
 
@@ -18,8 +26,57 @@ class LoansScreen extends StatefulWidget {
 }
 
 class _LoansScreenState extends State<LoansScreen> {
-  int _currentNavIndex = 3;
+  final LoanRepository _repo = LoanRepository(getIt());
+  final int _currentNavIndex = 3;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  bool _loading = false;
+  String? _error;
+  List<LoanApplication> _loans = const [];
+  List<LoanScheme> _schemes = const [];
+  int _balanceMinor = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _load() async {
+    final auth = context.read<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) return;
+    final user = auth.user;
+    final coopId = user.cooperativeId?.trim();
+    final ledger = user.ledgerNumber?.trim();
+    if (coopId == null || coopId.isEmpty || ledger == null || ledger.isEmpty) {
+      setState(() => _error = 'Cooperative not linked to your profile');
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final results = await Future.wait([
+        _repo.fetchMyLoans(user),
+        _repo.fetchSchemes(coopId),
+        _repo.fetchLoanBalanceMinor(ledger),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _loans = results[0] as List<LoanApplication>;
+        _schemes = results[1] as List<LoanScheme>;
+        _balanceMinor = results[2] as int;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,22 +93,25 @@ class _LoansScreenState extends State<LoansScreen> {
         drawerEdgeDragWidth: 50.w,
         drawerScrimColor: Colors.black.withValues(alpha: 0.4),
         body: SafeArea(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                vSpace(24),
-                _buildEligibilityCard(),
-                vSpace(24),
-                _buildQuickActions(),
-                vSpace(24),
-                _buildActiveLoansSection(),
-                vSpace(24),
-                _buildAvailableOffersSection(),
-                vSpace(32),
-              ],
+          child: RefreshIndicator(
+            onRefresh: _load,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding:
+                  EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(),
+                  vSpace(24),
+                  _buildSummaryCard(),
+                  vSpace(24),
+                  _buildQuickActions(),
+                  vSpace(24),
+                  if (_error != null) _buildErrorBanner(_error!) else _buildBody(),
+                  vSpace(32),
+                ],
+              ),
             ),
           ),
         ),
@@ -72,8 +132,6 @@ class _LoansScreenState extends State<LoansScreen> {
               case 4:
                 context.goNamed('account-settings');
                 break;
-              default:
-                setState(() => _currentNavIndex = index);
             }
           },
         ),
@@ -86,9 +144,7 @@ class _LoansScreenState extends State<LoansScreen> {
       children: [
         IconButton(
           icon: const Icon(Icons.menu, color: Colors.black),
-          onPressed: () {
-            _scaffoldKey.currentState?.openDrawer();
-          },
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
         Expanded(
           child: Text(
@@ -102,16 +158,23 @@ class _LoansScreenState extends State<LoansScreen> {
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.verified_user, color: Colors.black),
-          onPressed: () {},
+          icon: const Icon(Icons.refresh, color: Colors.black),
+          onPressed: _loading ? null : _load,
         ),
       ],
     );
   }
 
-  Widget _buildEligibilityCard() {
-    final eligibility = SampleLoans.eligibility;
-    
+  Widget _buildSummaryCard() {
+    final auth = context.watch<AuthBloc>().state;
+    final user = auth is AuthAuthenticated ? auth.user : null;
+    final currency = user != null ? resolveCurrencyCode(user) : 'NGN';
+    final activeCount =
+        _loans.where((l) => l.status == LoanStatus.approved).length;
+    final pendingCount =
+        _loans.where((l) => l.status == LoanStatus.pending).length;
+    final balanceLabel = Money(_balanceMinor, currency).format();
+
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
@@ -122,84 +185,70 @@ class _LoansScreenState extends State<LoansScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Loan Eligibility Score',
+            'Outstanding Loan Balance',
             style: TextStyle(
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
               color: Colors.white.withOpacity(0.9),
             ),
           ),
-          vSpace(12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                eligibility.scoreLabel,
-                style: TextStyle(
-                  fontSize: 48.sp,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-              hSpace(12),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.25),
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Text(
-                  eligibility.rating,
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          vSpace(16),
-          Stack(
-            children: [
-              Container(
-                height: 8.h,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(4.r),
-                ),
-              ),
-              FractionallySizedBox(
-                widthFactor: eligibility.score / 100,
-                child: Container(
-                  height: 8.h,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(4.r),
-                  ),
-                ),
-              ),
-            ],
+          vSpace(8),
+          Text(
+            balanceLabel,
+            style: TextStyle(
+              fontSize: 36.sp,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
           ),
           vSpace(12),
           Row(
             children: [
-              Icon(
-                Icons.bookmark,
-                size: 16.sp,
-                color: Colors.white.withOpacity(0.8),
-              ),
-              hSpace(6),
-              Text(
-                eligibility.communityName,
-                style: TextStyle(
-                  fontSize: 13.sp,
-                  color: Colors.white.withOpacity(0.9),
-                ),
-              ),
+              _summaryChip('$activeCount active'),
+              hSpace(8),
+              if (pendingCount > 0) _summaryChip('$pendingCount pending'),
             ],
           ),
+          if (user?.cooperativeName != null &&
+              user!.cooperativeName!.trim().isNotEmpty) ...[
+            vSpace(12),
+            Row(
+              children: [
+                Icon(Icons.bookmark,
+                    size: 16.sp, color: Colors.white.withOpacity(0.8)),
+                hSpace(6),
+                Expanded(
+                  child: Text(
+                    user.cooperativeDisplayName,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
+      ),
+    );
+  }
+
+  Widget _summaryChip(String label) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.25),
+        borderRadius: BorderRadius.circular(12.r),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12.sp,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
       ),
     );
   }
@@ -223,9 +272,7 @@ class _LoansScreenState extends State<LoansScreen> {
               child: _buildQuickActionButton(
                 icon: Icons.calculate_outlined,
                 label: 'Loan Calculator',
-                onTap: () {
-                  context.pushNamed('loan-calculator');
-                },
+                onTap: () => context.pushNamed('loan-calculator'),
               ),
             ),
             hSpace(12),
@@ -233,21 +280,15 @@ class _LoansScreenState extends State<LoansScreen> {
               child: _buildQuickActionButton(
                 icon: Icons.attach_money,
                 label: 'Apply Now',
-                onTap: () {
-                  context.pushNamed('loan-application');
-                },
+                onTap: () => context.pushNamed('loan-application'),
               ),
             ),
             hSpace(12),
             Expanded(
               child: _buildQuickActionButton(
-                icon: Icons.history,
-                label: 'Loan History',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Loan History coming soon')),
-                  );
-                },
+                icon: Icons.handshake_outlined,
+                label: 'Guarantor Requests',
+                onTap: () => context.pushNamed('guarantor-requests'),
               ),
             ),
           ],
@@ -279,11 +320,7 @@ class _LoansScreenState extends State<LoansScreen> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12.r),
               ),
-              child: Icon(
-                icon,
-                size: 20.sp,
-                color: const Color(0xFFFFD2B0),
-              ),
+              child: Icon(icon, size: 20.sp, color: const Color(0xFFE67E22)),
             ),
             vSpace(8),
             Text(
@@ -301,18 +338,35 @@ class _LoansScreenState extends State<LoansScreen> {
     );
   }
 
-  Widget _buildActiveLoansSection() {
-    final activeLoans = SampleLoans.activeLoans;
-
-    if (activeLoans.isEmpty) {
-      return const SizedBox.shrink();
+  Widget _buildBody() {
+    if (_loading && _loans.isEmpty && _schemes.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 48),
+        child: Center(child: CircularProgressIndicator()),
+      );
     }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_loans.isNotEmpty) _buildLoansSection(),
+        if (_loans.isNotEmpty) vSpace(24),
+        _buildSchemesSection(),
+      ],
+    );
+  }
 
+  Widget _buildLoansSection() {
+    final visible = _loans
+        .where((l) =>
+            l.status == LoanStatus.approved ||
+            l.status == LoanStatus.pending)
+        .toList();
+    if (visible.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Active Loans',
+          'My Loans',
           style: TextStyle(
             fontSize: 18.sp,
             fontWeight: FontWeight.w700,
@@ -320,35 +374,39 @@ class _LoansScreenState extends State<LoansScreen> {
           ),
         ),
         vSpace(16),
-        ...activeLoans.map((loan) {
-          return Padding(
+        ...visible.map(
+          (loan) => Padding(
             padding: EdgeInsets.only(bottom: 16.h),
             child: ActiveLoanCard(
               loan: loan,
-              onViewDetails: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('View details for ${loan.title}')),
-                );
-              },
+              onViewDetails: () => context.pushNamed(
+                'loan-detail',
+                extra: {'loan': loan},
+              ),
               onMakePayment: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Make payment for ${loan.title}')),
+                  const SnackBar(
+                    content: Text(
+                      'Repayments are processed by your cooperative from your obligations and wallet.',
+                    ),
+                  ),
                 );
               },
             ),
-          );
-        }),
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildAvailableOffersSection() {
-    final offers = SampleLoans.availableOffers;
-
-    if (offers.isEmpty) {
-      return const SizedBox.shrink();
+  Widget _buildSchemesSection() {
+    if (_schemes.isEmpty) {
+      return _emptyCard(
+        icon: Icons.lightbulb_outline,
+        title: 'No loan products available',
+        subtitle: 'Check back later or ask your cooperative admin.',
+      );
     }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -361,21 +419,89 @@ class _LoansScreenState extends State<LoansScreen> {
           ),
         ),
         vSpace(16),
-        ...offers.map((offer) {
-          return Padding(
+        ..._schemes.map(
+          (scheme) => Padding(
             padding: EdgeInsets.only(bottom: 16.h),
             child: LoanOfferCard(
-              offer: offer,
-              onApply: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Apply for ${offer.title}')),
-                );
-              },
+              scheme: scheme,
+              onApply: () => context.pushNamed(
+                'loan-application',
+                extra: {'scheme': scheme},
+              ),
             ),
-          );
-        }),
+          ),
+        ),
       ],
     );
   }
-}
 
+  Widget _buildErrorBanner(String message) {
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFDECEA),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: const Color(0xFFE74C3C).withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline,
+              size: 20.sp, color: const Color(0xFFE74C3C)),
+          hSpace(12),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                fontSize: 13.sp,
+                color: const Color(0xFFE74C3C),
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: _load,
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(24.w),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 32.sp, color: Colors.grey.shade500),
+          vSpace(12),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF0F1D40),
+            ),
+          ),
+          vSpace(4),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12.sp,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

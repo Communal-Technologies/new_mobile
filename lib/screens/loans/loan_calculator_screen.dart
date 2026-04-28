@@ -67,7 +67,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
           title: Text(
             'Loan Calculator',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
@@ -127,7 +127,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                 Text(
                   'Calculate Your Loan',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF0F1D40),
                   ),
@@ -136,7 +136,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                 Text(
                   'Adjust the loan amount and duration to see your estimated monthly payments and total repayment.',
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 15.sp,
                     color: Colors.grey.shade700,
                   ),
                 ),
@@ -155,7 +155,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
         Text(
           'Loan Amount',
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w600,
             color: const Color(0xFF0F1D40),
           ),
@@ -190,7 +190,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
             Text(
               _formatCurrency(_loanAmount),
               style: TextStyle(
-                fontSize: 16.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w700,
                 color: const Color(0xFF7434FF),
               ),
@@ -204,14 +204,14 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
             Text(
               _formatCurrency(_minAmount),
               style: TextStyle(
-                fontSize: 12.sp,
+                fontSize: 13.sp,
                 color: Colors.grey.shade600,
               ),
             ),
             Text(
               _formatCurrency(_maxAmount),
               style: TextStyle(
-                fontSize: 12.sp,
+                fontSize: 13.sp,
                 color: Colors.grey.shade600,
               ),
             ),
@@ -228,7 +228,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
         Text(
           'Loan Duration',
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w600,
             color: const Color(0xFF0F1D40),
           ),
@@ -263,7 +263,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
             Text(
               '$_loanDuration months',
               style: TextStyle(
-                fontSize: 16.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w700,
                 color: const Color(0xFF0F1D40),
               ),
@@ -277,14 +277,14 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
             Text(
               '$_minDuration months',
               style: TextStyle(
-                fontSize: 12.sp,
+                fontSize: 13.sp,
                 color: Colors.grey.shade600,
               ),
             ),
             Text(
               '$_maxDuration months',
               style: TextStyle(
-                fontSize: 12.sp,
+                fontSize: 13.sp,
                 color: Colors.grey.shade600,
               ),
             ),
@@ -316,7 +316,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                 Text(
                   'Interest Rate',
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 15.sp,
                     color: Colors.grey.shade600,
                   ),
                 ),
@@ -324,7 +324,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                 Text(
                   '${_interestRate.toStringAsFixed(0)}% per annum',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF0F1D40),
                   ),
@@ -333,7 +333,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                 Text(
                   'Based on your cooperative membership tier',
                   style: TextStyle(
-                    fontSize: 12.sp,
+                    fontSize: 13.sp,
                     color: Colors.grey.shade600,
                   ),
                 ),
@@ -366,7 +366,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
               Text(
                 'Repayment Summary',
                 style: TextStyle(
-                  fontSize: 16.sp,
+                  fontSize: 17.sp,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
                 ),
@@ -386,7 +386,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
           Text(
             'in $_numberOfInstallments installments',
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: 15.sp,
               color: Colors.white.withOpacity(0.9),
             ),
           ),
@@ -406,7 +406,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                     Text(
                       'Total Repayment',
                       style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: 15.sp,
                         color: Colors.white.withOpacity(0.9),
                       ),
                     ),
@@ -414,7 +414,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                     Text(
                       _formatCurrency(_totalRepayment),
                       style: TextStyle(
-                        fontSize: 18.sp,
+                        fontSize: 19.sp,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                       ),
@@ -429,7 +429,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                     Text(
                       'Total Interest',
                       style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: 15.sp,
                         color: Colors.white.withOpacity(0.9),
                       ),
                     ),
@@ -437,7 +437,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                     Text(
                       _formatCurrency(_totalInterest),
                       style: TextStyle(
-                        fontSize: 18.sp,
+                        fontSize: 19.sp,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                       ),
@@ -459,7 +459,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
         Text(
           'Payment Breakdown',
           style: TextStyle(
-            fontSize: 16.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF0F1D40),
           ),
@@ -489,14 +489,14 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
         Text(
           label,
           style: TextStyle(
-            fontSize: 14.sp,
+            fontSize: 15.sp,
             color: Colors.grey.shade700,
           ),
         ),
         Text(
           value,
           style: TextStyle(
-            fontSize: 14.sp,
+            fontSize: 15.sp,
             fontWeight: FontWeight.w600,
             color: const Color(0xFF0F1D40),
           ),
@@ -514,7 +514,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
         Text(
           'Quick Amounts',
           style: TextStyle(
-            fontSize: 16.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF0F1D40),
           ),
@@ -552,7 +552,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                   child: Text(
                     _formatCurrency(amount.toDouble()),
                     style: TextStyle(
-                      fontSize: 13.sp,
+                      fontSize: 15.sp,
                       fontWeight: FontWeight.w600,
                       color: isSelected ? Colors.white : const Color(0xFF0F1D40),
                     ),
@@ -591,7 +591,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
             Text(
               'Proceed to Application',
               style: TextStyle(
-                fontSize: 16.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -616,7 +616,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
           Text(
             'Note:',
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 15.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F1D40),
             ),
@@ -625,7 +625,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
           Text(
             'This is an estimated calculation. Final loan terms will be determined by your cooperative and may vary based on your eligibility score and membership history.',
             style: TextStyle(
-              fontSize: 12.sp,
+              fontSize: 13.sp,
               color: Colors.grey.shade700,
               height: 1.4,
             ),

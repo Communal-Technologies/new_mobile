@@ -84,7 +84,7 @@ class AccountSuccessScreen extends StatelessWidget {
                     'Your account has been created successfully, verify your account with your NIN or BVN to activate you account.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       color: Colors.white.withValues(alpha: 0.9),
                       height: 1.5,
                     ),
@@ -110,7 +110,7 @@ class AccountSuccessScreen extends StatelessWidget {
                         'Continue to Verify Account',
                         style: TextStyle(
                           color: theme.primaryColor,
-                          fontSize: 16.sp,
+                          fontSize: 17.sp,
                           fontWeight: FontWeight.w700,
                         ),
                       ),

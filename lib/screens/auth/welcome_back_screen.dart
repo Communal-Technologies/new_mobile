@@ -1151,7 +1151,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                 child: Text(
                   _getMaskedLogin(),
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 15.sp,
                     color: theme.primaryColor,
                     fontWeight: FontWeight.w500,
                   ),
@@ -1180,7 +1180,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                   Text(
                     'Want to switch account? ',
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 15.sp,
                       color: Colors.grey.shade700,
                     ),
                   ),
@@ -1197,7 +1197,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                     child: Text(
                       'Logout',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 15.sp,
                         color: theme.primaryColor,
                         fontWeight: FontWeight.w600,
                       ),
@@ -1304,7 +1304,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                               ? Text(
                                   _password[index],
                                   style: TextStyle(
-                                    fontSize: 18.sp,
+                                    fontSize: 19.sp,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white,
                                   ),
@@ -1331,7 +1331,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
           Text(
             _passwordError!,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 15.sp,
               color: Colors.red,
               fontWeight: FontWeight.w500,
             ),
@@ -1378,7 +1378,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
             child: Text(
               'Forgot Password?',
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 15.sp,
                 color: theme.primaryColor,
                 fontWeight: FontWeight.w600,
               ),

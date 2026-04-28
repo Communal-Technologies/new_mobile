@@ -121,14 +121,22 @@ class MyApp extends StatelessWidget {
                   // transition (resolved vs. unresolved, authed vs. not) so a
                   // logout immediately bounces protected routes back to /login.
                   BlocListener<AuthBloc, AuthState>(
-                    listenWhen: (previous, current) =>
-                        previous.runtimeType != current.runtimeType,
+                    // Fire on every transition (including same-type→same-type
+                    // identity changes) so a profile refresh that flips
+                    // `hasCompletedKyc` / `hasCooperative` reaches the
+                    // router. The previous `runtimeType` comparison missed
+                    // those because Authenticated→Authenticated has the
+                    // same runtime type.
+                    listenWhen: (previous, current) => previous != current,
                     listener: (context, state) {
                       final resolved = state is AuthAuthenticated ||
                           state is AuthUnauthenticated;
+                      final user = state is AuthAuthenticated ? state.user : null;
                       appAuthStatusNotifier.update(
                         isAuthenticated: state is AuthAuthenticated,
                         isResolved: resolved,
+                        hasCompletedKyc: user?.hasCompletedKyc ?? false,
+                        hasCooperative: user?.hasCooperativeMembership ?? false,
                       );
                     },
                   ),

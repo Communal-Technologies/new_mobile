@@ -1,116 +1,138 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
+import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:communal_mobile/data/models/loan_scheme.dart';
+import 'package:communal_mobile/data/repositories/loan_repository.dart';
+import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/screens/loans/data/loan_application_draft.dart';
 
+/// Step 1 of the loan apply flow — pick a scheme, enter amount + reason,
+/// choose interest treatment when the scheme leaves it open. Schemes
+/// (duration, interest rate, guarantor count) are loaded from the
+/// backend; nothing here is hardcoded.
 class LoanApplicationScreen extends StatefulWidget {
   const LoanApplicationScreen({
     super.key,
+    this.preselectedScheme,
     this.initialAmount,
-    this.initialDuration,
-    /// When null, symbol is taken from the signed-in user (country / wallet currency).
-    this.currencySymbol,
   });
 
+  /// When the user taps "Apply Now" on a specific scheme card from the
+  /// loans hub, the scheme is pre-selected and the picker is hidden.
+  final LoanScheme? preselectedScheme;
+
+  /// Optional initial amount in major currency units.
   final double? initialAmount;
-  final int? initialDuration;
-  final String? currencySymbol;
 
   @override
   State<LoanApplicationScreen> createState() => _LoanApplicationScreenState();
 }
 
 class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
-  double _loanAmount = 500000;
-  int _loanDuration = 12;
-  final double _interestRate = 12.0;
-  final double _minAmount = 50000;
-  final double _maxAmount = 2000000;
-  final TextEditingController _loanUsageController = TextEditingController();
+  final LoanRepository _repo = LoanRepository(getIt());
   final TextEditingController _amountController = TextEditingController();
+  final TextEditingController _reasonController = TextEditingController();
+
+  bool _loading = false;
+  String? _error;
+  List<LoanScheme> _schemes = const [];
+  LoanScheme? _selectedScheme;
+
+  /// `'1'` deduct-now, `'2'` add-to-principal. Default to deduct-now —
+  /// matches the most common cooperative behavior. Locked when the
+  /// scheme has a fixed `interest_type`.
+  String _interestType = '1';
 
   @override
   void initState() {
     super.initState();
+    _selectedScheme = widget.preselectedScheme;
     if (widget.initialAmount != null) {
-      _loanAmount = widget.initialAmount!;
+      _amountController.text = _formatPlain(widget.initialAmount!);
     }
-    if (widget.initialDuration != null) {
-      _loanDuration = widget.initialDuration!;
+    if (widget.preselectedScheme?.interestType != null &&
+        widget.preselectedScheme!.interestType!.isNotEmpty) {
+      _interestType = widget.preselectedScheme!.interestType!;
     }
-    _loanUsageController.text = 'I want to upgrade my business';
-    _amountController.text = _formatCurrencyNoDecimals(_loanAmount);
-    _amountController.addListener(_onAmountChanged);
-  }
-
-  void _onAmountChanged() {
-    final text = _amountController.text.replaceAll(RegExp(r'[^\d]'), '');
-    if (text.isNotEmpty) {
-      final value = double.tryParse(text) ?? 0;
-      if (value != _loanAmount) {
-        setState(() {
-          _loanAmount = value.clamp(_minAmount, _maxAmount);
-        });
-        // Update controller if value was clamped
-        if (value != _loanAmount) {
-          _amountController.value = TextEditingValue(
-            text: _formatCurrencyNoDecimals(_loanAmount),
-            selection: TextSelection.collapsed(
-              offset: _formatCurrencyNoDecimals(_loanAmount).length,
-            ),
-          );
-        }
-      }
+    if (widget.preselectedScheme == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadSchemes());
     }
   }
 
   @override
   void dispose() {
-    _loanUsageController.dispose();
     _amountController.dispose();
+    _reasonController.dispose();
     super.dispose();
   }
 
-  double get _monthlyPayment {
-    if (_loanDuration == 0) return 0;
-    final monthlyRate = _interestRate / 100 / 12;
-    if (monthlyRate == 0) return _loanAmount / _loanDuration;
-    final numerator = _loanAmount * monthlyRate * math.pow(1 + monthlyRate, _loanDuration);
-    final denominator = math.pow(1 + monthlyRate, _loanDuration) - 1;
-    return numerator / denominator;
+  Future<void> _loadSchemes() async {
+    final auth = context.read<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) return;
+    final coopId = auth.user.cooperativeId?.trim();
+    if (coopId == null || coopId.isEmpty) {
+      setState(() => _error = 'Cooperative not linked to your profile');
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final schemes = await _repo.fetchSchemes(coopId);
+      if (!mounted) return;
+      setState(() {
+        _schemes = schemes;
+        _selectedScheme ??= schemes.isNotEmpty ? schemes.first : null;
+        if (_selectedScheme?.interestType != null &&
+            _selectedScheme!.interestType!.isNotEmpty) {
+          _interestType = _selectedScheme!.interestType!;
+        }
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
   }
 
-  double get _totalRepayment => _monthlyPayment * _loanDuration;
-  double get _totalInterest => _totalRepayment - _loanAmount;
-  int get _numberOfInstallments => _loanDuration;
+  String _formatPlain(double amount) =>
+      amount.toStringAsFixed(amount.truncateToDouble() == amount ? 0 : 2);
 
-  String _formatCurrency(double amount, String currencySymbol) {
-    final formatter = NumberFormat('#,##0.00', 'en_NG');
-    return '$currencySymbol${formatter.format(amount)}';
+  double? _parsedAmount() {
+    final raw = _amountController.text.replaceAll(RegExp(r'[,\s]'), '').trim();
+    if (raw.isEmpty) return null;
+    return double.tryParse(raw);
   }
 
-  String _formatCurrencyNoDecimals(double amount) {
-    final formatter = NumberFormat('#,##0', 'en_NG');
-    return formatter.format(amount.round());
+  String? _validate() {
+    if (_selectedScheme == null) return 'Pick a loan product to continue';
+    final amount = _parsedAmount();
+    if (amount == null || amount <= 0) {
+      return 'Enter how much you want to borrow';
+    }
+    if (_reasonController.text.trim().isEmpty) {
+      return 'Tell us why you need this loan';
+    }
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
-    final authState = context.watch<AuthBloc>().state;
-    final currencySymbol = (widget.currencySymbol != null &&
-            widget.currencySymbol!.trim().isNotEmpty)
-        ? widget.currencySymbol!.trim()
-        : (authState is AuthAuthenticated
-            ? currencySymbolForUser(authState.user)
-            : currencySymbolForCode('NGN'));
+    final auth = context.watch<AuthBloc>().state;
+    final user = auth is AuthAuthenticated ? auth.user : null;
+    final currency = user != null ? resolveCurrencyCode(user) : 'NGN';
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(
@@ -141,18 +163,36 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+                padding:
+                    EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildProgressIndicator(),
-                    vSpace(32),
-                    _buildLoanAmountSection(currencySymbol),
                     vSpace(24),
-                    _buildRepaymentSummarySection(currencySymbol),
-                    vSpace(32),
-                    _buildLoanUsageSection(),
+                    if (widget.preselectedScheme == null)
+                      _buildSchemePicker()
+                    else
+                      _buildSchemeSummary(_selectedScheme!),
                     vSpace(24),
+                    _buildAmountSection(currency),
+                    vSpace(20),
+                    if (_selectedScheme != null) _buildEstimateCard(currency),
+                    vSpace(24),
+                    if ((_selectedScheme?.interestType?.isEmpty ?? true))
+                      _buildInterestTypeSection(),
+                    vSpace(24),
+                    _buildReasonSection(),
+                    if (_error != null) ...[
+                      vSpace(16),
+                      Text(
+                        _error!,
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          color: const Color(0xFFE74C3C),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -169,9 +209,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                   ),
                 ],
               ),
-              child: SafeArea(
-                child: _buildContinueButton(),
-              ),
+              child: SafeArea(child: _buildContinueButton(currency)),
             ),
           ],
         ),
@@ -229,7 +267,151 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     );
   }
 
-  Widget _buildLoanAmountSection(String currencySymbol) {
+  Widget _buildSchemePicker() {
+    if (_loading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (_schemes.isEmpty) {
+      return Container(
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.info_outline,
+                size: 24.sp, color: Colors.grey.shade500),
+            vSpace(8),
+            Text(
+              'No loan products available right now',
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: const Color(0xFF0F1D40),
+              ),
+            ),
+            vSpace(4),
+            Text(
+              'Ask your cooperative admin to publish one.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12.sp,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Loan Product',
+          style: TextStyle(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF0F1D40),
+          ),
+        ),
+        vSpace(8),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<LoanScheme>(
+              isExpanded: true,
+              value: _selectedScheme,
+              items: _schemes
+                  .map(
+                    (s) => DropdownMenuItem<LoanScheme>(
+                      value: s,
+                      child: Text(
+                        s.title.isNotEmpty
+                            ? '${s.title} • ${s.durationLabel} @ ${s.interestRateLabel}'
+                            : s.loanCode,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (s) {
+                setState(() {
+                  _selectedScheme = s;
+                  if (s?.interestType != null &&
+                      s!.interestType!.isNotEmpty) {
+                    _interestType = s.interestType!;
+                  }
+                });
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSchemeSummary(LoanScheme scheme) {
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4E9),
+        borderRadius: BorderRadius.circular(12.r),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            scheme.title.isNotEmpty ? scheme.title : scheme.loanCode,
+            style: TextStyle(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF0F1D40),
+            ),
+          ),
+          vSpace(8),
+          Wrap(
+            spacing: 12.w,
+            runSpacing: 6.h,
+            children: [
+              _miniStat('${scheme.durationMonths} months'),
+              _miniStat('${scheme.interestRateLabel} interest'),
+              _miniStat('${scheme.numberOfGuarantors} guarantors'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _miniStat(String label) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(6.r),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12.sp,
+          fontWeight: FontWeight.w600,
+          color: const Color(0xFF0F1D40),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAmountSection(String currency) {
+    final symbol = currencySymbolForCode(currency);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -241,75 +423,28 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             color: const Color(0xFF0F1D40),
           ),
         ),
-        vSpace(20),
-            Row(
-          children: [
-            Text(
-              '$currencySymbol${_formatCurrencyNoDecimals(_minAmount)}',
-              style: TextStyle(
-                fontSize: 13.sp,
-                color: Colors.grey.shade600,
-              ),
-            ),
-            Expanded(
-              child: SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  activeTrackColor: const Color(0xFF7434FF),
-                  inactiveTrackColor: Colors.grey.shade300,
-                  thumbColor: const Color(0xFF7434FF),
-                  thumbShape: RoundSliderThumbShape(enabledThumbRadius: 12.r),
-                  overlayShape: RoundSliderOverlayShape(overlayRadius: 24.r),
-                  trackHeight: 4.h,
-                ),
-                child: Slider(
-                  value: _loanAmount,
-                  min: _minAmount,
-                  max: _maxAmount,
-                  divisions: 39,
-                  onChanged: (value) {
-                    setState(() {
-                      _loanAmount = value;
-                      // Update text field when slider changes
-                      _amountController.value = TextEditingValue(
-                        text: _formatCurrencyNoDecimals(_loanAmount),
-                        selection: TextSelection.collapsed(
-                          offset: _formatCurrencyNoDecimals(_loanAmount).length,
-                        ),
-                      );
-                    });
-                  },
-                ),
-              ),
-            ),
-            Text(
-              '$currencySymbol${_formatCurrencyNoDecimals(_maxAmount)}',
-              style: TextStyle(
-                fontSize: 13.sp,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
-        vSpace(16),
+        vSpace(12),
         TextField(
           controller: _amountController,
-          keyboardType: TextInputType.number,
+          keyboardType:
+              const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
+          ],
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 24.sp,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF7434FF),
           ),
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[\d,]')),
-          ],
           decoration: InputDecoration(
-            prefixText: widget.currencySymbol,
+            prefixText: '$symbol ',
             prefixStyle: TextStyle(
               fontSize: 24.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF7434FF),
             ),
+            hintText: '0',
             filled: true,
             fillColor: Colors.grey.shade50,
             border: OutlineInputBorder(
@@ -322,152 +457,193 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
-              borderSide: const BorderSide(color: Color(0xFF7434FF), width: 2),
+              borderSide:
+                  const BorderSide(color: Color(0xFF7434FF), width: 2),
             ),
-            contentPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+            contentPadding:
+                EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
           ),
-          onChanged: (value) {
-            // Format the input as user types
-            final numericValue = value.replaceAll(RegExp(r'[^\d]'), '');
-            if (numericValue.isNotEmpty) {
-              final numValue = int.tryParse(numericValue) ?? 0;
-              final formatted = _formatCurrencyNoDecimals(numValue.toDouble());
-              if (formatted != value) {
-                _amountController.value = TextEditingValue(
-                  text: formatted,
-                  selection: TextSelection.collapsed(
-                    offset: formatted.length,
-                  ),
-                );
-              }
-            }
-          },
-        ),
-        vSpace(8),
-        Text(
-          'Minimum: $currencySymbol${_formatCurrencyNoDecimals(_minAmount)} | Maximum: $currencySymbol${_formatCurrencyNoDecimals(_maxAmount)}',
-          style: TextStyle(
-            fontSize: 12.sp,
-            color: Colors.grey.shade600,
-          ),
+          onChanged: (_) => setState(() {}),
         ),
       ],
     );
   }
 
-  Widget _buildRepaymentSummarySection(String currencySymbol) {
+  Widget _buildEstimateCard(String currency) {
+    final amount = _parsedAmount();
+    if (amount == null || amount <= 0) {
+      return const SizedBox.shrink();
+    }
+    final scheme = _selectedScheme!;
+    final principalMinor = (amount * factorFor(currency)).round();
+    final monthlyMinor = estimatedMonthlyRepaymentMinor(
+      principalMinor: principalMinor,
+      scheme: scheme,
+      interestType: _interestType,
+      currency: currency,
+    );
+    final interestMinor =
+        (principalMinor * scheme.interestRate / 100).round();
+    final totalMinor = _interestType == '1'
+        ? principalMinor
+        : principalMinor + interestMinor;
     return Container(
-      padding: EdgeInsets.all(20.w),
+      padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(12.r),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Repayment Summary',
+            'Estimated Repayment',
             style: TextStyle(
               fontSize: 16.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F1D40),
             ),
           ),
-          vSpace(20),
+          vSpace(12),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _formatCurrency(_monthlyPayment, currencySymbol),
-                      style: TextStyle(
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF7434FF),
-                      ),
-                    ),
-                    vSpace(4),
-                    Text(
-                      'monthly in $_numberOfInstallments installments',
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
+                child: _estimateColumn(
+                  'Monthly',
+                  Money(monthlyMinor, currency).format(),
+                  highlight: true,
                 ),
               ),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      _formatCurrency(_totalRepayment, currencySymbol),
-                      style: TextStyle(
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF7434FF),
-                      ),
-                    ),
-                    vSpace(4),
-                    Text(
-                      'Total Repayment',
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
+                child: _estimateColumn(
+                  'Total',
+                  Money(totalMinor, currency).format(),
+                ),
+              ),
+              Expanded(
+                child: _estimateColumn(
+                  'Interest',
+                  Money(interestMinor, currency).format(),
                 ),
               ),
             ],
           ),
-          vSpace(16),
-          Container(
-            padding: EdgeInsets.all(12.w),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(8.r),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Total Interest',
-                  style: TextStyle(
-                    fontSize: 13.sp,
-                    color: Colors.grey.shade700,
-                  ),
-                ),
-                Text(
-                  _formatCurrencyNoDecimals(_totalInterest),
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF0F1D40),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          vSpace(12),
+          vSpace(8),
           Text(
-            'At ${_interestRate.toStringAsFixed(0)}% annual interest rate',
-            style: TextStyle(
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFFE67E22),
-            ),
+            'Over ${scheme.durationMonths} month${scheme.durationMonths == 1 ? '' : 's'} at ${scheme.interestRateLabel}',
+            style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLoanUsageSection() {
+  Widget _estimateColumn(String label, String value,
+      {bool highlight = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600)),
+        vSpace(4),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w700,
+            color: highlight
+                ? const Color(0xFF7434FF)
+                : const Color(0xFF0F1D40),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInterestTypeSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Interest treatment',
+          style: TextStyle(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF0F1D40),
+          ),
+        ),
+        vSpace(8),
+        Row(
+          children: [
+            Expanded(
+              child: _interestOption(
+                value: '1',
+                label: 'Deduct now',
+                hint: 'Receive principal − interest',
+              ),
+            ),
+            hSpace(8),
+            Expanded(
+              child: _interestOption(
+                value: '2',
+                label: 'Add to balance',
+                hint: 'Repay principal + interest',
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _interestOption({
+    required String value,
+    required String label,
+    required String hint,
+  }) {
+    final selected = _interestType == value;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12.r),
+      onTap: () => setState(() => _interestType = value),
+      child: Container(
+        padding: EdgeInsets.all(12.w),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFEEE5FF) : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(
+            color:
+                selected ? const Color(0xFF7434FF) : Colors.grey.shade200,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w700,
+                color: selected
+                    ? const Color(0xFF7434FF)
+                    : const Color(0xFF0F1D40),
+              ),
+            ),
+            vSpace(4),
+            Text(
+              hint,
+              style:
+                  TextStyle(fontSize: 11.sp, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReasonSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -479,16 +655,15 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             color: const Color(0xFF0F1D40),
           ),
         ),
-        vSpace(16),
+        vSpace(12),
         TextField(
-          controller: _loanUsageController,
+          controller: _reasonController,
           maxLines: 3,
+          textInputAction: TextInputAction.done,
           decoration: InputDecoration(
-            hintText: 'I want to upgrade my business',
-            hintStyle: TextStyle(
-              fontSize: 14.sp,
-              color: Colors.grey.shade400,
-            ),
+            hintText: 'e.g., upgrade my business, buy equipment',
+            hintStyle:
+                TextStyle(fontSize: 14.sp, color: Colors.grey.shade400),
             filled: true,
             fillColor: Colors.grey.shade50,
             border: OutlineInputBorder(
@@ -501,29 +676,39 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
-              borderSide: const BorderSide(color: Color(0xFF7434FF), width: 2),
+              borderSide:
+                  const BorderSide(color: Color(0xFF7434FF), width: 2),
             ),
-            contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+            contentPadding:
+                EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
           ),
-          style: TextStyle(
-            fontSize: 14.sp,
-            color: const Color(0xFF0F1D40),
-          ),
+          style: TextStyle(fontSize: 14.sp, color: const Color(0xFF0F1D40)),
         ),
       ],
     );
   }
 
-  Widget _buildContinueButton() {
+  Widget _buildContinueButton(String currency) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () {
-          context.pushNamed('loan-application-step2', extra: {
-            'amount': _loanAmount,
-            'duration': _loanDuration,
-            'purpose': _loanUsageController.text,
-          });
+          final err = _validate();
+          if (err != null) {
+            setState(() => _error = err);
+            return;
+          }
+          final draft = LoanApplicationDraft(
+            scheme: _selectedScheme!,
+            amountMajor: _parsedAmount()!,
+            currency: currency,
+            interestType: _interestType,
+            reasonForLoan: _reasonController.text.trim(),
+          );
+          context.pushNamed(
+            'loan-application-step2',
+            extra: {'draft': draft},
+          );
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF7434FF),
@@ -536,13 +721,9 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         ),
         child: Text(
           'Continue',
-          style: TextStyle(
-            fontSize: 16.sp,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w700),
         ),
       ),
     );
   }
 }
-

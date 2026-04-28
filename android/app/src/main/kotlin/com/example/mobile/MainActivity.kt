@@ -1,12 +1,15 @@
 package com.example.communal_mobile
 
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.HandlerThread
+import android.os.Looper
+import android.view.PixelCopy
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -21,43 +24,80 @@ import io.flutter.plugin.common.MethodChannel
  *
  * ## Recents-snapshot privacy
  *
- * The product call is a *blurred* recents thumbnail rather than the black
- * one `FLAG_SECURE` would give us — partly so user-initiated screenshots
- * and screen recording stay enabled.
+ * Product call: a *blurred* recents thumbnail rather than the black one
+ * `FLAG_SECURE` would give us — partly so user-initiated screenshots and
+ * screen recording stay enabled.
  *
- * The original implementation called [setRenderEffect] (or added a
- * fresh overlay [View]) inside [onPause]. Both are *async-drawn*: they
- * request the next frame, but the OS snapshot is captured between
- * [onPause] and [onStop], so on slower devices (e.g. budget Android, the
- * reporter was on a TECNO KI5q) the snapshot reliably won the race and
- * captured the unblurred frame.
+ * Why View.draw is not enough: Flutter renders into a [android.view.SurfaceView]
+ * on Android. `View.draw(canvas)` does not read back surface content, so a
+ * synchronous capture of the decor view returns mostly empty chrome — the
+ * overlay would just show its frosted default background, not a real blur
+ * of the live UI.
  *
- * This implementation pre-installs the privacy overlay once at activity
- * setup and only mutates an `alpha` property in the lifecycle hooks:
- *   - the overlay is already laid out and uploaded as a hardware layer,
- *     so the alpha flip is a compositor uniform change with no layout
- *     pass and no texture upload — visible on the very next vsync,
- *     well before the snapshot.
- *   - on API 31+ we additionally try to stretch a downscaled bitmap of
- *     the live decor view onto the overlay so the cover looks like a
- *     real blur of the moment-before content rather than a flat panel.
- *     This capture is best-effort: when [Bitmap.createBitmap] /
- *     [View.draw] don't have time to complete (e.g. activity already
- *     stopped), the overlay falls back to its frosted-default
- *     background and the snapshot is still privacy-protected.
- *   - the same hooks fire across [onUserLeaveHint] (earliest, for
- *     user-initiated home/recents), [onWindowFocusChanged]`(false)`
- *     (catches incoming-call / system-sheet focus loss) and [onPause]
- *     as the final backstop, so we get the most lead time available
- *     for that capture and alpha flip.
+ * What we do instead:
+ *  - Pre-install a full-screen [ImageView] overlay during
+ *    [configureFlutterEngine], kept invisible (alpha=0) during normal use.
+ *    Toggling alpha is a compositor uniform — no layout, no async draw,
+ *    visible on the next vsync.
+ *  - While the activity is foregrounded, schedule periodic [PixelCopy]
+ *    captures of the live window surface (which DOES include the Flutter
+ *    SurfaceView). The captured bitmap is downscaled aggressively
+ *    (1/8 each side); when the [ImageView] paints it stretched across the
+ *    screen the GPU's bilinear filter gives the "frosted glass" look.
+ *  - On any "we're about to be backgrounded" hook ([onUserLeaveHint],
+ *    [onWindowFocusChanged]`(false)`, [onPause] as backstop): set the
+ *    cached blurred bitmap on the overlay and flip alpha to 1.
+ *  - On API 31+ also stack a real [RenderEffect] Gaussian blur on the
+ *    [ImageView] for extra polish.
  *
- * Trade-off: removing `FLAG_SECURE` keeps screenshots / screen recording
- * enabled. If PII-in-screenshots ever becomes a concern, restore
- * `window.setFlags(FLAG_SECURE, FLAG_SECURE)` in [onCreate] and accept
- * the black thumbnail.
+ * The cached bitmap is at most [CAPTURE_REFRESH_INTERVAL_MS] stale; if the
+ * user navigates and immediately backgrounds we may briefly show an older
+ * screen blurred — acceptable trade-off vs. the perf cost of capturing
+ * every frame.
+ *
+ * Trade-off (unchanged from before): no `FLAG_SECURE`, so screenshots and
+ * screen recording stay enabled. Restore it in [onCreate] if PII-in-
+ * screenshots becomes a concern.
  */
 class MainActivity : FlutterFragmentActivity() {
     private var privacyOverlay: ImageView? = null
+    private var cachedBlurredBitmap: Bitmap? = null
+
+    /**
+     * Dedicated background thread for [PixelCopy.request]'s callback.
+     * Using the main looper for the callback risks blocking the UI
+     * thread on slow captures; PixelCopy itself is hardware-accelerated
+     * and runs off the calling thread.
+     */
+    private var captureThread: HandlerThread? = null
+    private var captureBackgroundHandler: Handler? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    private val refreshCaptureRunnable = object : Runnable {
+        override fun run() {
+            captureLiveContent()
+            mainHandler.postDelayed(this, CAPTURE_REFRESH_INTERVAL_MS)
+        }
+    }
+
+    companion object {
+        /**
+         * How often to refresh the cached blur capture while the
+         * activity is foregrounded. Shorter = less stale blur in
+         * recents but more PixelCopy work; longer = staler capture if
+         * the user navigated since the last refresh. 2.5s is the
+         * compromise we landed on.
+         */
+        private const val CAPTURE_REFRESH_INTERVAL_MS = 2500L
+
+        /**
+         * 1/8 each side → 1/64 of the original pixel count. For a 1080×2400
+         * screen that's a 135×300 bitmap — cheap to capture and to upload
+         * to the GPU. Bilinear stretch when the ImageView paints hides the
+         * pixelation and looks like a frosted blur.
+         */
+        private const val CAPTURE_SCALE_DIVISOR = 8
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -82,9 +122,10 @@ class MainActivity : FlutterFragmentActivity() {
         val decor = window.decorView as? ViewGroup ?: return
         val overlay = ImageView(this).apply {
             scaleType = ImageView.ScaleType.FIT_XY
-            // Frosted-default background. Used directly when the live
-            // capture below is unavailable (cold pause, capture failure)
-            // and shows under the captured bitmap as a tinted backstop.
+            // Frosted-default background. Used directly when the cached
+            // capture isn't ready yet (cold pause before the first
+            // capture has completed) and shows under the captured
+            // bitmap as a tinted backstop.
             setBackgroundColor(Color.argb(0xE6, 0xF2, 0xF2, 0xF6))
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -102,16 +143,13 @@ class MainActivity : FlutterFragmentActivity() {
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         // Earliest hook for explicit user backgrounding (home / recents
-        // gesture). Gives the snapshot capture maximum lead time.
+        // gesture). Gives the OS snapshot the most lead time to capture
+        // the overlay.
         applyPrivacyShield()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        // Catches focus loss not covered by onUserLeaveHint — incoming
-        // call, control center sheet, biometric prompt parent stays put
-        // (the prompt itself is a child of this window so it does not
-        // trigger focus loss).
         if (!hasFocus) {
             applyPrivacyShield()
         } else {
@@ -119,33 +157,105 @@ class MainActivity : FlutterFragmentActivity() {
         }
     }
 
-    override fun onPause() {
-        super.onPause()
-        // Backstop in case neither prior hook fired (extremely rare,
-        // e.g. system-initiated pause without focus change).
-        applyPrivacyShield()
-    }
-
     override fun onResume() {
         super.onResume()
         removePrivacyShield()
+        startCaptureLoop()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        applyPrivacyShield()
+        stopCaptureLoop()
+    }
+
+    override fun onDestroy() {
+        stopCaptureLoop()
+        captureThread?.quitSafely()
+        captureThread = null
+        captureBackgroundHandler = null
+        cachedBlurredBitmap?.recycle()
+        cachedBlurredBitmap = null
+        super.onDestroy()
+    }
+
+    private fun startCaptureLoop() {
+        if (captureThread == null) {
+            captureThread = HandlerThread("communal-pixel-copy").also {
+                it.start()
+                captureBackgroundHandler = Handler(it.looper)
+            }
+        }
+        mainHandler.removeCallbacks(refreshCaptureRunnable)
+        // First capture after a frame so Flutter has time to paint
+        // following the resume.
+        mainHandler.postDelayed(refreshCaptureRunnable, 250L)
+    }
+
+    private fun stopCaptureLoop() {
+        mainHandler.removeCallbacks(refreshCaptureRunnable)
+    }
+
+    private fun captureLiveContent() {
+        // PixelCopy.request(Window, ...) is API 26+. Pre-26 devices fall
+        // back to the frosted-default overlay color — we just don't
+        // paint a real blur of the live UI on those.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val backgroundHandler = captureBackgroundHandler ?: return
+
+        val w = window.decorView.width
+        val h = window.decorView.height
+        if (w <= 0 || h <= 0) return
+
+        val targetW = (w / CAPTURE_SCALE_DIVISOR).coerceAtLeast(1)
+        val targetH = (h / CAPTURE_SCALE_DIVISOR).coerceAtLeast(1)
+
+        val bitmap = try {
+            Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888)
+        } catch (_: Throwable) {
+            return
+        }
+
+        try {
+            PixelCopy.request(
+                window,
+                bitmap,
+                { result ->
+                    // Callback runs on the background handler. Only
+                    // touch state we know is safe across threads —
+                    // writing to `cachedBlurredBitmap` is fine because
+                    // applyPrivacyShield reads it on the main thread
+                    // after the OS lifecycle hop, never concurrently.
+                    if (result == PixelCopy.SUCCESS) {
+                        val previous = cachedBlurredBitmap
+                        cachedBlurredBitmap = bitmap
+                        previous?.recycle()
+                    } else {
+                        bitmap.recycle()
+                    }
+                },
+                backgroundHandler,
+            )
+        } catch (_: Throwable) {
+            bitmap.recycle()
+        }
     }
 
     private fun applyPrivacyShield() {
         val overlay = privacyOverlay ?: return
         if (overlay.alpha == 1f) return
 
-        captureDecorViewSmall()?.let { overlay.setImageBitmap(it) }
+        cachedBlurredBitmap?.let { overlay.setImageBitmap(it) }
 
         // Bring overlay above any view Flutter inserted into decor in
-        // the meantime (e.g. a platform view PiP container).
+        // the meantime (e.g. a platform view container).
         overlay.bringToFront()
         overlay.alpha = 1f
 
-        // API 31+: real Gaussian blur on the captured downscale, stacked
-        // on top of the bilinear stretch. If the effect doesn't commit
-        // before the snapshot the overlay still covers the frame —
-        // blur quality degrades, privacy doesn't.
+        // API 31+: real Gaussian blur on the bilinear-stretched bitmap
+        // for a smoother look. If the effect doesn't commit before the
+        // snapshot the bitmap is still visible — blur quality degrades,
+        // privacy doesn't.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             overlay.setRenderEffect(
                 RenderEffect.createBlurEffect(
@@ -163,43 +273,6 @@ class MainActivity : FlutterFragmentActivity() {
         overlay.alpha = 0f
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             overlay.setRenderEffect(null)
-        }
-    }
-
-    /**
-     * Synchronously capture decorView into a heavily downscaled
-     * bitmap (1/16 each side). Bilinear stretching by the GPU when the
-     * ImageView paints gives the "frosted glass" look the product wants
-     * without any per-pixel CPU blur work.
-     *
-     * Note: Flutter draws into a SurfaceView on Android, which
-     * `View.draw(canvas)` cannot read back — so the captured bitmap
-     * mostly shows the activity chrome and our own backgrounds. That's
-     * fine: the overlay's frosted background still covers the snapshot,
-     * and on the brief in-app window the live RenderEffect blur is what
-     * the user actually sees.
-     */
-    private fun captureDecorViewSmall(): Bitmap? {
-        val decor = window.decorView
-        val w = decor.width
-        val h = decor.height
-        if (w <= 0 || h <= 0) return null
-
-        val scale = 16
-        val targetW = (w / scale).coerceAtLeast(1)
-        val targetH = (h / scale).coerceAtLeast(1)
-
-        return try {
-            val bitmap = Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bitmap)
-            // Scale the canvas so a single decor.draw lands the full
-            // frame inside the small bitmap. View.draw is synchronous —
-            // when it returns, the bitmap holds the snapshot.
-            canvas.scale(1f / scale, 1f / scale)
-            decor.draw(canvas)
-            bitmap
-        } catch (_: Throwable) {
-            null
         }
     }
 }

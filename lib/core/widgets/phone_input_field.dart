@@ -67,7 +67,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
             ),
             child: Text(
               'Allowed countries could not be loaded. Check your connection and try again.',
-              style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade800),
+              style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade800),
             ),
           ),
         ],
@@ -134,7 +134,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
               hintText: 'Phone number',
               hintStyle: TextStyle(
                 color: Colors.grey.shade400,
-                fontSize: 18.sp,
+                fontSize: 19.sp,
               ),
               border: InputBorder.none,
               isDense: true,
@@ -150,11 +150,11 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
               ),
             ),
             selectorTextStyle: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               color: Colors.black87,
             ),
             textStyle: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               color: Colors.black,
             ),
           ),
@@ -167,7 +167,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
               widget.errorText!,
               style: TextStyle(
                 color: Colors.red,
-                fontSize: 15.sp,
+                fontSize: 17.sp,
               ),
             ),
           ),

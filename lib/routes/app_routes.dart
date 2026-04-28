@@ -51,13 +51,17 @@ import 'package:communal_mobile/screens/transactions/transfer_internal_verify_sc
 import 'package:communal_mobile/screens/transactions/transfer_internal_review_screen.dart';
 import 'package:communal_mobile/screens/transactions/transfer_screen.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
+import 'package:communal_mobile/data/models/loan_scheme.dart';
+import 'package:communal_mobile/data/models/loan_application.dart';
 import 'package:communal_mobile/screens/loans/loans_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_calculator_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_application_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_application_step2_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_application_step3_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_application_success_screen.dart';
-import 'package:communal_mobile/screens/loans/data/sample_guarantors.dart';
+import 'package:communal_mobile/screens/loans/loan_detail_screen.dart';
+import 'package:communal_mobile/screens/loans/guarantor_requests_screen.dart';
+import 'package:communal_mobile/screens/loans/data/loan_application_draft.dart';
 import 'package:communal_mobile/screens/account/account_settings_screen.dart';
 import 'package:communal_mobile/screens/account/my_profile_screen.dart';
 import 'package:communal_mobile/screens/account/freeze_account_screen.dart';
@@ -370,8 +374,6 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const LoanCalculatorScreen(),
     ),
     // Audit M27: route extras are type-checked before any numeric conversion.
-    // The previous `extra?['amount']?.toDouble()` form crashed with
-    // NoSuchMethodError when a caller passed a String or other non-num value.
     GoRoute(
       path: '/loan-application',
       name: 'loan-application',
@@ -380,8 +382,9 @@ final GoRouter appRouter = GoRouter(
             ? state.extra as Map<String, dynamic>
             : const <String, dynamic>{};
         return LoanApplicationScreen(
+          preselectedScheme:
+              extra['scheme'] is LoanScheme ? extra['scheme'] as LoanScheme : null,
           initialAmount: (extra['amount'] as num?)?.toDouble(),
-          initialDuration: (extra['duration'] as num?)?.toInt(),
         );
       },
     ),
@@ -392,13 +395,13 @@ final GoRouter appRouter = GoRouter(
         final extra = state.extra is Map<String, dynamic>
             ? state.extra as Map<String, dynamic>
             : const <String, dynamic>{};
-        return LoanApplicationStep2Screen(
-          loanAmount: (extra['amount'] as num?)?.toDouble(),
-          loanDuration: (extra['duration'] as num?)?.toInt(),
-          loanPurpose: extra['purpose'] is String
-              ? extra['purpose'] as String
-              : null,
-        );
+        final draft = extra['draft'];
+        if (draft is! LoanApplicationDraft) {
+          // Hard-redirect back to the start of the flow if someone
+          // deep-links into step 2 without the draft state.
+          return const LoanApplicationScreen();
+        }
+        return LoanApplicationStep2Screen(draft: draft);
       },
     ),
     GoRoute(
@@ -408,20 +411,31 @@ final GoRouter appRouter = GoRouter(
         final extra = state.extra is Map<String, dynamic>
             ? state.extra as Map<String, dynamic>
             : const <String, dynamic>{};
-        return LoanApplicationStep3Screen(
-          loanAmount: (extra['amount'] as num?)?.toDouble(),
-          loanDuration: (extra['duration'] as num?)?.toInt(),
-          loanPurpose: extra['purpose'] is String
-              ? extra['purpose'] as String
-              : null,
-          firstGuarantor: extra['firstGuarantor'] is Guarantor
-              ? extra['firstGuarantor'] as Guarantor
-              : null,
-          secondGuarantor: extra['secondGuarantor'] is Guarantor
-              ? extra['secondGuarantor'] as Guarantor
-              : null,
-        );
+        final draft = extra['draft'];
+        if (draft is! LoanApplicationDraft) {
+          return const LoanApplicationScreen();
+        }
+        return LoanApplicationStep3Screen(draft: draft);
       },
+    ),
+    GoRoute(
+      path: '/loan-detail',
+      name: 'loan-detail',
+      builder: (context, state) {
+        final extra = state.extra is Map<String, dynamic>
+            ? state.extra as Map<String, dynamic>
+            : const <String, dynamic>{};
+        final loan = extra['loan'];
+        if (loan is! LoanApplication) {
+          return const LoansScreen();
+        }
+        return LoanDetailScreen(loan: loan);
+      },
+    ),
+    GoRoute(
+      path: '/guarantor-requests',
+      name: 'guarantor-requests',
+      builder: (context, state) => const GuarantorRequestsScreen(),
     ),
     GoRoute(
       path: '/loan-application-success',
@@ -431,9 +445,15 @@ final GoRouter appRouter = GoRouter(
             ? state.extra as Map<String, dynamic>
             : const <String, dynamic>{};
         return LoanApplicationSuccessScreen(
-          loanAmount: (extra['amount'] as num?)?.toDouble() ?? 0,
-          applicationId: extra['applicationId'] is String
-              ? extra['applicationId'] as String
+          amountMinor: (extra['amountMinor'] as num?)?.toInt() ?? 0,
+          currency: extra['currency'] is String
+              ? (extra['currency'] as String)
+              : 'NGN',
+          referenceId: extra['referenceId'] is String
+              ? extra['referenceId'] as String
+              : null,
+          message: extra['message'] is String
+              ? extra['message'] as String
               : null,
         );
       },

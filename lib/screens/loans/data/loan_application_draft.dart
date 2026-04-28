@@ -1,0 +1,83 @@
+import 'package:communal_mobile/data/models/loan_scheme.dart';
+import 'package:communal_mobile/data/models/member_search_result.dart';
+
+/// Mutable, in-memory state that the three application steps pass to
+/// each other through `GoRouter` `extra`. Persists for the duration of
+/// the apply flow only — no Hive / SharedPreferences write — and is
+/// thrown away once the success screen is shown or the user backs out.
+class LoanApplicationDraft {
+  LoanApplicationDraft({
+    required this.scheme,
+    required this.amountMajor,
+    required this.currency,
+    required this.interestType,
+    required this.reasonForLoan,
+    this.employmentStatus = 'unemployed',
+    this.guarantors = const [],
+    this.company,
+    this.department,
+    this.monthlySalary,
+    this.outstandingLoan,
+    this.otherMonthlyRepayment,
+  });
+
+  /// Scheme the member is applying under. Drives duration, guarantor
+  /// count and interest rate downstream.
+  final LoanScheme scheme;
+
+  /// Amount in main currency units (e.g. 50000 for ₦50,000). Backend
+  /// multiplies by 100 server-side, so we keep it as major here.
+  final double amountMajor;
+
+  /// ISO 4217 alpha-3 (kobo / cents inferred from this when needed).
+  final String currency;
+
+  /// `'1'` deduct-on-disbursal, `'2'` add-to-principal. Some schemes
+  /// pin this; otherwise the member chooses on step 1.
+  final String interestType;
+
+  final String reasonForLoan;
+
+  /// `'employed'` or `'unemployed'` — the controller branches on this
+  /// to require company / salary fields (see StoreLoanApplicationRequest).
+  final String employmentStatus;
+
+  /// Guarantors picked in step 2. Empty until then.
+  final List<MemberSearchResult> guarantors;
+
+  final String? company;
+  final String? department;
+  final double? monthlySalary;
+  final double? outstandingLoan;
+  final double? otherMonthlyRepayment;
+
+  LoanApplicationDraft copyWith({
+    LoanScheme? scheme,
+    double? amountMajor,
+    String? currency,
+    String? interestType,
+    String? reasonForLoan,
+    String? employmentStatus,
+    List<MemberSearchResult>? guarantors,
+    String? company,
+    String? department,
+    double? monthlySalary,
+    double? outstandingLoan,
+    double? otherMonthlyRepayment,
+  }) {
+    return LoanApplicationDraft(
+      scheme: scheme ?? this.scheme,
+      amountMajor: amountMajor ?? this.amountMajor,
+      currency: currency ?? this.currency,
+      interestType: interestType ?? this.interestType,
+      reasonForLoan: reasonForLoan ?? this.reasonForLoan,
+      employmentStatus: employmentStatus ?? this.employmentStatus,
+      guarantors: guarantors ?? this.guarantors,
+      company: company ?? this.company,
+      department: department ?? this.department,
+      monthlySalary: monthlySalary ?? this.monthlySalary,
+      outstandingLoan: outstandingLoan ?? this.outstandingLoan,
+      otherMonthlyRepayment: otherMonthlyRepayment ?? this.otherMonthlyRepayment,
+    );
+  }
+}

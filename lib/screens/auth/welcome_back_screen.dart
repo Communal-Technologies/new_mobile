@@ -298,6 +298,13 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
     debugPrint('🔐 attempting local biometric auth…');
 
     try {
+      final bool authenticated = await _localAuth.authenticate(
+        localizedReason: 'Unlock Communal with your $_biometricName',
+        options: const AuthenticationOptions(
+          biometricOnly: true,
+          stickyAuth: true,
+        ),
+      );
       debugPrint('🔐 local_auth returned: $authenticated');
 
       if (authenticated && mounted) {

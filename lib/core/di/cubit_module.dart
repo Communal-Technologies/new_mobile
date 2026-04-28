@@ -35,6 +35,10 @@ abstract class CubitModule {
   @lazySingleton
   ConnectivityCubit get connectivityCubit => ConnectivityCubit();
 
+  // [ServerStatusCubit] is registered manually in `injection.dart`
+  // after `getIt.init()` for the same reason [ServerStatusInterceptor]
+  // is — keeps this checkout-runnable without a `build_runner` pass.
+
   @lazySingleton
   SecurityCubit provideSecurityCubit(
     SharedPreferences prefs,

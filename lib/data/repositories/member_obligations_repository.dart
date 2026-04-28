@@ -1,18 +1,21 @@
+import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
+import 'package:communal_mobile/data/models/obligation.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
-import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
 import 'package:dio/dio.dart';
 
-/// Backend stores [Ledger.destination] as `{AccountType}-{account_code}` (e.g. `Equity-IA…`)
-/// and [obligation_type] as `{AccountType}-Obligation`, not the raw account code.
+/// Backend stores [Ledger.destination] as `{AccountType}-{account_code}`
+/// (e.g. `Equity-IA…`) for the credit row and (after the obligation→
+/// obligation fix) `obligation-{account_code}` (lowercase) for the debit
+/// row that hangs off the source obligation. Both cases are covered here.
 bool _ledgerRowMatchesObligation(Map<String, dynamic> row, Obligation obligation) {
   final code = obligation.accountCode.trim();
   if (code.isEmpty) return false;
 
   final dest = row['destination']?.toString().trim() ?? '';
   if (dest.isNotEmpty) {
-    const prefixes = ['Equity', 'Patronage', 'Custom', 'Obligation'];
+    const prefixes = ['Equity', 'Patronage', 'Custom', 'Obligation', 'obligation'];
     for (final p in prefixes) {
       final prefix = '$p-';
       if (dest.startsWith(prefix) && dest.substring(prefix.length) == code) {
@@ -95,6 +98,8 @@ class MemberObligationsRepository {
         }
       }
 
+      final fallbackCurrency = resolveCurrencyCode(user);
+
       return rawObligations
           .whereType<Map>()
           .map((row) {
@@ -103,6 +108,7 @@ class MemberObligationsRepository {
             return Obligation.fromBackend(
               obligation: map,
               account: accountByCode[code],
+              fallbackCurrency: fallbackCurrency,
             );
           })
           .toList(growable: false);
@@ -140,9 +146,12 @@ class MemberObligationsRepository {
               final rCoop = row['cooperative_id']?.toString().trim() ?? '';
               if (rCoop.isNotEmpty && rCoop != coopId) return false;
             }
-            if (row['trx_type']?.toString().trim() != '1') {
-              return false;
-            }
+            // Both inflows (`trx_type=1`, money entering this obligation
+            // from wallet/NIP/another obligation) and outflows
+            // (`trx_type=2`, this obligation funding another one) are
+            // surfaced. Other trx_types are unrelated movement.
+            final t = row['trx_type']?.toString().trim();
+            if (t != '1' && t != '2') return false;
             return _ledgerRowMatchesObligation(row, obligation);
           })
           .toList()
@@ -153,21 +162,32 @@ class MemberObligationsRepository {
         });
 
       return rows.map((row) {
-        final amountKobo = _parseDouble(row['amount']);
-        final amountMajor = amountKobo / 100;
+        final amountMinor = _parseInt(row['amount']);
         final date = DateTime.tryParse(row['created_at']?.toString() ?? '') ?? DateTime.now();
         final mode = row['payment_mode']?.toString().trim();
         final isBf = row['brought_forward']?.toString().trim() == '1';
+        final isOutflow = row['trx_type']?.toString().trim() == '2';
         final modeLower = (mode ?? '').toLowerCase();
-        final title = (isBf || modeLower.contains('brought forward'))
-            ? 'Brought forward'
-            : 'Payment received';
+        final String title;
+        if (isOutflow) {
+          // Source obligation funded another. The backend description
+          // already encodes the target ("…to {AccountType}-{code}")
+          // but we keep the title short and rely on the sign + palette
+          // to convey direction.
+          title = 'Used to pay another obligation';
+        } else if (isBf || modeLower.contains('brought forward')) {
+          title = 'Brought forward';
+        } else {
+          title = 'Payment received';
+        }
         return PaymentRecord(
           title: title,
           date: date,
-          amount: amountMajor,
+          amountMinor: amountMinor,
+          currency: obligation.currency,
           method: (mode == null || mode.isEmpty) ? 'Wallet' : mode,
           reference: row['trx_ref_id']?.toString() ?? '',
+          isOutflow: isOutflow,
         );
       }).toList(growable: false);
     } on DioException {
@@ -227,13 +247,16 @@ class MemberObligationsRepository {
     }
   }
 
-  /// After a successful NIP transfer to the cooperative cash repository, record obligation payment.
+  /// After a successful NIP transfer to the cooperative cash repository,
+  /// record obligation payment. [amountMinor] is integer minor units of
+  /// the obligation's currency (kobo for NGN) — same convention the
+  /// backend `pay-obligation` endpoint stores in the ledger.
   Future<void> recordNipObligationPayment({
     required UserModel user,
     required String obligationAccountCode,
     required String transferId,
     required String cashRepositoryId,
-    required double amountNaira,
+    required int amountMinor,
     String? idempotencyKey,
     Map<String, String>? biometricHeaders,
   }) async {
@@ -244,8 +267,7 @@ class MemberObligationsRepository {
     if (cooperativeId.isEmpty || ledgerNumber.isEmpty || tid.isEmpty || rid.isEmpty) {
       throw Exception('Missing payment details');
     }
-    final amountKobo = (amountNaira * 100).round();
-    if (amountKobo <= 0) {
+    if (amountMinor <= 0) {
       throw Exception('Invalid amount');
     }
     final code = obligationAccountCode.trim();
@@ -257,7 +279,7 @@ class MemberObligationsRepository {
       final response = await _dioClient.post(
         ApiEndpoints.membersPayObligation,
         data: {
-          'amount': amountKobo.toString(),
+          'amount': amountMinor.toString(),
           'obligation': code,
           'ledger_number': ledgerNumber,
           'gateway': 'nip_transfer',
@@ -295,7 +317,7 @@ class MemberObligationsRepository {
     required UserModel user,
     required String targetObligationAccountCode,
     required String sourceObligationAccountCode,
-    required double amountNaira,
+    required int amountMinor,
     String? idempotencyKey,
     Map<String, String>? biometricHeaders,
   }) async {
@@ -311,8 +333,7 @@ class MemberObligationsRepository {
     if (target == source) {
       throw Exception('Source and target obligations must differ');
     }
-    final amountKobo = (amountNaira * 100).round();
-    if (amountKobo <= 0) {
+    if (amountMinor <= 0) {
       throw Exception('Invalid amount');
     }
 
@@ -320,7 +341,7 @@ class MemberObligationsRepository {
       final response = await _dioClient.post(
         ApiEndpoints.membersPayObligation,
         data: {
-          'amount': amountKobo.toString(),
+          'amount': amountMinor.toString(),
           'obligation': target,
           'ledger_number': ledgerNumber,
           'gateway': 'obligation',
@@ -345,8 +366,13 @@ class MemberObligationsRepository {
     }
   }
 
-  double _parseDouble(dynamic value) {
-    if (value is num) return value.toDouble();
-    return double.tryParse(value?.toString() ?? '') ?? 0;
+  int _parseInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    final raw = value?.toString().trim() ?? '';
+    if (raw.isEmpty) return 0;
+    return int.tryParse(raw) ??
+        double.tryParse(raw)?.toInt() ??
+        0;
   }
 }

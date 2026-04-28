@@ -65,7 +65,7 @@ class AppElevatedButton extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 16.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.2,
                       ),
@@ -78,7 +78,7 @@ class AppElevatedButton extends StatelessWidget {
               title ?? "",
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 16.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.5,
                   ),
@@ -121,7 +121,7 @@ class AppOutlinedButton extends StatelessWidget {
             title,
             color: theme.primaryColor,
             fontWeight: FontWeight.w600,
-            fontSize: 16.sp,
+            fontSize: 17.sp,
           ),
     );
   }
@@ -169,7 +169,7 @@ class AppSecondaryButton extends StatelessWidget {
               title,
               style: TextStyle(
                 color: textColor,
-                fontSize: 16.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.5,
               ),

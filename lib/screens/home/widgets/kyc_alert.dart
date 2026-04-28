@@ -41,7 +41,7 @@ class KycAlert extends StatelessWidget {
                     Text(
                       'KYC NOT COMPLETED',
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
                         color: Colors.black,
                       ),
@@ -50,7 +50,7 @@ class KycAlert extends StatelessWidget {
                     Text(
                       'We\'ve detected that some of your details may be inaccurate or incomplete, kindly update to continue.',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 15.sp,
                         color: Colors.grey.shade700,
                         height: 1.4,
                       ),
@@ -76,7 +76,7 @@ class KycAlert extends StatelessWidget {
               child: Text(
                 'Update Now >',
                 style: TextStyle(
-                  fontSize: 15.sp,
+                  fontSize: 17.sp,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                 ),

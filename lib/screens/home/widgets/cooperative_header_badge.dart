@@ -78,7 +78,7 @@ class CooperativeHeaderBadge extends StatelessWidget {
         Text(
           line1,
           style: TextStyle(
-            fontSize: 11.sp,
+            fontSize: 13.sp,
             fontWeight: FontWeight.w700,
             color: theme.primaryColor,
           ),

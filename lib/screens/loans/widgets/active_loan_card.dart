@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
-import 'package:communal_mobile/screens/loans/data/sample_loans.dart';
+import 'package:communal_mobile/data/models/loan_application.dart';
 
 class ActiveLoanCard extends StatelessWidget {
   const ActiveLoanCard({
@@ -11,12 +11,42 @@ class ActiveLoanCard extends StatelessWidget {
     this.onMakePayment,
   });
 
-  final Loan loan;
+  final LoanApplication loan;
   final VoidCallback? onViewDetails;
   final VoidCallback? onMakePayment;
 
+  Color get _statusColor {
+    switch (loan.status) {
+      case LoanStatus.approved:
+        return const Color(0xFF1976D2);
+      case LoanStatus.pending:
+        return const Color(0xFFE67E22);
+      case LoanStatus.declined:
+        return const Color(0xFFE74C3C);
+      case LoanStatus.cancelled:
+        return Colors.grey;
+      case LoanStatus.unknown:
+        return Colors.grey;
+    }
+  }
+
+  Color get _statusBg {
+    switch (loan.status) {
+      case LoanStatus.approved:
+        return const Color(0xFFE3F2FD);
+      case LoanStatus.pending:
+        return const Color(0xFFFFF4E9);
+      case LoanStatus.declined:
+        return const Color(0xFFFDECEA);
+      case LoanStatus.cancelled:
+      case LoanStatus.unknown:
+        return Colors.grey.shade100;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isApproved = loan.status == LoanStatus.approved;
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
@@ -40,7 +70,7 @@ class ActiveLoanCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      loan.title,
+                      loan.loanCode.isNotEmpty ? loan.loanCode : 'Loan',
                       style: TextStyle(
                         fontSize: 16.sp,
                         fontWeight: FontWeight.w700,
@@ -49,7 +79,9 @@ class ActiveLoanCard extends StatelessWidget {
                     ),
                     vSpace(4),
                     Text(
-                      loan.loanId,
+                      loan.referenceId.isNotEmpty
+                          ? loan.referenceId
+                          : loan.id,
                       style: TextStyle(
                         fontSize: 12.sp,
                         color: Colors.grey.shade600,
@@ -61,137 +93,105 @@ class ActiveLoanCard extends StatelessWidget {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE3F2FD),
+                  color: _statusBg,
                   borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Text(
-                  loan.status,
+                  loan.status.label,
                   style: TextStyle(
                     fontSize: 11.sp,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF1976D2),
+                    color: _statusColor,
                   ),
                 ),
               ),
             ],
           ),
           vSpace(16),
-          Text(
-            'Repayment Progress',
-            style: TextStyle(
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade700,
-            ),
-          ),
-          vSpace(8),
-          Stack(
-            children: [
-              Container(
-                height: 8.h,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(4.r),
-                ),
-              ),
-              FractionallySizedBox(
-                widthFactor: loan.repaymentProgress,
-                child: Container(
-                  height: 8.h,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF7434FF),
-                    borderRadius: BorderRadius.circular(4.r),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          vSpace(4),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              loan.progressLabel,
+          if (isApproved) ...[
+            Text(
+              'Repayment Progress',
               style: TextStyle(
-                fontSize: 12.sp,
+                fontSize: 13.sp,
                 fontWeight: FontWeight.w600,
                 color: Colors.grey.shade700,
               ),
             ),
-          ),
-          vSpace(16),
+            vSpace(8),
+            Stack(
+              children: [
+                Container(
+                  height: 8.h,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(4.r),
+                  ),
+                ),
+                FractionallySizedBox(
+                  widthFactor: loan.repaymentProgress,
+                  child: Container(
+                    height: 8.h,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7434FF),
+                      borderRadius: BorderRadius.circular(4.r),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            vSpace(4),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                loan.progressLabel,
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+            ),
+            vSpace(16),
+          ],
           Row(
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Balance',
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    vSpace(4),
-                    Text(
-                      loan.balanceLabel,
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0F1D40),
-                      ),
-                    ),
-                  ],
+                child: _statColumn('Principal', loan.amountLabel),
+              ),
+              Expanded(
+                child: _statColumn(
+                  isApproved ? 'Balance' : 'Status',
+                  isApproved ? loan.balanceLabel : loan.status.label,
+                  highlight: isApproved,
                 ),
               ),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Next Payment',
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    vSpace(4),
-                    Text(
-                      loan.nextPaymentLabel,
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFFE67E22),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Due Date',
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    vSpace(4),
-                    Text(
-                      loan.dueDateLabel,
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0F1D40),
-                      ),
-                    ),
-                  ],
+                child: _statColumn(
+                  isApproved ? 'Monthly' : 'Applied',
+                  isApproved
+                      ? loan.monthlyRepaymentLabel
+                      : loan.createdAtLabel,
                 ),
               ),
             ],
           ),
+          if (loan.dueDateLabel != null) ...[
+            vSpace(8),
+            Row(
+              children: [
+                Icon(Icons.event,
+                    size: 14.sp, color: Colors.grey.shade600),
+                hSpace(6),
+                Text(
+                  'Due ${loan.dueDateLabel}',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ],
           vSpace(16),
           Row(
             children: [
@@ -215,33 +215,57 @@ class ActiveLoanCard extends StatelessWidget {
                   ),
                 ),
               ),
-              hSpace(12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: onMakePayment,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE67E22),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.r),
+              if (isApproved) ...[
+                hSpace(12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: onMakePayment,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE67E22),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      padding: EdgeInsets.symmetric(vertical: 12.h),
                     ),
-                    padding: EdgeInsets.symmetric(vertical: 12.h),
-                  ),
-                  child: Text(
-                    'Make Payment',
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w700,
+                    child: Text(
+                      'Make Payment',
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ],
           ),
         ],
       ),
     );
   }
-}
 
+  Widget _statColumn(String label, String value, {bool highlight = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600)),
+        vSpace(4),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w700,
+            color: highlight
+                ? const Color(0xFFE67E22)
+                : const Color(0xFF0F1D40),
+          ),
+        ),
+      ],
+    );
+  }
+}

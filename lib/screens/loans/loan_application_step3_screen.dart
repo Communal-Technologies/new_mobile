@@ -123,7 +123,7 @@ class _LoanApplicationStep3ScreenState
           title: Text(
             'Loan Application',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
@@ -136,7 +136,7 @@ class _LoanApplicationStep3ScreenState
                 child: Text(
                   'Step 3 of 3',
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF7434FF),
                   ),
@@ -174,7 +174,7 @@ class _LoanApplicationStep3ScreenState
                         child: Text(
                           _error!,
                           style: TextStyle(
-                            fontSize: 13.sp,
+                            fontSize: 15.sp,
                             color: const Color(0xFFE74C3C),
                           ),
                         ),
@@ -213,7 +213,7 @@ class _LoanApplicationStep3ScreenState
           child: Text(
             'Review & Submit',
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 15.sp,
               fontWeight: FontWeight.w600,
               color: const Color(0xFF7434FF),
             ),
@@ -256,7 +256,7 @@ class _LoanApplicationStep3ScreenState
           Text(
             'Loan Summary',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F1D40),
             ),
@@ -291,7 +291,7 @@ class _LoanApplicationStep3ScreenState
             flex: 2,
             child: Text(
               label,
-              style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
             ),
           ),
           Expanded(
@@ -300,7 +300,7 @@ class _LoanApplicationStep3ScreenState
               value,
               textAlign: TextAlign.right,
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF0F1D40),
               ),
@@ -327,7 +327,7 @@ class _LoanApplicationStep3ScreenState
           Text(
             'Guarantors',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F1D40),
             ),
@@ -348,7 +348,7 @@ class _LoanApplicationStep3ScreenState
                         Text(
                           g.name,
                           style: TextStyle(
-                            fontSize: 15.sp,
+                            fontSize: 17.sp,
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF0F1D40),
                           ),
@@ -357,7 +357,7 @@ class _LoanApplicationStep3ScreenState
                         Text(
                           g.ledgerNumber,
                           style: TextStyle(
-                            fontSize: 12.sp,
+                            fontSize: 13.sp,
                             color: Colors.grey.shade600,
                           ),
                         ),
@@ -413,7 +413,7 @@ class _LoanApplicationStep3ScreenState
             child: RichText(
               text: TextSpan(
                 style: TextStyle(
-                  fontSize: 13.sp,
+                  fontSize: 15.sp,
                   color: Colors.grey.shade700,
                   height: 1.5,
                 ),
@@ -452,7 +452,7 @@ class _LoanApplicationStep3ScreenState
           Text(
             'Important:',
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 15.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F1D40),
             ),
@@ -461,7 +461,7 @@ class _LoanApplicationStep3ScreenState
           Text(
             'Your application will be reviewed by your cooperative. You will be notified of the decision in-app and via SMS.',
             style: TextStyle(
-              fontSize: 12.sp,
+              fontSize: 13.sp,
               color: Colors.grey.shade700,
               height: 1.4,
             ),
@@ -488,7 +488,7 @@ class _LoanApplicationStep3ScreenState
             child: Text(
               'Back',
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF0F1D40),
               ),
@@ -524,7 +524,7 @@ class _LoanApplicationStep3ScreenState
                 : Text(
                     'Submit Application',
                     style: TextStyle(
-                      fontSize: 16.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

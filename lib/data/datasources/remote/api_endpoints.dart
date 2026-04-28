@@ -77,6 +77,8 @@ class ApiEndpoints {
           : '/members/loan/fetch-requested/$ledgerNumber/${status.trim()}';
   static String membersFetchLoanBalance(String ledgerNumber) =>
       '/members/loan/fetch-balances/$ledgerNumber';
+  static String membersLoanEligibility(String cooperativeId) =>
+      '/members/loan/eligibility/$cooperativeId';
   static String membersFetchGuarantorRequests(String ledgerNumber) =>
       '/members/loan/fetch-approval-requests/$ledgerNumber';
   static const String membersLoanApplication = '/members/loan/application';

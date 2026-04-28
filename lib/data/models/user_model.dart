@@ -117,6 +117,20 @@ class UserModel extends Equatable {
     return (id != null && id.isNotEmpty) || (n != null && n.isNotEmpty);
   }
 
+  /// "Far enough through KYC to use the app." The router uses this to
+  /// gate every protected route after sign-in: a fresh tier_0 user with
+  /// no submitted KYC step is bounced to `/kyc/profile-info` until they
+  /// at least submit step 1. Once the cooperative-side reviewer
+  /// approves them their tier flips to `tier_1+` and the gate falls
+  /// open the same way; users who submitted but are pending review are
+  /// considered "in-progress" and stay unblocked so we don't make them
+  /// redo the form.
+  bool get hasCompletedKyc {
+    final tier = communalTier?.trim().toLowerCase();
+    if (tier != null && tier.isNotEmpty && tier != 'tier_0') return true;
+    return kycStep1Submitted;
+  }
+
   /// Wallet is frozen (`account_status` = 2).
   bool get isWalletFrozen {
     final s = walletAccountStatus?.trim();

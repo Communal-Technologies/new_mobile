@@ -51,6 +51,7 @@ class QuickActionsSection extends StatelessWidget {
                 icon: Icons.favorite_border,
                 label: 'Loan',
                 theme: theme,
+                onTap: () => context.pushNamed('loans'),
               ),
             ],
           ),

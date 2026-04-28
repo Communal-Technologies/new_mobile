@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
@@ -15,9 +16,10 @@ import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/loans/data/loan_application_draft.dart';
 
 /// Step 1 of the loan apply flow — pick a scheme, enter amount + reason,
-/// choose interest treatment when the scheme leaves it open. Schemes
-/// (duration, interest rate, guarantor count) are loaded from the
-/// backend; nothing here is hardcoded.
+/// choose interest treatment when the scheme leaves it open. Scheme
+/// duration / interest rate / guarantor count come from the backend;
+/// the slider's min and max bounds are still UI-side defaults until
+/// the cooperative-settings endpoint exposes member-specific limits.
 class LoanApplicationScreen extends StatefulWidget {
   const LoanApplicationScreen({
     super.key,
@@ -41,6 +43,13 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _reasonController = TextEditingController();
 
+  // UI-side bounds for the slider. The backend does not yet surface
+  // per-scheme caps, so we keep these as the same defaults the screen
+  // shipped with originally — tighten / wire to settings later.
+  static const double _minAmount = 50000;
+  static const double _maxAmount = 2000000;
+
+  double _loanAmount = _minAmount;
   bool _loading = false;
   String? _error;
   List<LoanScheme> _schemes = const [];
@@ -55,9 +64,13 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   void initState() {
     super.initState();
     _selectedScheme = widget.preselectedScheme;
-    if (widget.initialAmount != null) {
-      _amountController.text = _formatPlain(widget.initialAmount!);
+    final initial = widget.initialAmount;
+    if (initial != null) {
+      _loanAmount = initial.clamp(_minAmount, _maxAmount).toDouble();
+    } else {
+      _loanAmount = (_minAmount + _maxAmount) / 2;
     }
+    _amountController.text = _formatNoDecimals(_loanAmount);
     if (widget.preselectedScheme?.interestType != null &&
         widget.preselectedScheme!.interestType!.isNotEmpty) {
       _interestType = widget.preselectedScheme!.interestType!;
@@ -107,21 +120,25 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     }
   }
 
-  String _formatPlain(double amount) =>
-      amount.toStringAsFixed(amount.truncateToDouble() == amount ? 0 : 2);
+  String _formatNoDecimals(double amount) {
+    final formatter = NumberFormat('#,##0', 'en_NG');
+    return formatter.format(amount.round());
+  }
 
-  double? _parsedAmount() {
-    final raw = _amountController.text.replaceAll(RegExp(r'[,\s]'), '').trim();
-    if (raw.isEmpty) return null;
-    return double.tryParse(raw);
+  void _setAmount(double value) {
+    final clamped = value.clamp(_minAmount, _maxAmount).toDouble();
+    setState(() => _loanAmount = clamped);
+    _amountController.value = TextEditingValue(
+      text: _formatNoDecimals(clamped),
+      selection: TextSelection.collapsed(
+        offset: _formatNoDecimals(clamped).length,
+      ),
+    );
   }
 
   String? _validate() {
     if (_selectedScheme == null) return 'Pick a loan product to continue';
-    final amount = _parsedAmount();
-    if (amount == null || amount <= 0) {
-      return 'Enter how much you want to borrow';
-    }
+    if (_loanAmount <= 0) return 'Enter how much you want to borrow';
     if (_reasonController.text.trim().isEmpty) {
       return 'Tell us why you need this loan';
     }
@@ -133,6 +150,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     final auth = context.watch<AuthBloc>().state;
     final user = auth is AuthAuthenticated ? auth.user : null;
     final currency = user != null ? resolveCurrencyCode(user) : 'NGN';
+    final symbol = currencySymbolForCode(currency);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(
@@ -175,9 +193,10 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                     else
                       _buildSchemeSummary(_selectedScheme!),
                     vSpace(24),
-                    _buildAmountSection(currency),
-                    vSpace(20),
-                    if (_selectedScheme != null) _buildEstimateCard(currency),
+                    _buildLoanAmountSection(symbol),
+                    vSpace(24),
+                    if (_selectedScheme != null)
+                      _buildRepaymentSummarySection(currency, symbol),
                     vSpace(24),
                     if ((_selectedScheme?.interestType?.isEmpty ?? true))
                       _buildInterestTypeSection(),
@@ -382,9 +401,11 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             spacing: 12.w,
             runSpacing: 6.h,
             children: [
-              _miniStat('${scheme.durationMonths} months'),
+              _miniStat(scheme.durationLabel),
               _miniStat('${scheme.interestRateLabel} interest'),
-              _miniStat('${scheme.numberOfGuarantors} guarantors'),
+              _miniStat(
+                '${scheme.numberOfGuarantors} guarantor${scheme.numberOfGuarantors == 1 ? '' : 's'}',
+              ),
             ],
           ),
         ],
@@ -410,8 +431,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     );
   }
 
-  Widget _buildAmountSection(String currency) {
-    final symbol = currencySymbolForCode(currency);
+  Widget _buildLoanAmountSection(String symbol) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -423,20 +443,55 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             color: const Color(0xFF0F1D40),
           ),
         ),
-        vSpace(12),
+        vSpace(20),
+        Row(
+          children: [
+            Text(
+              '$symbol${_formatNoDecimals(_minAmount)}',
+              style:
+                  TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
+            ),
+            Expanded(
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  activeTrackColor: const Color(0xFF7434FF),
+                  inactiveTrackColor: Colors.grey.shade300,
+                  thumbColor: const Color(0xFF7434FF),
+                  thumbShape:
+                      RoundSliderThumbShape(enabledThumbRadius: 12.r),
+                  overlayShape:
+                      RoundSliderOverlayShape(overlayRadius: 24.r),
+                  trackHeight: 4.h,
+                ),
+                child: Slider(
+                  value: _loanAmount,
+                  min: _minAmount,
+                  max: _maxAmount,
+                  divisions: 39,
+                  onChanged: _setAmount,
+                ),
+              ),
+            ),
+            Text(
+              '$symbol${_formatNoDecimals(_maxAmount)}',
+              style:
+                  TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+        vSpace(16),
         TextField(
           controller: _amountController,
-          keyboardType:
-              const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
-          ],
+          keyboardType: TextInputType.number,
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 24.sp,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF7434FF),
           ),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[\d,]')),
+          ],
           decoration: InputDecoration(
             prefixText: '$symbol ',
             prefixStyle: TextStyle(
@@ -444,7 +499,6 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
               fontWeight: FontWeight.w700,
               color: const Color(0xFF7434FF),
             ),
-            hintText: '0',
             filled: true,
             fillColor: Colors.grey.shade50,
             border: OutlineInputBorder(
@@ -463,102 +517,163 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             contentPadding:
                 EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
           ),
-          onChanged: (_) => setState(() {}),
+          onChanged: (value) {
+            final numeric = value.replaceAll(RegExp(r'[^\d]'), '');
+            if (numeric.isEmpty) {
+              setState(() => _loanAmount = _minAmount);
+              return;
+            }
+            final parsed = double.tryParse(numeric);
+            if (parsed == null) return;
+            final clamped =
+                parsed.clamp(_minAmount, _maxAmount).toDouble();
+            setState(() => _loanAmount = clamped);
+            // If the user typed beyond the max (or below min), reflect
+            // the clamped value back into the field so they see the cap
+            // they're held to.
+            if (clamped != parsed) {
+              final formatted = _formatNoDecimals(clamped);
+              _amountController.value = TextEditingValue(
+                text: formatted,
+                selection:
+                    TextSelection.collapsed(offset: formatted.length),
+              );
+            }
+          },
+        ),
+        vSpace(8),
+        Text(
+          'Minimum: $symbol${_formatNoDecimals(_minAmount)} | Maximum: $symbol${_formatNoDecimals(_maxAmount)}',
+          style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
         ),
       ],
     );
   }
 
-  Widget _buildEstimateCard(String currency) {
-    final amount = _parsedAmount();
-    if (amount == null || amount <= 0) {
-      return const SizedBox.shrink();
-    }
+  Widget _buildRepaymentSummarySection(String currency, String symbol) {
     final scheme = _selectedScheme!;
-    final principalMinor = (amount * factorFor(currency)).round();
+    final principalMinor =
+        (_loanAmount * factorFor(currency)).round();
+    final interestMinor =
+        (principalMinor * scheme.interestRate / 100).round();
     final monthlyMinor = estimatedMonthlyRepaymentMinor(
       principalMinor: principalMinor,
       scheme: scheme,
       interestType: _interestType,
       currency: currency,
     );
-    final interestMinor =
-        (principalMinor * scheme.interestRate / 100).round();
     final totalMinor = _interestType == '1'
         ? principalMinor
         : principalMinor + interestMinor;
+
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
         color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(12.r),
+        borderRadius: BorderRadius.circular(16.r),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Estimated Repayment',
+            'Repayment Summary',
             style: TextStyle(
               fontSize: 16.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F1D40),
             ),
           ),
-          vSpace(12),
+          vSpace(20),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: _estimateColumn(
-                  'Monthly',
-                  Money(monthlyMinor, currency).format(),
-                  highlight: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      Money(monthlyMinor, currency).format(),
+                      style: TextStyle(
+                        fontSize: 20.sp,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF7434FF),
+                      ),
+                    ),
+                    vSpace(4),
+                    Text(
+                      'monthly in ${scheme.durationMonths} installment${scheme.durationMonths == 1 ? '' : 's'}',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Expanded(
-                child: _estimateColumn(
-                  'Total',
-                  Money(totalMinor, currency).format(),
-                ),
-              ),
-              Expanded(
-                child: _estimateColumn(
-                  'Interest',
-                  Money(interestMinor, currency).format(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      Money(totalMinor, currency).format(),
+                      style: TextStyle(
+                        fontSize: 20.sp,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF7434FF),
+                      ),
+                    ),
+                    vSpace(4),
+                    Text(
+                      'Total Repayment',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          vSpace(8),
+          vSpace(16),
+          Container(
+            padding: EdgeInsets.all(12.w),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Total Interest',
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                Text(
+                  Money(interestMinor, currency).format(),
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF0F1D40),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          vSpace(12),
           Text(
-            'Over ${scheme.durationMonths} month${scheme.durationMonths == 1 ? '' : 's'} at ${scheme.interestRateLabel}',
-            style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
+            'At ${scheme.interestRateLabel} interest rate',
+            style: TextStyle(
+              fontSize: 13.sp,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFFE67E22),
+            ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _estimateColumn(String label, String value,
-      {bool highlight = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600)),
-        vSpace(4),
-        Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w700,
-            color: highlight
-                ? const Color(0xFF7434FF)
-                : const Color(0xFF0F1D40),
-          ),
-        ),
-      ],
     );
   }
 
@@ -700,7 +815,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           }
           final draft = LoanApplicationDraft(
             scheme: _selectedScheme!,
-            amountMajor: _parsedAmount()!,
+            amountMajor: _loanAmount,
             currency: currency,
             interestType: _interestType,
             reasonForLoan: _reasonController.text.trim(),

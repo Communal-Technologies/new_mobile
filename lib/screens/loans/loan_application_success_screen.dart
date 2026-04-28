@@ -46,7 +46,7 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
           title: Text(
             'Loan Application',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
@@ -78,7 +78,7 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
                         'Your loan application for $formattedAmount has been submitted. Your guarantors will review it and your cooperative will reach out with a decision.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 13.sp,
+                      fontSize: 15.sp,
                       color: Colors.grey.shade800,
                       height: 1.4,
                     ),
@@ -143,7 +143,7 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 14.sp,
+            fontSize: 15.sp,
             color: Colors.grey.shade700,
             fontWeight: FontWeight.w500,
           ),
@@ -153,7 +153,7 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
             value,
             textAlign: TextAlign.right,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 15.sp,
               fontWeight: FontWeight.w600,
               color: isStatus ? const Color(0xFFE67E22) : Colors.black87,
             ),
@@ -182,7 +182,7 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
             ),
             child: Text(
               'Go to Loans',
-              style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w700),
+              style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w700),
             ),
           ),
         ),
@@ -202,7 +202,7 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
             ),
             child: Text(
               'Back to Home',
-              style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w600),
             ),
           ),
         ),

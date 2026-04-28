@@ -99,7 +99,7 @@ class UiService {
               MedAppText(
                 data,
                 alignment: TextAlign.center,
-                fontSize: 14.sp,
+                fontSize: 15.sp,
                 color: theme.colorScheme.onSurface,
               ),
               vSpace(20),

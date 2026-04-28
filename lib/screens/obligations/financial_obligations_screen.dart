@@ -6,13 +6,15 @@ import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/core/utils/app_currency.dart';
+import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
 import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
 import 'package:communal_mobile/core/widgets/loader_overlay.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/models/obligation.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
 import 'package:communal_mobile/injection.dart';
-import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
 import 'package:communal_mobile/screens/obligations/widgets/obligation_card.dart';
 
 class FinancialObligationsScreen extends StatefulWidget {
@@ -207,8 +209,14 @@ class _FinancialObligationsScreenState
   }
 
   Widget _buildSummaryCards(ThemeData theme) {
-    final totalDue = _obligations.fold<double>(0, (sum, row) => sum + row.balance);
-    final totalPaid = _obligations.fold<double>(0, (sum, row) => sum + row.paidAmount);
+    final auth = context.watch<AuthBloc>().state;
+    final currency = auth is AuthAuthenticated
+        ? resolveCurrencyCode(auth.user)
+        : (_obligations.isNotEmpty ? _obligations.first.currency : 'NGN');
+    final totalDueMinor =
+        _obligations.fold<int>(0, (sum, row) => sum + row.balanceMinor);
+    final totalPaidMinor =
+        _obligations.fold<int>(0, (sum, row) => sum + row.paidAmountMinor);
     final nextDueLabel = _obligations.isEmpty
         ? 'N/A'
         : _formatDate(
@@ -219,14 +227,14 @@ class _FinancialObligationsScreenState
     final cards = [
       _SummaryCardData(
         label: 'Total Due',
-        value: '₦${_formatCompact(totalDue)}',
+        value: Money(totalDueMinor, currency).format(),
         color: const Color(0xFFFFE6E9),
         icon: Icons.error_outline,
         valueColor: const Color(0xFFD7263D),
       ),
       _SummaryCardData(
         label: 'Total Paid',
-        value: '₦${_formatCompact(totalPaid)}',
+        value: Money(totalPaidMinor, currency).format(),
         color: const Color(0xFFE7FFF2),
         icon: Icons.check_circle_outline,
         valueColor: const Color(0xFF1AAE70),
@@ -395,14 +403,6 @@ class _FinancialObligationsScreenState
       ],
       vSpace(20),
     ];
-  }
-
-  String _formatCompact(double value) {
-    final whole = value.round().toString();
-    return whole.replaceAllMapped(
-      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-      (m) => '${m[1]},',
-    );
   }
 
   String _formatDate(DateTime date) {

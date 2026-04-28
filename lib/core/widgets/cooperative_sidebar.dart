@@ -124,7 +124,7 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                                       Text(
                                         'Current Cooperative',
                                         style: TextStyle(
-                                          fontSize: 18.sp,
+                                          fontSize: 19.sp,
                                           fontWeight: FontWeight.w600,
                                           color: Colors.grey.shade800,
                                         ),
@@ -174,7 +174,7 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                                               Text(
                                                 primaryTitle,
                                                 style: TextStyle(
-                                                  fontSize: 15.sp,
+                                                  fontSize: 17.sp,
                                                   fontWeight: FontWeight.w700,
                                                   color: Colors.black,
                                                 ),
@@ -185,7 +185,7 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                                               Text(
                                                 secondaryLine,
                                                 style: TextStyle(
-                                                  fontSize: 13.sp,
+                                                  fontSize: 15.sp,
                                                   color: Colors.grey.shade700,
                                                 ),
                                                 maxLines: 2,
@@ -214,7 +214,7 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                         Text(
                           'Other cooperatives',
                           style: TextStyle(
-                            fontSize: 15.sp,
+                            fontSize: 17.sp,
                             fontWeight: FontWeight.w600,
                             color: Colors.grey.shade800,
                           ),
@@ -231,7 +231,7 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                                   'You can use Communal without belonging to a cooperative. '
                                   'When you join one (or more) with an invite code, they will show here.',
                                   style: TextStyle(
-                                    fontSize: 14.sp,
+                                    fontSize: 15.sp,
                                     height: 1.35,
                                     color: Colors.grey.shade700,
                                   ),
@@ -379,7 +379,7 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 16.sp,
+                  fontSize: 17.sp,
                   fontWeight: FontWeight.w600,
                   color: Colors.grey.shade800,
                 ),

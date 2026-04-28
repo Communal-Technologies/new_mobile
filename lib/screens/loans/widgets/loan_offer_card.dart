@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
-import 'package:communal_mobile/screens/loans/data/sample_loans.dart';
+import 'package:communal_mobile/data/models/loan_scheme.dart';
 
 class LoanOfferCard extends StatelessWidget {
   const LoanOfferCard({
     super.key,
-    required this.offer,
+    required this.scheme,
     this.onApply,
   });
 
-  final LoanOffer offer;
+  final LoanScheme scheme;
   final VoidCallback? onApply;
 
   @override
@@ -32,7 +32,7 @@ class LoanOfferCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  offer.title,
+                  scheme.title.isNotEmpty ? scheme.title : scheme.loanCode,
                   style: TextStyle(
                     fontSize: 18.sp,
                     fontWeight: FontWeight.w700,
@@ -40,71 +40,46 @@ class LoanOfferCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE67E22),
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Text(
-                  offer.badge,
-                  style: TextStyle(
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+              if (scheme.category.isNotEmpty)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE67E22),
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Text(
+                    scheme.category,
+                    style: TextStyle(
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
           vSpace(8),
           Text(
-            offer.description,
+            scheme.numberOfGuarantors > 0
+                ? 'Needs ${scheme.numberOfGuarantors} guarantor${scheme.numberOfGuarantors == 1 ? '' : 's'}'
+                : 'No guarantors required',
             style: TextStyle(
               fontSize: 14.sp,
               color: Colors.grey.shade700,
             ),
           ),
           vSpace(16),
-          Row(
+          Wrap(
+            spacing: 16.w,
+            runSpacing: 8.h,
             children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.trending_up,
-                    size: 16.sp,
-                    color: const Color(0xFFE67E22),
-                  ),
-                  hSpace(6),
-                  Text(
-                    offer.interestRateLabel,
-                    style: TextStyle(
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF0F1D40),
-                    ),
-                  ),
-                ],
-              ),
-              hSpace(16),
-              Row(
-                children: [
-                  Icon(
-                    Icons.access_time,
-                    size: 16.sp,
-                    color: const Color(0xFFE67E22),
-                  ),
-                  hSpace(6),
-                  Text(
-                    'Up to ${offer.maxTermMonths} months',
-                    style: TextStyle(
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF0F1D40),
-                    ),
-                  ),
-                ],
-              ),
+              _miniStat(Icons.trending_up, scheme.interestRateLabel),
+              _miniStat(Icons.access_time, scheme.durationLabel),
+              if (scheme.serviceCharge > 0)
+                _miniStat(
+                  Icons.percent,
+                  '${scheme.serviceCharge.toStringAsFixed(scheme.serviceCharge.truncateToDouble() == scheme.serviceCharge ? 0 : 2)}% service',
+                ),
             ],
           ),
           vSpace(16),
@@ -141,5 +116,22 @@ class LoanOfferCard extends StatelessWidget {
       ),
     );
   }
-}
 
+  Widget _miniStat(IconData icon, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16.sp, color: const Color(0xFFE67E22)),
+        hSpace(6),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13.sp,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF0F1D40),
+          ),
+        ),
+      ],
+    );
+  }
+}

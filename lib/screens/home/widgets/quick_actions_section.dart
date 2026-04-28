@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/screens/home/widgets/quick_action_button.dart';
 
@@ -11,6 +15,15 @@ class QuickActionsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Loan is a cooperative-only feature — drop it from the quick
+    // actions grid for users with no cooperative attached, and keep
+    // the row visually balanced by promoting "Pay Bills" up from the
+    // second row.
+    final authState = context.watch<AuthBloc>().state;
+    final hasCooperative = authState is AuthAuthenticated
+        ? authState.user.hasCooperativeMembership
+        : false;
+
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
       child: Column(
@@ -47,16 +60,23 @@ class QuickActionsSection extends StatelessWidget {
                 theme: theme,
               ),
               hSpace(10),
-              QuickActionButton(
-                icon: Icons.favorite_border,
-                label: 'Loan',
-                theme: theme,
-                onTap: () => context.pushNamed('loans'),
-              ),
+              if (hasCooperative)
+                QuickActionButton(
+                  icon: Icons.favorite_border,
+                  label: 'Loan',
+                  theme: theme,
+                  onTap: () => context.pushNamed('loans'),
+                )
+              else
+                QuickActionButton(
+                  icon: Icons.credit_card,
+                  label: 'Pay Bills',
+                  theme: theme,
+                ),
             ],
           ),
           vSpace(10),
-          // Second row - 3 buttons
+          // Second row - 3 buttons (or 2 when Pay Bills was promoted up)
           Row(
             children: [
               QuickActionButton(
@@ -70,12 +90,14 @@ class QuickActionsSection extends StatelessWidget {
                 label: 'Buy Now, Pay Later',
                 theme: theme,
               ),
-              hSpace(10),
-              QuickActionButton(
-                icon: Icons.credit_card,
-                label: 'Pay Bills',
-                theme: theme,
-              ),
+              if (hasCooperative) ...[
+                hSpace(10),
+                QuickActionButton(
+                  icon: Icons.credit_card,
+                  label: 'Pay Bills',
+                  theme: theme,
+                ),
+              ],
             ],
           ),
         ],

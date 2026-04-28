@@ -291,8 +291,26 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
       return;
     }
     if (_biometricInFlight) {
-      debugPrint('🔐 biometric tap ignored: already in-flight');
-      return;
+      // On some Android devices the OS biometric dialog's CANCEL does
+      // NOT resolve `_localAuth.authenticate()`'s future — the call
+      // hangs and `_biometricInFlight` stays `true` forever, silently
+      // swallowing every subsequent button tap. (`_switchMethod`
+      // already self-recovers via the same flag reset, which is why
+      // toggling to PIN and back unsticks it.)
+      // Cancel any prior session, clear the flag, and proceed fresh.
+      debugPrint('🔐 cancelling stale in-flight biometric and retrying');
+      try {
+        await _localAuth.stopAuthentication();
+      } catch (_) {
+        // No-op on platforms that don't support it (iOS returns false).
+        // Worst case: the prior dialog is still up and `authenticate()`
+        // below either replaces it or surfaces a clear error.
+      }
+      _biometricInFlight = false;
+      // Tiny gap so the OS fully dismisses the prior prompt before we
+      // open a new one (avoids stale-handle exceptions on some devices).
+      await Future.delayed(const Duration(milliseconds: 150));
+      if (!mounted) return;
     }
     _biometricInFlight = true;
     debugPrint('🔐 attempting local biometric auth…');
@@ -1217,11 +1235,14 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
         vSpace(40),
 
         // Sign in with fingerprint button. No `isLoading` — the OS
-        // biometric dialog is the indicator. `_biometricInFlight`
-        // disables the button so a re-tap during the prompt is a no-op.
+        // biometric dialog is the indicator. The button stays
+        // tappable: `_attemptBiometricAuth` self-recovers from a
+        // stuck `_biometricInFlight` flag (e.g. an OS dialog cancel
+        // that didn't resolve the future) by cancelling the prior
+        // session and retrying.
         AppElevatedButton(
           title: 'Sign in with $_biometricName',
-          onPressed: _biometricInFlight ? null : _attemptBiometricAuth,
+          onPressed: _attemptBiometricAuth,
         ),
 
         vSpace(16),

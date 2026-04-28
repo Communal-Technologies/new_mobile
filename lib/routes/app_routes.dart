@@ -108,6 +108,32 @@ const Set<String> _publicPaths = <String>{
   '/password-reset-success',
 };
 
+/// Routes the post-login KYC gate considers part of the KYC flow. While
+/// the user's KYC is incomplete every other protected route bounces back
+/// to `/kyc/profile-info`; staying on these is allowed so the user can
+/// actually finish the form. `/account-success` is also tolerated so a
+/// fresh signup that lands on the account-success screen can proceed
+/// into the KYC flow without an interim bounce.
+const Set<String> _kycPaths = <String>{
+  '/kyc/profile-info',
+  '/kyc/bank-info',
+  '/kyc/proof-of-identity',
+  '/kyc/verifying',
+  '/kyc/all-set',
+};
+
+/// Routes that require cooperative membership. Non-coop users hitting
+/// any of these are redirected to `/home`. Match by prefix because the
+/// loan flow has many sub-paths (apply, step2, step3, success, detail).
+bool _requiresCooperative(String loc) {
+  return loc == '/loans' ||
+      loc.startsWith('/loan-') ||
+      loc == '/loan-calculator' ||
+      loc == '/guarantor-requests' ||
+      loc.startsWith('/obligations') ||
+      loc.startsWith('/obligation-');
+}
+
 String? _authRedirect(Object _, GoRouterState state) {
   // The router runs `redirect` on the very first build before AuthBloc has
   // emitted anything beyond `AuthInitial`. Don't bounce anyone until we know
@@ -116,10 +142,29 @@ String? _authRedirect(Object _, GoRouterState state) {
 
   final loc = state.matchedLocation;
   if (_publicPaths.contains(loc)) return null;
-  if (appAuthStatusNotifier.isAuthenticated) return null;
+  if (!appAuthStatusNotifier.isAuthenticated) {
+    // Protected route, no session — back to login.
+    return '/login';
+  }
 
-  // Protected route, no session — back to login.
-  return '/login';
+  // Authenticated. KYC gate: a brand-new user who hasn't submitted any
+  // KYC step or earned a tier is held inside the KYC flow until they
+  // either submit step 1 (which flips `hasCompletedKyc` to true) or
+  // get approved to tier_1+. The check intentionally lets users who
+  // are *pending review* through — they've done their part, no point
+  // making them redo the form while admins review.
+  if (!appAuthStatusNotifier.hasCompletedKyc && !_kycPaths.contains(loc)) {
+    return '/kyc/profile-info';
+  }
+
+  // Cooperative-only routes: loans, obligations, guarantor inbox, the
+  // loan calculator. Non-coop members can still browse the app, they
+  // just can't reach these. Send them home.
+  if (!appAuthStatusNotifier.hasCooperative && _requiresCooperative(loc)) {
+    return '/home';
+  }
+
+  return null;
 }
 
 final GoRouter appRouter = GoRouter(

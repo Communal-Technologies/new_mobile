@@ -26,7 +26,7 @@ import 'package:communal_mobile/screens/kyc/proof_of_identity_screen.dart';
 import 'package:communal_mobile/screens/kyc/verifying_identity_screen.dart';
 import 'package:communal_mobile/screens/kyc/all_set_screen.dart';
 import 'package:communal_mobile/screens/home/home_screen.dart';
-import 'package:communal_mobile/screens/obligations/data/sample_obligations.dart';
+import 'package:communal_mobile/data/models/obligation.dart';
 import 'package:communal_mobile/screens/obligations/financial_obligations_screen.dart';
 import 'package:communal_mobile/screens/obligations/obligation_detail_screen.dart';
 import 'package:communal_mobile/screens/obligations/obligation_payment_screen.dart';
@@ -550,77 +550,75 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/obligation-detail',
       name: 'obligation-detail',
-      builder: (context, state) {
-        final extra = state.extra;
-        final obligation = extra is Obligation
-            ? extra
-            : SampleObligations.all.first;
-        return ObligationDetailScreen(obligation: obligation);
-      },
+      redirect: (context, state) =>
+          state.extra is Obligation ? null : '/obligations',
+      builder: (context, state) =>
+          ObligationDetailScreen(obligation: state.extra as Obligation),
     ),
     GoRoute(
       path: '/obligation-payment',
       name: 'obligation-payment',
-      builder: (context, state) {
-        final extra = state.extra;
-        final obligation = extra is Obligation
-            ? extra
-            : SampleObligations.all.first;
-        return ObligationPaymentScreen(obligation: obligation);
-      },
+      redirect: (context, state) =>
+          state.extra is Obligation ? null : '/obligations',
+      builder: (context, state) =>
+          ObligationPaymentScreen(obligation: state.extra as Obligation),
     ),
     GoRoute(
       path: '/obligation-confirm-payment',
       name: 'obligation-confirm-payment',
-      builder: (context, state) {
-        Obligation obligation = SampleObligations.all.first;
-        double amount = obligation.perInstallment;
-        String method = 'Wallet';
-        CooperativeCashBankAccount? cashAccount;
-        String? cashRepositoryId;
-        String? sourceObligationCode;
-        String? sourceObligationTitle;
-
+      redirect: (context, state) {
         final extra = state.extra;
-        if (extra is Map) {
-          final maybeObligation = extra['obligation'];
-          if (maybeObligation is Obligation) {
-            obligation = maybeObligation;
-          }
-          final maybeAmount = extra['amount'];
-          if (maybeAmount is num) {
-            amount = maybeAmount.toDouble();
-          }
-          final maybeMethod = extra['method'];
-          if (maybeMethod is String) {
-            method = maybeMethod;
-          }
-          final rawCash = extra['cash_account'];
-          if (rawCash is Map) {
-            cashAccount = CooperativeCashBankAccount.fromJson(
-              Map<String, dynamic>.from(rawCash),
-            );
-          }
-          final rawRid = extra['cash_repository_id'];
-          if (rawRid != null) {
-            final rid = rawRid.toString().trim();
-            cashRepositoryId = rid.isEmpty ? null : rid;
-          }
-          final rawSrcCode = extra['source_obligation_code'];
-          if (rawSrcCode != null) {
-            final code = rawSrcCode.toString().trim();
-            sourceObligationCode = code.isEmpty ? null : code;
-          }
-          final rawSrcTitle = extra['source_obligation_title'];
-          if (rawSrcTitle != null) {
-            final title = rawSrcTitle.toString().trim();
-            sourceObligationTitle = title.isEmpty ? null : title;
-          }
+        if (extra is! Map) return '/obligations';
+        if (extra['obligation'] is! Obligation) return '/obligations';
+        return null;
+      },
+      builder: (context, state) {
+        final extra = Map<String, dynamic>.from(state.extra as Map);
+        final obligation = extra['obligation'] as Obligation;
+
+        final maybeAmount = extra['amountMinor'] ?? extra['amount_minor'];
+        final amountMinor = maybeAmount is num
+            ? maybeAmount.toInt()
+            : int.tryParse(maybeAmount?.toString() ?? '') ??
+                obligation.perInstallmentMinor;
+
+        final maybeMethod = extra['method'];
+        final method = maybeMethod is String && maybeMethod.isNotEmpty
+            ? maybeMethod
+            : 'Wallet';
+
+        CooperativeCashBankAccount? cashAccount;
+        final rawCash = extra['cash_account'];
+        if (rawCash is Map) {
+          cashAccount = CooperativeCashBankAccount.fromJson(
+            Map<String, dynamic>.from(rawCash),
+          );
+        }
+
+        String? cashRepositoryId;
+        final rawRid = extra['cash_repository_id'];
+        if (rawRid != null) {
+          final rid = rawRid.toString().trim();
+          cashRepositoryId = rid.isEmpty ? null : rid;
+        }
+
+        String? sourceObligationCode;
+        final rawSrcCode = extra['source_obligation_code'];
+        if (rawSrcCode != null) {
+          final code = rawSrcCode.toString().trim();
+          sourceObligationCode = code.isEmpty ? null : code;
+        }
+
+        String? sourceObligationTitle;
+        final rawSrcTitle = extra['source_obligation_title'];
+        if (rawSrcTitle != null) {
+          final title = rawSrcTitle.toString().trim();
+          sourceObligationTitle = title.isEmpty ? null : title;
         }
 
         return ObligationConfirmPaymentScreen(
           obligation: obligation,
-          amount: amount,
+          amountMinor: amountMinor,
           method: method,
           cashAccount: cashAccount,
           cashRepositoryId: cashRepositoryId,
@@ -632,40 +630,38 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/obligation-payment-success',
       name: 'obligation-payment-success',
-      builder: (context, state) {
-        Obligation obligation = SampleObligations.all.first;
-        double amount = obligation.perInstallment;
-        String method = 'Wallet';
-        String reference = 'REF-${DateTime.now().millisecondsSinceEpoch}';
-        DateTime date = DateTime.now();
-
+      redirect: (context, state) {
         final extra = state.extra;
-        if (extra is Map) {
-          final maybeObligation = extra['obligation'];
-          if (maybeObligation is Obligation) {
-            obligation = maybeObligation;
-          }
-          final maybeAmount = extra['amount'];
-          if (maybeAmount is num) {
-            amount = maybeAmount.toDouble();
-          }
-          final maybeMethod = extra['method'];
-          if (maybeMethod is String && maybeMethod.isNotEmpty) {
-            method = maybeMethod;
-          }
-          final maybeReference = extra['reference'];
-          if (maybeReference is String && maybeReference.isNotEmpty) {
-            reference = maybeReference;
-          }
-          final maybeDate = extra['date'];
-          if (maybeDate is DateTime) {
-            date = maybeDate;
-          }
-        }
+        if (extra is! Map) return '/obligations';
+        if (extra['obligation'] is! Obligation) return '/obligations';
+        return null;
+      },
+      builder: (context, state) {
+        final extra = Map<String, dynamic>.from(state.extra as Map);
+        final obligation = extra['obligation'] as Obligation;
+
+        final maybeAmount = extra['amountMinor'] ?? extra['amount_minor'];
+        final amountMinor = maybeAmount is num
+            ? maybeAmount.toInt()
+            : int.tryParse(maybeAmount?.toString() ?? '') ??
+                obligation.perInstallmentMinor;
+
+        final maybeMethod = extra['method'];
+        final method = maybeMethod is String && maybeMethod.isNotEmpty
+            ? maybeMethod
+            : 'Wallet';
+
+        final maybeReference = extra['reference'];
+        final reference = maybeReference is String && maybeReference.isNotEmpty
+            ? maybeReference
+            : 'REF-${DateTime.now().millisecondsSinceEpoch}';
+
+        final maybeDate = extra['date'];
+        final date = maybeDate is DateTime ? maybeDate : DateTime.now();
 
         return ObligationPaymentSuccessScreen(
           obligation: obligation,
-          amount: amount,
+          amountMinor: amountMinor,
           method: method,
           reference: reference,
           date: date,

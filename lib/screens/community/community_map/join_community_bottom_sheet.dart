@@ -126,7 +126,7 @@ class _Header extends StatelessWidget {
           'Join $communityName?',
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 18.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF0F1D40),
           ),
@@ -135,7 +135,7 @@ class _Header extends StatelessWidget {
         Text(
           'By joining, you agree to the community guidelines and contribution requirements.',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
         ),
       ],
     );
@@ -154,7 +154,7 @@ class _MessageField extends StatelessWidget {
         Text(
           'Add a message (optional)',
           style: TextStyle(
-            fontSize: 13.sp,
+            fontSize: 15.sp,
             fontWeight: FontWeight.w600,
             color: const Color(0xFF0F1D40),
           ),
@@ -206,7 +206,7 @@ class _AlertCard extends StatelessWidget {
                 Text(
                   'Application Review Required',
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF9A4F00),
                   ),
@@ -217,7 +217,7 @@ class _AlertCard extends StatelessWidget {
                   'coordinator. You’ll receive a response within 2-3 '
                   'business days.',
                   style: TextStyle(
-                    fontSize: 12.sp,
+                    fontSize: 13.sp,
                     color: const Color(0xFF9A4F00),
                   ),
                 ),
@@ -258,7 +258,7 @@ class _Actions extends StatelessWidget {
             child: Text(
               'Cancel',
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF0F1D40),
               ),
@@ -290,7 +290,7 @@ class _Actions extends StatelessWidget {
                 : Text(
                     'Submit Request',
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

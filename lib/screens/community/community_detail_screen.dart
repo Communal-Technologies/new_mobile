@@ -107,7 +107,7 @@ class CommunityDetailScreen extends StatelessWidget {
                     Text(
                       location.name,
                       style: TextStyle(
-                        fontSize: 20.sp,
+                        fontSize: 22.sp,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF0F1D40),
                       ),
@@ -125,7 +125,7 @@ class CommunityDetailScreen extends StatelessWidget {
                       child: Text(
                         detail.categoryLabel,
                         style: TextStyle(
-                          fontSize: 12.sp,
+                          fontSize: 13.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF5B5CE2),
                         ),
@@ -170,7 +170,7 @@ class CommunityDetailScreen extends StatelessWidget {
                   child: Text(
                     'Join Community',
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -204,7 +204,7 @@ class CommunityDetailScreen extends StatelessWidget {
           hSpace(6),
           Text(
             label,
-            style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade700),
           ),
         ],
       ),
@@ -273,7 +273,7 @@ class CommunityDetailScreen extends StatelessWidget {
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 16.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
                     color: valueColor,
                   ),
@@ -282,7 +282,7 @@ class CommunityDetailScreen extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 12.sp,
+                    fontSize: 13.sp,
                     color: Colors.grey.shade600,
                   ),
                 ),
@@ -337,7 +337,7 @@ class CommunityDetailScreen extends StatelessWidget {
           hSpace(6),
           Text(
             label,
-            style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade700),
           ),
         ],
       ),
@@ -361,7 +361,7 @@ class CommunityDetailScreen extends StatelessWidget {
                         .join()
                   : 'CC',
               style: TextStyle(
-                fontSize: 16.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w700,
                 color: const Color(0xFF4328B8),
               ),
@@ -375,7 +375,7 @@ class CommunityDetailScreen extends StatelessWidget {
                 Text(
                   detail.coordinatorName,
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF0F1D40),
                   ),
@@ -384,7 +384,7 @@ class CommunityDetailScreen extends StatelessWidget {
                 Text(
                   detail.coordinatorRole,
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 15.sp,
                     color: Colors.grey.shade600,
                   ),
                 ),
@@ -416,7 +416,7 @@ class CommunityDetailScreen extends StatelessWidget {
             child: Text(
               detail.meetingSchedule,
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF0F1D40),
               ),
@@ -425,7 +425,7 @@ class CommunityDetailScreen extends StatelessWidget {
           Text(
             detail.meetingTime,
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF7434FF),
             ),
@@ -459,7 +459,7 @@ class CommunityDetailScreen extends StatelessWidget {
                       child: Text(
                         item,
                         style: TextStyle(
-                          fontSize: 13.sp,
+                          fontSize: 15.sp,
                           color: const Color(0xFF0F1D40),
                         ),
                       ),
@@ -493,7 +493,7 @@ class CommunityDetailScreen extends StatelessWidget {
                       child: Text(
                         item,
                         style: TextStyle(
-                          fontSize: 13.sp,
+                          fontSize: 15.sp,
                           color: const Color(0xFF0F1D40),
                         ),
                       ),
@@ -536,7 +536,7 @@ class CommunityDetailScreen extends StatelessWidget {
                           Text(
                             activity.title,
                             style: TextStyle(
-                              fontSize: 14.sp,
+                              fontSize: 15.sp,
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFF0F1D40),
                             ),
@@ -622,7 +622,7 @@ class _SectionCard extends StatelessWidget {
           Text(
             title,
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F1D40),
             ),

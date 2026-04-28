@@ -51,7 +51,7 @@ class FeaturedCommunityCard extends StatelessWidget {
                           child: Text(
                             community.name,
                             style: TextStyle(
-                              fontSize: 18.sp,
+                              fontSize: 19.sp,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
                             ),
@@ -71,7 +71,7 @@ class FeaturedCommunityCard extends StatelessWidget {
                     vSpace(4),
                     Text(
                       '${community.role} · ${community.membersLabel}',
-                      style: TextStyle(fontSize: 13.sp, color: Colors.white70),
+                      style: TextStyle(fontSize: 15.sp, color: Colors.white70),
                     ),
                   ],
                 ),
@@ -85,7 +85,7 @@ class FeaturedCommunityCard extends StatelessWidget {
                 child: Text(
                   'Active',
                   style: TextStyle(
-                    fontSize: 12.sp,
+                    fontSize: 13.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),
@@ -110,7 +110,7 @@ class FeaturedCommunityCard extends StatelessWidget {
                   child: Text(
                     'Open Chat',
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 15.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
@@ -131,7 +131,7 @@ class FeaturedCommunityCard extends StatelessWidget {
                   child: Text(
                     'View Cooperative',
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 15.sp,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF0F1D40),
                     ),
@@ -173,7 +173,7 @@ class FeaturedCommunityCard extends StatelessWidget {
         child: Text(
           initials,
           style: TextStyle(
-            fontSize: 16.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w700,
             color: Colors.white,
           ),

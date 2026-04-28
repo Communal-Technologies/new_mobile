@@ -85,7 +85,7 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
             location.name,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 20.sp,
+              fontSize: 22.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F1D40),
             ),
@@ -100,7 +100,7 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
             child: Text(
               detail.categoryLabel,
               style: TextStyle(
-                fontSize: 12.sp,
+                fontSize: 13.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF5B5CE2),
               ),
@@ -149,7 +149,7 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
                 Text(
                   'Application Pending',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF9A4F00),
                   ),
@@ -158,7 +158,7 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
                 Text(
                   'Your request to join is under review by the admin.',
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 15.sp,
                     color: const Color(0xFF9A4F00),
                   ),
                 ),
@@ -231,7 +231,7 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 16.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
                     color: valueColor,
                   ),
@@ -240,7 +240,7 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 12.sp,
+                    fontSize: 13.sp,
                     color: Colors.grey.shade600,
                   ),
                 ),
@@ -266,7 +266,7 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
           Text(
             'About',
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F1D40),
             ),
@@ -302,7 +302,7 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
         hSpace(4),
         Text(
           label,
-          style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
         ),
       ],
     );
@@ -322,7 +322,7 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
           hSpace(6),
           Text(
             label,
-            style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade700),
           ),
         ],
       ),
@@ -351,7 +351,7 @@ class CommunityApplicationStatusScreen extends StatelessWidget {
             Text(
               'Application Pending',
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF8B8C99),
               ),

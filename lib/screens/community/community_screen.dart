@@ -63,7 +63,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 Text(
                   'Your Communities',
                   style: TextStyle(
-                    fontSize: 18.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
                     color: Colors.black,
                   ),
@@ -145,7 +145,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
             'Communities',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 20.sp,
+              fontSize: 22.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),

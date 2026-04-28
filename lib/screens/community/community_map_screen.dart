@@ -242,7 +242,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                 'Explore Communities',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 18.sp,
+                  fontSize: 19.sp,
                   fontWeight: FontWeight.w700,
                   color: Colors.black87,
                 ),
@@ -303,7 +303,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                 child: Text(
                   initials.isNotEmpty ? initials : 'CM',
                   style: TextStyle(
-                    fontSize: 18.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                   ),
@@ -325,7 +325,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 18.sp,
+                            fontSize: 19.sp,
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
                           ),
@@ -353,7 +353,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                       Text(
                         '${community.communityType} • ${community.members} members',
                         style: TextStyle(
-                          fontSize: 12.sp,
+                          fontSize: 13.sp,
                           color: Colors.white.withOpacity(0.85),
                         ),
                       ),
@@ -370,7 +370,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 12.sp,
+                            fontSize: 13.sp,
                             color: Colors.white.withOpacity(0.85),
                           ),
                         ),
@@ -398,7 +398,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                   Text(
                     'Open',
                     style: TextStyle(
-                      fontSize: 13.sp,
+                      fontSize: 15.sp,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
@@ -473,7 +473,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                     Text(
                       'Nearby Communities',
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF0F1D40),
                       ),
@@ -491,7 +491,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                       child: Text(
                         '${communities.length} found',
                         style: TextStyle(
-                          fontSize: 12.sp,
+                          fontSize: 13.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF5B4AC8),
                         ),
@@ -503,7 +503,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                       child: Text(
                         'View all',
                         style: TextStyle(
-                          fontSize: 13.sp,
+                          fontSize: 15.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF7434FF),
                         ),
@@ -527,7 +527,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                             Text(
                               'No communities match your search',
                               style: TextStyle(
-                                fontSize: 14.sp,
+                                fontSize: 15.sp,
                                 color: Colors.grey.shade600,
                               ),
                             ),

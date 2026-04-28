@@ -316,7 +316,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       Text(
                         _exporting ? 'Exporting...' : 'Statement',
                         style: TextStyle(
-                          fontSize: 16.sp,
+                          fontSize: 17.sp,
                           fontWeight: FontWeight.w500,
                           color: Colors.grey.shade700,
                         ),
@@ -359,7 +359,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       Text(
                         _error!,
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 16.sp),
+                        style: TextStyle(fontSize: 17.sp),
                       ),
                       vSpace(16),
                       FilledButton(
@@ -531,7 +531,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                           Text(
                             'Generating statement...',
                             style: TextStyle(
-                              fontSize: 14.sp,
+                              fontSize: 15.sp,
                               fontWeight: FontWeight.w600,
                               color: Colors.black87,
                             ),
@@ -565,7 +565,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
               color: isActive ? theme.primaryColor : Colors.grey.shade600,
             ),
@@ -642,7 +642,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 label,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 16.sp,
+                  fontSize: 17.sp,
                   fontWeight: FontWeight.w500,
                   color: Colors.grey.shade700,
                 ),
@@ -704,7 +704,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     Text(
                       month,
                       style: TextStyle(
-                        fontSize: 18.sp,
+                        fontSize: 19.sp,
                         fontWeight: FontWeight.w700,
                         color: Colors.black,
                       ),
@@ -723,7 +723,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 Text(
                   'In: $currencySymbol${formatMoney(incoming)}',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.green,
                   ),
@@ -732,7 +732,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 Text(
                   'Out: $currencySymbol${formatMoney(outgoing)}',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.red,
                   ),

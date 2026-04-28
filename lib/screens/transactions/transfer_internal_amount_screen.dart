@@ -184,7 +184,7 @@ class _TransferInternalAmountScreenState
                           widget.recipient.accountNumber,
                           style: TextStyle(
                             color: Colors.white70,
-                            fontSize: 14.sp,
+                            fontSize: 15.sp,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -209,7 +209,7 @@ class _TransferInternalAmountScreenState
                   Text(
                     'Amount',
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 15.sp,
                       color: Colors.black54,
                       fontWeight: FontWeight.w600,
                     ),
@@ -265,7 +265,7 @@ class _TransferInternalAmountScreenState
                                 child: Text(
                                   '$currencySymbol${v >= 1000 ? '${(v ~/ 1000)}k' : v}',
                                   style: TextStyle(
-                                    fontSize: 14.sp,
+                                    fontSize: 15.sp,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -279,7 +279,7 @@ class _TransferInternalAmountScreenState
                   Text(
                     'Naration',
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 15.sp,
                       color: Colors.black54,
                       fontWeight: FontWeight.w600,
                     ),
@@ -339,7 +339,7 @@ class _TransferInternalAmountScreenState
                   'Continue',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 16.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

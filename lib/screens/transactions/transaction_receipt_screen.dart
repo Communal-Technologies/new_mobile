@@ -305,7 +305,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
           title: Text(
             'Transaction Status',
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w600,
               color: Colors.black,
             ),

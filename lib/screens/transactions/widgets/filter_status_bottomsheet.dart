@@ -81,7 +81,7 @@ class _FilterStatusBottomSheetState extends State<FilterStatusBottomSheet> {
                 child: Text(
                   status,
                   style: TextStyle(
-                    fontSize: 16.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w500,
                     color: isSelected ? Colors.white : Colors.grey.shade700,
                   ),

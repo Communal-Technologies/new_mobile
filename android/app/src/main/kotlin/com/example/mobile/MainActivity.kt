@@ -10,6 +10,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import android.view.PixelCopy
+import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -207,14 +208,20 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     private fun captureLiveContent() {
-        // PixelCopy.request(Window, ...) is API 26+. Pre-26 devices fall
-        // back to the frosted-default overlay color — we just don't
-        // paint a real blur of the live UI on those.
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        // PixelCopy.request(Window, ...) and PixelCopy.request(SurfaceView, ...)
+        // are both API 24+, but the SurfaceView overload is the one we need:
+        // Flutter renders into a SurfaceView under decor view, and the Window
+        // PixelCopy variant returns transparent pixels for SurfaceView regions
+        // on many devices — leaving the cached bitmap mostly empty and the
+        // overlay looking like a flat frosted panel rather than a blur of the
+        // live UI. Targeting the SurfaceView directly reads its surface buffer
+        // and gives us actual Flutter content to blur.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return
         val backgroundHandler = captureBackgroundHandler ?: return
 
-        val w = window.decorView.width
-        val h = window.decorView.height
+        val flutterSurface = findFlutterSurfaceView(window.decorView) ?: return
+        val w = flutterSurface.width
+        val h = flutterSurface.height
         if (w <= 0 || h <= 0) return
 
         val targetW = (w / CAPTURE_SCALE_DIVISOR).coerceAtLeast(1)
@@ -228,7 +235,7 @@ class MainActivity : FlutterFragmentActivity() {
 
         try {
             PixelCopy.request(
-                window,
+                flutterSurface,
                 bitmap,
                 { result ->
                     // Callback runs on the background handler. Only
@@ -249,6 +256,24 @@ class MainActivity : FlutterFragmentActivity() {
         } catch (_: Throwable) {
             bitmap.recycle()
         }
+    }
+
+    /**
+     * Walk the view tree under [root] looking for the first [SurfaceView] —
+     * Flutter's `FlutterSurfaceView` (or whatever underlying surface
+     * platform views may have inserted; we prefer Flutter's by depth and
+     * size). We don't rely on Flutter's class names because they live in
+     * an internal package and have shifted across releases.
+     */
+    private fun findFlutterSurfaceView(root: View): SurfaceView? {
+        if (root is SurfaceView) return root
+        if (root is ViewGroup) {
+            for (i in 0 until root.childCount) {
+                val match = findFlutterSurfaceView(root.getChildAt(i))
+                if (match != null) return match
+            }
+        }
+        return null
     }
 
     private fun applyPrivacyShield() {

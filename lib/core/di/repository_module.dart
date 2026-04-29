@@ -3,6 +3,7 @@ import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/data/repositories/community_repository.dart';
 import 'package:communal_mobile/data/repositories/community_settings_repository.dart';
 import 'package:communal_mobile/data/repositories/notifications_repository.dart';
+import 'package:communal_mobile/data/repositories/profile_repository.dart';
 import 'package:communal_mobile/data/repositories/kyc_repository.dart';
 import 'package:communal_mobile/data/repositories/locations_repository.dart';
 import 'package:communal_mobile/data/repositories/regions_repository.dart';
@@ -41,6 +42,10 @@ abstract class RepositoryModule {
   @lazySingleton
   NotificationsRepository provideNotificationsRepository(DioClient dioClient) =>
       NotificationsRepository(dioClient);
+
+  @lazySingleton
+  ProfileRepository provideProfileRepository(DioClient dioClient) =>
+      ProfileRepository(dioClient);
 
   @lazySingleton
   TransferRepository provideTransferRepository(DioClient dioClient) =>

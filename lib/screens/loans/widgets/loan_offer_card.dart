@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/loan_scheme.dart';
 
@@ -7,10 +8,16 @@ class LoanOfferCard extends StatelessWidget {
   const LoanOfferCard({
     super.key,
     required this.scheme,
+    required this.currency,
     this.onApply,
   });
 
   final LoanScheme scheme;
+  /// Currency code (e.g. NGN) used to format the flat service charge.
+  /// Backend stores `service_charge` in minor units and adds it to interest
+  /// as a flat amount (`interest = principal * rate% + service_charge`),
+  /// so it must be rendered as money — not as a percentage.
+  final String currency;
   final VoidCallback? onApply;
 
   @override
@@ -85,9 +92,10 @@ class LoanOfferCard extends StatelessWidget {
               _miniStat(context,Icons.trending_up, scheme.interestRateLabel),
               _miniStat(context,Icons.access_time, scheme.durationLabel),
               if (scheme.serviceCharge > 0)
-                _miniStat(context,
-                  Icons.percent,
-                  '${scheme.serviceCharge.toStringAsFixed(scheme.serviceCharge.truncateToDouble() == scheme.serviceCharge ? 0 : 2)}% service',
+                _miniStat(
+                  context,
+                  Icons.receipt_long_outlined,
+                  '${Money(scheme.serviceCharge.round(), currency).format()} service',
                 ),
             ],
           ),

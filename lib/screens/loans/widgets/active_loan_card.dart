@@ -132,7 +132,11 @@ class ActiveLoanCard extends StatelessWidget {
                   child: Container(
                     height: 8.h,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF7434FF),
+                      // Orange brand accent for the loan area (matches
+                      // LoanOfferCard / loan detail header). Was the
+                      // app-wide purple primary, which made the loan
+                      // section feel theme-mixed.
+                      color: const Color(0xFFE67E22),
                       borderRadius: BorderRadius.circular(4.r),
                     ),
                   ),

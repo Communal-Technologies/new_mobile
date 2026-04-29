@@ -421,16 +421,23 @@ class _LoansScreenState extends State<LoansScreen> {
         ),
         vSpace(16),
         ..._schemes.map(
-          (scheme) => Padding(
-            padding: EdgeInsets.only(bottom: 16.h),
-            child: LoanOfferCard(
-              scheme: scheme,
-              onApply: () => context.pushNamed(
-                'loan-application',
-                extra: {'scheme': scheme},
+          (scheme) {
+            final auth = context.read<AuthBloc>().state;
+            final currency = auth is AuthAuthenticated
+                ? resolveCurrencyCode(auth.user)
+                : 'NGN';
+            return Padding(
+              padding: EdgeInsets.only(bottom: 16.h),
+              child: LoanOfferCard(
+                scheme: scheme,
+                currency: currency,
+                onApply: () => context.pushNamed(
+                  'loan-application',
+                  extra: {'scheme': scheme},
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ],
     );

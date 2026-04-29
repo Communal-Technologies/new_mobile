@@ -189,10 +189,15 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
 
   Widget _buildHeaderCard() {
     final isApproved = _loan.status == LoanStatus.approved;
+    // Loans use the orange brand accent (matches LoanOfferCard +
+    // ActiveLoanCard chrome). The detail header used to inherit the
+    // app's purple primary, which made the loan area read as two
+    // different products as the user moved from list → detail.
+    const loanOrange = Color(0xFFE67E22);
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
-        color: const Color(0xFF7434FF),
+        color: loanOrange,
         borderRadius: BorderRadius.circular(16.r),
       ),
       child: Column(
@@ -473,12 +478,13 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           Container(
             width: 36.w,
             height: 36.w,
-            decoration: const BoxDecoration(
-              color: Color(0xFFEDE7FA),
+            decoration: BoxDecoration(
+              // Soft orange tint to match the loan area's orange chrome.
+              color: const Color(0xFFFFF4E9),
               shape: BoxShape.circle,
             ),
             child: Icon(Icons.south_west,
-                size: 18.sp, color: const Color(0xFF7434FF)),
+                size: 18.sp, color: const Color(0xFFE67E22)),
           ),
           hSpace(12),
           Expanded(

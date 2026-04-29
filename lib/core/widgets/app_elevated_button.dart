@@ -152,11 +152,19 @@ class AppSecondaryButton extends StatelessWidget {
     final Color borderColor;
     final Color textColor;
     if (isDark) {
+      // Forced white-on-dark style for screens with a fixed dark image
+      // background (welcome splash, etc.).
       borderColor = Colors.white;
       textColor = Colors.white;
     } else {
-      borderColor = theme.dividerColor;
-      textColor = theme.colorScheme.onSurface;
+      // Theme-driven secondary: use the primary brand colour for both
+      // the border and text so the button stays visible on light AND
+      // dark scaffolds. (The previous theme.dividerColor border read as
+      // near-invisible on the dark scaffold, and a foregroundColor +
+      // inner Text color combo on OutlinedButton was occasionally
+      // producing low-contrast text on dark mode.)
+      borderColor = theme.primaryColor;
+      textColor = theme.primaryColor;
     }
 
     return SizedBox(

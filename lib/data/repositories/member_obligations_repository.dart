@@ -251,6 +251,14 @@ class MemberObligationsRepository {
   /// record obligation payment. [amountMinor] is integer minor units of
   /// the obligation's currency (kobo for NGN) — same convention the
   /// backend `pay-obligation` endpoint stores in the ledger.
+  ///
+  /// Hits the record-only endpoint that intentionally drops the
+  /// biometric-sig requirement: the upstream `/transfer/initiate` was
+  /// already biometric-signed, and this is just the bookkeeping that
+  /// follows. The previous design re-prompted for biometric on the
+  /// receipt screen and silently failed when the user dismissed it or
+  /// biometric wasn't enrolled — wallet was debited but the obligation
+  /// never incremented.
   Future<void> recordNipObligationPayment({
     required UserModel user,
     required String obligationAccountCode,
@@ -258,7 +266,6 @@ class MemberObligationsRepository {
     required String cashRepositoryId,
     required int amountMinor,
     String? idempotencyKey,
-    Map<String, String>? biometricHeaders,
   }) async {
     final cooperativeId = user.cooperativeId?.trim() ?? '';
     final ledgerNumber = user.ledgerNumber?.trim() ?? '';
@@ -277,7 +284,7 @@ class MemberObligationsRepository {
 
     try {
       final response = await _dioClient.post(
-        ApiEndpoints.membersPayObligation,
+        ApiEndpoints.membersRecordNipObligationPayment,
         data: {
           'amount': amountMinor.toString(),
           'obligation': code,
@@ -288,7 +295,6 @@ class MemberObligationsRepository {
           'cash_repository_id': rid,
         },
         idempotencyKey: idempotencyKey,
-        extraHeaders: biometricHeaders,
       );
       final data = response.data;
       if (response.statusCode == 200) return;

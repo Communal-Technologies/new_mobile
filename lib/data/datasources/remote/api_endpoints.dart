@@ -91,6 +91,15 @@ class ApiEndpoints {
   static String membersFetchTransactions(String userId) =>
       '/members/fetch-transactions/$userId';
   static const String membersPayObligation = '/members/pay-obligation';
+  /// Record-only path for NIP-funded obligation payments. Backend skips
+  /// the biometric-sig middleware here because the upstream
+  /// `/transfer/initiate` already signed the value-moving step; this
+  /// call is bookkeeping. Without this split, the second biometric
+  /// prompt on the receipt screen silently failed when the user
+  /// dismissed it or biometric wasn't enrolled, leaving the wallet
+  /// debited but the obligation un-credited.
+  static const String membersRecordNipObligationPayment =
+      '/members/record-nip-obligation-payment';
 
   // --- Loans --------------------------------------------------------------
   static String membersFetchLoanSchemes(String cooperativeId) =>

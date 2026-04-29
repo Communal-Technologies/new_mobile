@@ -5,23 +5,27 @@ import 'package:communal_mobile/core/widgets/space.dart';
 class PersonalInfoFormSection extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController firstNameController;
+  final TextEditingController middleNameController;
   final TextEditingController lastNameController;
   final TextEditingController emailController;
   final TextEditingController phoneController;
   final TextEditingController dobController;
   final TextEditingController occupationController;
   final VoidCallback onSave;
+  final bool saving;
 
   const PersonalInfoFormSection({
     super.key,
     required this.formKey,
     required this.firstNameController,
+    required this.middleNameController,
     required this.lastNameController,
     required this.emailController,
     required this.phoneController,
     required this.dobController,
     required this.occupationController,
     required this.onSave,
+    this.saving = false,
   });
 
   @override
@@ -87,6 +91,14 @@ class PersonalInfoFormSection extends StatelessWidget {
               ],
             ),
             vSpace(16),
+            // Middle name is optional — most Nigerian users have one,
+            // but we don't want to block save when missing. Anchor's
+            // fullName payload accepts empty string for middleName.
+            _FormTextField(
+              controller: middleNameController,
+              label: 'Middle Name (optional)',
+            ),
+            vSpace(16),
             _FormTextFieldWithIcon(
               controller: emailController,
               label: 'Email Address',
@@ -135,9 +147,18 @@ class PersonalInfoFormSection extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: onSave,
-                icon: Icon(Icons.save, size: 18.sp),
-                label: Text('Save Changes'),
+                onPressed: saving ? null : onSave,
+                icon: saving
+                    ? SizedBox(
+                        height: 16.sp,
+                        width: 16.sp,
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                        ),
+                      )
+                    : Icon(Icons.save, size: 18.sp),
+                label: Text(saving ? 'Saving…' : 'Save Changes'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF7434FF),
                   foregroundColor: Colors.white,

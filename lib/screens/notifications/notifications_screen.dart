@@ -65,19 +65,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F6FA),
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         title: Text(
           'Notifications',
           style: TextStyle(
             fontSize: 19.sp,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF0F1D40),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFF0F1D40)),
         actions: [
           FutureBuilder<NotificationsResult>(
             future: _future,
@@ -89,7 +86,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 child: Text(
                   _markingAll ? 'Marking…' : 'Mark all read',
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 14.sp,
                     color: const Color(0xFF7434FF),
                     fontWeight: FontWeight.w600,
                   ),
@@ -184,7 +181,7 @@ class _NotificationTile extends StatelessWidget {
                       notification.message,
                       style: TextStyle(
                         fontSize: 15.sp,
-                        color: const Color(0xFF0F1D40),
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontWeight:
                             unread ? FontWeight.w600 : FontWeight.w500,
                       ),
@@ -195,7 +192,7 @@ class _NotificationTile extends StatelessWidget {
                         DateFormat('MMM d, h:mm a').format(notification.createdAt!),
                         style: TextStyle(
                           fontSize: 12.sp,
-                          color: Colors.grey.shade600,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -238,7 +235,7 @@ class _EmptyState extends StatelessWidget {
             'No notifications yet',
             style: TextStyle(
               fontSize: 15.sp,
-              color: Colors.grey.shade600,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -272,7 +269,7 @@ class _ErrorState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15.sp,
-                color: Colors.grey.shade700,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             vSpace(12),

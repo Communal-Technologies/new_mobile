@@ -360,7 +360,8 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
   Widget _bankLeadingIcon() {
     return CircleAvatar(
       radius: 24.r,
-      backgroundColor: const Color(0xFFE8E8F0),
+      backgroundColor:
+          Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Icon(Icons.account_balance, size: 24.sp, color: Theme.of(context).colorScheme.onSurface),
     );
   }
@@ -372,7 +373,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: const Color(0xFFE7E7E7)),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: child,
     );
@@ -736,7 +737,9 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                         width: double.infinity,
                         padding: EdgeInsets.all(10.w),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF5F5F5),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(10.r),
                         ),
                         child: Wrap(
@@ -755,7 +758,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                   color: Theme.of(context).cardColor,
                                   borderRadius: BorderRadius.circular(16.r),
                                   border: Border.all(
-                                    color: const Color(0xFFE0E0E0),
+                                    color: Theme.of(context).dividerColor,
                                   ),
                                 ),
                                 child: Text(
@@ -763,6 +766,9 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                   style: TextStyle(
                                     fontSize: 15.sp,
                                     fontWeight: FontWeight.w600,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface,
                                   ),
                                 ),
                               ),

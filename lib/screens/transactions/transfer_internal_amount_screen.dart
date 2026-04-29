@@ -201,7 +201,7 @@ class _TransferInternalAmountScreenState
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(color: const Color(0xFFE7E7E7)),
+                border: Border.all(color: Theme.of(context).dividerColor),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,10 +222,26 @@ class _TransferInternalAmountScreenState
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9,]')),
                       _ThousandsSeparatorInputFormatter(),
                     ],
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                     decoration: InputDecoration(
                       hintText: '0',
+                      hintStyle: TextStyle(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.4),
+                      ),
+                      filled: true,
+                      fillColor: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8.r),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).dividerColor,
+                        ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8.r),
@@ -239,7 +255,13 @@ class _TransferInternalAmountScreenState
                     width: double.infinity,
                     padding: EdgeInsets.all(10.w),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F5),
+                      // Quick amounts panel surface — sits inside the
+                      // amount card, so use the slightly raised
+                      // surfaceContainerHighest token for visible
+                      // separation in both themes.
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(10.r),
                     ),
                     child: Wrap(
@@ -259,7 +281,7 @@ class _TransferInternalAmountScreenState
                                   color: Theme.of(context).cardColor,
                                   borderRadius: BorderRadius.circular(16.r),
                                   border: Border.all(
-                                    color: const Color(0xFFE0E0E0),
+                                    color: Theme.of(context).dividerColor,
                                   ),
                                 ),
                                 child: Text(
@@ -267,6 +289,9 @@ class _TransferInternalAmountScreenState
                                   style: TextStyle(
                                     fontSize: 15.sp,
                                     fontWeight: FontWeight.w600,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface,
                                   ),
                                 ),
                               ),

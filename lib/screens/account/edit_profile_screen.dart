@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,6 +11,7 @@ import 'package:intl/intl.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/cubits/security/security_cubit.dart';
 import 'package:communal_mobile/data/models/member_profile_details.dart';
 import 'package:communal_mobile/data/repositories/profile_repository.dart';
 import 'package:communal_mobile/injection.dart';
@@ -205,6 +209,41 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  /// Pick + upload a new avatar from the edit screen. Same idle-lock
+  /// guard as the read-view header so returning from the OS picker
+  /// doesn't trigger PIN re-prompt.
+  Future<void> _pickAndUploadAvatar() async {
+    final security = context.read<SecurityCubit>();
+    security.beginExternalFilePickerGuard();
+    try {
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+        withData: false,
+      );
+      if (picked == null || picked.files.isEmpty) return;
+      final path = picked.files.single.path;
+      if (path == null) return;
+      try {
+        await getIt<ProfileRepository>().uploadAvatar(File(path));
+        if (!mounted) return;
+        context.read<AuthBloc>().add(AuthRefreshUserRequested());
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile picture updated.')),
+        );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
+          ),
+        );
+      }
+    } finally {
+      security.cancelExternalFilePickerGuard();
+    }
+  }
+
   void _handleSavePersonalInfo() {
     if (_personalInfoFormKey.currentState!.validate()) {
       _save(_personalDelta());
@@ -250,11 +289,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               if (!widget.isAddressOnly) ...[
                 vSpace(24),
                 EditProfileHeader(
-                  onEditPicture: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Profile picture edit')),
-                    );
-                  },
+                  onEditPicture: _pickAndUploadAvatar,
                 ),
                 vSpace(24),
                 PersonalInfoFormSection(

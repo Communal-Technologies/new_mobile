@@ -1,5 +1,7 @@
 import 'package:intl/intl.dart';
 
+import 'package:communal_mobile/data/models/community_membership_model.dart';
+
 class Community {
   Community({
     required this.id,
@@ -13,6 +15,24 @@ class Community {
     this.isVerified = false,
   });
 
+  /// Adapter from the API `CommunityMembership` shape (the user's own
+  /// memberships) onto this UI-side model. Backend doesn't yet surface
+  /// a join date or per-membership verified flag, so we fall back to
+  /// `DateTime.now()` (sinceLabel becomes the current month) and false.
+  factory Community.fromMembership(CommunityMembership m) {
+    return Community(
+      id: m.cooperativeId,
+      name: m.cooperativeName,
+      membersCount: m.memberCount,
+      since: DateTime.now(),
+      role: m.roleLabel,
+      membershipLabel: m.roleLabel,
+      initials: _initialsFor(m.cooperativeName),
+      isFeatured: m.isDefault,
+      isVerified: false,
+    );
+  }
+
   final String id;
   final String name;
   final int membersCount;
@@ -25,6 +45,16 @@ class Community {
 
   String get sinceLabel => DateFormat('MMM yyyy').format(since);
   String get membersLabel => '$membersCount members';
+}
+
+String _initialsFor(String name) {
+  final parts = name.split(RegExp(r'\s+')).where((s) => s.isNotEmpty).toList();
+  if (parts.isEmpty) return '?';
+  if (parts.length == 1) {
+    final p = parts.first;
+    return p.length >= 2 ? p.substring(0, 2).toUpperCase() : p.toUpperCase();
+  }
+  return parts.take(3).map((p) => p[0].toUpperCase()).join();
 }
 
 class SampleCommunities {

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 import 'package:communal_mobile/core/utils/app_logger.dart';
@@ -400,8 +401,15 @@ final GoRouter appRouter = GoRouter(
         return '/community';
       },
       builder: (context, state) {
-        final location = state.extra as CommunityLocation;
-        final detail = SampleCommunityDetails.forLocation(location);
+        // Defensive: GoRouter redirects don't re-run on every rebuild
+        // (page-restoration / state-tick paths can hit the builder with
+        // a null extra). Guard the cast so we never crash; the
+        // post-frame redirect bounces back to the listing.
+        final extra = state.extra;
+        if (extra is! CommunityLocation) {
+          return _MissingExtraRedirect(target: '/community');
+        }
+        final detail = SampleCommunityDetails.forLocation(extra);
         return CommunityDetailScreen(detail: detail);
       },
     ),
@@ -413,8 +421,11 @@ final GoRouter appRouter = GoRouter(
         return '/community';
       },
       builder: (context, state) {
-        final location = state.extra as CommunityLocation;
-        final detail = SampleCommunityDetails.forLocation(location);
+        final extra = state.extra;
+        if (extra is! CommunityLocation) {
+          return _MissingExtraRedirect(target: '/community');
+        }
+        final detail = SampleCommunityDetails.forLocation(extra);
         return CommunityApplicationStatusScreen(detail: detail);
       },
     ),
@@ -999,4 +1010,35 @@ ObligationNipSettlement? _extraObligationNipSettlement(
     );
   }
   return null;
+}
+
+/// Recovery screen used by route builders when their required `extra`
+/// argument is missing. Renders a transient blank scaffold and schedules
+/// a post-frame `go(target)` so the navigator settles cleanly. Used by
+/// the community detail / application-status routes when GoRouter
+/// rebuilds them with a null extra (page-restoration corner case).
+class _MissingExtraRedirect extends StatefulWidget {
+  const _MissingExtraRedirect({required this.target});
+
+  final String target;
+
+  @override
+  State<_MissingExtraRedirect> createState() => _MissingExtraRedirectState();
+}
+
+class _MissingExtraRedirectState extends State<_MissingExtraRedirect> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.go(widget.target);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator()),
+    );
+  }
 }

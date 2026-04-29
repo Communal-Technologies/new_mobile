@@ -63,6 +63,9 @@ class ApiEndpoints {
   static String membersFetchUserDetails(String id) =>
       '/members/fetch-user-details/$id';
   static const String membersUpdateProfile = '/members/update-profile';
+  static const String membersUploadAvatar = '/members/profile/avatar';
+  static const String membersAccountFreeze = '/members/account/freeze';
+  static const String membersAccountClosureSubmit = '/members/account-closure/submit';
   static const String membersTransactionStatementExport =
       '/members/transaction-statement/export';
 

@@ -1,6 +1,8 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 
+import 'package:communal_mobile/data/models/public_cooperative.dart';
+
 class CommunityLocation {
   CommunityLocation({
     required this.id,
@@ -19,6 +21,39 @@ class CommunityLocation {
     this.isMember = false,
   });
 
+  /// Adapter for the discoverable cooperatives returned by
+  /// /fetch-cooperatives. Coordinates may be null when the cooperative
+  /// admin hasn't pinned the address on the dashboard yet — UI must
+  /// check [hasCoordinate] before rendering markers / animating to it.
+  /// Distance defaults to 0 (we don't yet ask for device location);
+  /// expose a "—" via [distanceLabel] when distance is unknown.
+  factory CommunityLocation.fromPublicCooperative(PublicCooperative coop) {
+    final hue = _stableHueFor(coop.cooperativeId);
+    return CommunityLocation(
+      id: coop.cooperativeId,
+      name: coop.name,
+      category: (coop.category?.isNotEmpty == true)
+          ? coop.category!
+          : 'Cooperative',
+      // The public listing only includes coops with allow_signup=1,
+      // so we can label them "Open Group" wholesale here.
+      communityType: 'Open Group',
+      address: coop.address ?? '',
+      members: coop.membersCount,
+      distanceKm: 0,
+      minContribution: coop.minContributionKobo != null
+          ? (coop.minContributionKobo! / 100).round()
+          : 0,
+      rating: double.tryParse(coop.rating ?? '') ?? 0.0,
+      coordinate: coop.hasCoordinates
+          ? LatLng(coop.latitude!, coop.longitude!)
+          : null,
+      markerHue: hue,
+      isFeatured: coop.isFeatured,
+      isVerified: coop.isVerified,
+    );
+  }
+
   final String id;
   final String name;
   final String category;
@@ -28,20 +63,42 @@ class CommunityLocation {
   final double distanceKm;
   final int minContribution;
   final double rating;
-  final LatLng coordinate;
+  final LatLng? coordinate;
   final double markerHue;
   final bool isFeatured;
   final bool isVerified;
   final bool isMember;
 
-  String get membersLabel => '$members members';
-  String get distanceLabel =>
-      '${distanceKm >= 1 ? distanceKm.toStringAsFixed(1) : distanceKm.toStringAsFixed(2)} km';
+  bool get hasCoordinate => coordinate != null;
 
-  String get minContributionLabel => NumberFormat.currency(
-    symbol: '₦',
-    decimalDigits: 0,
-  ).format(minContribution);
+  String get membersLabel => '$members members';
+  String get distanceLabel => distanceKm > 0
+      ? '${distanceKm >= 1 ? distanceKm.toStringAsFixed(1) : distanceKm.toStringAsFixed(2)} km'
+      : '—';
+
+  String get minContributionLabel => minContribution > 0
+      ? NumberFormat.currency(symbol: '₦', decimalDigits: 0)
+            .format(minContribution)
+      : '—';
+}
+
+/// Stable hue per cooperative_id so the same coop keeps the same colour
+/// across loads. Hashing the id maps it onto Google Maps' canonical hue
+/// palette.
+double _stableHueFor(String id) {
+  if (id.isEmpty) return BitmapDescriptor.hueViolet;
+  const palette = <double>[
+    BitmapDescriptor.hueViolet,
+    BitmapDescriptor.hueGreen,
+    BitmapDescriptor.hueAzure,
+    BitmapDescriptor.hueOrange,
+    BitmapDescriptor.hueRose,
+    BitmapDescriptor.hueRed,
+    BitmapDescriptor.hueYellow,
+    BitmapDescriptor.hueCyan,
+    BitmapDescriptor.hueMagenta,
+  ];
+  return palette[id.hashCode.abs() % palette.length];
 }
 
 class SampleCommunityLocations {

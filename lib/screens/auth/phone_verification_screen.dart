@@ -33,6 +33,8 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   String _code = '';
   int _resendTimer = 34;
   Timer? _timer;
+  Timer? _deliveryPollTimer;
+  int _deliveryPollAttempts = 0;
 
   /// Set on first successful OTP send and used in /create-account-password
   /// later in the chain. Null until the backend responds.
@@ -46,6 +48,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   /// Inline error message shown below the OTP field. Cleared when the
   /// user starts typing a new code or hits Resend.
   String? _error;
+  String? _deliveryInfo;
 
   @override
   void initState() {
@@ -63,7 +66,49 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _deliveryPollTimer?.cancel();
     super.dispose();
+  }
+
+  String _deliveryMethodForRequest() {
+    switch (widget.method) {
+      case VerificationMethod.call:
+        return 'voice_call';
+      case VerificationMethod.sms:
+      case VerificationMethod.whatsapp:
+        return 'sms';
+    }
+  }
+
+  void _startDeliveryStatusPolling() {
+    _deliveryPollTimer?.cancel();
+    _deliveryPollAttempts = 0;
+    _deliveryPollTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+      _deliveryPollAttempts++;
+      if (_deliveryPollAttempts > 20) {
+        timer.cancel();
+        return;
+      }
+      try {
+        final data = await _authRepository.getOtpDeliveryStatus(
+          widget.phoneNumber,
+          purpose: 'signup',
+        );
+        if (!mounted || data == null) return;
+        final status = (data['status']?.toString() ?? '').toLowerCase();
+        final note = data['delivery_note']?.toString();
+        if (note != null && note.isNotEmpty) {
+          setState(() {
+            _deliveryInfo = note;
+          });
+        }
+        if (status == 'sent' || status == 'failed') {
+          timer.cancel();
+        }
+      } catch (_) {
+        // Keep polling; transient failures are common on weak networks.
+      }
+    });
   }
 
   void _startTimer() {
@@ -85,12 +130,17 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
       _error = null;
     });
     try {
-      final id = await _authRepository.requestOtpForSignup(widget.phoneNumber);
+      final id = await _authRepository.requestOtpForSignup(
+        widget.phoneNumber,
+        deliveryMethod: _deliveryMethodForRequest(),
+      );
       if (!mounted) return;
       setState(() {
         _userId = id;
         _busy = false;
+        _deliveryInfo = null;
       });
+      _startDeliveryStatusPolling();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -104,6 +154,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
     setState(() {
       _resendTimer = 34;
       _error = null;
+      _deliveryInfo = null;
     });
     _startTimer();
     await _sendOtp();
@@ -398,6 +449,17 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                   style: TextStyle(
                     fontSize: 13.sp,
                     color: const Color(0xFFE74C3C),
+                  ),
+                ),
+              ],
+
+              if (_deliveryInfo != null) ...[
+                vSpace(10),
+                Text(
+                  _deliveryInfo!,
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    color: const Color(0xFF0F8B8D),
                   ),
                 ),
               ],

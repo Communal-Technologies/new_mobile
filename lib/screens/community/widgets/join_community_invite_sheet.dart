@@ -111,6 +111,9 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                       controller: _codeController,
                       textCapitalization: TextCapitalization.characters,
                       enabled: !_isSubmitting,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                       onChanged: (_) {
                         if (_errorMessage != null) {
                           setState(() => _errorMessage = null);
@@ -118,10 +121,16 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                       },
                       decoration: InputDecoration(
                         hintText: 'E.G. COOP-XXXX-XXXX',
+                        hintStyle: TextStyle(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16.r),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE1E1EB),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).dividerColor,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
@@ -139,7 +148,8 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                           ),
                         ),
                         filled: true,
-                        fillColor: const Color(0xFFF7F7FB),
+                        fillColor:
+                            Theme.of(context).colorScheme.surfaceContainerHighest,
                       ),
                     ),
                     if (_errorMessage != null) ...[

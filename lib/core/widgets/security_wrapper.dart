@@ -154,6 +154,41 @@ class _SecurityWrapperState extends State<SecurityWrapper>
     }
   }
 
+  /// True when the user is currently sitting on an auth/lock route — the
+  /// welcome-back PIN screen, login, signup, or any reset flow. The idle
+  /// prompt is meaningless on those screens (the user is *already* at a
+  /// gate they have to clear), so we suppress the modal there. Without
+  /// this, a hot-restart would leave the cubit in `unlocked`, the user
+  /// on welcome-back, and after one minute the "Are you still there?"
+  /// dialog would pop on top of the lock screen.
+  bool _isAuthFlowActive() {
+    bool isAuth(String? p) {
+      if (p == null || p.isEmpty) return false;
+      return p.startsWith('/welcome-back') ||
+          p.startsWith('/login') ||
+          p.startsWith('/signup') ||
+          p.startsWith('/forgot-password') ||
+          p.startsWith('/reset-password') ||
+          p.startsWith('/verify-reset') ||
+          p.startsWith('/phone-verification') ||
+          p.startsWith('/set-password') ||
+          p.startsWith('/set-pin') ||
+          p.startsWith('/account-success');
+    }
+
+    try {
+      final s = appRouter.state;
+      if (isAuth(s.uri.path)) return true;
+      if (isAuth(s.matchedLocation)) return true;
+      if (isAuth(s.fullPath)) return true;
+      try {
+        final enginePath = appRouter.routeInformationProvider.value.uri.path;
+        if (isAuth(enginePath)) return true;
+      } catch (_) {}
+    } catch (_) {}
+    return false;
+  }
+
   /// KYC flows can take several minutes; idle prompts / auto-lock would interrupt uploads and forms.
   ///
   /// Prefer [GoRouter.state] — [RouteInformationProvider.value] can lag or not match the
@@ -191,12 +226,17 @@ class _SecurityWrapperState extends State<SecurityWrapper>
         // Only check idle timeout if:
         // 1. User is authenticated
         // 2. App is NOT already locked (don't check if locked)
+        // 3. We're not on an auth route (welcome-back, login, signup,
+        //    password reset). Showing "Are you still there?" on top
+        //    of a lock / login screen is nonsense — the user is
+        //    already at the gate they need to clear.
         // Note: Removed _hasInitializedLock check - idle detection should work as soon as user is authenticated
         if (authState is AuthAuthenticated &&
             securityCubit.state != SecurityState.locked) {
           _runSessionHeartbeat(authState);
-          if (_isKycFlowActive()) {
-            // Dismiss idle prompt if user navigated into KYC; keep activity fresh so timer doesn't fire on exit.
+          if (_isKycFlowActive() || _isAuthFlowActive()) {
+            // Dismiss idle prompt if user navigated into KYC / auth;
+            // keep activity fresh so timer doesn't fire on exit.
             if (securityCubit.state == SecurityState.idlePrompt) {
               securityCubit.resetIdle();
             } else {
@@ -674,7 +714,7 @@ class _SecurityWrapperState extends State<SecurityWrapper>
             // Idle prompt: [SecurityWrapper] sits above [MaterialApp.router], so
             // Navigator.maybeOf(securityWrapperContext) is null — use [rootNavigatorKey].
             if (state == SecurityState.idlePrompt && mounted) {
-              if (_isKycFlowActive()) {
+              if (_isKycFlowActive() || _isAuthFlowActive()) {
                 context.read<SecurityCubit>().resetIdle();
                 return;
               }

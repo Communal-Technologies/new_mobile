@@ -22,7 +22,12 @@ import 'package:communal_mobile/cubits/splash/splash_cubit.dart';
 enum LoginType { phone, email }
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.initialPhone});
+
+  /// Pre-fills the phone field. Currently used by the signup screen's
+  /// "Sign in instead" CTA (when the backend already had an account for
+  /// the entered number) so the user doesn't retype.
+  final PhoneNumber? initialPhone;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -43,6 +48,12 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialPhone != null) {
+      _phoneNumber = widget.initialPhone;
+      // Seed the visible text. PhoneInputField will reconcile with the
+      // structured value on first onPhoneNumberChanged callback.
+      _phoneController.text = widget.initialPhone?.phoneNumber ?? '';
+    }
     _loadRegions();
   }
 
@@ -208,6 +219,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     : PhoneInputField(
                         controller: _phoneController,
                         regions: _regions,
+                        initialValue: widget.initialPhone,
                         errorText: _phoneError,
                         onChanged: () {
                           if (_phoneError != null) {

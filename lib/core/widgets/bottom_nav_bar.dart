@@ -126,7 +126,7 @@ class BottomNavBar extends StatelessWidget {
           Text(
             item.label,
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: 14.sp,
               fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
               color: isActive ? theme.primaryColor : inactiveColor,
             ),

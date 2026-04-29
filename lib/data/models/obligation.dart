@@ -193,24 +193,32 @@ class Obligation {
     final now = DateTime.now();
     final createdAt = _parseDate(obligation['created_at']);
     final hasPeriod = month > 0 && year > 0;
-    final dueDate = hasPeriod
+    // First day of the obligation period — i.e. the month this row is FOR.
+    final periodStart = hasPeriod
         ? DateTime(year, month, 1)
         : DateTime(
             createdAt?.year ?? now.year,
             createdAt?.month ?? now.month,
             createdAt?.day ?? 1,
           );
+    // The card's "Next Due" should show the upcoming payment cycle —
+    // i.e. the FIRST OF THE FOLLOWING MONTH, not the start of the
+    // current period. e.g. an April 2026 obligation rolls into a
+    // May 1 due date for the next payment window.
+    final nextCycle = DateTime(periodStart.year, periodStart.month + 1, 1);
     final minPayableMinor = _asInt(account?['min_amount_payable']);
     final totalShares = _asInt(account?['total_shares']);
     final costPerShareMinor = _asInt(account?['cost_per_share']);
-    final category = _resolveCategory(account?['account_type']?.toString());
+    final accountType = account?['account_type']?.toString();
+    final category = _resolveCategory(accountType);
     final title = account?['account_name']?.toString().trim().isNotEmpty == true
         ? account!['account_name'].toString()
         : '$category Obligation';
     final status = _resolveStatus(
       paidMinor: amountPaidMinor,
       totalMinor: amountMinor,
-      dueDate: dueDate,
+      dueDate: nextCycle,
+      category: category,
     );
 
     var totalInstallments = 1;
@@ -221,15 +229,21 @@ class Obligation {
           (amountMinor / minPayableMinor).ceil().clamp(1, 9999);
     }
 
-    var perInstallmentMinor = minPayableMinor;
-    if (perInstallmentMinor <= 0 && totalShares > 0 && costPerShareMinor > 0) {
+    // Equity rows are share-priced — `cost_per_share` is the unit, not
+    // `min_amount_payable`. Old logic preferred minPayable across all
+    // categories, which made installmentsPaid wrong whenever both
+    // values were sent for an equity row.
+    int perInstallmentMinor;
+    if (category == 'Equity' && costPerShareMinor > 0) {
       perInstallmentMinor = costPerShareMinor;
-    } else if (perInstallmentMinor <= 0 &&
-        totalInstallments > 0 &&
-        amountMinor > 0) {
+    } else if (minPayableMinor > 0) {
+      perInstallmentMinor = minPayableMinor;
+    } else if (totalShares > 0 && costPerShareMinor > 0) {
+      perInstallmentMinor = costPerShareMinor;
+    } else if (totalInstallments > 0 && amountMinor > 0) {
       perInstallmentMinor = (amountMinor / totalInstallments).round();
-    } else if (perInstallmentMinor <= 0 && amountMinor > 0) {
-      perInstallmentMinor = amountMinor;
+    } else {
+      perInstallmentMinor = amountMinor > 0 ? amountMinor : 0;
     }
 
     var installmentsPaid = 0;
@@ -242,7 +256,7 @@ class Obligation {
 
     final startDate = createdAt != null
         ? DateTime(createdAt.year, createdAt.month, createdAt.day)
-        : dueDate;
+        : periodStart;
 
     final currency = (obligation['currency']?.toString().trim().isNotEmpty == true
             ? obligation['currency'].toString()
@@ -267,8 +281,10 @@ class Obligation {
       installmentsPaid: installmentsPaid,
       totalInstallments: totalInstallments,
       startDate: startDate,
-      endDate: dueDate,
-      nextDueDate: dueDate,
+      endDate: nextCycle,
+      // Next due = first of the month after the obligation period, so
+      // an April 2026 row reads "next due May 1, 2026".
+      nextDueDate: nextCycle,
       frequency: 'Monthly',
       payments: const [],
       fines: _parseFines(obligation['fines'], currency),
@@ -332,9 +348,15 @@ class Obligation {
     required int paidMinor,
     required int totalMinor,
     required DateTime dueDate,
+    String? category,
   }) {
     if (totalMinor > 0 && paidMinor >= totalMinor) return 'Completed';
-    if (dueDate.isBefore(DateTime.now())) return 'Overdue';
+    // Equity contributions are share-based, not time-bound — there's
+    // no "overdue" state, only "fully subscribed" vs. "still active".
+    // Patronage / custom obligations keep the standard date-based check.
+    if (category != 'Equity' && dueDate.isBefore(DateTime.now())) {
+      return 'Overdue';
+    }
     return 'Active';
   }
 

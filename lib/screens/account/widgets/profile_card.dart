@@ -2,7 +2,9 @@ import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/navigation/kyc_resume.dart';
 import 'package:communal_mobile/core/utils/currency_formatter.dart';
+import 'package:communal_mobile/data/local/home_wallet_prefs.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -17,7 +19,9 @@ class ProfileCard extends StatefulWidget {
 }
 
 class _ProfileCardState extends State<ProfileCard> {
-  bool _isBalanceVisible = true;
+  // Visibility lives in the shared HomeWalletPrefs singleton (a
+  // ChangeNotifier) so toggling here propagates to the home dashboard
+  // card and any other surface that listens to the same notifier.
 
   /// Status only (e.g. "Not verified", "Tier 1") — not a second CTA beside [ _upgradeChipLabel ].
   String _tierStatusChipLabel(UserModel u) {
@@ -61,6 +65,7 @@ class _ProfileCardState extends State<ProfileCard> {
           return SizedBox(height: 120.h);
         }
         final user = authState.user;
+        final prefs = getIt<HomeWalletPrefs>();
         final showUpgradeChip = user.tierLimits?.isFullyVerified != true;
         final displayName =
             user.name.trim().isNotEmpty ? user.name.trim() : 'Member';
@@ -149,40 +154,53 @@ class _ProfileCardState extends State<ProfileCard> {
                         ],
                       ),
                       vSpace(12),
-                      Row(
-                        children: [
-                          Text(
-                            'Total Balance',
-                            style: TextStyle(
-                              fontSize: 17.sp,
-                              color: Colors.white.withValues(alpha: 0.9),
-                            ),
-                          ),
-                          hSpace(8),
-                          GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _isBalanceVisible = !_isBalanceVisible;
-                              });
-                            },
-                            child: Icon(
-                              _isBalanceVisible
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                              color: Colors.white,
-                              size: 20.sp,
-                            ),
-                          ),
-                        ],
-                      ),
-                      vSpace(4),
-                      Text(
-                        _isBalanceVisible ? balanceText : '••••••',
-                        style: TextStyle(
-                          fontSize: 26.sp,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
+                      AnimatedBuilder(
+                        animation: prefs,
+                        builder: (context, _) {
+                          final visible = prefs.isBalanceVisible(user.id);
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'Total Balance',
+                                    style: TextStyle(
+                                      fontSize: 17.sp,
+                                      color:
+                                          Colors.white.withValues(alpha: 0.9),
+                                    ),
+                                  ),
+                                  hSpace(8),
+                                  GestureDetector(
+                                    onTap: () {
+                                      // Persisted + broadcast to every
+                                      // listener via the shared notifier.
+                                      prefs.setBalanceVisible(
+                                          user.id, !visible);
+                                    },
+                                    child: Icon(
+                                      visible
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
+                                      color: Colors.white,
+                                      size: 20.sp,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              vSpace(4),
+                              Text(
+                                visible ? balanceText : '••••••',
+                                style: TextStyle(
+                                  fontSize: 26.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),

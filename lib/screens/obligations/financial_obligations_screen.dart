@@ -88,7 +88,7 @@ class _FinancialObligationsScreenState
       ),
       child: Scaffold(
         key: _scaffoldKey,
-        backgroundColor: Colors.grey.shade50,
+        backgroundColor: theme.scaffoldBackgroundColor,
         drawer: const CooperativeSidebar(),
         drawerEdgeDragWidth: 50.w,
         drawerScrimColor: Colors.black.withValues(alpha: 0.4),
@@ -145,6 +145,7 @@ class _FinancialObligationsScreenState
 
   Widget _buildHeader(ThemeData theme) {
     final auth = context.watch<AuthBloc>().state;
+    final onSurface = theme.colorScheme.onSurface;
     final coopLine = auth is AuthAuthenticated
         ? () {
             final line = auth.user.cooperativeDisplayName.trim();
@@ -156,6 +157,7 @@ class _FinancialObligationsScreenState
     return Row(
       children: [
         _roundedIcon(
+          theme: theme,
           icon: Icons.menu,
           onTap: () {
             _scaffoldKey.currentState?.openDrawer();
@@ -170,60 +172,89 @@ class _FinancialObligationsScreenState
                 style: TextStyle(
                   fontSize: 22.sp,
                   fontWeight: FontWeight.w700,
-                  color: Colors.black,
+                  color: onSurface,
                 ),
               ),
               vSpace(4),
               Text(
                 coopLine,
-                style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
+                style: TextStyle(
+                  fontSize: 15.sp,
+                  color: onSurface.withValues(alpha: 0.6),
+                ),
               ),
             ],
           ),
         ),
-        _roundedIcon(icon: Icons.refresh, onTap: _loadObligations),
+        _roundedIcon(
+          theme: theme,
+          icon: Icons.refresh,
+          onTap: _loadObligations,
+        ),
       ],
     );
   }
 
-  Widget _roundedIcon({required IconData icon, VoidCallback? onTap}) {
+  Widget _roundedIcon({
+    required ThemeData theme,
+    required IconData icon,
+    VoidCallback? onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 40.w,
         height: 40.w,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.cardColor,
           borderRadius: BorderRadius.circular(12.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
           ],
         ),
-        child: Icon(icon, color: Colors.black87, size: 20.sp),
+        child: Icon(
+          icon,
+          color: theme.colorScheme.onSurface,
+          size: 20.sp,
+        ),
       ),
     );
   }
 
   Widget _buildSummaryCards(ThemeData theme) {
     final auth = context.watch<AuthBloc>().state;
+    // Summary numbers should reflect the category the user is currently
+    // looking at — otherwise switching tabs leaves the same totals
+    // sitting at the top, which makes them feel static and wrong.
+    final scoped = _obligations
+        .where((o) =>
+            o.category.toLowerCase() == _selectedCategory.toLowerCase())
+        .toList();
     final currency = auth is AuthAuthenticated
         ? resolveCurrencyCode(auth.user)
-        : (_obligations.isNotEmpty ? _obligations.first.currency : 'NGN');
+        : (scoped.isNotEmpty
+            ? scoped.first.currency
+            : (_obligations.isNotEmpty ? _obligations.first.currency : 'NGN'));
     final totalDueMinor =
-        _obligations.fold<int>(0, (sum, row) => sum + row.balanceMinor);
+        scoped.fold<int>(0, (sum, row) => sum + row.balanceMinor);
     final totalPaidMinor =
-        _obligations.fold<int>(0, (sum, row) => sum + row.paidAmountMinor);
-    final nextDueLabel = _obligations.isEmpty
+        scoped.fold<int>(0, (sum, row) => sum + row.paidAmountMinor);
+    // Equity has no "next due" — it's share-based and never overdue. Show
+    // a dash for that category instead of an upcoming date that doesn't
+    // mean anything.
+    final nextDueLabel = scoped.isEmpty
         ? 'N/A'
-        : _formatDate(
-            _obligations
-                .map((e) => e.nextDueDate)
-                .reduce((a, b) => a.isBefore(b) ? a : b),
-          );
+        : (_selectedCategory == 'Equity'
+            ? '—'
+            : _formatDate(
+                scoped
+                    .map((e) => e.nextDueDate)
+                    .reduce((a, b) => a.isBefore(b) ? a : b),
+              ));
     final cards = [
       _SummaryCardData(
         label: 'Total Due',
@@ -279,6 +310,7 @@ class _FinancialObligationsScreenState
   }
 
   Widget _buildCategorySelector(ThemeData theme) {
+    final onSurface = theme.colorScheme.onSurface;
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -295,14 +327,14 @@ class _FinancialObligationsScreenState
               },
               selectedColor: theme.primaryColor,
               labelStyle: TextStyle(
-                color: isActive ? Colors.white : Colors.black87,
+                color: isActive ? Colors.white : onSurface,
                 fontWeight: FontWeight.w600,
               ),
-              backgroundColor: Colors.white,
+              backgroundColor: theme.cardColor,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24.r),
                 side: BorderSide(
-                  color: isActive ? theme.primaryColor : Colors.grey.shade300,
+                  color: isActive ? theme.primaryColor : theme.dividerColor,
                 ),
               ),
             ),
@@ -313,22 +345,28 @@ class _FinancialObligationsScreenState
   }
 
   Widget _buildSearchBar(ThemeData theme) {
+    final onSurface = theme.colorScheme.onSurface;
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: theme.dividerColor),
       ),
       child: Row(
         children: [
-          const Icon(Icons.search, color: Colors.grey),
+          Icon(Icons.search, color: onSurface.withValues(alpha: 0.6)),
           hSpace(10),
           Expanded(
             child: TextField(
               controller: _searchController,
-              decoration: const InputDecoration.collapsed(
+              style: TextStyle(color: onSurface, fontSize: 15.sp),
+              decoration: InputDecoration.collapsed(
                 hintText: 'Search obligations...',
+                hintStyle: TextStyle(
+                  color: onSurface.withValues(alpha: 0.5),
+                  fontSize: 15.sp,
+                ),
               ),
               onChanged: (_) => setState(() {}),
             ),
@@ -337,7 +375,7 @@ class _FinancialObligationsScreenState
             width: 36.w,
             height: 36.w,
             decoration: BoxDecoration(
-              color: theme.primaryColor.withOpacity(0.1),
+              color: theme.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10.r),
             ),
             child: Icon(

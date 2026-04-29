@@ -37,6 +37,13 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // Required by `flutter_local_notifications` (and any plugin that
+        // pulls in java.time / Stream APIs while targeting older Android
+        // runtimes). Without this AGP fails with
+        // "requires core library desugaring to be enabled" on
+        // assembleDebug. See
+        // https://developer.android.com/studio/write/java8-support.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -73,6 +80,10 @@ android {
 // auth-types API the channel uses.
 dependencies {
     implementation("androidx.biometric:biometric:1.2.0-alpha05")
+    // Provides backports of java.time / Stream APIs at build time so
+    // `isCoreLibraryDesugaringEnabled = true` above can resolve them on
+    // older Android runtimes. Required by `flutter_local_notifications`.
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
 flutter {

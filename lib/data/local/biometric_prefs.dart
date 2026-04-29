@@ -25,9 +25,20 @@ class BiometricPrefs {
 
   static const String _kAppLogin = 'biometric_app_login_enabled';
   static const String _kTransactions = 'biometric_transactions_enabled';
+  // user_id of the account that enrolled biometric on this device. Without
+  // this, enrollment leaks across users — User A enrols, logs out, User B
+  // logs in on the same device, and User B's idle-lock screen would auto-
+  // prompt biometric (the local key + appLogin pref are device-scoped).
+  // Welcome-back checks this against the *current* user before treating
+  // biometric as enrolled.
+  static const String _kEnrolledUserId = 'biometric_enrolled_user_id';
 
   bool get appLoginEnabled => _prefs.getBool(_kAppLogin) ?? true;
   bool get transactionsEnabled => _prefs.getBool(_kTransactions) ?? true;
+
+  /// Account that owns the local enrollment, or null when nothing is
+  /// enrolled (or pre-upgrade install where the field wasn't written).
+  String? get enrolledUserId => _prefs.getString(_kEnrolledUserId);
 
   Future<void> setAppLoginEnabled(bool value) =>
       _prefs.setBool(_kAppLogin, value);
@@ -35,11 +46,15 @@ class BiometricPrefs {
   Future<void> setTransactionsEnabled(bool value) =>
       _prefs.setBool(_kTransactions, value);
 
-  /// Reset both flags. Called on master-toggle off (via unenrollment) so
-  /// the next time the user re-enrolls, the granular flags don't carry
-  /// stale state.
+  Future<void> setEnrolledUserId(String userId) =>
+      _prefs.setString(_kEnrolledUserId, userId);
+
+  /// Reset all flags. Called on master-toggle off (via unenrollment) and
+  /// on logout so the next user starts from a clean slate and can't be
+  /// auto-prompted with a previous owner's enrollment.
   Future<void> resetAll() async {
     await _prefs.remove(_kAppLogin);
     await _prefs.remove(_kTransactions);
+    await _prefs.remove(_kEnrolledUserId);
   }
 }

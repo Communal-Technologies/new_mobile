@@ -10,7 +10,10 @@ class IdlePromptDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
     return Dialog(
+      backgroundColor: theme.cardColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16.r),
       ),
@@ -22,7 +25,7 @@ class IdlePromptDialog extends StatelessWidget {
             Icon(
               Icons.touch_app_outlined,
               size: 48.sp,
-              color: Theme.of(context).primaryColor,
+              color: theme.primaryColor,
             ),
             vSpace(16),
             Text(
@@ -30,7 +33,7 @@ class IdlePromptDialog extends StatelessWidget {
               style: TextStyle(
                 fontSize: 22.sp,
                 fontWeight: FontWeight.w700,
-                color: Colors.black,
+                color: onSurface,
               ),
             ),
             vSpace(8),
@@ -39,7 +42,7 @@ class IdlePromptDialog extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15.sp,
-                color: Colors.grey.shade600,
+                color: onSurface.withValues(alpha: 0.6),
               ),
             ),
             vSpace(24),

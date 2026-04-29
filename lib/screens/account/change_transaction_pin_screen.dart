@@ -408,7 +408,9 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                           vertical: 9.h,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFE3E2),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFFC62828).withValues(alpha: 0.16)
+                              : const Color(0xFFFFE3E2),
                           borderRadius: BorderRadius.circular(8.r),
                         ),
                         child: Row(

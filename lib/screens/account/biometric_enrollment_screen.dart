@@ -612,7 +612,7 @@ class _GranularToggleCard extends StatelessWidget {
                 vSpace(2),
                 Text(
                   subtitle,
-                  style: TextStyle(fontSize: 13.sp, color: Colors.black54),
+                  style: TextStyle(fontSize: 14.sp, color: Colors.black54),
                 ),
               ],
             ),
@@ -744,7 +744,7 @@ class _RegisteredBiometricRow extends StatelessWidget {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 14.sp,
                     color: Colors.black54,
                   ),
                 ),
@@ -784,7 +784,7 @@ class _StatusBadge extends StatelessWidget {
           Text(
             isActive ? 'Active' : 'Inactive',
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: 14.sp,
               fontWeight: FontWeight.w700,
               color: color,
             ),

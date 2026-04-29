@@ -46,19 +46,33 @@ class ActiveLoanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final isApproved = loan.status == LoanStatus.approved;
+    // In dark mode, a black drop shadow on a dark scaffold is
+    // invisible — the card vanishes into the background. Use a 1px
+    // outline tinted with the scheme's onSurface so the card lifts
+    // off the scaffold the way the obligation / detail cards do.
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: isDark
+            ? Border.all(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.10),
+                width: 1,
+              )
+            : null,
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

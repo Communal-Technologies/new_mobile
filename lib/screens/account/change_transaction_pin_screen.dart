@@ -323,7 +323,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 15.sp,
-                            color: Colors.black54,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -385,14 +385,14 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                           Icon(
                             _showPin ? Icons.visibility_off : Icons.visibility,
                             size: 18.sp,
-                            color: Colors.black54,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                           hSpace(6),
                           Text(
                             'Show PIN',
                             style: TextStyle(
                               fontSize: 15.sp,
-                              color: Colors.black54,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -464,7 +464,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                                   'Never share your PIN wth anyone.\nCommunal HQ will never ask for your PIN via email, SMS or phone call.',
                                   style: TextStyle(
                                     fontSize: 14.sp,
-                                    color: Colors.black87,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),

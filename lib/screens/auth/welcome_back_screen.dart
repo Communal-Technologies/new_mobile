@@ -569,7 +569,12 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
       if (widget.isAppLock && hasExistingToken) {
         setState(() {
           _isAuthenticating = true;
-          _waitingForBackendValidation = false;
+          // Surface the full-screen loader during the verify-unlock
+          // call so PIN unlock paints the same overlay as biometric.
+          // Without this the screen looks frozen for the duration of
+          // the network round-trip (network/captcha/CFW latency).
+          // Cleared on success/failure below.
+          _waitingForBackendValidation = true;
           _passwordError = null;
         });
 
@@ -579,6 +584,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
         if (verified) {
           final securityCubit = context.read<SecurityCubit>();
           _isAuthenticating = false;
+          _waitingForBackendValidation = false;
           _password = '';
           _pinController.clear();
           _passwordError = null;
@@ -594,6 +600,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
         } else {
           setState(() {
             _isAuthenticating = false;
+            _waitingForBackendValidation = false;
             _password = '';
             _pinController.clear();
             _passwordError = 'Incorrect PIN';

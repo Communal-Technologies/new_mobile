@@ -20,24 +20,26 @@ class SettingItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
     return InkWell(
       onTap: onTap,
       child: Container(
         margin: EdgeInsets.only(bottom: 1.h),
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-        color: Theme.of(context).cardColor,
+        color: theme.cardColor,
         child: Row(
           children: [
             Container(
               width: 40.w,
               height: 40.w,
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: theme.primaryColor.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(10.r),
               ),
               child: Icon(
                 icon,
-                color: const Color(0xFF7434FF),
+                color: theme.primaryColor,
                 size: 22.sp,
               ),
             ),
@@ -51,7 +53,7 @@ class SettingItem extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 17.sp,
                       fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
+                      color: onSurface,
                     ),
                   ),
                   vSpace(4),
@@ -59,7 +61,7 @@ class SettingItem extends StatelessWidget {
                     description,
                     style: TextStyle(
                       fontSize: 15.sp,
-                      color: Colors.grey.shade600,
+                      color: onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -70,7 +72,7 @@ class SettingItem extends StatelessWidget {
             else
               Icon(
                 Icons.chevron_right,
-                color: Colors.grey.shade400,
+                color: onSurface.withValues(alpha: 0.5),
                 size: 22.sp,
               ),
           ],

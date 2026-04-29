@@ -259,12 +259,10 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                           onTap: () => _openJoinCooperativeSheet(context),
                         ),
                         vSpace(8),
-                        _buildBottomAction(
-                          icon: Icons.person_add_outlined,
-                          label: 'Add Another Account',
-                          onTap: () {},
-                        ),
-                        vSpace(8),
+                        // "Add Another Account" removed — the app does
+                        // not currently permit multiple concurrent
+                        // sessions, so a non-functional row would just
+                        // confuse users.
                         _buildBottomAction(
                           icon: Icons.settings_outlined,
                           label: 'Settings',

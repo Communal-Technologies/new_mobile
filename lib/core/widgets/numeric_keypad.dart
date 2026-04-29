@@ -75,7 +75,12 @@ class NumericKeypad extends StatelessWidget {
         width: 70.w,
         height: 70.w,
         decoration: BoxDecoration(
-          color: Colors.grey.shade100,
+          // Read the live theme so the keypad keys flip with the
+          // dark/light toggle. `surfaceContainerHighest` gives the
+          // softer "raised pill" tint Material 3 ships for both
+          // themes, instead of the hardcoded Colors.grey.shade100
+          // that rendered as a near-white bg on a dark scaffold.
+          color: theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(50.r),
         ),
         child: Center(

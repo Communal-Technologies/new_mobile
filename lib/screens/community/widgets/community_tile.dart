@@ -22,7 +22,7 @@ class CommunityTile extends StatelessWidget {
       margin: EdgeInsets.only(bottom: 16.h),
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20.r),
         border: Border.all(
           color: isActive ? const Color(0xFF7434FF) : Colors.transparent,
@@ -30,7 +30,7 @@ class CommunityTile extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -40,6 +40,7 @@ class CommunityTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildAvatar(
                 community.initials,
@@ -55,40 +56,27 @@ class CommunityTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Flexible(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  community.name,
-                                  style: TextStyle(
-                                    fontSize: 17.sp,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.black,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (_isVerified(community)) ...[
-                                hSpace(6),
-                                Icon(
-                                  Icons.verified,
-                                  size: 18.sp,
-                                  color: const Color(0xFF4CAF50),
-                                ),
-                              ],
-                            ],
+                          child: Text(
+                            community.name,
+                            style: TextStyle(
+                              fontSize: 17.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const Spacer(),
-                        if (isActive)
+                        if (_isVerified(community)) ...[
+                          hSpace(6),
                           Icon(
-                            Icons.check_circle,
-                            color: const Color(0xFF7434FF),
-                            size: 20.sp,
+                            Icons.verified,
+                            size: 18.sp,
+                            color: const Color(0xFF4CAF50),
                           ),
+                        ],
                       ],
                     ),
                     vSpace(4),
@@ -126,6 +114,18 @@ class CommunityTile extends StatelessWidget {
                   ],
                 ),
               ),
+              // Active-membership check sits at the *card's* top-right
+              // (sibling of the avatar/details column) so it lines up
+              // with the avatar regardless of how the name wraps.
+              if (isActive)
+                Padding(
+                  padding: EdgeInsets.only(left: 8.w, top: 2.h),
+                  child: Icon(
+                    Icons.check_circle,
+                    color: const Color(0xFF7434FF),
+                    size: 22.sp,
+                  ),
+                ),
             ],
           ),
           vSpace(10),

@@ -53,12 +53,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
             ),
           ),
           centerTitle: true,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.settings),
-              onPressed: () {},
-            ),
-          ],
         ),
         body: SingleChildScrollView(
           child: Column(

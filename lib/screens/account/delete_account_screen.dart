@@ -111,7 +111,7 @@ class _DataLossSection extends StatelessWidget {
         const DataLossItem(
           icon: Icons.shield_outlined,
           title: 'Account Balance',
-          description: '₦450,000 must be withdrawn before deletion',
+          description: 'Any balance must be transferred to another account before deletion',
           iconColor: Colors.red,
         ),
       ],

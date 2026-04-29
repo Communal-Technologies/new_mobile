@@ -50,7 +50,7 @@ class ActiveLoanCard extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
@@ -123,7 +123,7 @@ class ActiveLoanCard extends StatelessWidget {
                 Container(
                   height: 8.h,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
+                    color: Theme.of(context).dividerColor,
                     borderRadius: BorderRadius.circular(4.r),
                   ),
                 ),

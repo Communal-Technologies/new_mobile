@@ -185,7 +185,7 @@ class _LoanApplicationStep3ScreenState
             Container(
               padding: EdgeInsets.all(16.w),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.05),
@@ -222,7 +222,7 @@ class _LoanApplicationStep3ScreenState
             Container(
               height: 4.h,
               decoration: BoxDecoration(
-                color: Colors.grey.shade200,
+                color: Theme.of(context).dividerColor,
                 borderRadius: BorderRadius.circular(2.r),
               ),
             ),
@@ -243,7 +243,7 @@ class _LoanApplicationStep3ScreenState
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: Colors.grey.shade200),
       ),
@@ -314,7 +314,7 @@ class _LoanApplicationStep3ScreenState
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: Colors.grey.shade200),
       ),
@@ -374,7 +374,7 @@ class _LoanApplicationStep3ScreenState
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: Colors.grey.shade200),
       ),

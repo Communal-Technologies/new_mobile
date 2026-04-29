@@ -124,12 +124,9 @@ class _NotificationSettingsScreenState
         statusBarBrightness: Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: Colors.grey.shade50,
         appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
           title: Text(
@@ -137,7 +134,6 @@ class _NotificationSettingsScreenState
             style: TextStyle(
               fontSize: 19.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
             ),
           ),
           centerTitle: true,
@@ -163,7 +159,13 @@ class _NotificationSettingsScreenState
             Text(
               _error!,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade700),
+              style: TextStyle(
+                fontSize: 15.sp,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.7),
+              ),
             ),
             vSpace(12),
             OutlinedButton(onPressed: _load, child: const Text('Retry')),
@@ -300,12 +302,17 @@ class _NotificationSettingsScreenState
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 15.sp,
-          fontWeight: FontWeight.w600,
-          color: Colors.grey.shade700,
+      child: Builder(
+        builder: (context) => Text(
+          title,
+          style: TextStyle(
+            fontSize: 15.sp,
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context)
+                .colorScheme
+                .onSurface
+                .withValues(alpha: 0.7),
+          ),
         ),
       ),
     );

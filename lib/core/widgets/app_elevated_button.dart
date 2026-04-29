@@ -178,6 +178,12 @@ class AppSecondaryButton extends StatelessWidget {
             color: borderColor,
           ),
           backgroundColor: Colors.transparent,
+          // Material 3 OutlinedButton paints a `surfaceTint` overlay
+          // by default; on a dark scaffold this rendered the button
+          // body as a near-white block. Pinning these to transparent
+          // keeps the button truly outlined-only.
+          surfaceTintColor: Colors.transparent,
+          shadowColor: Colors.transparent,
           foregroundColor: textColor,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25.r),

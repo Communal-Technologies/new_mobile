@@ -327,18 +327,28 @@ class _MessageField extends StatelessWidget {
         TextField(
           controller: controller,
           maxLines: 3,
+          // Use the live foreground colour so input text reads on
+          // both themes; the InputDecoration's default hint colour
+          // collapses against the dark fill colour we used to set,
+          // which is why the placeholder was invisible.
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
           decoration: InputDecoration(
             hintText: 'Hi, my name is ... I would like to join because...',
+            hintStyle: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
-              borderSide: const BorderSide(color: Color(0xFFE6E6F0)),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
               borderSide: const BorderSide(color: Color(0xFF7434FF)),
             ),
             filled: true,
-            fillColor: const Color(0xFFF8F8FB),
+            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
           ),
         ),
       ],

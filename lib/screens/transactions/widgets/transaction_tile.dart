@@ -12,13 +12,15 @@ class TransactionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12.r),
       child: Container(
         padding: EdgeInsets.all(14.w),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.cardColor,
           borderRadius: BorderRadius.circular(12.r),
         ),
         child: Row(
@@ -42,7 +44,7 @@ class TransactionTile extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 17.sp,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black,
+                      color: onSurface,
                     ),
                   ),
                   vSpace(4),
@@ -50,7 +52,7 @@ class TransactionTile extends StatelessWidget {
                     item.subtitle,
                     style: TextStyle(
                       fontSize: 17.sp,
-                      color: Colors.grey.shade600,
+                      color: onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],

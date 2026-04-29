@@ -426,8 +426,21 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                             TextField(
                               controller: _accountNumberCtrl,
                               keyboardType: TextInputType.number,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
                               decoration: InputDecoration(
                                 hintText: '10 Digit Account Number',
+                                hintStyle: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.5),
+                                ),
+                                filled: true,
+                                fillColor: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8.r),
                                 ),

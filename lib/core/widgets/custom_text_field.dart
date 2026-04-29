@@ -43,6 +43,14 @@ class CustomTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasError = errorText != null && errorText!.isNotEmpty;
+    final theme = Theme.of(context);
+    // Theme-aware fill / border / hint so the field works on both
+    // light and dark scaffolds. Was hard-coded white + grey.shade300
+    // — looked white on dark mode and ate the value text.
+    final fillColor = theme.colorScheme.surfaceContainerHighest;
+    final borderColor = theme.dividerColor;
+    final hintColor = theme.colorScheme.onSurface.withValues(alpha: 0.5);
+    final textColor = theme.colorScheme.onSurface;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,7 +61,7 @@ class CustomTextField extends StatelessWidget {
             style: TextStyle(
               fontSize: 19.sp,
               fontWeight: FontWeight.w500,
-              color: Theme.of(context).colorScheme.onSurface,
+              color: textColor,
             ),
           ),
           SizedBox(height: 8.h),
@@ -71,18 +79,18 @@ class CustomTextField extends StatelessWidget {
           onChanged: onChanged,
           style: TextStyle(
             fontSize: 19.sp,
-            color: Theme.of(context).colorScheme.onSurface,
+            color: textColor,
           ),
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: TextStyle(
-              color: Colors.grey.shade400,
+              color: hintColor,
               fontSize: 17.sp,
             ),
             prefixIcon: prefixIcon,
             suffixIcon: suffixIcon,
             filled: true,
-            fillColor: Colors.white,
+            fillColor: fillColor,
             contentPadding: EdgeInsets.symmetric(
               horizontal: 14.w,
               vertical: 14.h,
@@ -90,23 +98,21 @@ class CustomTextField extends StatelessWidget {
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
               borderSide: BorderSide(
-                color: hasError ? Colors.red : Colors.grey.shade300,
+                color: hasError ? Colors.red : borderColor,
                 width: 1.5,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
               borderSide: BorderSide(
-                color: hasError ? Colors.red : Colors.grey.shade300,
+                color: hasError ? Colors.red : borderColor,
                 width: 1.5,
               ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
               borderSide: BorderSide(
-                color: hasError
-                    ? Colors.red
-                    : Theme.of(context).primaryColor,
+                color: hasError ? Colors.red : theme.primaryColor,
                 width: 1.5,
               ),
             ),

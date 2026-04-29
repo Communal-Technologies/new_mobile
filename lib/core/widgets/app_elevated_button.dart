@@ -36,8 +36,13 @@ class AppElevatedButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: theme.primaryColor,
           foregroundColor: Colors.white,
-              disabledBackgroundColor: theme.primaryColor,
-              disabledForegroundColor: Colors.white,
+              // Disabled = primary tinted lighter (alpha 0.45). Looks
+              // like a light overlay sits on top of the brand colour
+              // — keeps the action visually identifiable while
+              // signalling "not ready" instead of going pure white.
+              disabledBackgroundColor:
+                  theme.primaryColor.withValues(alpha: 0.45),
+              disabledForegroundColor: Colors.white.withValues(alpha: 0.85),
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25.r),

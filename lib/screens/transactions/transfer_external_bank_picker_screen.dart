@@ -143,7 +143,14 @@ class _TransferExternalBankPickerScreenState
                     size: 24.sp,
                   ),
                   filled: true,
-                  fillColor: Theme.of(context).cardColor,
+                  // Was theme.cardColor — read as same colour as the
+                  // surrounding scaffold on dark mode (no input
+                  // affordance). surfaceContainerHighest is the
+                  // Material 3 elevation step we use everywhere else
+                  // for inputs.
+                  fillColor: Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerHighest,
                   contentPadding:
                       EdgeInsets.symmetric(horizontal: 12.w, vertical: 14.h),
                   border: OutlineInputBorder(

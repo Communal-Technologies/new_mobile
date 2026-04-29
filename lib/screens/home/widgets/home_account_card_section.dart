@@ -146,6 +146,7 @@ class _HomeAccountCardSectionState extends State<HomeAccountCardSection> {
   Widget _buildTabBody(BuildContext context, UserModel user) {
     switch (_tabIndex) {
       case 0:
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return _SavingsTabContent(
           user: user,
           balanceVisible: _balanceVisible,
@@ -158,7 +159,10 @@ class _HomeAccountCardSectionState extends State<HomeAccountCardSection> {
             await getIt<HomeWalletPrefs>().setBalanceVisible(uid, next);
             if (mounted) setState(() => _balanceVisible = next);
           },
-          primary: Theme.of(context).primaryColor,
+          // Copy chip: brand purple in light mode reads against the
+          // soft-purple chip background; on dark it disappears, so
+          // switch to white.
+          copyForeground: isDark ? Colors.white : Theme.of(context).primaryColor,
           copyBg: _kCopyButtonBg,
         );
       case 1:
@@ -278,14 +282,17 @@ class _SavingsTabContent extends StatelessWidget {
     required this.user,
     required this.balanceVisible,
     required this.onToggleBalance,
-    required this.primary,
+    required this.copyForeground,
     required this.copyBg,
   });
 
   final UserModel user;
   final bool balanceVisible;
   final Future<void> Function() onToggleBalance;
-  final Color primary;
+  /// Foreground (icon + label) of the Copy Acc. chip. Brand purple in
+  /// light mode, white in dark mode (the soft-purple chip bg eats
+  /// brand-purple text on a dark card).
+  final Color copyForeground;
   final Color copyBg;
 
   String get _accountLabel {
@@ -420,14 +427,15 @@ class _SavingsTabContent extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.copy_rounded, size: 18.sp, color: primary),
+                      Icon(Icons.copy_rounded,
+                          size: 18.sp, color: copyForeground),
                       SizedBox(width: 6.w),
                       Text(
                         'Copy Acc. No.',
                         style: TextStyle(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w700,
-                          color: primary,
+                          color: copyForeground,
                         ),
                       ),
                     ],

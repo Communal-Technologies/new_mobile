@@ -541,7 +541,12 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                   Padding(
                                     padding: EdgeInsets.fromLTRB(10.w, 6.h, 10.w, 10.h),
                                     child: Material(
-                                      color: Colors.white,
+                                      // Was hard-coded white — read as a
+                                      // pure-white tile on dark mode.
+                                      // Use the card surface so it sits
+                                      // on the suggest panel cleanly in
+                                      // both themes.
+                                      color: Theme.of(context).cardColor,
                                       borderRadius: BorderRadius.circular(10.r),
                                       child: InkWell(
                                         onTap: _openBankPicker,
@@ -716,12 +721,25 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                       TextField(
                         controller: _amountCtrl,
                         keyboardType: TextInputType.number,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(RegExp(r'[0-9,]')),
                           _ThousandsSeparatorInputFormatter(),
                         ],
                         decoration: InputDecoration(
                           hintText: '0 ($currencyCode)',
+                          hintStyle: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.5),
+                          ),
+                          filled: true,
+                          fillColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8.r),
                           ),

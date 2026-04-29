@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:communal_mobile/core/constants/images.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/custom_text_field.dart';
+import 'package:communal_mobile/core/widgets/loader_overlay.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
@@ -732,22 +732,13 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
             ],
           ),
         ),
+        // Replaces the previous ad-hoc `Material(color: Colors.white …)`
+        // overlay that rendered as a bright white veil on dark mode.
+        // The shared `LoaderOverlay` already handles the dark scrim
+        // and tints the loader GIF white when the active theme is
+        // dark.
         if (_isLoading)
-          Positioned.fill(
-            child: Material(
-              color: Colors.white.withValues(alpha: 0.78),
-              child: IgnorePointer(
-                child: Center(
-                  child: Image.asset(
-                    Images.loader,
-                    width: 84.w,
-                    height: 84.w,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-            ),
-          ),
+          const Positioned.fill(child: LoaderOverlay(loaderSize: 84)),
       ],
     );
   }

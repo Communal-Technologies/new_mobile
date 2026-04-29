@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 import 'package:communal_mobile/core/utils/app_logger.dart';
 import 'package:communal_mobile/routes/auth_status_notifier.dart';
 
@@ -200,7 +200,15 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/login',
       name: 'login',
-      builder: (context, state) => const LoginScreen(),
+      builder: (context, state) {
+        final extra = state.extra is Map<String, dynamic>
+            ? state.extra as Map<String, dynamic>
+            : const <String, dynamic>{};
+        final phoneArg = extra['phoneNumber'];
+        return LoginScreen(
+          initialPhone: phoneArg is PhoneNumber ? phoneArg : null,
+        );
+      },
     ),
     GoRoute(
       path: '/welcome-back',
@@ -291,9 +299,11 @@ final GoRouter appRouter = GoRouter(
         final extra = state.extra as Map<String, dynamic>?;
         final phone = extra?['phone'] ?? '';
         final method = extra?['method'] ?? 'sms';
+        final userId = extra?['userId']?.toString();
 
         return PhoneVerificationScreen(
           phoneNumber: phone,
+          userId: userId == null || userId.isEmpty ? null : userId,
           method: method == 'sms'
               ? VerificationMethod.sms
               : method == 'whatsapp'
@@ -385,37 +395,26 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/community-detail',
       name: 'community-detail',
-      // Audit M31: SampleCommunityDetails / SampleCommunityLocations are dev
-      // fixtures. In release we redirect missing-extra navigations back to
-      // the listing rather than render fake content; in debug the fallback
-      // stays on so screen previews keep working.
       redirect: (context, state) {
         if (state.extra is CommunityLocation) return null;
-        return kReleaseMode ? '/community' : null;
+        return '/community';
       },
       builder: (context, state) {
-        final extra = state.extra;
-        final location = extra is CommunityLocation
-            ? extra
-            : SampleCommunityLocations.featured;
-        final detail = SampleCommunityDetails.getById(location.id);
+        final location = state.extra as CommunityLocation;
+        final detail = SampleCommunityDetails.forLocation(location);
         return CommunityDetailScreen(detail: detail);
       },
     ),
     GoRoute(
       path: '/community-application-status',
       name: 'community-application-status',
-      // Audit M31: same gating as `/community-detail`.
       redirect: (context, state) {
         if (state.extra is CommunityLocation) return null;
-        return kReleaseMode ? '/community' : null;
+        return '/community';
       },
       builder: (context, state) {
-        final extra = state.extra;
-        final location = extra is CommunityLocation
-            ? extra
-            : SampleCommunityLocations.featured;
-        final detail = SampleCommunityDetails.getById(location.id);
+        final location = state.extra as CommunityLocation;
+        final detail = SampleCommunityDetails.forLocation(location);
         return CommunityApplicationStatusScreen(detail: detail);
       },
     ),

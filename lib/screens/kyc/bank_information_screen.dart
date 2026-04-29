@@ -307,16 +307,16 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
 
     return KycIdleSuppressor(
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).cardColor,
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).cardColor,
           elevation: 0,
           centerTitle: true,
           automaticallyImplyLeading: false,
           leading: hideBack
               ? const SizedBox.shrink()
               : IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.black),
+                  icon: const Icon(Icons.arrow_back),
                   onPressed: () => context.pop(),
                 ),
           title: Text(
@@ -324,7 +324,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
             style: TextStyle(
               fontSize: 22.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ),
@@ -343,7 +343,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                         'Secure your account',
                         style: TextStyle(
                           fontSize: 17.sp,
-                          color: Colors.grey.shade600,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                     ),
@@ -399,7 +399,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                         style: TextStyle(
                           fontSize: 22.sp,
                           fontWeight: FontWeight.w600,
-                          color: Colors.black,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       vSpace(16),
@@ -428,7 +428,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                         style: TextStyle(
                           fontSize: 22.sp,
                           fontWeight: FontWeight.w600,
-                          color: Colors.black,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       vSpace(16),
@@ -505,7 +505,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                         style: TextStyle(
                           fontSize: 22.sp,
                           fontWeight: FontWeight.w600,
-                          color: Colors.black,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       vSpace(16),
@@ -671,7 +671,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                     ),
                     Icon(
                       Icons.keyboard_arrow_down,
-                      color: Colors.grey.shade600,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       size: 22.sp,
                     ),
                   ],

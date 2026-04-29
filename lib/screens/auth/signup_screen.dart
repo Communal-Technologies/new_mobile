@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -8,6 +10,7 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:go_router/go_router.dart';
 import 'package:communal_mobile/core/utils/phone_login_format.dart';
 import 'package:communal_mobile/data/models/region_model.dart';
+import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/data/repositories/regions_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:intl_phone_number_input/intl_phone_number_input.dart';
@@ -23,6 +26,11 @@ class _SignupScreenState extends State<SignupScreen> {
   final _phoneController = TextEditingController();
   bool _agreedToTerms = false;
   String? _phoneError;
+  // When the backend reports an existing account for this number, surface
+  // the prompt with a direct "Sign in" call-to-action instead of pushing
+  // the user forward into the OTP step.
+  bool _accountAlreadyExists = false;
+  bool _submitting = false;
   List<RegionModel> _regions = RegionModel.offlineFallback;
   bool _regionsLoading = true;
   PhoneNumber? _phoneNumber;
@@ -57,12 +65,14 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  void _validateAndContinue() {
+  Future<void> _validateAndContinue() async {
+    if (_submitting) return;
+
     setState(() {
       _phoneError = null;
+      _accountAlreadyExists = false;
     });
 
-    // Validation
     if (_phoneNumber == null || !_phoneValid) {
       setState(() {
         _phoneError = 'Enter a valid phone number';
@@ -83,11 +93,48 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
-    // Navigate to OTP verification
-    context.push('/verify-phone', extra: {
-      'phone': PhoneLoginFormat.apiLoginFromPhoneNumber(_phoneNumber!),
+    final apiPhone = PhoneLoginFormat.apiLoginFromPhoneNumber(_phoneNumber!);
+
+    setState(() => _submitting = true);
+    String? userId;
+    try {
+      // Issuing the OTP from here does double duty: backend creates the
+      // User row + sends the code AND surfaces the account-exists case
+      // (HTTP 409, error_code: account_exists) so we can stop the user
+      // here instead of letting them discover it on the OTP screen.
+      userId = await getIt<AuthRepository>().requestOtpForSignup(apiPhone);
+    } on AccountAlreadyExistsException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _accountAlreadyExists = true;
+        _phoneError = e.message;
+      });
+      return;
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _phoneError = e.toString().replaceFirst('Exception: ', '');
+      });
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _submitting = false);
+
+    if (userId == null || userId.isEmpty) {
+      setState(() {
+        _phoneError = 'Could not start your signup. Please try again.';
+      });
+      return;
+    }
+
+    unawaited(context.push('/verify-phone', extra: {
+      'phone': apiPhone,
       'method': 'sms',
-    });
+      'userId': userId,
+    }));
   }
 
   @override
@@ -168,9 +215,10 @@ class _SignupScreenState extends State<SignupScreen> {
                       regions: _regions,
                       errorText: _phoneError,
                       onChanged: () {
-                        if (_phoneError != null) {
+                        if (_phoneError != null || _accountAlreadyExists) {
                           setState(() {
                             _phoneError = null;
+                            _accountAlreadyExists = false;
                           });
                         }
                       },
@@ -178,17 +226,32 @@ class _SignupScreenState extends State<SignupScreen> {
                         setState(() {
                           _phoneNumber = phone;
                           _phoneValid = valid;
+                          if (_accountAlreadyExists) {
+                            _accountAlreadyExists = false;
+                            _phoneError = null;
+                          }
                         });
                       },
                     ),
 
               vSpace(24),
 
-              // Sign up button
-              AppElevatedButton(
-                title: 'Sign up',
-                onPressed: _validateAndContinue,
-              ),
+              // Account-exists CTA replaces the Sign Up button when the
+              // backend has already told us this contact has an account.
+              // The user can still type a different number to retry —
+              // we clear the flag on input change above.
+              if (_accountAlreadyExists)
+                AppElevatedButton(
+                  title: 'Sign in instead',
+                  onPressed: () => context.push('/login', extra: {
+                    if (_phoneNumber != null) 'phoneNumber': _phoneNumber,
+                  }),
+                )
+              else
+                AppElevatedButton(
+                  title: _submitting ? 'Please wait...' : 'Sign up',
+                  onPressed: _submitting ? null : _validateAndContinue,
+                ),
 
               vSpace(20),
 

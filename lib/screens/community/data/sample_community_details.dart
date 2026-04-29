@@ -136,27 +136,31 @@ class SampleCommunityDetails {
   static CommunityDetail forLocation(CommunityLocation location) {
     final cached = _details[location.id];
     if (cached != null) return cached;
+    // Empty strings / lists where the backend has no real data yet.
+    // The detail screen renders each section only when its source is
+    // populated, so empty fields collapse instead of showing
+    // placeholder content like "Community Coordinator / Admin".
     return CommunityDetail(
       location: location,
-      categoryLabel: location.communityType,
+      categoryLabel: location.category,
       stats: const CommunityDetailStats(
-        totalLoans: '₦0',
-        totalSavings: '₦0',
-        monthlyContribution: '₦0',
-        activeLoans: '0',
-        defaultRate: '0%',
-        loanInterestRate: '0%',
+        totalLoans: '',
+        totalSavings: '',
+        monthlyContribution: '',
+        activeLoans: '',
+        defaultRate: '',
+        loanInterestRate: '',
       ),
-      about: 'Community details coming soon.',
-      foundedDate: 'Created 2024',
-      contributionRange: '₦0 - ₦0',
+      about: 'Details will appear once the cooperative admin completes their profile.',
+      foundedDate: '',
+      contributionRange: location.minContributionLabel,
       isVerified: location.isVerified,
-      coordinatorName: 'Community Coordinator',
-      coordinatorRole: 'Admin',
-      meetingSchedule: 'No schedule yet',
-      meetingTime: '--',
-      membershipRequirements: const ['Details will be updated soon.'],
-      benefits: const ['Details will be updated soon.'],
+      coordinatorName: '',
+      coordinatorRole: '',
+      meetingSchedule: '',
+      meetingTime: '',
+      membershipRequirements: const [],
+      benefits: const [],
       recentActivities: const [],
     );
   }

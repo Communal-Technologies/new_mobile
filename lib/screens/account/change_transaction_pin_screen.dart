@@ -314,7 +314,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                           style: TextStyle(
                             fontSize: 22.sp,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF0F1D40),
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         vSpace(6),
@@ -423,7 +423,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                               child: Text(
                                 _errorText!,
                                 style: TextStyle(
-                                  fontSize: 13.sp,
+                                  fontSize: 14.sp,
                                   color: const Color(0xFFC62828),
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -463,7 +463,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                                 Text(
                                   'Never share your PIN wth anyone.\nCommunal HQ will never ask for your PIN via email, SMS or phone call.',
                                   style: TextStyle(
-                                    fontSize: 13.sp,
+                                    fontSize: 14.sp,
                                     color: Colors.black87,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -498,7 +498,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                       style: TextStyle(
                         fontSize: 15.sp,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0F1D40),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     vSpace(8),
@@ -583,7 +583,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
             style: TextStyle(
               fontSize: 17.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF0F1D40),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           hSpace(8),
@@ -592,7 +592,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
               text,
               style: TextStyle(
                 fontSize: 12.5.sp,
-                color: const Color(0xFF0F1D40),
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w500,
               ),
             ),

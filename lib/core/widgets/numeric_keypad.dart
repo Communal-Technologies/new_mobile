@@ -83,14 +83,14 @@ class NumericKeypad extends StatelessWidget {
               ? Icon(
                   icon,
                   size: 24.sp,
-                  color: Colors.black87,
+                  color: theme.colorScheme.onSurface,
                 )
               : Text(
                   label!,
                   style: TextStyle(
                     fontSize: 24.sp,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
         ),

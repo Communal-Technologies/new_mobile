@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -81,14 +82,10 @@ class _LoansScreenState extends State<LoansScreen> {
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-      ),
+      value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
         key: _scaffoldKey,
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).cardColor,
         drawer: const CooperativeSidebar(),
         drawerEdgeDragWidth: 50.w,
         drawerScrimColor: Colors.black.withValues(alpha: 0.4),
@@ -143,7 +140,7 @@ class _LoansScreenState extends State<LoansScreen> {
     return Row(
       children: [
         IconButton(
-          icon: const Icon(Icons.menu, color: Colors.black),
+          icon: const Icon(Icons.menu),
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
         Expanded(
@@ -153,12 +150,12 @@ class _LoansScreenState extends State<LoansScreen> {
             style: TextStyle(
               fontSize: 22.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.refresh, color: Colors.black),
+          icon: const Icon(Icons.refresh),
           onPressed: _loading ? null : _load,
         ),
       ],
@@ -245,7 +242,7 @@ class _LoansScreenState extends State<LoansScreen> {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 13.sp,
+          fontSize: 14.sp,
           fontWeight: FontWeight.w600,
           color: Colors.white,
         ),
@@ -262,7 +259,7 @@ class _LoansScreenState extends State<LoansScreen> {
           style: TextStyle(
             fontSize: 19.sp,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF0F1D40),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         vSpace(12),
@@ -327,9 +324,9 @@ class _LoansScreenState extends State<LoansScreen> {
               label,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 13.sp,
+                fontSize: 14.sp,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF0F1D40),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ],
@@ -370,7 +367,7 @@ class _LoansScreenState extends State<LoansScreen> {
           style: TextStyle(
             fontSize: 19.sp,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF0F1D40),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         vSpace(16),
@@ -415,7 +412,7 @@ class _LoansScreenState extends State<LoansScreen> {
           style: TextStyle(
             fontSize: 19.sp,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF0F1D40),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         vSpace(16),
@@ -488,7 +485,7 @@ class _LoansScreenState extends State<LoansScreen> {
             style: TextStyle(
               fontSize: 15.sp,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF0F1D40),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           vSpace(4),
@@ -496,8 +493,8 @@ class _LoansScreenState extends State<LoansScreen> {
             subtitle,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 13.sp,
-              color: Colors.grey.shade600,
+              fontSize: 14.sp,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ],

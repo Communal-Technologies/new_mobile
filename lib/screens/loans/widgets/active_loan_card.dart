@@ -74,7 +74,7 @@ class ActiveLoanCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0F1D40),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     vSpace(4),
@@ -83,8 +83,8 @@ class ActiveLoanCard extends StatelessWidget {
                           ? loan.referenceId
                           : loan.id,
                       style: TextStyle(
-                        fontSize: 13.sp,
-                        color: Colors.grey.shade600,
+                        fontSize: 14.sp,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -99,7 +99,7 @@ class ActiveLoanCard extends StatelessWidget {
                 child: Text(
                   loan.status.label,
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
                     color: _statusColor,
                   ),
@@ -114,7 +114,7 @@ class ActiveLoanCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey.shade700,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             vSpace(8),
@@ -145,9 +145,9 @@ class ActiveLoanCard extends StatelessWidget {
               child: Text(
                 loan.progressLabel,
                 style: TextStyle(
-                  fontSize: 13.sp,
+                  fontSize: 14.sp,
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade700,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ),
@@ -156,17 +156,17 @@ class ActiveLoanCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _statColumn('Principal', loan.amountLabel),
+                child: _statColumn(context,'Principal', loan.amountLabel),
               ),
               Expanded(
-                child: _statColumn(
+                child: _statColumn(context,
                   isApproved ? 'Balance' : 'Status',
                   isApproved ? loan.balanceLabel : loan.status.label,
                   highlight: isApproved,
                 ),
               ),
               Expanded(
-                child: _statColumn(
+                child: _statColumn(context,
                   isApproved ? 'Monthly' : 'Applied',
                   isApproved
                       ? loan.monthlyRepaymentLabel
@@ -185,8 +185,8 @@ class ActiveLoanCard extends StatelessWidget {
                 Text(
                   'Due ${loan.dueDateLabel}',
                   style: TextStyle(
-                    fontSize: 13.sp,
-                    color: Colors.grey.shade700,
+                    fontSize: 14.sp,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -210,7 +210,7 @@ class ActiveLoanCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 15.sp,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF0F1D40),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ),
@@ -246,12 +246,13 @@ class ActiveLoanCard extends StatelessWidget {
     );
   }
 
-  Widget _statColumn(String label, String value, {bool highlight = false}) {
+  Widget _statColumn(BuildContext context, String label, String value,
+      {bool highlight = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600)),
+            style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600)),
         vSpace(4),
         Text(
           value,
@@ -262,7 +263,7 @@ class ActiveLoanCard extends StatelessWidget {
             fontWeight: FontWeight.w700,
             color: highlight
                 ? const Color(0xFFE67E22)
-                : const Color(0xFF0F1D40),
+                : Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],

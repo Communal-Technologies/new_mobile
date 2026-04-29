@@ -14,7 +14,9 @@ class ManageAccountCard extends StatelessWidget {
       // too airy next to the Personal Information / Address cards.
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
       decoration: BoxDecoration(
-        color: Colors.white,
+        // Reads card colour from the live theme so the surface flips
+        // alongside the dark/light toggle.
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16.r),
       ),
       child: Column(
@@ -33,7 +35,7 @@ class ManageAccountCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 17.sp,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF0F1D40),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
@@ -118,7 +120,7 @@ class _ManageAccountItem extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 17.sp,
                           fontWeight: FontWeight.w700,
-                          color: const Color(0xFF0F1D40),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       hSpace(8),

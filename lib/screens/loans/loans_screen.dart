@@ -305,16 +305,16 @@ class _LoansScreenState extends State<LoansScreen> {
       child: Container(
         padding: EdgeInsets.all(14.w),
         decoration: BoxDecoration(
-          color: Colors.grey.shade50,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(color: Theme.of(context).dividerColor),
         ),
         child: Column(
           children: [
             Container(
               padding: EdgeInsets.all(8.w),
               decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(12.r),
               ),
               child: Icon(icon, size: 20.sp, color: const Color(0xFFE67E22)),
@@ -433,12 +433,16 @@ class _LoansScreenState extends State<LoansScreen> {
   }
 
   Widget _buildErrorBanner(String message) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: const Color(0xFFFDECEA),
+        color: isDark
+            ? const Color(0xFFE74C3C).withValues(alpha: 0.16)
+            : const Color(0xFFFDECEA),
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: const Color(0xFFE74C3C).withOpacity(0.3)),
+        border: Border.all(
+            color: const Color(0xFFE74C3C).withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -472,13 +476,18 @@ class _LoansScreenState extends State<LoansScreen> {
       width: double.infinity,
       padding: EdgeInsets.all(24.w),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         children: [
-          Icon(icon, size: 32.sp, color: Colors.grey.shade500),
+          Icon(
+            icon,
+            size: 32.sp,
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
           vSpace(12),
           Text(
             title,

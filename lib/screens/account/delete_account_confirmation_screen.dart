@@ -72,11 +72,13 @@ class _DeleteAccountConfirmationScreenState
               vSpace(16),
               BalanceCard(
                 balance: 450000000000,
+                // Account closure can't proceed while there's a balance.
+                // Send the user into the in-app transfer flow so they
+                // can move funds to another internal account or to an
+                // external bank — *not* a withdrawal step that doesn't
+                // exist.
                 onWithdraw: () {
-                  // TODO: Navigate to withdraw funds
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Navigate to withdraw funds')),
-                  );
+                  context.pushNamed('transfer');
                 },
               ),
               vSpace(16),

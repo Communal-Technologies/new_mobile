@@ -52,8 +52,11 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
   String _code = '';
   int _resendTimer = 34;
   Timer? _timer;
+  Timer? _deliveryPollTimer;
+  int _deliveryPollAttempts = 0;
   bool _isVerifying = false;
   bool _isResending = false;
+  String? _deliveryInfo;
 
   void _restartSplashColdStart() {
     if (!mounted) return;
@@ -79,6 +82,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
       if (!ok) {
         AppToast.error('Could not send verification code. Try again.');
       }
+      _startDeliveryStatusPolling();
     } catch (e) {
       if (!mounted) {
         return;
@@ -96,7 +100,38 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _deliveryPollTimer?.cancel();
     super.dispose();
+  }
+
+  void _startDeliveryStatusPolling() {
+    if (widget.isEmail || widget.isForgotPassword) return;
+    _deliveryPollTimer?.cancel();
+    _deliveryPollAttempts = 0;
+    _deliveryPollTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+      _deliveryPollAttempts++;
+      if (_deliveryPollAttempts > 20) {
+        timer.cancel();
+        return;
+      }
+      try {
+        final data = await getIt<AuthRepository>().getOtpDeliveryStatus(
+          widget.contact,
+          purpose: widget.isInitialSetup ? 'signup' : 'verification',
+        );
+        if (!mounted || data == null) return;
+        final note = data['delivery_note']?.toString();
+        final status = (data['status']?.toString() ?? '').toLowerCase();
+        if (note != null && note.isNotEmpty) {
+          setState(() {
+            _deliveryInfo = note;
+          });
+        }
+        if (status == 'sent' || status == 'failed') {
+          timer.cancel();
+        }
+      } catch (_) {}
+    });
   }
 
   void _startTimer() {
@@ -147,6 +182,8 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
           }
           if (ok) {
             AppToast.success('A new code has been sent.');
+            _deliveryInfo = null;
+            _startDeliveryStatusPolling();
           } else {
             AppToast.error('Could not resend code. Try again.');
           }
@@ -399,6 +436,20 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                             ],
                           ),
               ),
+
+              if (_deliveryInfo != null) ...[
+                vSpace(10),
+                Center(
+                  child: Text(
+                    _deliveryInfo!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      color: const Color(0xFF0F8B8D),
+                    ),
+                  ),
+                ),
+              ],
 
               vSpace(32),
 

@@ -78,14 +78,14 @@ class BottomNavBar extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(20.r),
           topRight: Radius.circular(20.r),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade300,
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -110,6 +110,7 @@ class BottomNavBar extends StatelessWidget {
     required ThemeData theme,
   }) {
     final isActive = currentIndex == item.index;
+    final inactiveColor = theme.colorScheme.onSurface.withValues(alpha: 0.6);
 
     return InkWell(
       onTap: () => onTap(item.index),
@@ -118,7 +119,7 @@ class BottomNavBar extends StatelessWidget {
         children: [
           Icon(
             isActive ? item.activeIcon : item.icon,
-            color: isActive ? theme.primaryColor : Colors.grey.shade600,
+            color: isActive ? theme.primaryColor : inactiveColor,
             size: 24.sp,
           ),
           vSpace(4),
@@ -127,7 +128,7 @@ class BottomNavBar extends StatelessWidget {
             style: TextStyle(
               fontSize: 13.sp,
               fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-              color: isActive ? theme.primaryColor : Colors.grey.shade600,
+              color: isActive ? theme.primaryColor : inactiveColor,
             ),
           ),
           if (isActive) ...[

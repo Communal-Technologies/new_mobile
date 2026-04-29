@@ -25,11 +25,11 @@ class QuickActionButton extends StatelessWidget {
         child: Container(
           padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 4.w),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: theme.cardColor,
             borderRadius: BorderRadius.circular(12.r),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.shade200,
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -46,7 +46,7 @@ class QuickActionButton extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 15.sp,
                   fontWeight: FontWeight.w700,
-                  color: Colors.black87,
+                  color: theme.colorScheme.onSurface,
                   height: 1.1,
                 ),
                 maxLines: 2,

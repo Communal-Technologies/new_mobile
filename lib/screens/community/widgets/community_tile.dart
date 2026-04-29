@@ -85,28 +85,28 @@ class CommunityTile extends StatelessWidget {
                         Icon(
                           Icons.people_alt,
                           size: 14.sp,
-                          color: Colors.grey.shade600,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                         hSpace(4),
                         Text(
                           community.membersLabel,
                           style: TextStyle(
-                            fontSize: 13.sp,
-                            color: Colors.grey.shade600,
+                            fontSize: 14.sp,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                         hSpace(12),
                         Icon(
                           Icons.access_time,
                           size: 14.sp,
-                          color: Colors.grey.shade600,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                         hSpace(4),
                         Text(
                           'Since ${community.sinceLabel}',
                           style: TextStyle(
-                            fontSize: 13.sp,
-                            color: Colors.grey.shade600,
+                            fontSize: 14.sp,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                       ],
@@ -138,7 +138,7 @@ class CommunityTile extends StatelessWidget {
             child: Text(
               community.membershipLabel,
               style: TextStyle(
-                fontSize: 13.sp,
+                fontSize: 14.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF5B5CE2),
               ),

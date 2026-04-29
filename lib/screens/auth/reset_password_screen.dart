@@ -329,7 +329,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       // Logo
                       Center(
                         child: Image.asset(
-                          Images.coloredLogo,
+                          Theme.of(context).brightness == Brightness.dark ? Images.whiteLogo : Images.coloredLogo,
                           width: 130.w,
                         ),
                       ),

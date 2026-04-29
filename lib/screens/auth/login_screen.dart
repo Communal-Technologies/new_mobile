@@ -167,7 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
               // Logo
               Center(
                 child: Image.asset(
-                  Images.coloredLogo,
+                  Theme.of(context).brightness == Brightness.dark ? Images.whiteLogo : Images.coloredLogo,
                   width: 180.w,
                 ),
               ),

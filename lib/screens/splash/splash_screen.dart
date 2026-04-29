@@ -341,7 +341,11 @@ class _SplashScreenState extends State<SplashScreen>
       ),
       child: Center(
         child: Image.asset(
-          Images.coloredLogo,
+          // Mark stays legible on the active scaffold — coloured logo
+          // has dark glyph strokes that disappear on the dark surface.
+          Theme.of(context).brightness == Brightness.dark
+              ? Images.whiteLogo
+              : Images.coloredLogo,
           width: 140.w,
           fit: BoxFit.contain,
         ),

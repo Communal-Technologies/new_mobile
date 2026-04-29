@@ -202,7 +202,7 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Center(
-                    child: Image.asset(Images.coloredLogo, width: 140.w),
+                    child: Image.asset(Theme.of(context).brightness == Brightness.dark ? Images.whiteLogo : Images.coloredLogo, width: 140.w),
                   ),
                   vSpace(28),
                   Text(

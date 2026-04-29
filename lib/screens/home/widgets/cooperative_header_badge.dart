@@ -71,6 +71,15 @@ class CooperativeHeaderBadge extends StatelessWidget {
   }
 
   Widget _textFallback(BuildContext context, String line1, String line2) {
+    final isDark = theme.brightness == Brightness.dark;
+    // Line 1 (cooperative name) — brand purple in light; white in dark
+    // so it reads against the dark card and matches the user-name row.
+    // Line 2 (ledger / cooperative ID) — dim onSurface in light; white
+    // in dark for parity with the user name above it.
+    final line1Color = isDark ? Colors.white : theme.primaryColor;
+    final line2Color = isDark
+        ? Colors.white.withValues(alpha: 0.85)
+        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -80,7 +89,7 @@ class CooperativeHeaderBadge extends StatelessWidget {
           style: TextStyle(
             fontSize: 14.sp,
             fontWeight: FontWeight.w700,
-            color: theme.primaryColor,
+            color: line1Color,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -92,7 +101,7 @@ class CooperativeHeaderBadge extends StatelessWidget {
             style: TextStyle(
               fontSize: 9.sp,
               fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              color: line2Color,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

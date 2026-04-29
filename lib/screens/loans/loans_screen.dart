@@ -11,6 +11,7 @@ import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
 import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
+import 'package:communal_mobile/core/widgets/loader_overlay.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/loan_application.dart';
 import 'package:communal_mobile/data/models/loan_scheme.dart';
@@ -81,6 +82,8 @@ class _LoansScreenState extends State<LoansScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final showFullLoader =
+        _loading && _loans.isEmpty && _schemes.isEmpty;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
@@ -89,30 +92,37 @@ class _LoansScreenState extends State<LoansScreen> {
         drawer: const CooperativeSidebar(),
         drawerEdgeDragWidth: 50.w,
         drawerScrimColor: Colors.black.withValues(alpha: 0.4),
-        body: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: _load,
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding:
-                  EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(),
-                  vSpace(24),
-                  _buildSummaryCard(),
-                  vSpace(24),
-                  _buildQuickActions(),
-                  vSpace(24),
-                  if (_error != null) _buildErrorBanner(_error!) else _buildBody(),
-                  vSpace(32),
-                ],
+        body: showFullLoader
+            ? const LoaderOverlay()
+            : SafeArea(
+                child: RefreshIndicator(
+                  onRefresh: _load,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildHeader(),
+                        vSpace(24),
+                        _buildSummaryCard(),
+                        vSpace(24),
+                        _buildQuickActions(),
+                        vSpace(24),
+                        if (_error != null)
+                          _buildErrorBanner(_error!)
+                        else
+                          _buildBody(),
+                        vSpace(32),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-        ),
-        bottomNavigationBar: BottomNavBar(
+        bottomNavigationBar: showFullLoader
+            ? null
+            : BottomNavBar(
           currentIndex: _currentNavIndex,
           onTap: (index) {
             if (index == _currentNavIndex) return;
@@ -336,12 +346,6 @@ class _LoansScreenState extends State<LoansScreen> {
   }
 
   Widget _buildBody() {
-    if (_loading && _loans.isEmpty && _schemes.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 48),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

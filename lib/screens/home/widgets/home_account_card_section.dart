@@ -20,11 +20,13 @@ const Color _kBalanceBannerPurple = Color(0xFF9810FA);
 /// (dark) without competing with the balance banner.
 const Color _kCopyButtonBg = Color(0x33C8A0FF);
 
-/// Home finance card: tabs (Savings / Investments / Loans) sit on top
-/// of the card; the *selected* tab is painted in the same colour as
-/// the outer card and overlaps its top edge by 1 logical pixel, so
-/// visually the tab and the card join into a single shape (the
-/// inactive tabs sit slightly lower with no fill, "behind" the card).
+/// Home finance card: tabs (Savings / Investments / Loans) and the
+/// content area share **one** rounded surface (no gap between tab strip
+/// and body). The selected tab is painted in the card's surface colour
+/// so its bottom edge merges into the body; inactive tabs sit on a
+/// muted tint of the same surface so they still read as tabs (not as
+/// the body). A short vertical hairline between cells preserves
+/// segment clarity.
 ///
 /// Inside the card a purple sub-banner shows the balance row; the
 /// account name + number row + Copy CTA sit on the outer card surface
@@ -107,44 +109,36 @@ class _HomeAccountCardSectionState extends State<HomeAccountCardSection> {
     final theme = Theme.of(context);
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _FinanceTabsRow(
-            tabIndex: _tabIndex,
-            // Selected-tab fill matches the outer card surface so the
-            // tab visually joins the card. On dark mode that's the
-            // dark surface, on light mode it's white — same colour as
-            // `cardSurface` below.
-            cardSurface: theme.cardColor,
-            primary: theme.primaryColor,
-            onChanged: (i) => setState(() => _tabIndex = i),
-          ),
-          // -1.h vertical shift so the selected tab overlaps the card
-          // top edge by exactly one logical pixel — eliminates the
-          // sub-pixel seam that otherwise shows up between the tab
-          // and the card border.
-          Transform.translate(
-            offset: Offset(0, -1.h),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: BorderRadius.circular(16.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(16.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16.r),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _FinanceTabsRow(
+                tabIndex: _tabIndex,
+                cardSurface: theme.cardColor,
+                primary: theme.primaryColor,
+                onChanged: (i) => setState(() => _tabIndex = i),
               ),
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 18.h),
+              Padding(
+                padding: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 18.h),
                 child: _buildTabBody(context, user),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -198,81 +192,83 @@ class _FinanceTabsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Inactive tabs render directly on the scaffold (so their fill is
-    // transparent). The selected tab gets the card's surface colour
-    // and only the top corners rounded, so the bottom edge butts
-    // flush against the card top — visually one continuous shape.
+    // The whole tabs+body card is one ClipRRect; this row is the top
+    // band. Selected cell uses [cardSurface] so its bottom edge flows
+    // straight into the body (no seam). Inactive cells overlay a soft
+    // tint of the same surface so they read as tabs without separating
+    // from the card. Hairlines between cells keep segment clarity.
     final theme = Theme.of(context);
-    final inactive = theme.colorScheme.onSurface.withValues(alpha: 0.6);
+    final isDark = theme.brightness == Brightness.dark;
+    final inactiveTint = isDark
+        ? Colors.white.withValues(alpha: 0.06)
+        : Colors.black.withValues(alpha: 0.04);
+    final inactiveLabel = isDark
+        ? Colors.white
+        : theme.colorScheme.onSurface.withValues(alpha: 0.6);
+    final hairline = theme.dividerColor;
     final items = <({IconData icon, String label})>[
       (icon: Icons.account_balance_wallet_outlined, label: 'Savings'),
       (icon: Icons.trending_up_rounded, label: 'Investments'),
       (icon: Icons.request_quote_rounded, label: 'Loans'),
     ];
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: List.generate(3, (i) {
-        final sel = tabIndex == i;
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 3.w),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => onChanged(i),
-                borderRadius:
-                    BorderRadius.vertical(top: Radius.circular(14.r)),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOut,
-                  padding:
-                      EdgeInsets.symmetric(vertical: 10.h, horizontal: 4.w),
-                  decoration: BoxDecoration(
-                    color: sel ? cardSurface : Colors.transparent,
-                    borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(14.r)),
-                    boxShadow: sel
-                        ? [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 8,
-                              offset: const Offset(0, -2),
+    return SizedBox(
+      height: 52.h,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: List.generate(3, (i) {
+          final sel = tabIndex == i;
+          return Expanded(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: sel ? cardSurface : inactiveTint,
+                border: Border(
+                  right: i < 2 && !sel && tabIndex != i + 1
+                      ? BorderSide(color: hairline, width: 0.6)
+                      : BorderSide.none,
+                ),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => onChanged(i),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      vertical: 10.h,
+                      horizontal: 4.w,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          items[i].icon,
+                          size: 22.sp,
+                          color: sel ? primary : inactiveLabel,
+                        ),
+                        SizedBox(width: 6.w),
+                        Flexible(
+                          child: Text(
+                            items[i].label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 17.sp,
+                              fontWeight:
+                                  sel ? FontWeight.w700 : FontWeight.w500,
+                              color: sel ? primary : inactiveLabel,
                             ),
-                          ]
-                        : null,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        items[i].icon,
-                        size: 22.sp,
-                        color: sel ? primary : inactive,
-                      ),
-                      SizedBox(width: 6.w),
-                      Flexible(
-                        child: Text(
-                          items[i].label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 17.sp,
-                            fontWeight:
-                                sel ? FontWeight.w700 : FontWeight.w500,
-                            color: sel ? primary : inactive,
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        );
-      }),
+          );
+        }),
+      ),
     );
   }
 }

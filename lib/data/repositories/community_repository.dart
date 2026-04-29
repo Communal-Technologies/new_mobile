@@ -1,5 +1,6 @@
 import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
+import 'package:communal_mobile/data/models/public_cooperative.dart';
 import 'package:dio/dio.dart';
 
 class CommunityJoinResult {
@@ -21,6 +22,65 @@ class CommunityJoinResult {
       cooperativeName: json['cooperative_name']?.toString() ?? '',
       ledgerNumber: json['ledger_number']?.toString() ?? '',
       isDefault: json['is_default'] == true,
+    );
+  }
+}
+
+enum JoinRequestStatus { pending, approved, declined, cancelled, unknown }
+
+JoinRequestStatus _parseStatus(String? raw) {
+  switch (raw?.toLowerCase()) {
+    case 'pending':
+      return JoinRequestStatus.pending;
+    case 'approved':
+      return JoinRequestStatus.approved;
+    case 'declined':
+      return JoinRequestStatus.declined;
+    case 'cancelled':
+      return JoinRequestStatus.cancelled;
+    default:
+      return JoinRequestStatus.unknown;
+  }
+}
+
+class CommunityJoinRequest {
+  CommunityJoinRequest({
+    required this.id,
+    required this.cooperativeId,
+    required this.cooperativeName,
+    required this.message,
+    required this.status,
+    required this.declineReason,
+    required this.decidedAt,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String cooperativeId;
+  final String cooperativeName;
+  final String? message;
+  final JoinRequestStatus status;
+  final String? declineReason;
+  final DateTime? decidedAt;
+  final DateTime? createdAt;
+
+  factory CommunityJoinRequest.fromJson(Map<String, dynamic> json) {
+    DateTime? parse(dynamic v) {
+      if (v is String && v.isNotEmpty) return DateTime.tryParse(v);
+      return null;
+    }
+
+    return CommunityJoinRequest(
+      id: json['id']?.toString() ?? '',
+      cooperativeId: json['cooperative_id']?.toString() ?? '',
+      cooperativeName: json['cooperative_name']?.toString() ?? '',
+      message: (json['message'] as String?)?.trim().isEmpty == true
+          ? null
+          : json['message']?.toString(),
+      status: _parseStatus(json['status']?.toString()),
+      declineReason: json['decline_reason']?.toString(),
+      decidedAt: parse(json['decided_at']),
+      createdAt: parse(json['created_at']),
     );
   }
 }
@@ -51,6 +111,110 @@ class CommunityRepository {
             Map<String, dynamic>.from(data),
           );
         }
+      }
+      throw Exception('Unexpected response from server.');
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  /// Submit a request to join a cooperative the user does not have an
+  /// invite code for. The cooperative admin reviews and approves or
+  /// declines from the dashboard.
+  Future<CommunityJoinRequest> requestToJoin({
+    required String cooperativeId,
+    String? message,
+  }) async {
+    try {
+      final response = await _dioClient.post(
+        ApiEndpoints.membersJoinRequests,
+        data: {
+          'cooperative_id': cooperativeId,
+          if (message != null && message.trim().isNotEmpty)
+            'message': message.trim(),
+        },
+      );
+
+      final body = response.data;
+      if (body is Map && body['data'] is Map) {
+        return CommunityJoinRequest.fromJson(
+          Map<String, dynamic>.from(body['data'] as Map),
+        );
+      }
+      throw Exception('Unexpected response from server.');
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  /// List the user's join requests across all cooperatives. The
+  /// application-status screen filters to a specific cooperative.
+  Future<List<CommunityJoinRequest>> fetchMyJoinRequests() async {
+    try {
+      final response = await _dioClient.get(ApiEndpoints.membersJoinRequestsMine);
+      final body = response.data;
+      if (body is Map && body['data'] is List) {
+        return (body['data'] as List)
+            .whereType<Map>()
+            .map((e) => CommunityJoinRequest.fromJson(
+                  Map<String, dynamic>.from(e),
+                ))
+            .toList();
+      }
+      return const [];
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  /// Cancel a pending request. Approved/declined/cancelled requests
+  /// return 409 from the backend; surfaced via [Exception] message.
+  Future<void> cancelJoinRequest(String requestId) async {
+    try {
+      await _dioClient.post(ApiEndpoints.membersJoinRequestCancel(requestId));
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  /// Public cooperatives the user can discover and request to join.
+  /// Backend filters to coops with allow_signup=1 and orders featured
+  /// first. Endpoint is unauthenticated, but the dio client adds auth
+  /// when available — that's fine, the route ignores it.
+  Future<List<PublicCooperative>> fetchPublicCooperatives() async {
+    try {
+      final response = await _dioClient.get(
+        ApiEndpoints.fetchCooperatives,
+        requireAuth: false,
+      );
+      final body = response.data;
+      if (body is Map && body['cooperatives'] is List) {
+        return (body['cooperatives'] as List)
+            .whereType<Map>()
+            .map((e) => PublicCooperative.fromJson(
+                  Map<String, dynamic>.from(e),
+                ))
+            .where((c) => c.cooperativeId.isNotEmpty)
+            .toList();
+      }
+      return const [];
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  /// Single cooperative profile, used by the discovery detail screen.
+  /// Accepts cooperative_id, unique_id, or the cooperative UUID id.
+  Future<PublicCooperative> fetchCooperativeProfile(String id) async {
+    try {
+      final response = await _dioClient.get(
+        ApiEndpoints.fetchCooperativeProfile(id),
+      );
+      final body = response.data;
+      if (body is Map && body['cooperative'] is Map) {
+        return PublicCooperative.fromJson(
+          Map<String, dynamic>.from(body['cooperative'] as Map),
+        );
       }
       throw Exception('Unexpected response from server.');
     } on DioException catch (e) {

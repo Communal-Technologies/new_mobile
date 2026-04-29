@@ -51,6 +51,13 @@ class ApiEndpoints {
   static const String membersJoinRequestsMine = '/members/join-requests/mine';
   static String membersJoinRequestCancel(String id) =>
       '/members/join-requests/$id/cancel';
+  static const String membersNotifications = '/members/notifications';
+  static const String membersNotificationsUnreadCount =
+      '/members/notifications/unread-count';
+  static String membersNotificationRead(String id) =>
+      '/members/notifications/$id/read';
+  static const String membersNotificationsMarkAllRead =
+      '/members/notifications/mark-all-read';
   static const String membersTransactionStatementExport =
       '/members/transaction-statement/export';
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl_phone_number_input/intl_phone_number_input.dart';
+import 'package:communal_mobile/data/models/member_profile_details.dart';
 import 'package:communal_mobile/core/utils/app_logger.dart';
 import 'package:communal_mobile/routes/auth_status_notifier.dart';
 
@@ -563,10 +564,22 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/edit-profile',
       name: 'edit-profile',
-      builder: (context, state) {
+      // EditProfileScreen requires the loaded MemberProfileDetails so
+      // the form starts hydrated with the user's actual values; reject
+      // missing extras instead of letting the screen crash.
+      redirect: (context, state) {
         final extra = state.extra;
-        final isAddressOnly = extra is Map && extra['isAddressOnly'] == true;
-        return EditProfileScreen(isAddressOnly: isAddressOnly);
+        if (extra is Map && extra['profile'] is MemberProfileDetails) {
+          return null;
+        }
+        return '/my-profile';
+      },
+      builder: (context, state) {
+        final extra = state.extra as Map;
+        return EditProfileScreen(
+          profile: extra['profile'] as MemberProfileDetails,
+          isAddressOnly: extra['isAddressOnly'] == true,
+        );
       },
     ),
     GoRoute(

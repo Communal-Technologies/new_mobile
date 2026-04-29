@@ -572,15 +572,15 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
 
     return KycIdleSuppressor(
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).cardColor,
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).cardColor,
           elevation: 0,
           centerTitle: true,
           automaticallyImplyLeading: false,
           leading: showBack
               ? IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.black),
+                  icon: const Icon(Icons.arrow_back),
                   onPressed: () => context.pop(),
                 )
               : null,
@@ -589,7 +589,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
             style: TextStyle(
               fontSize: 22.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ),
@@ -607,7 +607,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                         'Tell us about yourself',
                         style: TextStyle(
                           fontSize: 17.sp,
-                          color: Colors.grey.shade600,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                     ),
@@ -657,7 +657,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                         style: TextStyle(
                           fontSize: 22.sp,
                           fontWeight: FontWeight.w600,
-                          color: Colors.black,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       vSpace(16),
@@ -718,7 +718,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                         style: TextStyle(
                           fontSize: 17.sp,
                           fontWeight: FontWeight.w500,
-                          color: Colors.grey.shade700,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
                       vSpace(8),
@@ -756,7 +756,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                         style: TextStyle(
                           fontSize: 22.sp,
                           fontWeight: FontWeight.w600,
-                          color: Colors.black,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       vSpace(16),
@@ -990,7 +990,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                         child: Text(
                           loadingHint,
                           style: TextStyle(
-                            color: Colors.grey.shade600,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                             fontSize: 19.sp,
                           ),
                           maxLines: 1,
@@ -1002,7 +1002,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                         height: 18.w,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.grey.shade600,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -1034,7 +1034,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                           ),
                           Icon(
                             Icons.keyboard_arrow_down,
-                            color: Colors.grey.shade600,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                             size: 22.sp,
                           ),
                         ],

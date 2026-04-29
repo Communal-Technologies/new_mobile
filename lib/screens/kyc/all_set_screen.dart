@@ -117,7 +117,7 @@ class AllSetScreen extends StatelessWidget {
                           if (context.mounted) context.go('/home');
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
+                          backgroundColor: Theme.of(context).cardColor,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(28.r),
@@ -126,7 +126,7 @@ class AllSetScreen extends StatelessWidget {
                         child: Text(
                           'Continue to Dashboard',
                           style: TextStyle(
-                            color: Colors.black87,
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 17.sp,
                             fontWeight: FontWeight.w700,
                           ),

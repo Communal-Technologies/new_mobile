@@ -38,16 +38,25 @@ class ThemeModeController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// True until the user explicitly picks light or dark; while this is
+  /// true the app follows the device's brightness. Once the user taps
+  /// the toggle (light/dark) the explicit choice wins on subsequent
+  /// launches even if the device flips.
+  bool get isFollowingSystem => _mode == ThemeMode.system;
+
   ThemeMode _read() {
     final raw = _prefs.getString(_key);
     switch (raw) {
       case 'dark':
         return ThemeMode.dark;
-      case 'system':
-        return ThemeMode.system;
       case 'light':
-      default:
         return ThemeMode.light;
+      case 'system':
+      default:
+        // Default to following the device until the user decides
+        // otherwise — the previous default ("light") ignored OS dark
+        // mode for users who never opened the toggle.
+        return ThemeMode.system;
     }
   }
 

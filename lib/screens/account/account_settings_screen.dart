@@ -36,15 +36,14 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       ),
       child: Scaffold(
         key: _scaffoldKey,
-        backgroundColor: Colors.grey.shade50,
+        // Theme-driven background + AppBar — flip cleanly with the
+        // dark/light toggle (see AppTheme).
         drawer: const CooperativeSidebar(),
         drawerEdgeDragWidth: 50.w,
         drawerScrimColor: Colors.black.withValues(alpha: 0.4),
         appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.menu, color: Colors.black),
+            icon: const Icon(Icons.menu),
             onPressed: () {
               _scaffoldKey.currentState?.openDrawer();
             },
@@ -54,13 +53,12 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
             style: TextStyle(
               fontSize: 21.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
             ),
           ),
           centerTitle: true,
           actions: [
             IconButton(
-              icon: const Icon(Icons.settings, color: Colors.black),
+              icon: const Icon(Icons.settings),
               onPressed: () {},
             ),
           ],

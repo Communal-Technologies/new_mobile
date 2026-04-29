@@ -194,7 +194,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               // Logo
               Center(
                 child: Image.asset(
-                  Images.coloredLogo,
+                  Theme.of(context).brightness == Brightness.dark ? Images.whiteLogo : Images.coloredLogo,
                   width: 180.w,
                 ),
               ),

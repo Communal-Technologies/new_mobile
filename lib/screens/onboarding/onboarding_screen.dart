@@ -151,7 +151,7 @@ class OnboardingPage extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 70),
                   child: Image.asset(
-                    Images.coloredLogo,
+                    Theme.of(context).brightness == Brightness.dark ? Images.whiteLogo : Images.coloredLogo,
                     height: 71,
                     width: 250,
                   ),

@@ -10,12 +10,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 
-/// Balance row (Total balance + amount + Add Money).
-const Color _kBalanceCardPurple = Color(0xFF9810FA);
-
-/// Copy Acc. No. control background: `#C8A0FF` at **20%** opacity (on white card).
-const Color _kCopyButtonBg = Color(0x33C8A0FF);
-
 /// Home finance card: tabs (Savings / Investments / Loans) sit above a white card;
 /// the selected tab visually connects to the card. Shown when [UserModel.walletAccountNumber]
 /// is set (wallet provisioned after KYC); otherwise home may show [KycPendingApprovalCard]
@@ -89,6 +83,7 @@ class _HomeAccountCardSectionState extends State<HomeAccountCardSection> {
     final user =
         authState is AuthAuthenticated ? authState.user : widget.user;
 
+    final primary = Theme.of(context).primaryColor;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
       child: Column(
@@ -96,18 +91,24 @@ class _HomeAccountCardSectionState extends State<HomeAccountCardSection> {
         children: [
           _FinanceTabsRow(
             tabIndex: _tabIndex,
-            primary: Theme.of(context).primaryColor,
+            primary: primary,
             onChanged: (i) => setState(() => _tabIndex = i),
           ),
           Transform.translate(
             offset: Offset(0, -1.h),
             child: DecoratedBox(
+              // Wallet card now uses the brand primary as its surface
+              // (was cardColor white). Tabs, balance row, account info,
+              // and copy CTA all sit on the same purple, with white
+              // text/icons throughout — matches the rest of the
+              // dashboard's purple chrome and stays legible in both
+              // light and dark themes.
               decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
+                color: primary,
                 borderRadius: BorderRadius.circular(16.r),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
+                    color: Colors.black.withValues(alpha: 0.10),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -140,7 +141,6 @@ class _HomeAccountCardSectionState extends State<HomeAccountCardSection> {
             if (mounted) setState(() => _balanceVisible = next);
           },
           primary: Theme.of(context).primaryColor,
-          copyBg: _kCopyButtonBg,
         );
       case 1:
         return _PlaceholderTab(
@@ -171,8 +171,10 @@ class _FinanceTabsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final inactive = theme.colorScheme.onSurface.withValues(alpha: 0.6);
+    // Tabs sit on top of the purple wallet card. Active = white pill
+    // with the brand purple text (so it visually clips into the card
+    // edge); inactive = white labels at reduced opacity.
+    final inactiveOnPurple = Colors.white.withValues(alpha: 0.7);
     final items = <({IconData icon, String label})>[
       (icon: Icons.account_balance_wallet_outlined, label: 'Savings'),
       (icon: Icons.trending_up_rounded, label: 'Investments'),
@@ -196,19 +198,10 @@ class _FinanceTabsRow extends StatelessWidget {
                   curve: Curves.easeOut,
                   padding: EdgeInsets.symmetric(vertical: 10.h, horizontal: 4.w),
                   decoration: BoxDecoration(
-                    color: sel ? theme.cardColor : Colors.transparent,
+                    color: sel ? primary : Colors.transparent,
                     borderRadius: BorderRadius.vertical(
                       top: Radius.circular(14.r),
                     ),
-                    boxShadow: sel
-                        ? [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ]
-                        : null,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -217,7 +210,7 @@ class _FinanceTabsRow extends StatelessWidget {
                       Icon(
                         items[i].icon,
                         size: 22.sp,
-                        color: sel ? primary : inactive,
+                        color: sel ? Colors.white : inactiveOnPurple,
                       ),
                       SizedBox(width: 6.w),
                       Flexible(
@@ -228,7 +221,7 @@ class _FinanceTabsRow extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 17.sp,
                             fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
-                            color: sel ? primary : inactive,
+                            color: sel ? Colors.white : inactiveOnPurple,
                           ),
                         ),
                       ),
@@ -250,14 +243,12 @@ class _SavingsTabContent extends StatelessWidget {
     required this.balanceVisible,
     required this.onToggleBalance,
     required this.primary,
-    required this.copyBg,
   });
 
   final UserModel user;
   final bool balanceVisible;
   final Future<void> Function() onToggleBalance;
   final Color primary;
-  final Color copyBg;
 
   String get _accountLabel {
     final wa = user.walletAccountName?.trim();
@@ -271,9 +262,10 @@ class _SavingsTabContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final mutedOnSurface =
-        theme.colorScheme.onSurface.withValues(alpha: 0.7);
+    // The wallet card is now a single purple surface, so all body
+    // text/icons sit on purple — render in white. Soft white tints
+    // for the secondary lines (label, divider).
+    final softWhite = Colors.white.withValues(alpha: 0.85);
     final balanceText = CurrencyFormatter.formatNairaFromKoboWithDecimals(
       user.walletBalanceKobo,
     );
@@ -281,87 +273,55 @@ class _SavingsTabContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: _kBalanceCardPurple,
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(16.w, 14.h, 12.w, 14.h),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        // Balance row sits directly on the card (no inner sub-container
+        // any more — the whole card is purple). Add Money button is
+        // gone per design feedback; the action wasn't shipped and the
+        // dummy snackbar shouldn't ride to production.
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          Text(
-                            'Total balance',
-                            style: TextStyle(
-                              fontSize: 15.sp,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white.withValues(alpha: 0.92),
-                            ),
-                          ),
-                          SizedBox(width: 8.w),
-                          GestureDetector(
-                            onTap: onToggleBalance,
-                            behavior: HitTestBehavior.opaque,
-                            child: Icon(
-                              balanceVisible
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
-                              size: 20.sp,
-                              color: Colors.white.withValues(alpha: 0.92),
-                            ),
-                          ),
-                        ],
-                      ),
-                      vSpace(6),
                       Text(
-                        balanceVisible ? balanceText : '••••••',
+                        'Total balance',
                         style: TextStyle(
-                          fontSize: 22.sp,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          letterSpacing: -0.5,
+                          fontSize: 15.sp,
+                          fontWeight: FontWeight.w600,
+                          color: softWhite,
+                        ),
+                      ),
+                      SizedBox(width: 8.w),
+                      GestureDetector(
+                        onTap: onToggleBalance,
+                        behavior: HitTestBehavior.opaque,
+                        child: Icon(
+                          balanceVisible
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                          size: 20.sp,
+                          color: softWhite,
                         ),
                       ),
                     ],
                   ),
-                ),
-                SizedBox(
-                  width: 90.07.w,
-                  height: 37.7.h,
-                  child: Material(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(999),
-                    elevation: 0,
-                    child: InkWell(
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Add money — coming soon')),
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(999),
-                      child: Center(
-                        child: Text(
-                          'Add Money',
-                          style: TextStyle(
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.w700,
-                            color: primary,
-                          ),
-                        ),
-                      ),
+                  vSpace(6),
+                  Text(
+                    balanceVisible ? balanceText : '••••••',
+                    style: TextStyle(
+                      fontSize: 24.sp,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: -0.5,
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
         ),
         vSpace(14),
         Row(
@@ -374,7 +334,7 @@ class _SavingsTabContent extends StatelessWidget {
                 text: TextSpan(
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: mutedOnSurface,
+                    color: softWhite,
                     fontWeight: FontWeight.w500,
                   ),
                   children: [
@@ -382,15 +342,15 @@ class _SavingsTabContent extends StatelessWidget {
                     TextSpan(
                       text: '  |  ',
                       style: TextStyle(
-                        color: theme.dividerColor,
+                        color: Colors.white.withValues(alpha: 0.4),
                         fontWeight: FontWeight.w400,
                       ),
                     ),
                     TextSpan(
                       text: _accountNo.isEmpty ? '—' : _accountNo,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontWeight: FontWeight.w700,
-                        color: mutedOnSurface,
+                        color: Colors.white,
                       ),
                     ),
                   ],
@@ -399,7 +359,9 @@ class _SavingsTabContent extends StatelessWidget {
             ),
             hSpace(8),
             Material(
-              color: copyBg,
+              // Copy CTA: subtle white-on-purple chip — readable on the
+              // purple card without competing with the balance value.
+              color: Colors.white.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(10.r),
               child: InkWell(
                 onTap: _accountNo.isEmpty
@@ -418,14 +380,14 @@ class _SavingsTabContent extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.copy_rounded, size: 18.sp, color: primary),
+                      Icon(Icons.copy_rounded, size: 18.sp, color: Colors.white),
                       SizedBox(width: 6.w),
                       Text(
                         'Copy Acc. No.',
                         style: TextStyle(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w700,
-                          color: primary,
+                          color: Colors.white,
                         ),
                       ),
                     ],
@@ -457,17 +419,16 @@ class _PlaceholderTab extends StatelessWidget {
       padding: EdgeInsets.symmetric(vertical: 28.h),
       child: Column(
         children: [
-          Icon(icon, size: 40.sp, color: primary.withValues(alpha: 0.35)),
+          // Placeholder tabs sit on the same purple wallet card as the
+          // savings tab now, so render the icon + label in soft white.
+          Icon(icon, size: 40.sp, color: Colors.white.withValues(alpha: 0.5)),
           vSpace(12),
           Text(
             '$title — coming soon',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 15.sp,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.6),
+              color: Colors.white.withValues(alpha: 0.85),
               height: 1.35,
             ),
           ),

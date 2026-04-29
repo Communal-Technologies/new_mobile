@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/repositories/community_repository.dart';
+import 'package:communal_mobile/screens/community/community_map/join_community_bottom_sheet.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_details.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_locations.dart';
 
@@ -9,6 +14,23 @@ class CommunityDetailScreen extends StatelessWidget {
   const CommunityDetailScreen({super.key, required this.detail});
 
   final CommunityDetail detail;
+
+  bool get _hasStats {
+    final s = detail.stats;
+    return [
+      s.totalLoans,
+      s.totalSavings,
+      s.monthlyContribution,
+      s.activeLoans,
+      s.defaultRate,
+      s.loanInterestRate,
+    ].any((v) => v.trim().isNotEmpty);
+  }
+
+  bool get _hasCoordinator => detail.coordinatorName.trim().isNotEmpty;
+  bool get _hasMeeting => detail.meetingSchedule.trim().isNotEmpty;
+  bool get _hasRequirements => detail.membershipRequirements.isNotEmpty;
+  bool get _hasBenefits => detail.benefits.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -39,25 +61,35 @@ class CommunityDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeaderCard(location),
+            _buildHeaderCard(context, location),
             vSpace(16),
-            _buildStatsCard(),
-            vSpace(16),
+            if (_hasStats) ...[
+              _buildStatsCard(),
+              vSpace(16),
+            ],
             _buildAboutSection(),
-            vSpace(16),
-            _buildCoordinatorSection(),
-            vSpace(16),
-            _buildMeetingSection(),
-            vSpace(16),
-            _buildChecklistSection(
-              title: 'Membership Requirements',
-              items: detail.membershipRequirements,
-            ),
-            vSpace(16),
-            _buildBulletSection(
-              title: 'Member Benefits',
-              items: detail.benefits,
-            ),
+            if (_hasCoordinator) ...[
+              vSpace(16),
+              _buildCoordinatorSection(),
+            ],
+            if (_hasMeeting) ...[
+              vSpace(16),
+              _buildMeetingSection(),
+            ],
+            if (_hasRequirements) ...[
+              vSpace(16),
+              _buildChecklistSection(
+                title: 'Membership Requirements',
+                items: detail.membershipRequirements,
+              ),
+            ],
+            if (_hasBenefits) ...[
+              vSpace(16),
+              _buildBulletSection(
+                title: 'Member Benefits',
+                items: detail.benefits,
+              ),
+            ],
             vSpace(16),
             _buildRecentActivities(),
             vSpace(32),
@@ -67,7 +99,18 @@ class CommunityDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeaderCard(CommunityLocation location) {
+  Future<void> _handleJoin(BuildContext context, CommunityLocation location) async {
+    final result = await showModalBottomSheet<CommunityJoinRequest>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => JoinCommunityBottomSheet(community: location),
+    );
+    if (!context.mounted || result == null) return;
+    unawaited(context.pushNamed('community-application-status', extra: location));
+  }
+
+  Widget _buildHeaderCard(BuildContext context, CommunityLocation location) {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
@@ -158,7 +201,7 @@ class CommunityDetailScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () => _handleJoin(context, location),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF7434FF),
                     foregroundColor: Colors.white,
@@ -234,7 +277,11 @@ class CommunityDetailScreen extends StatelessWidget {
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 2.8,
+          // 2.8 was too tight for sp-scaled fonts on smaller devices —
+          // the inner Column overflowed by < 1px (the analyzer's "rendering
+          // overflow" stripe). Drop to 2.3 so the cells have headroom for
+          // the two stacked Text rows + their padding.
+          childAspectRatio: 2.3,
           mainAxisSpacing: 12.h,
           crossAxisSpacing: 12.w,
         ),
@@ -309,9 +356,13 @@ class CommunityDetailScreen extends StatelessWidget {
             spacing: 12.w,
             runSpacing: 12.h,
             children: [
-              _buildMetaChip(Icons.calendar_today, detail.foundedDate),
-              _buildMetaChip(Icons.money, detail.contributionRange),
-              _buildMetaChip(Icons.location_on, 'Lagos, Nigeria'),
+              if (detail.foundedDate.trim().isNotEmpty)
+                _buildMetaChip(Icons.calendar_today, detail.foundedDate),
+              if (detail.contributionRange.trim().isNotEmpty &&
+                  detail.contributionRange != '—')
+                _buildMetaChip(Icons.money, detail.contributionRange),
+              if (detail.location.address.trim().isNotEmpty)
+                _buildMetaChip(Icons.location_on, detail.location.address),
               _buildMetaChip(
                 Icons.verified,
                 detail.isVerified ? 'Verified Community' : 'Unverified',

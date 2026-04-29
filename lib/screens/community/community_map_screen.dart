@@ -9,6 +9,8 @@ import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
 import 'package:communal_mobile/core/widgets/bottomsheet_handlebar.dart';
 import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/repositories/community_repository.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/community/community_map/community_card.dart';
 import 'package:communal_mobile/screens/community/community_map/join_community_bottom_sheet.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_locations.dart';
@@ -31,14 +33,26 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
   bool _isSheetExpanded = false;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  // Live cooperative list loaded from /fetch-cooperatives. Empty until
+  // the first fetch completes; failure surfaces via [_loadError] so we
+  // can show an inline retry on the bottom sheet.
+  List<CommunityLocation> _communities = const [];
+  bool _loading = true;
+  String? _loadError;
+
   static const double _collapsedSheetSize = 0.34;
   static const double _expandedSheetSize = 0.82;
+
+  /// Fallback camera centre when the device location isn't known and no
+  /// cooperative has coordinates yet — keeps the map from opening on
+  /// the equator.
+  static const LatLng _fallbackCenter = LatLng(6.5244, 3.3792);
 
   @override
   void initState() {
     super.initState();
-    _selectedCommunityId = SampleCommunityLocations.featured.id;
     _sheetController.addListener(_handleSheetExtentChange);
+    _loadCooperatives();
   }
 
   @override
@@ -46,6 +60,56 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
     _sheetController.removeListener(_handleSheetExtentChange);
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCooperatives() async {
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
+    try {
+      final coops = await getIt<CommunityRepository>().fetchPublicCooperatives();
+      if (!mounted) return;
+      final mapped = coops
+          .map((c) => CommunityLocation.fromPublicCooperative(c))
+          .toList();
+      setState(() {
+        _communities = mapped;
+        _loading = false;
+        // Default selection: first featured, else the first with
+        // coordinates so the featured banner has something to show.
+        _selectedCommunityId = _pickInitialSelection(mapped);
+      });
+      // If we picked something with real coordinates, animate the map
+      // there once it's ready.
+      if (_selectedCommunityId != null) {
+        final selected = mapped.firstWhere(
+          (c) => c.id == _selectedCommunityId,
+          orElse: () => mapped.first,
+        );
+        if (selected.hasCoordinate) {
+          unawaited(_focusOnCommunity(selected));
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _loadError = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  String? _pickInitialSelection(List<CommunityLocation> list) {
+    if (list.isEmpty) return null;
+    final featured = list.firstWhere(
+      (c) => c.isFeatured,
+      orElse: () => list.firstWhere(
+        (c) => c.hasCoordinate,
+        orElse: () => list.first,
+      ),
+    );
+    return featured.id;
   }
 
   void _handleSheetExtentChange() {
@@ -67,15 +131,23 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
     );
   }
 
-  List<CommunityLocation> get _filteredCommunities =>
-      SampleCommunityLocations.search(_searchQuery);
+  List<CommunityLocation> get _filteredCommunities {
+    final q = _searchQuery.trim().toLowerCase();
+    if (q.isEmpty) return List.unmodifiable(_communities);
+    return _communities.where((c) {
+      return c.name.toLowerCase().contains(q) ||
+          c.category.toLowerCase().contains(q) ||
+          c.address.toLowerCase().contains(q);
+    }).toList();
+  }
 
   Future<void> _focusOnCommunity(CommunityLocation community) async {
     setState(() => _selectedCommunityId = community.id);
+    if (!community.hasCoordinate) return;
     final controller = await _mapController.future;
     await controller.animateCamera(
       CameraUpdate.newCameraPosition(
-        CameraPosition(target: community.coordinate, zoom: 15),
+        CameraPosition(target: community.coordinate!, zoom: 15),
       ),
     );
   }
@@ -83,39 +155,32 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
   @override
   Widget build(BuildContext context) {
     final communities = _filteredCommunities;
-    final selectedCommunity = SampleCommunityLocations.all.firstWhere(
-      (community) => community.id == _selectedCommunityId,
-      orElse: () => SampleCommunityLocations.featured,
-    );
-
-    final markers =
-        communities
-            .map(
-              (community) => Marker(
-                markerId: MarkerId(community.id),
-                position: community.coordinate,
-                icon: BitmapDescriptor.defaultMarkerWithHue(
-                  community.id == _selectedCommunityId
-                      ? BitmapDescriptor.hueViolet
-                      : community.markerHue,
-                ),
-                infoWindow: InfoWindow(
-                  title: community.name,
-                  snippet: community.address,
-                ),
-                onTap: () => _focusOnCommunity(community),
-              ),
-            )
-            .toSet()
-          ..add(
-            Marker(
-              markerId: const MarkerId('user-location'),
-              position: SampleCommunityLocations.userLocation,
-              icon: BitmapDescriptor.defaultMarkerWithHue(
-                BitmapDescriptor.hueAzure,
-              ),
-            ),
+    final selectedCommunity = _communities.isEmpty
+        ? null
+        : _communities.firstWhere(
+            (community) => community.id == _selectedCommunityId,
+            orElse: () => _communities.first,
           );
+
+    final markers = communities
+        .where((c) => c.hasCoordinate)
+        .map(
+          (community) => Marker(
+            markerId: MarkerId(community.id),
+            position: community.coordinate!,
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              community.id == _selectedCommunityId
+                  ? BitmapDescriptor.hueViolet
+                  : community.markerHue,
+            ),
+            infoWindow: InfoWindow(
+              title: community.name,
+              snippet: community.address,
+            ),
+            onTap: () => _focusOnCommunity(community),
+          ),
+        )
+        .toSet();
 
     return Scaffold(
       key: _scaffoldKey,
@@ -127,7 +192,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
         children: [
           _buildMap(markers),
           _buildTopBar(),
-          _buildFeaturedBanner(selectedCommunity),
+          if (selectedCommunity != null) _buildFeaturedBanner(selectedCommunity),
           _buildBottomSheet(communities),
         ],
       ),
@@ -170,7 +235,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
   }
 
   Future<void> _handleCommunityAction(CommunityLocation community) async {
-    final result = await showModalBottomSheet<dynamic>(
+    final result = await showModalBottomSheet<CommunityJoinRequest>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -180,14 +245,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
     );
 
     if (!mounted || result == null) return;
-
-    if (result is Map && result['status'] == 'pending') {
-      _openApplicationStatus(community);
-    } else if (result is String) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(result)));
-    }
+    _openApplicationStatus(community);
   }
 
   void _openCommunityDetails(CommunityLocation community) {
@@ -200,18 +258,11 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
 
   Widget _buildMap(Set<Marker> markers) {
     return GoogleMap(
-      initialCameraPosition: SampleCommunityLocations.initialCameraPosition,
+      initialCameraPosition: const CameraPosition(
+        target: _fallbackCenter,
+        zoom: 12.5,
+      ),
       markers: markers,
-      circles: {
-        Circle(
-          circleId: const CircleId('search-radius'),
-          center: SampleCommunityLocations.userLocation,
-          radius: 1200,
-          strokeColor: const Color(0x557434FF),
-          strokeWidth: 1,
-          fillColor: const Color(0x1A7434FF),
-        ),
-      },
       myLocationButtonEnabled: false,
       myLocationEnabled: false,
       zoomControlsEnabled: false,
@@ -513,7 +564,39 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                 ),
               ),
               Expanded(
-                child: communities.isEmpty
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _loadError != null
+                    ? Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 24.w,
+                          vertical: 24.h,
+                        ),
+                        child: Column(
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: Color(0xFFB42318),
+                              size: 36,
+                            ),
+                            vSpace(8),
+                            Text(
+                              _loadError!,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 15.sp,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                            vSpace(12),
+                            OutlinedButton(
+                              onPressed: _loadCooperatives,
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : communities.isEmpty
                     ? Padding(
                         padding: EdgeInsets.only(top: 32.h),
                         child: Column(
@@ -525,7 +608,10 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                             ),
                             vSpace(12),
                             Text(
-                              'No communities match your search',
+                              _searchQuery.isEmpty
+                                  ? 'No communities are accepting new members yet.'
+                                  : 'No communities match your search',
+                              textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 15.sp,
                                 color: Colors.grey.shade600,

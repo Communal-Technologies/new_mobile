@@ -384,15 +384,10 @@ class _LoansScreenState extends State<LoansScreen> {
                 'loan-detail',
                 extra: {'loan': loan},
               ),
-              onMakePayment: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Repayments are processed by your cooperative from your obligations and wallet.',
-                    ),
-                  ),
-                );
-              },
+              onMakePayment: loan.status == LoanStatus.approved &&
+                      loan.balanceMinor > 0
+                  ? () => context.pushNamed('loan-payment', extra: loan)
+                  : null,
             ),
           ),
         ),

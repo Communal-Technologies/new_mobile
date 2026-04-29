@@ -423,7 +423,7 @@ class _SavingsTabContent extends StatelessWidget {
                       Text(
                         'Copy Acc. No.',
                         style: TextStyle(
-                          fontSize: 13.sp,
+                          fontSize: 14.sp,
                           fontWeight: FontWeight.w700,
                           color: primary,
                         ),

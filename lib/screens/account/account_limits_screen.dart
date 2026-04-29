@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -72,11 +73,7 @@ class AccountLimitsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-      ),
+      value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
@@ -157,7 +154,7 @@ class AccountLimitsScreen extends StatelessWidget {
                     statusBadgeColor: Colors.white,
                   ),
                   vSpace(24),
-                  _buildKycBenefitSection(),
+                  _buildKycBenefitSection(context),
                   vSpace(16),
                   if (catalog.isEmpty)
                     Padding(
@@ -211,7 +208,7 @@ class AccountLimitsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildKycBenefitSection() {
+  Widget _buildKycBenefitSection(BuildContext context) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
       child: Column(

@@ -5,6 +5,7 @@ import 'package:communal_mobile/data/local/home_wallet_prefs.dart';
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
 import 'package:communal_mobile/data/local/theme_mode_controller.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
+import 'package:communal_mobile/data/repositories/account_actions_repository.dart';
 import 'package:communal_mobile/data/repositories/community_repository.dart';
 import 'package:communal_mobile/data/repositories/notifications_repository.dart';
 import 'package:communal_mobile/data/repositories/profile_repository.dart';
@@ -54,6 +55,11 @@ Future<void> configureDependencies() async {
   if (!getIt.isRegistered<ProfileRepository>()) {
     getIt.registerLazySingleton<ProfileRepository>(
       () => ProfileRepository(getIt()),
+    );
+  }
+  if (!getIt.isRegistered<AccountActionsRepository>()) {
+    getIt.registerLazySingleton<AccountActionsRepository>(
+      () => AccountActionsRepository(getIt()),
     );
   }
   if (!getIt.isRegistered<TransferFavoritesPrefs>()) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -70,18 +71,14 @@ class _DeleteAccountFinalConfirmationScreenState
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-      ),
+      value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).cardColor,
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).cardColor,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
           title: Text(
@@ -89,7 +86,7 @@ class _DeleteAccountFinalConfirmationScreenState
             style: TextStyle(
               fontSize: 19.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           centerTitle: true,
@@ -161,7 +158,7 @@ class _DeleteAccountFinalConfirmationScreenState
           style: TextStyle(
             fontSize: 24.sp,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF0F1D40),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         vSpace(8),
@@ -169,7 +166,7 @@ class _DeleteAccountFinalConfirmationScreenState
           'This is your last chance to cancel.',
           style: TextStyle(
             fontSize: 15.sp,
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
@@ -185,7 +182,7 @@ class _DeleteAccountFinalConfirmationScreenState
             style: TextStyle(
               fontSize: 17.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF0F1D40),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
             children: [
               const TextSpan(text: 'Type '),
@@ -212,7 +209,7 @@ class _DeleteAccountFinalConfirmationScreenState
             style: TextStyle(
               fontSize: 17.sp,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF0F1D40),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
             decoration: InputDecoration(
               hintText: 'Type DELETE in capital letters',

@@ -32,16 +32,19 @@ class AccountManagementSection extends StatelessWidget {
             context.pushNamed('transactions');
           },
         ),
-        SettingItem(
-          icon: Icons.credit_card,
-          title: 'Bank Card/Account',
-          description: '2 linked cards/accounts',
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Bank Card/Account')),
-            );
-          },
-        ),
+        // TODO(communal-mobile): wire Bank Card/Account once the
+        // backend exposes linked-bank metadata. Hidden until then so
+        // a non-functional row doesn't show a SnackBar stub.
+        // SettingItem(
+        //   icon: Icons.credit_card,
+        //   title: 'Bank Card/Account',
+        //   description: '2 linked cards/accounts',
+        //   onTap: () {
+        //     ScaffoldMessenger.of(context).showSnackBar(
+        //       const SnackBar(content: Text('Bank Card/Account')),
+        //     );
+        //   },
+        // ),
         SettingItem(
           icon: Icons.trending_up,
           title: 'Account Limits',
@@ -50,14 +53,17 @@ class AccountManagementSection extends StatelessWidget {
             context.pushNamed('account-limits');
           },
         ),
-        SettingItem(
-          icon: Icons.share,
-          title: 'Invite and Earn',
-          description: 'Invite friends and earn up to ₦5,000 Bonus',
-          onTap: () {
-            context.pushNamed('invite-and-earn');
-          },
-        ),
+        // TODO(communal-mobile): Invite and Earn screen has hard-coded
+        // referral copy and no backend integration yet. Hide until the
+        // referrals service / payout rules ship.
+        // SettingItem(
+        //   icon: Icons.share,
+        //   title: 'Invite and Earn',
+        //   description: 'Invite friends and earn up to ₦5,000 Bonus',
+        //   onTap: () {
+        //     context.pushNamed('invite-and-earn');
+        //   },
+        // ),
       ],
     );
   }

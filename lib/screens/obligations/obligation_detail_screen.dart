@@ -485,12 +485,17 @@ class _FinesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    const accent = Color(0xFFD7263D);
     return _InfoCard(
       title: 'Fines & Penalties',
       child: Container(
         padding: EdgeInsets.all(12.w),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFEEF0),
+          color: isDark
+              ? accent.withValues(alpha: 0.16)
+              : const Color(0xFFFFEEF0),
           borderRadius: BorderRadius.circular(14.r),
         ),
         child: Column(
@@ -500,7 +505,7 @@ class _FinesSection extends StatelessWidget {
               children: [
                 Icon(
                   Icons.error_outline,
-                  color: const Color(0xFFD7263D),
+                  color: accent,
                   size: 18.sp,
                 ),
                 hSpace(8),
@@ -509,17 +514,20 @@ class _FinesSection extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFFD7263D),
+                    color: accent,
                   ),
                 ),
                 const Spacer(),
-                _StatusChip(label: fine.status, color: const Color(0xFFD7263D)),
+                _StatusChip(label: fine.status, color: accent),
               ],
             ),
             vSpace(8),
             Text(
               fine.description,
-              style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade700),
+              style: TextStyle(
+                fontSize: 15.sp,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+              ),
             ),
             vSpace(8),
             Text(
@@ -650,10 +658,19 @@ class _LoanPromoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    const accent = Color(0xFF5B5CE2);
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: const Color(0xFFE9F2FF),
+        // Soft blue notice tile — keep the tint visible on dark mode
+        // by mixing the accent with the surface, otherwise the fixed
+        // 0xFFE9F2FF reads as a near-white block on the dark
+        // scaffold.
+        color: isDark
+            ? accent.withValues(alpha: 0.16)
+            : const Color(0xFFE9F2FF),
         borderRadius: BorderRadius.circular(18.r),
       ),
       child: Column(
@@ -665,10 +682,10 @@ class _LoanPromoCard extends StatelessWidget {
                 width: 36.w,
                 height: 36.w,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
+                  color: theme.cardColor,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.trending_up, color: Color(0xFF5B5CE2)),
+                child: const Icon(Icons.trending_up, color: accent),
               ),
               hSpace(12),
               Text(
@@ -676,7 +693,7 @@ class _LoanPromoCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 17.sp,
                   fontWeight: FontWeight.w700,
-                  color: Theme.of(context).colorScheme.onSurface,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
             ],
@@ -685,7 +702,10 @@ class _LoanPromoCard extends StatelessWidget {
           Text(
             note ??
                 'Your consistent payments qualify you for cooperative loans at competitive rates.',
-            style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade700),
+            style: TextStyle(
+              fontSize: 15.sp,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+            ),
           ),
           vSpace(12),
           ElevatedButton(
@@ -717,10 +737,11 @@ class _BottomActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final liveTheme = Theme.of(context);
     return SafeArea(
       child: Container(
         padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
-        decoration: const BoxDecoration(color: Colors.white),
+        decoration: BoxDecoration(color: liveTheme.cardColor),
         child: Row(
           children: [
             Expanded(
@@ -732,7 +753,7 @@ class _BottomActions extends StatelessWidget {
                 },
                 icon: Icon(
                   Icons.chat_bubble_outline,
-                  color: theme.primaryColor,
+                  color: liveTheme.primaryColor,
                   size: 20.sp,
                 ),
                 label: Text(
@@ -740,12 +761,12 @@ class _BottomActions extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 17.sp,
                     fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
+                    color: liveTheme.colorScheme.onSurface,
                   ),
                 ),
                 style: OutlinedButton.styleFrom(
                   minimumSize: Size(double.infinity, 52.h),
-                  side: BorderSide(color: Colors.grey.shade300),
+                  side: BorderSide(color: liveTheme.dividerColor),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18.r),
                   ),

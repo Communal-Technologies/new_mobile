@@ -343,7 +343,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                           height: 80.w,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.grey.shade300,
+                            color: Theme.of(context).dividerColor,
                           ),
                           child: Icon(
                             Icons.person,

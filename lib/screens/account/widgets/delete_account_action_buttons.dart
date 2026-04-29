@@ -19,10 +19,10 @@ class DeleteAccountActionButtons extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade300,
+            color: Theme.of(context).dividerColor,
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -39,7 +39,7 @@ class DeleteAccountActionButtons extends StatelessWidget {
                       context.pushNamed('freeze-account');
                     },
                 style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: Colors.grey.shade300, width: 1.5),
+                  side: BorderSide(color: Theme.of(context).dividerColor, width: 1.5),
                   padding: EdgeInsets.symmetric(vertical: 16.h),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12.r),

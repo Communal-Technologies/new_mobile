@@ -899,10 +899,10 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.shade200,
+                      color: Theme.of(context).dividerColor,
                       blurRadius: 10,
                       offset: const Offset(0, -2),
                     ),
@@ -992,7 +992,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
               style: TextStyle(fontSize: 19.sp, color: Colors.black87),
               hint: Text(
                 label,
-                style: TextStyle(color: Colors.grey.shade400, fontSize: 19.sp),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 19.sp),
               ),
               icon: Icon(
                 Icons.keyboard_arrow_down,

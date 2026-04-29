@@ -25,7 +25,7 @@ class ReferralCodeSection extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(20.w),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(16.r),
             ),
             child: Column(

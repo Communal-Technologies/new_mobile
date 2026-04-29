@@ -33,7 +33,7 @@ class FreezeAccountSuccessScreen extends StatelessWidget {
           centerTitle: true,
           actions: [
             IconButton(
-              icon: Icon(Icons.edit, color: Colors.grey.shade400, size: 20.sp),
+              icon: Icon(Icons.edit, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4), size: 20.sp),
               onPressed: () {},
             ),
           ],
@@ -43,7 +43,7 @@ class FreezeAccountSuccessScreen extends StatelessWidget {
             margin: EdgeInsets.all(16.w),
             padding: EdgeInsets.all(32.w),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(20.r),
             ),
             child: Column(
@@ -132,7 +132,7 @@ class FreezeAccountSuccessScreen extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12.r),
         border: Border.all(color: Colors.grey.shade200),
       ),

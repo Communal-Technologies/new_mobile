@@ -241,7 +241,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12.r),
                 border: Border.all(color: const Color(0xFFE8E8E8)),
               ),
@@ -342,7 +342,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                               margin: EdgeInsets.symmetric(horizontal: 4.w),
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: Theme.of(context).cardColor,
                                 borderRadius: BorderRadius.circular(8.r),
                                 border: Border.all(
                                   color:

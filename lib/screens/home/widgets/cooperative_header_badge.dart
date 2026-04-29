@@ -31,9 +31,9 @@ class CooperativeHeaderBadge extends StatelessWidget {
         height: 48.h,
         padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 4.h),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(6.r),
-          border: Border.all(color: Colors.grey.shade200, width: 1),
+          border: Border.all(color: Theme.of(context).dividerColor, width: 1),
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(4.r),
@@ -62,9 +62,9 @@ class CooperativeHeaderBadge extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(6.r),
-        border: Border.all(color: Colors.grey.shade200, width: 1),
+        border: Border.all(color: Theme.of(context).dividerColor, width: 1),
       ),
       child: _textFallback(context,line1, line2),
     );

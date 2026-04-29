@@ -11,10 +11,10 @@ class BottomActionBar extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade300,
+            color: Theme.of(context).dividerColor,
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),

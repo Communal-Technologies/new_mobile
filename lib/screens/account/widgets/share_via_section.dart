@@ -87,7 +87,7 @@ class _ShareOption extends StatelessWidget {
             width: 60.w,
             height: 60.w,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).cardColor,
               shape: BoxShape.circle,
               border: Border.all(color: iconColor, width: 2),
             ),

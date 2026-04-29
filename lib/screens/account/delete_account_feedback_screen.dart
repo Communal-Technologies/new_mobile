@@ -164,7 +164,7 @@ class _DeleteAccountFeedbackScreenState
               hintText: 'Tell us more about your experience...',
               hintStyle: TextStyle(
                 fontSize: 15.sp,
-                color: Colors.grey.shade500,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
               border: InputBorder.none,
               contentPadding: EdgeInsets.all(16.w),

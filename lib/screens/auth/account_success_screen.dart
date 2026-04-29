@@ -50,8 +50,8 @@ class AccountSuccessScreen extends StatelessWidget {
                   Container(
                     width: 120.w,
                     height: 120.w,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
                       shape: BoxShape.circle,
                     ),
                     child: Center(

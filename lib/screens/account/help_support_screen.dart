@@ -124,11 +124,11 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
       padding: EdgeInsets.symmetric(horizontal: 16.w),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(12.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.shade200,
+              color: Theme.of(context).dividerColor,
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -140,11 +140,11 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
             hintText: 'Search for help...',
             hintStyle: TextStyle(
               fontSize: 15.sp,
-              color: Colors.grey.shade500,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
             prefixIcon: Icon(
               Icons.search,
-              color: Colors.grey.shade400,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
               size: 20.sp,
             ),
             border: InputBorder.none,

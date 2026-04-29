@@ -612,7 +612,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                       '|',
                       style: TextStyle(
                         fontSize: 14.sp,
-                        color: Colors.grey.shade400,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                       ),
                     ),
                     hSpace(8),
@@ -676,7 +676,7 @@ class _MethodButton extends StatelessWidget {
         padding: EdgeInsets.symmetric(vertical: 14.h),
         decoration: BoxDecoration(
           border: Border.all(
-            color: Colors.grey.shade300,
+            color: Theme.of(context).dividerColor,
             width: 1.5,
           ),
           borderRadius: BorderRadius.circular(12.r),

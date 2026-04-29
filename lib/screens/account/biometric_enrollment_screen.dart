@@ -512,7 +512,7 @@ class _MasterEnableCard extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(14.r),
         border: Border.all(color: const Color(0xFFE7E7E7)),
       ),
@@ -582,7 +582,7 @@ class _GranularToggleCard extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(14.r),
         border: Border.all(color: const Color(0xFFE7E7E7)),
       ),
@@ -649,7 +649,7 @@ class _RegisteredBiometricsCard extends StatelessWidget {
     final hasFinger = available.contains(BiometricType.fingerprint);
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(14.r),
         border: Border.all(color: const Color(0xFFE7E7E7)),
       ),
@@ -825,7 +825,7 @@ class _BiometricConfirmModal extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
       ),
       padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 20.h),

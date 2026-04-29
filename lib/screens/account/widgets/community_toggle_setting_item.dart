@@ -33,7 +33,7 @@ class CommunityToggleSettingItem extends StatelessWidget {
             width: 40.w,
             height: 40.w,
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: Theme.of(context).dividerColor,
               borderRadius: BorderRadius.circular(10.r),
             ),
             child: Icon(

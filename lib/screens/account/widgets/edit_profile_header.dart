@@ -43,9 +43,9 @@ class EditProfileHeader extends StatelessWidget {
                   width: 36.w,
                   height: 36.w,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.grey.shade300, width: 2),
+                    border: Border.all(color: Theme.of(context).dividerColor, width: 2),
                   ),
                   child: Icon(
                     Icons.edit,

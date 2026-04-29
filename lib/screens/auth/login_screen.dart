@@ -417,7 +417,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       '|',
                       style: TextStyle(
                         fontSize: 14.sp,
-                        color: Colors.grey.shade400,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                       ),
                     ),
                     hSpace(8),

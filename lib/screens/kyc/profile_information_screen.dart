@@ -876,10 +876,10 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.shade200,
+                      color: Theme.of(context).dividerColor,
                       blurRadius: 10,
                       offset: const Offset(0, -2),
                     ),

@@ -118,7 +118,7 @@ class _DeleteAccountFinalConfirmationScreenState
               Container(
                 padding: EdgeInsets.all(16.w),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
@@ -215,7 +215,7 @@ class _DeleteAccountFinalConfirmationScreenState
               hintText: 'Type DELETE in capital letters',
               hintStyle: TextStyle(
                 fontSize: 15.sp,
-                color: Colors.grey.shade500,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
               border: InputBorder.none,
               contentPadding: EdgeInsets.all(16.w),

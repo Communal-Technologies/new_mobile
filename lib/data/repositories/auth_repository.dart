@@ -406,11 +406,13 @@ class AuthRepository {
   Future<bool> requestOtp(
     String contact, {
     String purpose = 'verification',
+    String deliveryMethod = 'auto',
   }) async {
     try {
       final body = <String, dynamic>{
         'login': contact.trim(),
         'purpose': purpose,
+        'delivery_method': deliveryMethod,
       };
 
       final response = await dioClient.post(
@@ -442,13 +444,17 @@ class AuthRepository {
   /// resumed for this contact, so we can carry it through the rest of
   /// the signup chain. Returns null when the send failed but didn't
   /// throw (rare — the request layer normally throws on non-200).
-  Future<String?> requestOtpForSignup(String contact) async {
+  Future<String?> requestOtpForSignup(
+    String contact, {
+    String deliveryMethod = 'auto',
+  }) async {
     try {
       final response = await dioClient.post(
         ApiEndpoints.otpSend,
         data: <String, dynamic>{
           'login': contact.trim(),
           'purpose': 'signup',
+          'delivery_method': deliveryMethod,
         },
         requireAuth: false,
       );
@@ -474,6 +480,42 @@ class AuthRepository {
         final msg = data is Map
             ? (data['message']?.toString() ?? 'Unable to send verification code')
             : 'Unable to send verification code';
+        throw Exception(msg);
+      }
+      rethrow;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Poll OTP delivery diagnostics (queued/sent/failed + fallback note).
+  Future<Map<String, dynamic>?> getOtpDeliveryStatus(
+    String contact, {
+    String purpose = 'verification',
+  }) async {
+    try {
+      final response = await dioClient.post(
+        ApiEndpoints.otpDeliveryStatus,
+        data: <String, dynamic>{
+          'login': contact.trim(),
+          'purpose': purpose,
+        },
+        requireAuth: false,
+      );
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        final map = response.data as Map<String, dynamic>;
+        final data = map['data'];
+        if (data is Map<String, dynamic>) {
+          return data;
+        }
+      }
+      return null;
+    } on DioException catch (e) {
+      if (e.response != null) {
+        final data = e.response?.data;
+        final msg = data is Map
+            ? (data['message']?.toString() ?? 'Unable to fetch OTP delivery status')
+            : 'Unable to fetch OTP delivery status';
         throw Exception(msg);
       }
       rethrow;

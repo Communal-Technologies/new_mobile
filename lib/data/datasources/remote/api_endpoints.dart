@@ -31,6 +31,7 @@ class ApiEndpoints {
   static const String resetPassword = '/reset-password';
   static const String otpSend = '/otp/send';
   static const String otpVerify = '/otp/verify';
+  static const String otpDeliveryStatus = '/otp/delivery-status';
 
   // --- Profile ------------------------------------------------------------
   static const String profileDeviceToken = '/profile/device-token';

@@ -1,11 +1,14 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/security/biometric_key_service.dart';
 import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/core/utils/biometric_service.dart';
@@ -82,6 +85,10 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
 
   Future<void> _onMasterToggle(bool nextValue) async {
     if (_busy) return;
+    // Snapshot the current user before any async gap — reading
+    // context.read after an await is flagged by the analyzer and the
+    // bloc state could change in between.
+    final authSnapshot = context.read<AuthBloc>().state;
     final result = await _showConfirmModal(enabling: nextValue);
     if (result != true) return;
     setState(() => _busy = true);
@@ -90,6 +97,13 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
         await _signer.enroll(deviceLabel: _deviceLabel());
         await _prefs.setAppLoginEnabled(true);
         await _prefs.setTransactionsEnabled(true);
+        // Stamp the enrolled user so welcome-back can refuse to surface
+        // this enrollment to a different user who later signs in on the
+        // same device. Without this, biometric availability bleeds
+        // across users (device-scoped key + global pref).
+        if (authSnapshot is AuthAuthenticated && authSnapshot.user.id.isNotEmpty) {
+          await _prefs.setEnrolledUserId(authSnapshot.user.id);
+        }
       } else {
         await _signer.unenroll();
         await _prefs.resetAll();

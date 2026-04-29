@@ -310,7 +310,10 @@ class _TransferScreenState extends State<TransferScreen> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14.sp, color: Colors.black54),
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
             ),
           ],
         ),
@@ -384,6 +387,23 @@ class _TransferScreenState extends State<TransferScreen> {
     required String tag,
     required VoidCallback onTap,
   }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    // Tag pills used to be hardcoded lavender / sky pastels which
+    // washed out on the dark scaffold. Mix the brand purple (Internal)
+    // and a steel blue (External) with the surface in dark mode.
+    const externalAccent = Color(0xFF1976D2);
+    final tagBg = tag == 'Internal'
+        ? (isDark
+            ? theme.primaryColor.withValues(alpha: 0.16)
+            : const Color(0xFFEDE4FF))
+        : (isDark
+            ? externalAccent.withValues(alpha: 0.16)
+            : const Color(0xFFE1F5FE));
+    final tagFg = tag == 'Internal'
+        ? theme.primaryColor
+        : (isDark ? externalAccent : const Color(0xFF1565C0));
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12.r),
@@ -391,22 +411,16 @@ class _TransferScreenState extends State<TransferScreen> {
         width: double.infinity,
         padding: EdgeInsets.all(14.w),
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
+          color: theme.cardColor,
           borderRadius: BorderRadius.circular(12.r),
-          boxShadow: [
-            BoxShadow(
-              color: Theme.of(context).dividerColor,
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          border: Border.all(color: theme.dividerColor),
         ),
         child: Row(
           children: [
             CircleAvatar(
               radius: 22.r,
-              backgroundColor: const Color(0xFFF1EAFF),
-              child: Icon(icon, color: const Color(0xFF7434FF)),
+              backgroundColor: theme.primaryColor.withValues(alpha: 0.15),
+              child: Icon(icon, color: theme.primaryColor),
             ),
             hSpace(12),
             Expanded(
@@ -415,23 +429,32 @@ class _TransferScreenState extends State<TransferScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onSurface,
+                    ),
                   ),
-                  Text(subtitle, style: const TextStyle(color: Colors.black54)),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
                 ],
               ),
             ),
             Container(
               padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
               decoration: BoxDecoration(
-                color: tag == 'Internal'
-                    ? const Color(0xFFEDE4FF)
-                    : const Color(0xFFE1F5FE),
+                color: tagBg,
                 borderRadius: BorderRadius.circular(12.r),
               ),
               child: Text(
                 tag,
-                style: const TextStyle(fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: tagFg,
+                ),
               ),
             ),
           ],

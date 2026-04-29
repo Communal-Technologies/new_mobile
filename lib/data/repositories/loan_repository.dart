@@ -101,6 +101,14 @@ class LoanRepository {
   /// `destination='Loan-{reference_id}_{loan_id}'` (see
   /// `MembersController::createLedgerEntries`); we filter the member's
   /// transaction list by that prefix to surface a per-loan history.
+  ///
+  /// Brought-forward uploads also write to the same destination prefix
+  /// (`Loan-{reference}` with `payment_mode='Brought Forward Upload'`
+  /// or `source='Brought Forward'`) — those rows are *loan creations*,
+  /// not repayments, and were leaking into the history with the loan
+  /// principal (or sometimes 0) as the displayed amount. Same for
+  /// "Brought Forward Correction" reversals. Drop both, plus any row
+  /// with amount ≤ 0, before returning.
   Future<List<Map<String, dynamic>>> fetchLoanRepayments({
     required String ledgerNumber,
     required String referenceId,
@@ -115,12 +123,24 @@ class LoanRepository {
       final raw = data is Map ? (data['data'] ?? data['transactions']) : null;
       if (raw is! List) return const [];
       final prefix = 'Loan-$ref';
+      bool isBroughtForwardArtifact(Map<String, dynamic> row) {
+        final mode = row['payment_mode']?.toString().trim().toLowerCase() ?? '';
+        final source = row['source']?.toString().trim().toLowerCase() ?? '';
+        if (mode.contains('brought forward')) return true;
+        if (source == 'brought forward') return true;
+        if (source == 'brought forward correction') return true;
+        return false;
+      }
       return raw
           .whereType<Map>()
           .map((e) => Map<String, dynamic>.from(e))
           .where((row) {
             final dest = row['destination']?.toString().trim() ?? '';
-            return dest.startsWith(prefix);
+            if (!dest.startsWith(prefix)) return false;
+            if (isBroughtForwardArtifact(row)) return false;
+            final amt = num.tryParse(row['amount']?.toString() ?? '0') ?? 0;
+            if (amt <= 0) return false;
+            return true;
           })
           .toList()
         ..sort((a, b) {

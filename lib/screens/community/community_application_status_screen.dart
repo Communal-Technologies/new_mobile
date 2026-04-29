@@ -334,7 +334,7 @@ class _CommunityApplicationStatusScreenState
           return Container(
             padding: EdgeInsets.all(12.w),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8F8FF),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(16.r),
             ),
             child: Column(
@@ -424,7 +424,7 @@ class _CommunityApplicationStatusScreenState
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F3F9),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16.r),
       ),
       child: Row(

@@ -123,7 +123,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
       value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
         key: _scaffoldKey,
-        backgroundColor: const Color(0xFFF2F2F5),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         drawer: const CooperativeSidebar(),
         drawerEdgeDragWidth: 50.w,
         drawerScrimColor: Colors.black.withValues(alpha: 0.4),
@@ -233,11 +233,14 @@ class _CommunityScreenState extends State<CommunityScreen> {
       ];
     }
     if (snapshot.hasError) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
       return [
         Container(
           padding: EdgeInsets.all(16.w),
           decoration: BoxDecoration(
-            color: const Color(0xFFFDECEA),
+            color: isDark
+                ? const Color(0xFFB42318).withValues(alpha: 0.16)
+                : const Color(0xFFFDECEA),
             borderRadius: BorderRadius.circular(16.r),
           ),
           child: Text(
@@ -289,13 +292,21 @@ class _CommunityScreenState extends State<CommunityScreen> {
   }
 
   Widget _buildEmptyState() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F4FF),
+        color: isDark
+            ? theme.primaryColor.withValues(alpha: 0.12)
+            : const Color(0xFFF7F4FF),
         borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: const Color(0xFFE2D2FF)),
+        border: Border.all(
+          color: isDark
+              ? theme.primaryColor.withValues(alpha: 0.35)
+              : const Color(0xFFE2D2FF),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -350,12 +361,20 @@ class _CommunityScreenState extends State<CommunityScreen> {
       padding: EdgeInsets.only(bottom: 12.h),
       child: GestureDetector(
         onTap: () => _openPendingStatus(request),
-        child: Container(
+        child: Builder(builder: (context) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          return Container(
           padding: EdgeInsets.all(14.w),
           decoration: BoxDecoration(
-            color: const Color(0xFFFFF4E9),
+            color: isDark
+                ? const Color(0xFFEE7B00).withValues(alpha: 0.16)
+                : const Color(0xFFFFF4E9),
             borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(color: const Color(0xFFFFD2B0)),
+            border: Border.all(
+              color: isDark
+                  ? const Color(0xFFEE7B00).withValues(alpha: 0.45)
+                  : const Color(0xFFFFD2B0),
+            ),
           ),
           child: Row(
             children: [
@@ -393,7 +412,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
               ),
             ],
           ),
-        ),
+          );
+        }),
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/server_status_interceptor.dart';
 import 'package:communal_mobile/data/local/home_wallet_prefs.dart';
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
+import 'package:communal_mobile/data/local/theme_mode_controller.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:communal_mobile/data/repositories/community_repository.dart';
 import 'package:communal_mobile/data/repositories/notifications_repository.dart';
@@ -28,6 +29,11 @@ Future<void> configureDependencies() async {
   if (!getIt.isRegistered<HomeWalletPrefs>()) {
     getIt.registerLazySingleton<HomeWalletPrefs>(
       () => HomeWalletPrefs(getIt<SharedPreferences>()),
+    );
+  }
+  if (!getIt.isRegistered<ThemeModeController>()) {
+    getIt.registerLazySingleton<ThemeModeController>(
+      () => ThemeModeController(getIt<SharedPreferences>()),
     );
   }
   if (!getIt.isRegistered<TransferRepository>()) {

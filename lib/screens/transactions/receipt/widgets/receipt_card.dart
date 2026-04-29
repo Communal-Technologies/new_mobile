@@ -25,6 +25,7 @@ class ReceiptCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final style = ReceiptStatusStyle(
       status: details.status,
+      brightness: Theme.of(context).brightness,
       failureReason: details.failureReason,
     );
     return Container(
@@ -138,10 +139,16 @@ class _ReceiptCardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Receipt card uses `theme.cardColor` as its surface (white in
+    // light mode, dark surface in dark mode). The coloured logo has
+    // dark glyph strokes that vanish on the dark card, so swap to the
+    // white asset there. The PNG export captures whatever's on screen,
+    // so the saved/shared receipt matches the active theme.
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         Image.asset(
-          Images.coloredLogo,
+          isDark ? Images.whiteLogo : Images.coloredLogo,
           height: 32.h,
           fit: BoxFit.contain,
         ),

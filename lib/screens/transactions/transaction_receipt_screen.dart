@@ -287,10 +287,10 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
-        backgroundColor: const Color(0xFFF7F8FB),
+        backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
           elevation: 0,
-          backgroundColor: const Color(0xFFF7F8FB),
+          backgroundColor: theme.scaffoldBackgroundColor,
           leading: IconButton(
             icon: Icon(
               Icons.arrow_back_ios_new,
@@ -326,7 +326,9 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                         child: ReceiptActionButton(
                           label: 'Download',
                           icon: Iconsax.import,
-                          background: const Color(0xFFF0E6FF),
+                          background: theme.brightness == Brightness.dark
+                              ? theme.primaryColor.withValues(alpha: 0.16)
+                              : const Color(0xFFF0E6FF),
                           foreground: theme.primaryColor,
                           onTap: _downloadReceipt,
                         ),
@@ -350,7 +352,9 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                   child: ReceiptActionButton(
                     label: 'Make Another Transfer',
                     icon: Iconsax.arrow_swap_horizontal,
-                    background: const Color(0xFFEFE6FD),
+                    background: theme.brightness == Brightness.dark
+                        ? theme.primaryColor.withValues(alpha: 0.16)
+                        : const Color(0xFFEFE6FD),
                     foreground: theme.primaryColor,
                     onTap: () => context.goNamed('transfer'),
                   ),

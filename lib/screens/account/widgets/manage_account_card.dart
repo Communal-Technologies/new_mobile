@@ -147,7 +147,7 @@ class _ManageAccountItem extends StatelessWidget {
                   Text(
                     description,
                     style: TextStyle(
-                      fontSize: 13.sp,
+                      fontSize: 14.sp,
                       color: onSurface.withValues(alpha: 0.6),
                       height: 1.4,
                     ),

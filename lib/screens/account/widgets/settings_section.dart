@@ -70,73 +70,152 @@ class SettingsSection extends StatelessWidget {
 class _PreferenceItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    // Reads through the shared ThemeModeController so the switch value
-    // matches the live theme on first paint and stays in sync if the
-    // mode is changed elsewhere (e.g. system-mode auto-flip in future).
+    // Three-way control: System (follow device), Light, Dark. The
+    // default is "System"; once the user picks Light/Dark the explicit
+    // choice wins over the device's brightness on every subsequent
+    // launch — only tapping System again hands control back to the OS.
     final controller = getIt<ThemeModeController>();
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
         final theme = Theme.of(context);
         final onSurface = theme.colorScheme.onSurface;
+        final mode = controller.mode;
+        IconData icon;
+        String description;
+        switch (mode) {
+          case ThemeMode.dark:
+            icon = Icons.dark_mode;
+            description = 'Dark theme';
+            break;
+          case ThemeMode.light:
+            icon = Icons.light_mode;
+            description = 'Light theme';
+            break;
+          case ThemeMode.system:
+            icon = Icons.brightness_auto;
+            description = 'Follows your device setting';
+            break;
+        }
+
         return Container(
           margin: EdgeInsets.only(bottom: 1.h),
           padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
           color: theme.cardColor,
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 40.w,
-                height: 40.w,
-                decoration: BoxDecoration(
-                  color: theme.primaryColor.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(10.r),
-                ),
-                child: Icon(
-                  controller.isDarkMode
-                      ? Icons.dark_mode
-                      : Icons.dark_mode_outlined,
-                  color: theme.primaryColor,
-                  size: 22.sp,
-                ),
-              ),
-              hSpace(16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Preferences',
-                      style: TextStyle(
-                        fontSize: 17.sp,
-                        fontWeight: FontWeight.w600,
-                        color: onSurface,
-                      ),
+              Row(
+                children: [
+                  Container(
+                    width: 40.w,
+                    height: 40.w,
+                    decoration: BoxDecoration(
+                      color: theme.primaryColor.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(10.r),
                     ),
-                    vSpace(4),
-                    Text(
-                      controller.isDarkMode
-                          ? 'Dark theme is on'
-                          : 'Toggle dark/light theme',
-                      style: TextStyle(
-                        fontSize: 15.sp,
-                        color: onSurface.withValues(alpha: 0.6),
-                      ),
+                    child: Icon(icon, color: theme.primaryColor, size: 22.sp),
+                  ),
+                  hSpace(16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Appearance',
+                          style: TextStyle(
+                            fontSize: 17.sp,
+                            fontWeight: FontWeight.w600,
+                            color: onSurface,
+                          ),
+                        ),
+                        vSpace(4),
+                        Text(
+                          description,
+                          style: TextStyle(
+                            fontSize: 15.sp,
+                            color: onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              Switch(
-                value: controller.isDarkMode,
-                onChanged: (value) {
-                  controller.setDarkMode(value);
-                },
-                activeThumbColor: theme.primaryColor,
+              vSpace(12),
+              Row(
+                children: [
+                  _ThemeSegment(
+                    label: 'System',
+                    selected: mode == ThemeMode.system,
+                    onTap: () => controller.setMode(ThemeMode.system),
+                  ),
+                  hSpace(8),
+                  _ThemeSegment(
+                    label: 'Light',
+                    selected: mode == ThemeMode.light,
+                    onTap: () => controller.setMode(ThemeMode.light),
+                  ),
+                  hSpace(8),
+                  _ThemeSegment(
+                    label: 'Dark',
+                    selected: mode == ThemeMode.dark,
+                    onTap: () => controller.setMode(ThemeMode.dark),
+                  ),
+                ],
               ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+class _ThemeSegment extends StatelessWidget {
+  const _ThemeSegment({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10.r),
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 10.h),
+          decoration: BoxDecoration(
+            color: selected
+                ? theme.primaryColor
+                : theme.colorScheme.onSurface.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(10.r),
+            border: Border.all(
+              color: selected
+                  ? theme.primaryColor
+                  : theme.dividerColor,
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 15.sp,
+              fontWeight: FontWeight.w600,
+              color: selected
+                  ? Colors.white
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.8),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

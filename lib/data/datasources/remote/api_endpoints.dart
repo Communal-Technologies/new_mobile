@@ -42,6 +42,7 @@ class ApiEndpoints {
   static const String membersCommunitySettings = '/members/community-settings';
   static String membersCommunitySettingsForCooperative(String cooperativeId) =>
       '/members/community-settings/$cooperativeId';
+  static const String membersRedeemInviteCode = '/members/redeem-invite-code';
   static const String membersTransactionStatementExport =
       '/members/transaction-statement/export';
 

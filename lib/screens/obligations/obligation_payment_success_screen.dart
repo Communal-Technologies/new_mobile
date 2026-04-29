@@ -48,10 +48,10 @@ class ObligationPaymentSuccessScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F5F7),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).cardColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.black),
+          icon: const Icon(Icons.close),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         centerTitle: true,
@@ -60,7 +60,7 @@ class ObligationPaymentSuccessScreen extends StatelessWidget {
           style: TextStyle(
             fontSize: 19.sp,
             fontWeight: FontWeight.w700,
-            color: Colors.black,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ),
@@ -87,7 +87,7 @@ class ObligationPaymentSuccessScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 22.sp,
                 fontWeight: FontWeight.w700,
-                color: Colors.black,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             vSpace(6),
@@ -102,7 +102,7 @@ class ObligationPaymentSuccessScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 30.sp,
                 fontWeight: FontWeight.w800,
-                color: Colors.black,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             vSpace(4),
@@ -280,14 +280,14 @@ class _ActionButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.black87, size: 20.sp),
+            Icon(icon, color: Theme.of(context).colorScheme.onSurface, size: 20.sp),
             hSpace(8),
             Text(
               label,
               style: TextStyle(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
-                color: Colors.black,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ],
@@ -321,7 +321,7 @@ class _NextStepsCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black87,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 vSpace(6),
@@ -329,7 +329,7 @@ class _NextStepsCard extends StatelessWidget {
                   'Your payment will reflect in your obligation history within a few minutes. You can view all your payments in the obligation details.',
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: Colors.grey.shade700,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ],

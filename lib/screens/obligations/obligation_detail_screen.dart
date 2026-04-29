@@ -76,7 +76,7 @@ class _ObligationDetailScreenState extends State<ObligationDetailScreen> {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, auth) {
         return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _DetailAppBar(
         title: _obligation.title,
         subtitle: _cooperativeSubtitle(auth),
@@ -136,7 +136,7 @@ class _DetailAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return AppBar(
       elevation: 0,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       centerTitle: true,
       title: Column(
         children: [
@@ -145,25 +145,25 @@ class _DetailAppBar extends StatelessWidget implements PreferredSizeWidget {
             style: TextStyle(
               fontSize: 19.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           vSpace(4),
           Text(
             subtitle,
-            style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
           ),
         ],
       ),
       leading: IconButton(
         onPressed: () => Navigator.of(context).maybePop(),
-        icon: const Icon(Icons.arrow_back, color: Colors.black),
+        icon: const Icon(Icons.arrow_back),
       ),
       actions: [
         IconButton(
           onPressed: () {},
           icon: const Icon(Icons.help_outline),
-          color: Colors.grey.shade700,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
         ),
         hSpace(8),
       ],
@@ -308,7 +308,7 @@ class _Badge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(color: Colors.white, fontSize: 13.sp),
+        style: TextStyle(color: Colors.white, fontSize: 14.sp),
       ),
     );
   }
@@ -356,7 +356,7 @@ class _AboutSection extends StatelessWidget {
             obligation.description,
             style: TextStyle(
               fontSize: 17.sp,
-              color: Colors.grey.shade700,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               height: 1.4,
             ),
           ),
@@ -438,7 +438,7 @@ class _InfoCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 17.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           vSpace(12),
@@ -470,7 +470,7 @@ class _InfoTile extends StatelessWidget {
           style: TextStyle(
             fontSize: 17.sp,
             fontWeight: FontWeight.w600,
-            color: Colors.black,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],
@@ -608,7 +608,7 @@ class _PaymentTile extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 17.sp,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 vSpace(4),
@@ -616,7 +616,7 @@ class _PaymentTile extends StatelessWidget {
                   '${record.dateLabel}  •  ${record.method}',
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
                 Text(
@@ -676,7 +676,7 @@ class _LoanPromoCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 17.sp,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF0F1D40),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
@@ -740,7 +740,7 @@ class _BottomActions extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 17.sp,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 style: OutlinedButton.styleFrom(

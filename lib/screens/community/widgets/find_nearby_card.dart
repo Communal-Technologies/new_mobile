@@ -10,13 +10,20 @@ class FindNearbyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12.r),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
         decoration: BoxDecoration(
-          color: const Color(0xFFEDE5FF),
+          // Lavender CTA — keep the brand tint visible on dark mode
+          // by mixing with the primary colour instead of the fixed
+          // light pastel that washes out on a near-black scaffold.
+          color: isDark
+              ? theme.primaryColor.withValues(alpha: 0.16)
+              : const Color(0xFFEDE5FF),
           borderRadius: BorderRadius.circular(12.r),
         ),
         child: Row(
@@ -24,7 +31,7 @@ class FindNearbyCard extends StatelessWidget {
           children: [
             Icon(
               Icons.location_on_outlined,
-              color: const Color(0xFF7434FF),
+              color: theme.primaryColor,
               size: 22.sp,
             ),
             hSpace(8),
@@ -33,7 +40,9 @@ class FindNearbyCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 17.sp,
                 fontWeight: FontWeight.w700,
-                color: const Color(0xFF4B3D8F),
+                color: isDark
+                    ? theme.colorScheme.onSurface
+                    : const Color(0xFF4B3D8F),
               ),
             ),
           ],

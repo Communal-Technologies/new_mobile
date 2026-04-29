@@ -91,13 +91,15 @@ class _ManageAccountItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12.r),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(color: theme.dividerColor),
           borderRadius: BorderRadius.circular(12.r),
         ),
         child: Row(
@@ -120,7 +122,7 @@ class _ManageAccountItem extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 17.sp,
                           fontWeight: FontWeight.w700,
-                          color: Theme.of(context).colorScheme.onSurface,
+                          color: onSurface,
                         ),
                       ),
                       hSpace(8),
@@ -146,7 +148,7 @@ class _ManageAccountItem extends StatelessWidget {
                     description,
                     style: TextStyle(
                       fontSize: 13.sp,
-                      color: Colors.grey.shade600,
+                      color: onSurface.withValues(alpha: 0.6),
                       height: 1.4,
                     ),
                   ),
@@ -156,7 +158,7 @@ class _ManageAccountItem extends StatelessWidget {
             hSpace(8),
             Icon(
               Icons.chevron_right,
-              color: Colors.grey.shade400,
+              color: onSurface.withValues(alpha: 0.5),
               size: 20.sp,
             ),
           ],

@@ -1,77 +1,82 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/models/member_profile_details.dart';
 
 class ProfileHeader extends StatelessWidget {
-  const ProfileHeader({super.key});
+  const ProfileHeader({super.key, required this.profile});
+
+  final MemberProfileDetails profile;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Stack(
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, authState) {
+        final user = authState is AuthAuthenticated ? authState.user : null;
+
+        // Tier label off auth state — KYC tier comes from /me, not the
+        // profile row, so we read it here rather than putting it in the
+        // profile model. Falls through to "Not verified" when missing.
+        final tierLabel = _tierLabel(user?.communalTier);
+        final accountNumber =
+            user?.walletAccountNumber?.trim().isNotEmpty == true
+                ? user!.walletAccountNumber!
+                : null;
+
+        return Column(
           children: [
             Container(
               width: 120.w,
               height: 120.w,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [Color(0xFF7434FF), Color(0xFF1976D2)],
                 ),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.person,
-                color: Colors.white,
-                size: 60.sp,
-              ),
-            ),
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: Container(
-                width: 36.w,
-                height: 36.w,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.grey.shade300, width: 2),
-                ),
-                child: Icon(
-                  Icons.camera_alt,
-                  color: const Color(0xFF7434FF),
-                  size: 18.sp,
+              child: Center(
+                child: Text(
+                  _initialsFor(profile.displayName),
+                  style: TextStyle(
+                    fontSize: 36.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
+            vSpace(16),
+            Text(
+              profile.displayName,
+              style: TextStyle(
+                fontSize: 24.sp,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF0F1D40),
+              ),
+            ),
+            vSpace(12),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8.w,
+              runSpacing: 8.h,
+              children: [
+                _buildBadge(tierLabel, const Color(0xFF7434FF)),
+                if (user?.kycStep1Submitted == true)
+                  _buildBadge('KYC submitted', const Color(0xFF4CAF50)),
+              ],
+            ),
+            vSpace(20),
+            if (accountNumber != null) _AccountNumberCard(number: accountNumber),
           ],
-        ),
-        vSpace(16),
-        Text(
-          'Pado Lebari',
-          style: TextStyle(
-            fontSize: 24.sp,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF0F1D40),
-          ),
-        ),
-        vSpace(12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildBadge('BVN Verified', const Color(0xFF4CAF50)),
-            hSpace(8),
-            _buildBadge('Premium Account', const Color(0xFF7434FF)),
-            hSpace(8),
-            _buildBadge('Tier 3', Colors.grey.shade400),
-          ],
-        ),
-        vSpace(20),
-        _AccountNumberCard(),
-      ],
+        );
+      },
     );
   }
 
@@ -79,7 +84,7 @@ class ProfileHeader extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Text(
@@ -92,9 +97,30 @@ class ProfileHeader extends StatelessWidget {
       ),
     );
   }
+
+  String _tierLabel(String? tier) {
+    final t = tier?.trim().toLowerCase();
+    if (t == 'tier_1') return 'Tier 1';
+    if (t == 'tier_2') return 'Tier 2';
+    if (t == 'tier_3') return 'Tier 3';
+    return 'Not verified';
+  }
+
+  String _initialsFor(String name) {
+    final parts = name.split(RegExp(r'\s+')).where((s) => s.isNotEmpty).toList();
+    if (parts.isEmpty) return 'M';
+    if (parts.length == 1) {
+      return parts.first.substring(0, 1).toUpperCase();
+    }
+    return (parts.first[0] + parts.last[0]).toUpperCase();
+  }
 }
 
 class _AccountNumberCard extends StatelessWidget {
+  const _AccountNumberCard({required this.number});
+
+  final String number;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -108,10 +134,10 @@ class _AccountNumberCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Bullion Crib Account Number',
+            'Account Number',
             style: TextStyle(
               fontSize: 15.sp,
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
           vSpace(12),
@@ -119,7 +145,7 @@ class _AccountNumberCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '7037334888',
+                  number,
                   style: TextStyle(
                     fontSize: 28.sp,
                     fontWeight: FontWeight.w700,
@@ -131,11 +157,11 @@ class _AccountNumberCard extends StatelessWidget {
               Builder(
                 builder: (context) => GestureDetector(
                   onTap: () {
-                    Clipboard.setData(const ClipboardData(text: '7037334888'));
+                    Clipboard.setData(ClipboardData(text: number));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Account number copied to clipboard'),
-                        duration: const Duration(seconds: 2),
+                      const SnackBar(
+                        content: Text('Account number copied to clipboard'),
+                        duration: Duration(seconds: 2),
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
@@ -143,7 +169,7 @@ class _AccountNumberCard extends StatelessWidget {
                   child: Container(
                     padding: EdgeInsets.all(8.w),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(8.r),
                     ),
                     child: Icon(
@@ -161,4 +187,3 @@ class _AccountNumberCard extends StatelessWidget {
     );
   }
 }
-

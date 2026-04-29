@@ -43,6 +43,13 @@ class ApiEndpoints {
   static String membersCommunitySettingsForCooperative(String cooperativeId) =>
       '/members/community-settings/$cooperativeId';
   static const String membersRedeemInviteCode = '/members/redeem-invite-code';
+  static const String fetchCooperatives = '/fetch-cooperatives';
+  static String fetchCooperativeProfile(String id) =>
+      '/fetch-cooperative-profile/$id';
+  static const String membersJoinRequests = '/members/join-requests';
+  static const String membersJoinRequestsMine = '/members/join-requests/mine';
+  static String membersJoinRequestCancel(String id) =>
+      '/members/join-requests/$id/cancel';
   static const String membersTransactionStatementExport =
       '/members/transaction-statement/export';
 

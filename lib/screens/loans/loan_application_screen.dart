@@ -328,14 +328,17 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       return Container(
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: Colors.grey.shade50,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(color: Theme.of(context).dividerColor),
         ),
         child: Column(
           children: [
-            Icon(Icons.info_outline,
-                size: 24.sp, color: Colors.grey.shade500),
+            Icon(
+              Icons.info_outline,
+              size: 24.sp,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
             vSpace(8),
             Text(
               'No loan products available right now',
@@ -372,9 +375,9 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         Container(
           padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
           decoration: BoxDecoration(
-            color: Colors.grey.shade50,
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: Colors.grey.shade300),
+            border: Border.all(color: Theme.of(context).dividerColor),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<LoanScheme>(
@@ -402,10 +405,20 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   }
 
   Widget _buildSchemeSummary(LoanScheme scheme) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const accent = Color(0xFFE67E22);
     return Container(
+      width: double.infinity,
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF4E9),
+        // Make the loan-summary tile readable on dark mode by mixing
+        // the orange accent with the surface (the previous fixed
+        // 0xFFFFF4E9 cream washed out everywhere on dark, so the body
+        // text inside became unreadable). Stretch full width so it
+        // doesn't shrink to its content on the application step.
+        color: isDark
+            ? accent.withValues(alpha: 0.16)
+            : const Color(0xFFFFF4E9),
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Column(
@@ -471,9 +484,9 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           Container(
             padding: EdgeInsets.all(12.w),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(10.r),
-              border: Border.all(color: Colors.grey.shade200),
+              border: Border.all(color: Theme.of(context).dividerColor),
             ),
             child: Text(
               _loading
@@ -728,8 +741,39 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     );
   }
 
+  /// Friendly member-facing labels for the interest-treatment value
+  /// codes the cooperative dashboard stores. These were the original
+  /// mobile copy ("Deduct now" / "Add to balance") that got
+  /// accidentally replaced with the dashboard's raw `title`/`note`
+  /// jargon. Member-facing UI should not surface accountant terms.
+  static const Map<String, ({String title, String note})>
+      _interestTreatmentLabels = {
+    '1': (
+      title: 'Deduct now',
+      note: 'Receive principal − interest at disbursement.',
+    ),
+    '2': (
+      title: 'Add to balance',
+      note: 'Repay principal + interest over the loan duration.',
+    ),
+  };
+
   Widget _buildInterestTypeReadOnly() {
     final defaultType = _eligibility?.defaultInterestType;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final friendly = defaultType == null
+        ? null
+        : _interestTreatmentLabels[defaultType.value];
+    final title = friendly?.title ??
+        (defaultType?.title.isNotEmpty == true
+            ? defaultType!.title
+            : (_loading ? 'Loading…' : 'Not configured'));
+    final note = friendly?.note ??
+        (defaultType?.note.isNotEmpty == true
+            ? defaultType!.note
+            : 'Set by your cooperative — not member-selectable.');
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -738,46 +782,42 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           style: TextStyle(
             fontSize: 15.sp,
             fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onSurface,
+            color: theme.colorScheme.onSurface,
           ),
         ),
         vSpace(8),
         Container(
+          width: double.infinity,
           padding: EdgeInsets.all(14.w),
           decoration: BoxDecoration(
-            color: const Color(0xFFEEE5FF),
+            color: isDark
+                ? theme.primaryColor.withValues(alpha: 0.16)
+                : const Color(0xFFEEE5FF),
             borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: const Color(0xFF7434FF), width: 1.5),
+            border: Border.all(color: theme.primaryColor, width: 1.5),
           ),
           child: Row(
             children: [
-              Icon(Icons.lock_outline,
-                  size: 18.sp, color: const Color(0xFF7434FF)),
+              Icon(Icons.lock_outline, size: 18.sp, color: theme.primaryColor),
               hSpace(10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      defaultType?.title.isNotEmpty == true
-                          ? defaultType!.title
-                          : (_loading
-                              ? 'Loading…'
-                              : 'Not configured'),
+                      title,
                       style: TextStyle(
                         fontSize: 15.sp,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF7434FF),
+                        color: theme.primaryColor,
                       ),
                     ),
                     vSpace(4),
                     Text(
-                      defaultType?.note.isNotEmpty == true
-                          ? defaultType!.note
-                          : 'Set by your cooperative — not member-selectable.',
+                      note,
                       style: TextStyle(
                         fontSize: 14.sp,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
                       ),
                     ),
                   ],

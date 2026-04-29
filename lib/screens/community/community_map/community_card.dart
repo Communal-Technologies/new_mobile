@@ -16,6 +16,7 @@ class CommunityCard extends StatelessWidget {
     required this.accentColor,
     required this.onTap,
     required this.onJoinPressed,
+    this.isMember = false,
   });
 
   final CommunityLocation community;
@@ -23,6 +24,11 @@ class CommunityCard extends StatelessWidget {
   final Color accentColor;
   final VoidCallback onTap;
   final VoidCallback onJoinPressed;
+
+  /// When true, suppress the Join CTA in the footer — the user is
+  /// already a member, so showing it would just produce a 409 from
+  /// the backend on tap.
+  final bool isMember;
 
   bool get _isVerified {
     try {
@@ -67,6 +73,7 @@ class CommunityCard extends StatelessWidget {
             _CommunityCardFooter(
               community: community,
               onJoinPressed: onJoinPressed,
+              isMember: isMember,
             ),
           ],
         ),
@@ -198,10 +205,12 @@ class _CommunityCardFooter extends StatelessWidget {
   const _CommunityCardFooter({
     required this.community,
     required this.onJoinPressed,
+    this.isMember = false,
   });
 
   final CommunityLocation community;
   final VoidCallback onJoinPressed;
+  final bool isMember;
 
   @override
   Widget build(BuildContext context) {
@@ -225,7 +234,7 @@ class _CommunityCardFooter extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 19.sp,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF0F1D40),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
@@ -233,32 +242,50 @@ class _CommunityCardFooter extends StatelessWidget {
         ),
         SizedBox(
           width: 140.w,
-          child: ElevatedButton(
-            onPressed: onJoinPressed,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF7434FF),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              minimumSize: Size(double.infinity, 38.h),
-              padding: EdgeInsets.symmetric(
-                horizontal: 6.w,
-                vertical: 8.h,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.r),
-              ),
-            ),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                'Join Community',
-                style: TextStyle(
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w700,
+          child: isMember
+              ? Container(
+                  height: 38.h,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE7F7EE),
+                    borderRadius: BorderRadius.circular(10.r),
+                    border: Border.all(color: const Color(0xFFB6E2C7)),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'Member',
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1F8B4C),
+                    ),
+                  ),
+                )
+              : ElevatedButton(
+                  onPressed: onJoinPressed,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF7434FF),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    minimumSize: Size(double.infinity, 38.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 6.w,
+                      vertical: 8.h,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
+                  ),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'Join Community',
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ),
         ),
       ],
     );

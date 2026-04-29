@@ -45,12 +45,6 @@ class MemberProfileDetails {
   final String? ledgerNumber;
   final String? cooperativeId;
 
-  String? _nullIfEmpty(dynamic v) {
-    if (v == null) return null;
-    final s = v.toString().trim();
-    return s.isEmpty ? null : s;
-  }
-
   String get displayName {
     final parts = [firstName, middleName, lastName]
         .map((s) => (s ?? '').trim())

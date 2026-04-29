@@ -227,7 +227,7 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
         backgroundColor: Theme.of(context).cardColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
         centerTitle: true,
@@ -267,7 +267,7 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 15.sp,
-              color: Colors.black54,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               height: 1.4,
             ),
           ),
@@ -299,7 +299,7 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15.sp,
-                color: Colors.black54,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 height: 1.4,
               ),
             ),
@@ -534,7 +534,7 @@ class _MasterEnableCard extends StatelessWidget {
                   'Use your $method for secure access',
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: Colors.black54,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -745,7 +745,7 @@ class _RegisteredBiometricRow extends StatelessWidget {
                   subtitle,
                   style: TextStyle(
                     fontSize: 14.sp,
-                    color: Colors.black54,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
                 vSpace(6),
@@ -874,7 +874,7 @@ class _BiometricConfirmModal extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15.sp,
-                color: Colors.black54,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 height: 1.4,
               ),
             ),

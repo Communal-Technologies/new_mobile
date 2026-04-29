@@ -3,15 +3,14 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:communal_mobile/core/widgets/bottomsheet_handlebar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/repositories/community_repository.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_locations.dart';
 
-/// Audit M39: extracted from `community_map_screen.dart` (was nested as
-/// the file's second class). Self-contained — owns its own controller,
-/// submitting flag, and pop-with-result behaviour.
-///
-/// Push via `showModalBottomSheet<Map>(...)`. The bottom sheet returns
-/// `{status: 'pending', community: <CommunityLocation>}` on submit, or
-/// `null` on cancel/dismiss.
+/// Bottom sheet for the request-to-join flow (no invite code). Submits
+/// to /members/join-requests and pops the resulting [CommunityJoinRequest]
+/// so callers can route to the application-status screen. Pops `null` on
+/// cancel/dismiss.
 class JoinCommunityBottomSheet extends StatefulWidget {
   const JoinCommunityBottomSheet({super.key, required this.community});
 
@@ -25,6 +24,7 @@ class JoinCommunityBottomSheet extends StatefulWidget {
 class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
   late final TextEditingController _messageController;
   bool _isSubmitting = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -39,12 +39,24 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
   }
 
   Future<void> _submit() async {
-    setState(() => _isSubmitting = true);
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
-    Navigator.of(
-      context,
-    ).pop({'status': 'pending', 'community': widget.community});
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
+    try {
+      final result = await getIt<CommunityRepository>().requestToJoin(
+        cooperativeId: widget.community.id,
+        message: _messageController.text,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(result);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSubmitting = false;
+        _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
   }
 
   @override
@@ -81,6 +93,19 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
                     _Header(communityName: widget.community.name),
                     vSpace(16),
                     _MessageField(controller: _messageController),
+                    if (_errorMessage != null) ...[
+                      vSpace(8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          _errorMessage!,
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            color: const Color(0xFFE74C3C),
+                          ),
+                        ),
+                      ),
+                    ],
                     vSpace(16),
                     const _AlertCard(),
                     vSpace(16),

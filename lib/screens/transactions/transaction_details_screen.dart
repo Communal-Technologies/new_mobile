@@ -36,7 +36,7 @@ class TransactionDetailsScreen extends StatelessWidget {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
-        backgroundColor: const Color(0xFFF4F2FA),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           backgroundColor: Theme.of(context).cardColor,
           elevation: 0,
@@ -121,17 +121,18 @@ class TransactionDetailsScreen extends StatelessWidget {
     );
   }
 
-  Color _amountDisplayColor() {
+  Color _amountDisplayColor(BuildContext context) {
+    final theme = Theme.of(context);
     if (details.status == TransactionStatus.failed) {
-      return Colors.grey.shade800;
+      return theme.colorScheme.onSurface.withValues(alpha: 0.7);
     }
     if (details.isIncoming) return const Color(0xFF1AAE70);
-    return const Color(0xFF0F1D40);
+    return theme.colorScheme.onSurface;
   }
 
   Widget _buildSummaryCard(BuildContext context, ThemeData theme) {
     final statusColor = _statusColor(details.status, theme);
-    final statusBackground = _statusBackgroundColor(details.status);
+    final statusBackground = _statusBackgroundColor(details.status, theme);
     final initials = _counterpartyInitials(
       details.counterpartyName,
       details.counterpartyBank,
@@ -144,7 +145,7 @@ class TransactionDetailsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Theme.of(context).dividerColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
@@ -197,7 +198,7 @@ class TransactionDetailsScreen extends StatelessWidget {
             style: TextStyle(
               fontSize: 36.sp,
               fontWeight: FontWeight.w800,
-              color: _amountDisplayColor(),
+              color: _amountDisplayColor(context),
               letterSpacing: -0.8,
             ),
           ),
@@ -236,9 +237,15 @@ class TransactionDetailsScreen extends StatelessWidget {
               width: double.infinity,
               padding: EdgeInsets.all(14.w),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF1F2),
+                color: theme.brightness == Brightness.dark
+                    ? const Color(0xFFD7263D).withValues(alpha: 0.16)
+                    : const Color(0xFFFFF1F2),
                 borderRadius: BorderRadius.circular(14.r),
-                border: Border.all(color: const Color(0xFFFFD4DB)),
+                border: Border.all(
+                  color: theme.brightness == Brightness.dark
+                      ? const Color(0xFFD7263D).withValues(alpha: 0.45)
+                      : const Color(0xFFFFD4DB),
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -251,7 +258,7 @@ class TransactionDetailsScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 15.sp,
                         height: 1.35,
-                        color: Colors.grey.shade900,
+                        color: theme.colorScheme.onSurface,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -287,7 +294,7 @@ class TransactionDetailsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Theme.of(context).dividerColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -301,7 +308,7 @@ class TransactionDetailsScreen extends StatelessWidget {
           for (int i = 0; i < infoRows.length; i++) ...[
             _TransactionInfoRow(data: infoRows[i]),
             if (i != infoRows.length - 1)
-              Divider(height: 1, thickness: 1, color: Colors.grey.shade100),
+              Divider(height: 1, thickness: 1, color: Theme.of(context).dividerColor),
           ],
         ],
       ),
@@ -309,13 +316,21 @@ class TransactionDetailsScreen extends StatelessWidget {
   }
 
   Widget _buildNoteCard(BuildContext context, ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
+    const accent = Color(0xFF1AAE70);
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(18.w),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFFBF5),
+        color: isDark
+            ? accent.withValues(alpha: 0.16)
+            : const Color(0xFFEFFBF5),
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: const Color(0xFFC8E6D4)),
+        border: Border.all(
+          color: isDark
+              ? accent.withValues(alpha: 0.4)
+              : const Color(0xFFC8E6D4),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -338,13 +353,19 @@ class TransactionDetailsScreen extends StatelessWidget {
   }
 
   Widget _buildActionsSection(BuildContext context, ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
+    Color tileTint(Color accent, Color lightFallback) {
+      return isDark ? accent.withValues(alpha: 0.16) : lightFallback;
+    }
+
     final actions = [
       _ActionTileData(
         label: 'Report issue',
         subtitle: 'Get help with this transaction',
         icon: Iconsax.warning_2,
         iconColor: const Color(0xFFD7263D),
-        tileColor: const Color(0xFFFFF5F6),
+        tileColor:
+            tileTint(const Color(0xFFD7263D), const Color(0xFFFFF5F6)),
         onTap: () => context.pushNamed('help-support'),
       ),
       _ActionTileData(
@@ -352,15 +373,15 @@ class TransactionDetailsScreen extends StatelessWidget {
         subtitle: 'Open full transaction list',
         icon: Iconsax.document_text5,
         iconColor: theme.primaryColor,
-        tileColor: const Color(0xFFF6F2FF),
+        tileColor: tileTint(theme.primaryColor, const Color(0xFFF6F2FF)),
         onTap: () => context.goNamed('transactions'),
       ),
       _ActionTileData(
         label: 'Transfer again',
         subtitle: 'Send money from your wallet',
         icon: Iconsax.send_1,
-        iconColor: Theme.of(context).colorScheme.onSurface,
-        tileColor: Colors.white,
+        iconColor: theme.colorScheme.onSurface,
+        tileColor: theme.cardColor,
         onTap: () {
           context.pop();
           context.pushNamed('transfer');
@@ -434,7 +455,18 @@ class TransactionDetailsScreen extends StatelessWidget {
     }
   }
 
-  Color _statusBackgroundColor(TransactionStatus status) {
+  Color _statusBackgroundColor(
+    TransactionStatus status,
+    ThemeData theme,
+  ) {
+    final isDark = theme.brightness == Brightness.dark;
+    final accent = _statusColor(status, theme);
+    if (isDark) {
+      // On dark mode the pastel pills washed out into bright blocks.
+      // Mix the status accent with the surface so the pill stays
+      // perceptible without competing with the amount + label.
+      return accent.withValues(alpha: 0.16);
+    }
     switch (status) {
       case TransactionStatus.pending:
         return const Color(0xFFFFF6E6);
@@ -534,7 +566,7 @@ class _ActionTile extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16.r),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: Theme.of(context).dividerColor),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -664,9 +696,11 @@ class _BankAvatar extends StatelessWidget {
     return Container(
       width: 52.w,
       height: 52.w,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Color(0xFFFCE7EC),
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFFD7263D).withValues(alpha: 0.18)
+            : const Color(0xFFFCE7EC),
       ),
       alignment: Alignment.center,
       child: Text(

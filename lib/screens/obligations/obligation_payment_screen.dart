@@ -322,7 +322,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 12.w),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(14.r),
                       border: Border.all(color: Colors.grey.shade300),
                     ),
@@ -414,7 +414,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
       width: double.infinity,
       padding: EdgeInsets.all(18.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24.r),
         boxShadow: [
           BoxShadow(
@@ -504,7 +504,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
             fillColor: Colors.white,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16.r),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16.r),
@@ -583,7 +583,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: const Color(0xFF7434FF), width: 2),
       ),
@@ -611,7 +611,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: Colors.grey.shade300),
       ),
@@ -769,7 +769,7 @@ class _MethodChip extends StatelessWidget {
         duration: const Duration(milliseconds: 120),
         padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16.r),
           border: Border.all(
             color: selected ? const Color(0xFF7434FF) : Colors.grey.shade300,
@@ -921,7 +921,7 @@ class _PickerCard extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: Colors.grey.shade300),
       ),

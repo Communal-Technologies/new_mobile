@@ -75,6 +75,28 @@ class _CommunityScreenState extends State<CommunityScreen> {
     ]);
   }
 
+  /// Resolve a real CommunityLocation for [cooperativeId] (the user's
+  /// "Your Communities" tiles store membership-side data, not a full
+  /// PublicCooperative — the detail screen needs the latter), then
+  /// push the detail screen.
+  Future<void> _openCooperativeDetails(String cooperativeId) async {
+    try {
+      final coop = await getIt<CommunityRepository>()
+          .fetchCooperativeProfile(cooperativeId);
+      if (!mounted) return;
+      final location = CommunityLocation.fromPublicCooperative(coop);
+      // ignore: unawaited_futures
+      context.pushNamed('community-detail', extra: location);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+        ),
+      );
+    }
+  }
+
   Future<void> _openPendingStatus(CommunityJoinRequest req) async {
     try {
       final coop = await getIt<CommunityRepository>()
@@ -243,8 +265,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
     return [
       FeaturedCommunityCard(
         community: featured,
+        // Open Chat is hidden inside FeaturedCommunityCard with a TODO
+        // until in-app chat ships. Callback is left wired so we don't
+        // have to thread state through if/when it returns.
         onOpenChat: () => _showComingSoon('Open chat'),
-        onViewCommunity: () => _showComingSoon('View cooperative'),
+        onViewCommunity: () => _openCooperativeDetails(featured.id),
       ),
       vSpace(24),
       Text(
@@ -396,10 +421,15 @@ class _CommunityScreenState extends State<CommunityScreen> {
             ),
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.location_on_outlined, color: Colors.black),
-          onPressed: () {},
-        ),
+        // TODO(communal-mobile): re-enable the top-right location
+        // icon once it has a real action wired (likely "open
+        // community map at your current location"). Hidden until
+        // then so it doesn't read as a no-op tap target.
+        // IconButton(
+        //   icon: const Icon(Icons.location_on_outlined, color: Colors.black),
+        //   onPressed: () {},
+        // ),
+        SizedBox(width: 48.w),
       ],
     );
   }

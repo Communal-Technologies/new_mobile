@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -81,11 +82,7 @@ class _FinancialObligationsScreenState
     final theme = Theme.of(context);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-      ),
+      value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
         key: _scaffoldKey,
         backgroundColor: theme.scaffoldBackgroundColor,

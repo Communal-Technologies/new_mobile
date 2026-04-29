@@ -131,9 +131,9 @@ class _ObligationConfirmPaymentScreenState
       backgroundColor: const Color(0xFFF6F6F9),
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).cardColor,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         title: Text(
@@ -141,7 +141,7 @@ class _ObligationConfirmPaymentScreenState
           style: TextStyle(
             fontSize: 19.sp,
             fontWeight: FontWeight.w700,
-            color: Colors.black,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         centerTitle: true,
@@ -164,7 +164,7 @@ class _ObligationConfirmPaymentScreenState
               style: TextStyle(
                 fontSize: 22.sp,
                 fontWeight: FontWeight.w700,
-                color: Colors.black,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               textAlign: TextAlign.center,
             ),
@@ -299,7 +299,7 @@ class _ObligationConfirmPaymentScreenState
             style: TextStyle(
               fontSize: 15.sp,
               fontWeight: FontWeight.w600,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ],
@@ -329,7 +329,7 @@ class _ObligationConfirmPaymentScreenState
                   style: TextStyle(
                     fontSize: 15.sp,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F1D40),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 vSpace(4),
@@ -337,7 +337,7 @@ class _ObligationConfirmPaymentScreenState
                   'Your transaction is encrypted and secure. Never share your PIN with anyone.',
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: Colors.grey.shade700,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ],

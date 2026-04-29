@@ -102,7 +102,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                   style: TextStyle(
                     fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 vSpace(4),
@@ -112,7 +112,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                       : 'Your cooperative has not published an active bank account to receive this payment yet.',
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
                 vSpace(6),
@@ -121,7 +121,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                   style: TextStyle(
                     fontSize: 15.sp,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF0F1D40),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -259,9 +259,9 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
         backgroundColor: const Color(0xFFF4F4F6),
         appBar: AppBar(
           elevation: 0,
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).cardColor,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            icon: const Icon(Icons.arrow_back),
             onPressed: () => Navigator.of(context).maybePop(),
           ),
           title: Text(
@@ -269,7 +269,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
             style: TextStyle(
               fontSize: 19.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           centerTitle: true,
@@ -293,14 +293,14 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                 style: TextStyle(
                   fontSize: 17.sp,
                   fontWeight: FontWeight.w700,
-                  color: Colors.black,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               if (bankSubtitleExtra.isNotEmpty) ...[
                 vSpace(6),
                 Text(
                   bankSubtitleExtra,
-                  style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
+                  style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
                 ),
               ],
               vSpace(12),
@@ -315,7 +315,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                     style: TextStyle(
                       fontSize: 15.sp,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   vSpace(8),
@@ -362,7 +362,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                 style: TextStyle(
                   fontSize: 17.sp,
                   fontWeight: FontWeight.w700,
-                  color: Colors.black,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               vSpace(10),
@@ -437,7 +437,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
             style: TextStyle(
               fontSize: 19.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           Text(
@@ -482,7 +482,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
           style: TextStyle(
             fontSize: 17.sp,
             fontWeight: FontWeight.w700,
-            color: Colors.black,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         vSpace(10),
@@ -514,7 +514,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
           style: TextStyle(
             fontSize: 19.sp,
             fontWeight: FontWeight.w600,
-            color: Colors.black,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],
@@ -633,7 +633,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
             alignment: Alignment.centerRight,
             child: Text(
               '${_noteController.text.length}/$_noteLimit',
-              style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
             ),
           ),
         ],
@@ -797,14 +797,14 @@ class _MethodChip extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 15.sp,
                       fontWeight: FontWeight.w700,
-                      color: Colors.black,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   Text(
                     sublabel,
                     style: TextStyle(
-                      fontSize: 13.sp,
-                      color: Colors.grey.shade600,
+                      fontSize: 14.sp,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -872,15 +872,15 @@ class _SourceObligationTile extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 15.sp,
                       fontWeight: FontWeight.w700,
-                      color: Colors.black,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   vSpace(2),
                   Text(
                     '${obligation.category} • Available ${obligation.paidAmountLabel}',
                     style: TextStyle(
-                      fontSize: 13.sp,
-                      color: Colors.grey.shade700,
+                      fontSize: 14.sp,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -947,15 +947,15 @@ class _PickerCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 15.sp,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 vSpace(4),
                 Text(
                   body,
                   style: TextStyle(
-                    fontSize: 13.sp,
-                    color: Colors.grey.shade700,
+                    fontSize: 14.sp,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
                 if (action != null) ...[
@@ -1001,7 +1001,7 @@ class _MetricBlock extends StatelessWidget {
           style: TextStyle(
             fontSize: 17.sp,
             fontWeight: FontWeight.w700,
-            color: Colors.black,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],

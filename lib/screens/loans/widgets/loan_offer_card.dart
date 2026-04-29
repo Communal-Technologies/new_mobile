@@ -15,13 +15,22 @@ class LoanOfferCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const accent = Color(0xFFE67E22);
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF4E9),
+        // Loan offer cards rendered as bright cream blocks on dark
+        // mode. Mix the orange accent with the surface so the tint
+        // stays perceptible without being eye-strain bright.
+        color: isDark
+            ? accent.withValues(alpha: 0.16)
+            : const Color(0xFFFFF4E9),
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(
-          color: const Color(0xFFFFD2B0).withOpacity(0.5),
+          color: isDark
+              ? accent.withValues(alpha: 0.45)
+              : const Color(0xFFFFD2B0).withValues(alpha: 0.5),
           width: 1,
         ),
       ),

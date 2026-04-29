@@ -115,7 +115,7 @@ class _DeleteAccountConfirmationScreenState
         style: TextStyle(
           fontSize: 19.sp,
           fontWeight: FontWeight.w700,
-          color: const Color(0xFF0F1D40),
+          color: Theme.of(context).colorScheme.onSurface,
         ),
         textAlign: TextAlign.center,
       ),
@@ -133,7 +133,7 @@ class _DeleteAccountConfirmationScreenState
             style: TextStyle(
               fontSize: 17.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF0F1D40),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           vSpace(16),

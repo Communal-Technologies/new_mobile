@@ -22,10 +22,19 @@ class ReceiptStatusStyle {
   ReceiptStatusStyle({
     required this.status,
     String? failureReason,
+    this.brightness = Brightness.light,
   }) : _failureReason = failureReason?.trim();
 
   final TransactionStatus status;
   final String? _failureReason;
+
+  /// Active theme brightness — controls whether the hero / footer
+  /// tints render as the original light pastels or as a dark-mode-safe
+  /// mix of the status accent + surface. Defaults to light so the
+  /// pure-function getters stay drop-in for tests / receipt export.
+  final Brightness brightness;
+
+  bool get _isDark => brightness == Brightness.dark;
 
   /// Large hero amount duplicates the pill on failed/pending; keep pill only.
   bool get showHeroAmount => status == TransactionStatus.successful;
@@ -42,6 +51,12 @@ class ReceiptStatusStyle {
   }
 
   Color get heroBackground {
+    if (_isDark) {
+      // Mix the status accent with the dark surface so the hero
+      // halo stays perceptible without rendering as a bright pastel
+      // block on the dark card.
+      return statusColor.withValues(alpha: 0.16);
+    }
     switch (status) {
       case TransactionStatus.pending:
         return const Color(0xFFFFF4E6);
@@ -107,6 +122,9 @@ class ReceiptStatusStyle {
   }
 
   Color get footerInfoBackground {
+    if (_isDark) {
+      return footerInfoIconColor.withValues(alpha: 0.16);
+    }
     switch (status) {
       case TransactionStatus.successful:
         return const Color(0xFFE6FBFF);

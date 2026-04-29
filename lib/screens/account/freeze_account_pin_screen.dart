@@ -171,7 +171,7 @@ class _FreezeAccountPinScreenState extends State<FreezeAccountPinScreen> {
                   Container(
                     padding: EdgeInsets.all(16.w),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFEBEE),
+                      color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFD32F2F).withValues(alpha: 0.16) : const Color(0xFFFFEBEE),
                       borderRadius: BorderRadius.circular(12.r),
                     ),
                     child: Row(

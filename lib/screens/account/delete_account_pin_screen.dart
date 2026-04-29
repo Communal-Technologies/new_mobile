@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/account_actions_repository.dart';
 import 'package:communal_mobile/injection.dart';
@@ -56,11 +57,7 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.white,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-      ),
+      value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
         backgroundColor: Theme.of(context).cardColor,
         appBar: AppBar(
@@ -160,7 +157,7 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
                   Container(
                     padding: EdgeInsets.all(16.w),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFEBEE),
+                      color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFD32F2F).withValues(alpha: 0.16) : const Color(0xFFFFEBEE),
                       borderRadius: BorderRadius.circular(12.r),
                     ),
                     child: Row(

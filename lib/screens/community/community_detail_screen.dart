@@ -145,7 +145,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24.r),
         boxShadow: [
           BoxShadow(
@@ -326,7 +326,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24.r),
       ),
       child: GridView.builder(
@@ -665,7 +665,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       activity.daysAgo,
                       style: TextStyle(
                         fontSize: 11.5.sp,
-                        color: Colors.grey.shade500,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                     ),
                   ],
@@ -722,7 +722,7 @@ class _SectionCard extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24.r),
       ),
       child: Column(

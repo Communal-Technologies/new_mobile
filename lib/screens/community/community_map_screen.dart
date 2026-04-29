@@ -502,7 +502,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
       builder: (context, scrollController) {
         return Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
             boxShadow: [
               BoxShadow(
@@ -521,14 +521,28 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                   controller: _searchController,
                   onChanged: (value) =>
                       setState(() => _searchQuery = value.trim()),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'Search communities near you...',
-                    prefixIcon: const Icon(
+                    hintStyle: TextStyle(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.5),
+                    ),
+                    prefixIcon: Icon(
                       Icons.search,
-                      color: Color(0xFF6C6C80),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
                     ),
                     filled: true,
-                    fillColor: const Color(0xFFF5F4F9),
+                    fillColor: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest,
                     contentPadding: EdgeInsets.symmetric(
                       horizontal: 16.w,
                       vertical: 0,
@@ -560,7 +574,9 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                         vertical: 4.h,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEDE5FF),
+                        color: Theme.of(context)
+                            .primaryColor
+                            .withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8.r),
                       ),
                       child: Text(
@@ -568,7 +584,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                         style: TextStyle(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF5B4AC8),
+                          color: Theme.of(context).primaryColor,
                         ),
                       ),
                     ),
@@ -694,7 +710,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(10.r),
         boxShadow: [
           BoxShadow(

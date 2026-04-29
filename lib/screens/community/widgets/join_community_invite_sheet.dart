@@ -60,7 +60,7 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
         color: Colors.transparent,
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
           ),
           child: SafeArea(
@@ -173,9 +173,18 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                         vertical: 14.h,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF3E9FF),
+                        // Lavender info tile — keep the tint visible on
+                        // dark mode by mixing with the primary brand
+                        // colour rather than the fixed light asset.
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Theme.of(context).primaryColor.withValues(alpha: 0.12)
+                            : const Color(0xFFF3E9FF),
                         borderRadius: BorderRadius.circular(16.r),
-                        border: Border.all(color: const Color(0xFFE2D2FF)),
+                        border: Border.all(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Theme.of(context).primaryColor.withValues(alpha: 0.35)
+                              : const Color(0xFFE2D2FF),
+                        ),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -203,7 +212,7 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                                   style: TextStyle(
                                     fontSize: 15.sp,
                                     fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF3F2B8F),
+                                    color: Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                                 vSpace(4),
@@ -211,7 +220,10 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                                   'Contact your cooperative admin to get an invite code. Each code is unique and can only be used once.',
                                   style: TextStyle(
                                     fontSize: 14.sp,
-                                    color: const Color(0xFF4D3C8A),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.7),
                                   ),
                                 ),
                               ],
@@ -228,7 +240,9 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                             onPressed: () => Navigator.of(context).pop(),
                             style: OutlinedButton.styleFrom(
                               minimumSize: Size(double.infinity, 52.h),
-                              side: const BorderSide(color: Color(0xFFE0E0EC)),
+                              side: BorderSide(
+                                color: Theme.of(context).dividerColor,
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16.r),
                               ),

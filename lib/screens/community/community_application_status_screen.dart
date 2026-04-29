@@ -215,7 +215,7 @@ class _CommunityApplicationStatusScreenState
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24.r),
         boxShadow: [
           BoxShadow(
@@ -296,7 +296,7 @@ class _CommunityApplicationStatusScreenState
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24.r),
       ),
       child: GridView.builder(
@@ -369,7 +369,7 @@ class _CommunityApplicationStatusScreenState
       width: double.infinity,
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24.r),
       ),
       child: Column(

@@ -3,10 +3,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/navigation/root_navigator_key.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
+import 'package:communal_mobile/data/repositories/community_repository.dart';
 import 'package:communal_mobile/screens/community/widgets/join_community_invite_sheet.dart';
 
 class CooperativeSidebar extends StatefulWidget {
@@ -22,16 +24,23 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final navCtx = rootNavigatorKey.currentContext;
       if (navCtx == null || !navCtx.mounted) return;
-      showModalBottomSheet<String>(
+      showModalBottomSheet<CommunityJoinResult>(
         context: navCtx,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
         builder: (sheetContext) => const JoinCommunityInviteSheet(),
-      ).then((inviteCode) {
-        if (inviteCode == null || inviteCode.isEmpty) return;
+      ).then((result) {
+        if (result == null) return;
         if (!navCtx.mounted) return;
+        navCtx.read<AuthBloc>().add(AuthRefreshUserRequested());
         ScaffoldMessenger.of(navCtx).showSnackBar(
-          SnackBar(content: Text('Invite code submitted: $inviteCode')),
+          SnackBar(
+            content: Text(
+              result.cooperativeName.isEmpty
+                  ? 'You have joined the cooperative.'
+                  : 'Welcome to ${result.cooperativeName}.',
+            ),
+          ),
         );
       });
     });

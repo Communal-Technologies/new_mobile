@@ -22,10 +22,11 @@ import 'package:communal_mobile/screens/transactions/models/transaction_details_
 import 'package:communal_mobile/core/widgets/space.dart';
 
 /// Three states the confirm screen can be in. Backend M38 middleware
-/// requires a biometric signature on `pay-obligation`, so PIN-only
-/// confirmation is no longer a valid auth path — `_AuthMode.notReady`
-/// surfaces a "set this up first" page instead.
-enum _AuthMode { checking, biometric, notReady }
+/// gates `pay-obligation` on a biometric signature *or* a valid
+/// transaction PIN supplied via the `X-Security-Pin` header. So when
+/// the device hasn't enrolled biometric we fall through to a PIN
+/// prompt instead of forcing an enrollment detour.
+enum _AuthMode { checking, biometric, pin, notReady }
 
 class ObligationConfirmPaymentScreen extends StatefulWidget {
   const ObligationConfirmPaymentScreen({
@@ -78,6 +79,17 @@ class _ObligationConfirmPaymentScreenState
   _AuthMode _authMode = _AuthMode.checking;
   String? _notReadyReason;
 
+  /// Captures the PIN typed in the fallback prompt; the value is
+  /// forwarded to the backend via the `X-Security-Pin` header on the
+  /// pay-obligation request. Cleared on dispose.
+  final TextEditingController _pinController = TextEditingController();
+
+  @override
+  void dispose() {
+    _pinController.dispose();
+    super.dispose();
+  }
+
   /// Audit M23: minted once per screen mount; reused across user-initiated
   /// retries of the Confirm action so a transient failure + retry dedupes
   /// server-side instead of double-paying the obligation.
@@ -94,13 +106,11 @@ class _ObligationConfirmPaymentScreenState
       final shared = await shared_prefs.SharedPreferences.getInstance();
       final prefs = BiometricPrefs(shared);
       if (!prefs.transactionsEnabled) {
+        // User explicitly turned off biometric for transactions in
+        // Settings. Fall through to PIN — they still need to confirm
+        // the payment.
         if (!mounted) return;
-        setState(() {
-          _authMode = _AuthMode.notReady;
-          _notReadyReason =
-              'Biometric authorization for transactions is turned off. '
-              'Re-enable it in Settings → Biometric Authentication.';
-        });
+        setState(() => _authMode = _AuthMode.pin);
         return;
       }
       final enrolled = await _biometricSigner.isEnrolled();
@@ -108,19 +118,19 @@ class _ObligationConfirmPaymentScreenState
       if (enrolled) {
         setState(() => _authMode = _AuthMode.biometric);
       } else {
-        setState(() {
-          _authMode = _AuthMode.notReady;
-          _notReadyReason =
-              'Biometric authorization is required for payments on this account. '
-              'Set it up to continue.';
-        });
+        // No biometric enrolled on this device — drop to the PIN
+        // prompt instead of marching the user off to the enrollment
+        // screen for what is just a confirmation step.
+        setState(() => _authMode = _AuthMode.pin);
       }
     } catch (e) {
       if (!mounted) return;
+      // Last-resort PIN. Surface the reason in case the user wants
+      // to retry biometric, but keep the action available.
       setState(() {
-        _authMode = _AuthMode.notReady;
+        _authMode = _AuthMode.pin;
         _notReadyReason =
-            'Could not verify biometric setup: ${e.toString().replaceFirst('Exception: ', '')}';
+            'Could not verify biometric setup: ${e.toString().replaceFirst('Exception: ', '')}. Use your PIN instead.';
       });
     }
   }
@@ -128,7 +138,7 @@ class _ObligationConfirmPaymentScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F6F9),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Theme.of(context).cardColor,
@@ -189,11 +199,13 @@ class _ObligationConfirmPaymentScreenState
   String _headerForMode() {
     switch (_authMode) {
       case _AuthMode.checking:
-        return 'Preparing biometric…';
+        return 'Preparing payment…';
       case _AuthMode.biometric:
         return 'Authorize with Biometrics';
+      case _AuthMode.pin:
+        return 'Enter your transaction PIN';
       case _AuthMode.notReady:
-        return 'Biometric Required';
+        return 'Authorization Unavailable';
     }
   }
 
@@ -203,8 +215,12 @@ class _ObligationConfirmPaymentScreenState
         return 'One moment.';
       case _AuthMode.biometric:
         return 'Tap below and scan your fingerprint or face to confirm.';
+      case _AuthMode.pin:
+        return _notReadyReason ??
+            'Biometric isn\'t set up on this device. Enter your 4-digit PIN to confirm.';
       case _AuthMode.notReady:
-        return _notReadyReason ?? 'Biometric is not configured for this device.';
+        return _notReadyReason ??
+            'We could not verify your identity. Try again later.';
     }
   }
 
@@ -241,24 +257,107 @@ class _ObligationConfirmPaymentScreenState
             ),
           ),
         );
+      case _AuthMode.pin:
+        return Column(
+          children: [
+            SizedBox(
+              width: 220.w,
+              child: TextField(
+                controller: _pinController,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                maxLength: 6,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 24.sp,
+                  letterSpacing: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                decoration: InputDecoration(
+                  counterText: '',
+                  hintText: '••••',
+                  hintStyle: TextStyle(
+                    fontSize: 24.sp,
+                    letterSpacing: 12,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.4),
+                  ),
+                  filled: true,
+                  fillColor: Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerHighest,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14.r),
+                    borderSide: BorderSide(
+                      color: Theme.of(context).dividerColor,
+                    ),
+                  ),
+                  contentPadding: EdgeInsets.symmetric(vertical: 16.h),
+                ),
+              ),
+            ),
+            vSpace(16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _submitting
+                    ? null
+                    : () => _confirmDebouncer.run(_onConfirm),
+                icon: const Icon(Icons.lock_outline),
+                label: Text(
+                  _submitting ? 'Processing…' : 'Authorize Payment',
+                  style: TextStyle(
+                    fontSize: 17.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF7434FF),
+                  foregroundColor: Colors.white,
+                  minimumSize: Size(double.infinity, 52.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18.r),
+                  ),
+                ),
+              ),
+            ),
+            vSpace(8),
+            // Offer biometric setup as a secondary path; tapping it
+            // routes to the enrollment screen but doesn't gate the PIN
+            // flow.
+            TextButton(
+              onPressed: () => context.pushNamed('biometric-enrollment'),
+              child: Text(
+                'Set up biometric instead',
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
+            ),
+          ],
+        );
       case _AuthMode.notReady:
         return SizedBox(
           width: double.infinity,
-          child: ElevatedButton(
-            onPressed: () => context.pushNamed('biometric-enrollment'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF7434FF),
-              foregroundColor: Colors.white,
+          child: OutlinedButton(
+            onPressed: _checkAuthReadiness,
+            style: OutlinedButton.styleFrom(
               minimumSize: Size(double.infinity, 52.h),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(18.r),
               ),
+              side: BorderSide(color: Theme.of(context).primaryColor),
             ),
             child: Text(
-              'Set up Biometrics',
+              'Retry',
               style: TextStyle(
                 fontSize: 17.sp,
                 fontWeight: FontWeight.w600,
+                color: Theme.of(context).primaryColor,
               ),
             ),
           ),
@@ -267,18 +366,25 @@ class _ObligationConfirmPaymentScreenState
   }
 
   Widget _buildAmountBanner() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 18.h),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFE7FF),
+        color: isDark
+            ? theme.primaryColor.withValues(alpha: 0.16)
+            : const Color(0xFFEFE7FF),
         borderRadius: BorderRadius.circular(18.r),
       ),
       child: Column(
         children: [
           Text(
             "You're paying",
-            style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade700),
+            style: TextStyle(
+              fontSize: 15.sp,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
           ),
           vSpace(4),
           Text(
@@ -286,13 +392,16 @@ class _ObligationConfirmPaymentScreenState
             style: TextStyle(
               fontSize: 30.sp,
               fontWeight: FontWeight.w800,
-              color: const Color(0xFF7434FF),
+              color: theme.primaryColor,
             ),
           ),
           vSpace(4),
           Text(
             'to ${widget.obligation.category}',
-            style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
+            style: TextStyle(
+              fontSize: 15.sp,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
           ),
           Text(
             widget.obligation.title,
@@ -308,11 +417,15 @@ class _ObligationConfirmPaymentScreenState
   }
 
   Widget _buildSecureInfo() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const accent = Color(0xFF4A90E2);
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
-        color: const Color(0xFFE6F1FF),
+        color: isDark
+            ? accent.withValues(alpha: 0.16)
+            : const Color(0xFFE6F1FF),
         borderRadius: BorderRadius.circular(16.r),
       ),
       child: Row(
@@ -346,6 +459,36 @@ class _ObligationConfirmPaymentScreenState
         ],
       ),
     );
+  }
+
+  /// Resolves the headers we attach to the pay-obligation request.
+  /// In biometric mode we sign the intent with the device-bound key;
+  /// in PIN-fallback mode we forward the typed PIN as
+  /// `X-Security-Pin` and the backend middleware accepts that as the
+  /// alternative auth path. Throws if PIN mode is selected but the
+  /// field isn't a 4-digit number, so we surface a friendly error
+  /// before the round-trip.
+  Future<Map<String, String>> _resolveAuthHeaders({
+    required bool transfer,
+    required String promptSubtitle,
+  }) async {
+    if (_authMode == _AuthMode.pin) {
+      final pin = _pinController.text.trim();
+      if (pin.length < 4 || int.tryParse(pin) == null) {
+        throw Exception('Enter your 4-digit transaction PIN to continue.');
+      }
+      return {'X-Security-Pin': pin};
+    }
+    final result = transfer
+        ? await _biometricSigner.signTransferIntent(
+            promptTitle: 'Authorize payment',
+            promptSubtitle: promptSubtitle,
+          )
+        : await _biometricSigner.signObligationIntent(
+            promptTitle: 'Authorize payment',
+            promptSubtitle: promptSubtitle,
+          );
+    return result.toHeaders();
   }
 
   Future<void> _onConfirm() async {
@@ -442,11 +585,14 @@ class _ObligationConfirmPaymentScreenState
     final narration = 'Obligation: ${widget.obligation.title}';
 
     // Audit M38: biometric proof for the transfer that backs this
-    // obligation payment. Same shape as the user-driven transfer flow.
-    final biometricHeaders = (await _biometricSigner.signTransferIntent(
-      promptTitle: 'Authorize payment',
+    // obligation payment. When biometric isn't enrolled the user
+    // typed a PIN in the fallback field; we forward it as
+    // `X-Security-Pin` and the middleware accepts that as an
+    // alternative auth.
+    final authHeaders = await _resolveAuthHeaders(
+      transfer: true,
       promptSubtitle: 'Use biometrics to confirm this obligation payment',
-    )).toHeaders();
+    );
 
     final result = await _transferRepo.initiateTransfer(
       type: 'NIPTransfer',
@@ -455,7 +601,7 @@ class _ObligationConfirmPaymentScreenState
       counterPartyId: fav.accountId,
       currencyCode: currencyCode,
       idempotencyKey: _idempotencyKey,
-      biometricHeaders: biometricHeaders,
+      biometricHeaders: authHeaders,
     );
 
     if (!mounted) return;
@@ -503,12 +649,13 @@ class _ObligationConfirmPaymentScreenState
 
     // Audit M38: biometric proof for the obligation-funded path uses
     // the `pay-obligation` intent (matches the backend gate on this
-    // endpoint, which the NIP path satisfies via the upstream transfer).
-    final biometricHeaders = (await _biometricSigner.signObligationIntent(
-      promptTitle: 'Authorize payment',
+    // endpoint, which the NIP path satisfies via the upstream
+    // transfer). PIN fallback uses `X-Security-Pin` instead.
+    final authHeaders = await _resolveAuthHeaders(
+      transfer: false,
       promptSubtitle:
           'Use biometrics to confirm paying ${widget.obligation.title}',
-    )).toHeaders();
+    );
 
     await _repository.payObligationFromObligation(
       user: authState.user,
@@ -516,7 +663,7 @@ class _ObligationConfirmPaymentScreenState
       sourceObligationAccountCode: sourceCode,
       amountMinor: widget.amountMinor,
       idempotencyKey: _idempotencyKey,
-      biometricHeaders: biometricHeaders,
+      biometricHeaders: authHeaders,
     );
 
     if (!mounted) return;

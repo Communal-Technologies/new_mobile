@@ -41,7 +41,7 @@ class FeedbackInfoBox extends StatelessWidget {
               'Your feedback helps us improve our services for everyone. Thank you for sharing.',
               style: TextStyle(
                 fontSize: 15.sp,
-                color: Colors.grey.shade700,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 height: 1.4,
               ),
             ),

@@ -34,7 +34,7 @@ class FinalWarningBox extends StatelessWidget {
             'Once you click "Delete My Account permanently", your account and all data will be permanently deleted. This action cannot be reversed.',
             style: TextStyle(
               fontSize: 15.sp,
-              color: const Color(0xFF0F1D40),
+              color: Theme.of(context).colorScheme.onSurface,
               height: 1.5,
             ),
           ),

@@ -113,7 +113,7 @@ class _AddressRow extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 15.sp,
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
         Expanded(

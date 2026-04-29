@@ -80,7 +80,7 @@ class CancelDeletionBox extends StatelessWidget {
                 }
               },
               style: OutlinedButton.styleFrom(
-                backgroundColor: Colors.white,
+                backgroundColor: Theme.of(context).cardColor,
                 side: const BorderSide(
                   color: Color(0xFF2196F3),
                   width: 1.5,

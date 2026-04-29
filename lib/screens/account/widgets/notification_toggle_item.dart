@@ -71,7 +71,7 @@ class NotificationToggleItem extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                           color: isDisabled
                               ? Colors.grey.shade400
-                              : const Color(0xFF0F1D40),
+                              : Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ),

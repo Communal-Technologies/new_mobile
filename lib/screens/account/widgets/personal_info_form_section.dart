@@ -55,7 +55,7 @@ class PersonalInfoFormSection extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F1D40),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -197,7 +197,7 @@ class _FormTextField extends StatelessWidget {
         labelText: label,
         labelStyle: TextStyle(
           fontSize: 15.sp,
-          color: Colors.grey.shade600,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         ),
         filled: true,
         fillColor: Colors.grey.shade50,
@@ -244,12 +244,12 @@ class _FormTextFieldWithIcon extends StatelessWidget {
         labelText: label,
         labelStyle: TextStyle(
           fontSize: 15.sp,
-          color: Colors.grey.shade600,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         ),
         prefixIcon: Icon(
           icon,
           size: 20.sp,
-          color: Colors.grey.shade600,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         ),
         filled: true,
         fillColor: Colors.grey.shade50,
@@ -322,12 +322,12 @@ class _DateOfBirthField extends StatelessWidget {
         labelText: 'Date of Birth',
         labelStyle: TextStyle(
           fontSize: 15.sp,
-          color: Colors.grey.shade600,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         ),
         prefixIcon: Icon(
           Icons.calendar_today_outlined,
           size: 20.sp,
-          color: Colors.grey.shade600,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         ),
         filled: true,
         fillColor: Colors.grey.shade50,

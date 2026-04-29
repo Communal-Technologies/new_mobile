@@ -144,7 +144,7 @@ class _InfoRow extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 15.sp,
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
         Expanded(
@@ -185,14 +185,14 @@ class _InfoRowWithIcon extends StatelessWidget {
             Icon(
               icon,
               size: 18.sp,
-              color: Colors.grey.shade600,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
             hSpace(8),
             Text(
               label,
               style: TextStyle(
                 fontSize: 15.sp,
-                color: Colors.grey.shade600,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],

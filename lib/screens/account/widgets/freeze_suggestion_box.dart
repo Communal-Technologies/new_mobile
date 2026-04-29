@@ -34,7 +34,7 @@ class FreezeSuggestionBox extends StatelessWidget {
             'If you just need a break, consider freezing your account instead. You can unfreeze it anytime and keep all your data.',
             style: TextStyle(
               fontSize: 15.sp,
-              color: Colors.grey.shade700,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               height: 1.4,
             ),
           ),

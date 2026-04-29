@@ -34,7 +34,7 @@ class SettingsInfoBox extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F1D40),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 vSpace(6),
@@ -43,7 +43,7 @@ class SettingsInfoBox extends StatelessWidget {
                   'Your choices are saved to your account and apply on this device when you are online.',
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: Colors.grey.shade700,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                     height: 1.45,
                   ),
                 ),

@@ -60,7 +60,7 @@ class KycTierInfoCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 22.sp,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF0F1D40),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               if (isCurrent)
@@ -100,12 +100,12 @@ class KycTierInfoCard extends StatelessWidget {
             ],
           ),
           vSpace(16),
-          _buildLimitItem(
+          _buildLimitItem(context,
             label: 'Daily Transaction Limit',
             value: _formatFromKobo(dailyLimitKobo),
           ),
           vSpace(12),
-          _buildLimitItem(
+          _buildLimitItem(context,
             label: 'Maximum Balance',
             value: _formatFromKobo(maxBalanceKobo),
           ),
@@ -115,17 +115,17 @@ class KycTierInfoCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 17.sp,
               fontWeight: FontWeight.w600,
-              color: Colors.grey.shade700,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           vSpace(8),
-          ...requirements.map((requirement) => _buildRequirementItem(requirement)),
+          ...requirements.map((requirement) => _buildRequirementItem(context,requirement)),
         ],
       ),
     );
   }
 
-  Widget _buildLimitItem({
+  Widget _buildLimitItem(BuildContext context, {
     required String label,
     required String value,
   }) {
@@ -136,7 +136,7 @@ class KycTierInfoCard extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 17.sp,
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
         Text(
@@ -151,7 +151,7 @@ class KycTierInfoCard extends StatelessWidget {
     );
   }
 
-  Widget _buildRequirementItem(String requirement) {
+  Widget _buildRequirementItem(BuildContext context, String requirement) {
     return Padding(
       padding: EdgeInsets.only(bottom: 6.h),
       child: Row(
@@ -162,7 +162,7 @@ class KycTierInfoCard extends StatelessWidget {
             width: 4.w,
             height: 4.w,
             decoration: BoxDecoration(
-              color: Colors.grey.shade600,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               shape: BoxShape.circle,
             ),
           ),
@@ -172,7 +172,7 @@ class KycTierInfoCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 17.sp,
                 height: 1.35,
-                color: Colors.grey.shade600,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),

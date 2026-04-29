@@ -193,7 +193,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 13.sp,
+          fontSize: 14.sp,
           fontWeight: FontWeight.w600,
           color: color,
         ),

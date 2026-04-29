@@ -25,7 +25,7 @@ class SettingItem extends StatelessWidget {
       child: Container(
         margin: EdgeInsets.only(bottom: 1.h),
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         child: Row(
           children: [
             Container(
@@ -51,7 +51,7 @@ class SettingItem extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 17.sp,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF0F1D40),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   vSpace(4),

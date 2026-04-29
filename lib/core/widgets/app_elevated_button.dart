@@ -133,18 +133,31 @@ class AppSecondaryButton extends StatelessWidget {
     this.onPressed,
     required this.title,
     this.child,
-    this.isDark = true, // true for dark bg (white border), false for light bg (gray border)
+    this.isDark = true, // true for dark bg (white border), false → derive from theme
   });
 
   final void Function()? onPressed;
   final String title;
   final Widget? child;
+
+  /// `true` forces the white-on-dark style (use on screens with a fixed
+  /// dark image background like the welcome splash). `false` lets the
+  /// active theme drive the border + text colour, so the button reads
+  /// correctly on light *and* dark scaffolds.
   final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = isDark ? Colors.white : Colors.grey.shade300;
-    final textColor = isDark ? Colors.white : Colors.black87;
+    final theme = Theme.of(context);
+    final Color borderColor;
+    final Color textColor;
+    if (isDark) {
+      borderColor = Colors.white;
+      textColor = Colors.white;
+    } else {
+      borderColor = theme.dividerColor;
+      textColor = theme.colorScheme.onSurface;
+    }
 
     return SizedBox(
       width: double.infinity,

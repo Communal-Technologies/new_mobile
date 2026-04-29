@@ -97,7 +97,7 @@ class BottomActionBar extends StatelessWidget {
                     Text(
                       'AVG. Response time: 1 min',
                       style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: 14.sp,
                         color: Colors.white.withOpacity(0.9),
                       ),
                     ),

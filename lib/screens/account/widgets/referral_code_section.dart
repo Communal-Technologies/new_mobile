@@ -18,7 +18,7 @@ class ReferralCodeSection extends StatelessWidget {
             style: TextStyle(
               fontSize: 17.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF0F1D40),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           vSpace(12),
@@ -33,7 +33,7 @@ class ReferralCodeSection extends StatelessWidget {
                 _ReferralItem(
                   label: 'Referral Code',
                   value: 'PADO2025XYZ',
-                  valueColor: const Color(0xFF0F1D40),
+                  valueColor: Theme.of(context).colorScheme.onSurface,
                   onCopy: () {
                     Clipboard.setData(const ClipboardData(text: 'PADO2025XYZ'));
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -96,8 +96,8 @@ class _ReferralItem extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 13.sp,
-                  color: Colors.grey.shade600,
+                  fontSize: 14.sp,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               vSpace(4),

@@ -21,8 +21,8 @@ class FreezeActionButtons extends StatelessWidget {
             onPressed: () => context.pop(),
             style: OutlinedButton.styleFrom(
               side: BorderSide(color: Colors.grey.shade300),
-              foregroundColor: const Color(0xFF0F1D40),
-              backgroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
+              backgroundColor: Theme.of(context).cardColor,
               padding: EdgeInsets.symmetric(vertical: 16.h),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12.r),

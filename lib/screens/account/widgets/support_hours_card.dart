@@ -51,7 +51,7 @@ class SupportHoursCard extends StatelessWidget {
                   child: Text(
                     'Email support available 24/7 with response within 24 hours',
                     style: TextStyle(
-                      fontSize: 13.sp,
+                      fontSize: 14.sp,
                       color: Colors.white.withOpacity(0.9),
                     ),
                   ),

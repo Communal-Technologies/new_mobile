@@ -13,7 +13,7 @@ class AppInfo extends StatelessWidget {
           'Communal v2.1.0',
           style: TextStyle(
             fontSize: 15.sp,
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
         vSpace(8),
@@ -21,7 +21,7 @@ class AppInfo extends StatelessWidget {
           '© 2026 All rights reserved',
           style: TextStyle(
             fontSize: 15.sp,
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],

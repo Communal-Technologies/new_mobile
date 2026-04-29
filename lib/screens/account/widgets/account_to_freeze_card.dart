@@ -15,7 +15,7 @@ class AccountToFreezeCard extends StatelessWidget {
           style: TextStyle(
             fontSize: 17.sp,
             fontWeight: FontWeight.w600,
-            color: const Color(0xFF0F1D40),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         vSpace(12),
@@ -55,7 +55,7 @@ class AccountToFreezeCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 17.sp,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF0F1D40),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     vSpace(4),
@@ -63,7 +63,7 @@ class AccountToFreezeCard extends StatelessWidget {
                       '7037334888',
                       style: TextStyle(
                         fontSize: 15.sp,
-                        color: Colors.grey.shade600,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ],

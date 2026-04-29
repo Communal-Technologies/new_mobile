@@ -17,7 +17,7 @@ class ReferralHistorySection extends StatelessWidget {
             style: TextStyle(
               fontSize: 17.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF0F1D40),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           vSpace(16),
@@ -132,15 +132,15 @@ class _ReferralHistoryItem extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 17.sp,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFF0F1D40),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               vSpace(2),
               Text(
                 date,
                 style: TextStyle(
-                  fontSize: 13.sp,
-                  color: Colors.grey.shade600,
+                  fontSize: 14.sp,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -154,7 +154,7 @@ class _ReferralHistoryItem extends StatelessWidget {
               style: TextStyle(
                 fontSize: 17.sp,
                 fontWeight: FontWeight.w700,
-                color: const Color(0xFF0F1D40),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             vSpace(4),

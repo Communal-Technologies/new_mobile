@@ -167,7 +167,7 @@ class _FaqItemWidgetState extends State<_FaqItemWidget> {
                       style: TextStyle(
                         fontSize: 15.sp,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF0F1D40),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -175,7 +175,7 @@ class _FaqItemWidgetState extends State<_FaqItemWidget> {
                     _isExpanded
                         ? Icons.keyboard_arrow_up
                         : Icons.keyboard_arrow_down,
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ],
               ),
@@ -188,7 +188,7 @@ class _FaqItemWidgetState extends State<_FaqItemWidget> {
                 widget.faq.answer,
                 style: TextStyle(
                   fontSize: 15.sp,
-                  color: Colors.grey.shade700,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   height: 1.5,
                 ),
               ),

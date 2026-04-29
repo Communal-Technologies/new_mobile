@@ -63,7 +63,7 @@ class ResourceItem extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 17.sp,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF0F1D40),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   vSpace(4),
@@ -71,7 +71,7 @@ class ResourceItem extends StatelessWidget {
                     description,
                     style: TextStyle(
                       fontSize: 15.sp,
-                      color: Colors.grey.shade600,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],

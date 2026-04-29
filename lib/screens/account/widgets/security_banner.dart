@@ -61,15 +61,15 @@ class SecurityBanner extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F1D40),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 vSpace(4),
                 Text(
                   'Do safety check again to ensure your account\'s security.',
                   style: TextStyle(
-                    fontSize: 13.sp,
-                    color: Colors.grey.shade700,
+                    fontSize: 14.sp,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ],

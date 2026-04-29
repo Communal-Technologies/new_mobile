@@ -102,10 +102,14 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
   }
 
   Widget _buildInfoBox() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const accent = Color(0xFF1976D2);
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: const Color(0xFFE3F2FD),
+        color: isDark
+            ? accent.withValues(alpha: 0.16)
+            : const Color(0xFFE3F2FD),
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Row(
@@ -164,8 +168,9 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
               child: SliderTheme(
                 data: SliderTheme.of(context).copyWith(
                   activeTrackColor: const Color(0xFF7434FF),
-                  inactiveTrackColor: Colors.grey.shade300,
-                  thumbColor: Colors.white,
+                  inactiveTrackColor: Theme.of(context).dividerColor,
+                  thumbColor:
+                      Theme.of(context).colorScheme.surface,
                   thumbShape: RoundSliderThumbShape(enabledThumbRadius: 10.r),
                   overlayShape: RoundSliderOverlayShape(overlayRadius: 20.r),
                   trackHeight: 4.h,
@@ -237,8 +242,9 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
               child: SliderTheme(
                 data: SliderTheme.of(context).copyWith(
                   activeTrackColor: const Color(0xFF7434FF),
-                  inactiveTrackColor: Colors.grey.shade300,
-                  thumbColor: Colors.white,
+                  inactiveTrackColor: Theme.of(context).dividerColor,
+                  thumbColor:
+                      Theme.of(context).colorScheme.surface,
                   thumbShape: RoundSliderThumbShape(enabledThumbRadius: 10.r),
                   overlayShape: RoundSliderOverlayShape(overlayRadius: 20.r),
                   trackHeight: 4.h,
@@ -539,10 +545,14 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
               borderRadius: BorderRadius.circular(12.r),
               child: Container(
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFF7434FF) : Colors.grey.shade100,
+                  color: isSelected
+                      ? Theme.of(context).primaryColor
+                      : Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12.r),
                   border: Border.all(
-                    color: isSelected ? const Color(0xFF7434FF) : Colors.grey.shade300,
+                    color: isSelected
+                        ? Theme.of(context).primaryColor
+                        : Theme.of(context).dividerColor,
                   ),
                 ),
                 child: Center(
@@ -601,10 +611,14 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
   }
 
   Widget _buildNoteSection() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const accent = Color(0xFFE6B800);
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF9E6),
+        color: isDark
+            ? accent.withValues(alpha: 0.16)
+            : const Color(0xFFFFF9E6),
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Column(

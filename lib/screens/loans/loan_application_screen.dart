@@ -250,7 +250,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             Container(
               padding: EdgeInsets.all(16.w),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.05),
@@ -297,7 +297,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             Container(
               height: 4.h,
               decoration: BoxDecoration(
-                color: Colors.grey.shade200,
+                color: Theme.of(context).dividerColor,
                 borderRadius: BorderRadius.circular(2.r),
               ),
             ),
@@ -440,7 +440,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(6.r),
       ),
       child: Text(
@@ -543,7 +543,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                 color: const Color(0xFF7434FF),
               ),
               filled: true,
-              fillColor: Colors.grey.shade50,
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12.r),
                 borderSide: BorderSide(color: Colors.grey.shade200),
@@ -620,7 +620,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: Theme.of(context).dividerColor,
         borderRadius: BorderRadius.circular(16.r),
       ),
       child: Column(
@@ -690,7 +690,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           Container(
             padding: EdgeInsets.all(12.w),
             decoration: BoxDecoration(
-              color: Colors.grey.shade200,
+              color: Theme.of(context).dividerColor,
               borderRadius: BorderRadius.circular(8.r),
             ),
             child: Row(
@@ -812,14 +812,14 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             hintStyle:
                 TextStyle(fontSize: 15.sp, color: Colors.grey.shade400),
             filled: true,
-            fillColor: Colors.grey.shade50,
+            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),

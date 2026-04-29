@@ -281,7 +281,7 @@ class _LoanApplicationStep2ScreenState
     }
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: child,
@@ -366,7 +366,7 @@ class _LoanApplicationStep2ScreenState
             Container(
               padding: EdgeInsets.all(16.w),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.05),
@@ -403,7 +403,7 @@ class _LoanApplicationStep2ScreenState
             Container(
               height: 4.h,
               decoration: BoxDecoration(
-                color: Colors.grey.shade200,
+                color: Theme.of(context).dividerColor,
                 borderRadius: BorderRadius.circular(2.r),
               ),
             ),
@@ -517,14 +517,14 @@ class _LoanApplicationStep2ScreenState
                   },
                 ),
           filled: true,
-          fillColor: Colors.grey.shade50,
+          fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12.r),
-            borderSide: BorderSide(color: Colors.grey.shade300),
+            borderSide: BorderSide(color: Theme.of(context).dividerColor),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12.r),
-            borderSide: BorderSide(color: Colors.grey.shade300),
+            borderSide: BorderSide(color: Theme.of(context).dividerColor),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12.r),

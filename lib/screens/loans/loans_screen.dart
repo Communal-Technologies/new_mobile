@@ -314,7 +314,7 @@ class _LoansScreenState extends State<LoansScreen> {
             Container(
               padding: EdgeInsets.all(8.w),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12.r),
               ),
               child: Icon(icon, size: 20.sp, color: const Color(0xFFE67E22)),

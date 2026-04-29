@@ -196,7 +196,7 @@ class _ConnectionLostDialog extends StatelessWidget {
               Text(
                 "We can't reach the server right now. We'll keep trying — please don't close the app.",
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey.shade700,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   height: 1.4,
                 ),
                 textAlign: TextAlign.center,
@@ -211,7 +211,7 @@ class _ConnectionLostDialog extends StatelessWidget {
               Text(
                 "If we can't reconnect within 10 minutes you'll be signed out.",
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: Colors.grey.shade600,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
                 textAlign: TextAlign.center,
               ),

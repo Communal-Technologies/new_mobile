@@ -514,7 +514,7 @@ class _MasterEnableCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: const Color(0xFFE7E7E7)),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Row(
         children: [
@@ -584,7 +584,7 @@ class _GranularToggleCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: const Color(0xFFE7E7E7)),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Row(
         children: [
@@ -607,12 +607,19 @@ class _GranularToggleCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 15.sp,
                     fontWeight: FontWeight.w700,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 vSpace(2),
                 Text(
                   subtitle,
-                  style: TextStyle(fontSize: 14.sp, color: Colors.black54),
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
+                  ),
                 ),
               ],
             ),
@@ -651,7 +658,7 @@ class _RegisteredBiometricsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: const Color(0xFFE7E7E7)),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         children: [
@@ -663,12 +670,12 @@ class _RegisteredBiometricsCard extends StatelessWidget {
                 : const Color(0xFF9F9F9F).withValues(alpha: 0.4),
             iconBgColor: hasFace
                 ? primaryColor.withValues(alpha: 0.12)
-                : const Color(0xFFF1F1F1),
+                : Theme.of(context).colorScheme.surfaceContainerHighest,
             title: 'Face ID',
             subtitle: 'Registered on this device',
             isActive: hasFace,
           ),
-          const Divider(height: 1, color: Color(0xFFEDEDED)),
+          Divider(height: 1, color: Theme.of(context).dividerColor),
           _RegisteredBiometricRow(
             iconBuilder: (color, size) =>
                 Icon(Icons.fingerprint, color: color, size: size),
@@ -677,7 +684,7 @@ class _RegisteredBiometricsCard extends StatelessWidget {
                 : const Color(0xFF9F9F9F).withValues(alpha: 0.4),
             iconBgColor: hasFinger
                 ? const Color(0xFF16A34A).withValues(alpha: 0.12)
-                : const Color(0xFFF1F1F1),
+                : Theme.of(context).colorScheme.surfaceContainerHighest,
             title: 'Fingerprint',
             subtitle: 'Available as alternative method',
             isActive: hasFinger,
@@ -903,16 +910,25 @@ class _BiometricConfirmModal extends StatelessWidget {
               child: OutlinedButton(
                 onPressed: () => Navigator.of(context).pop(false),
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFFCCCCCC)),
+                  side: BorderSide(color: Theme.of(context).dividerColor),
                   padding: EdgeInsets.symmetric(vertical: 14.h),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10.r),
                   ),
-                  foregroundColor: Colors.black87,
+                  foregroundColor: Theme.of(context).colorScheme.onSurface,
+                  // Pin the M3 surface tint + shadow off so the button
+                  // body stays transparent on the dark sheet rather
+                  // than getting overlaid white.
+                  surfaceTintColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
                 ),
                 child: Text(
                   'Cancel',
-                  style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    fontSize: 17.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
               ),
             ),

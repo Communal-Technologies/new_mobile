@@ -7,6 +7,8 @@ import 'package:communal_mobile/core/constants/images.dart';
 import 'package:communal_mobile/core/widgets/otp_input_field.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/repositories/auth_repository.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:go_router/go_router.dart';
 
 enum VerificationMethod { sms, whatsapp, call }
@@ -27,14 +29,35 @@ class PhoneVerificationScreen extends StatefulWidget {
 }
 
 class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
+  final AuthRepository _authRepository = getIt<AuthRepository>();
   String _code = '';
   int _resendTimer = 34;
   Timer? _timer;
+
+  /// Set on first successful OTP send and used in /create-account-password
+  /// later in the chain. Null until the backend responds.
+  String? _userId;
+
+  /// True while an in-flight network request would make a tap a no-op
+  /// (sending OTP, verifying OTP, resending). Disables the button so
+  /// rapid taps can't fire two requests.
+  bool _busy = false;
+
+  /// Inline error message shown below the OTP field. Cleared when the
+  /// user starts typing a new code or hits Resend.
+  String? _error;
 
   @override
   void initState() {
     super.initState();
     _startTimer();
+    // Kick off the real OTP send. The signup flow lands on this screen
+    // immediately after the user enters their phone — there is no
+    // intermediate step that would have already sent the code, so we
+    // own the first send here. Errors surface inline; the timer keeps
+    // counting down regardless so the Resend button works even if the
+    // initial send failed (user can retry).
+    WidgetsBinding.instance.addPostFrameCallback((_) => _sendOtp());
   }
 
   @override
@@ -55,12 +78,35 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
     });
   }
 
-  void _resendCode() {
+  Future<void> _sendOtp() async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final id = await _authRepository.requestOtpForSignup(widget.phoneNumber);
+      if (!mounted) return;
+      setState(() {
+        _userId = id;
+        _busy = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  Future<void> _resendCode() async {
     setState(() {
       _resendTimer = 34;
+      _error = null;
     });
     _startTimer();
-    // TODO: Implement actual resend logic
+    await _sendOtp();
   }
 
   String get _maskedPhone {
@@ -168,12 +214,50 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
     return methods;
   }
 
-  void _verifyCode() {
-    // Audit M25: read from [AppConstants.otpLength].
-    if (_code.length == AppConstants.otpLength) {
-      // TODO: Verify code with backend
-      // Navigate to PIN setup
-      context.push('/set-pin');
+  Future<void> _verifyCode() async {
+    if (_busy) return;
+    if (_code.length != AppConstants.otpLength) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final result = await _authRepository.verifyOtpForSignup(
+        widget.phoneNumber,
+        _code,
+      );
+      if (!mounted) return;
+      if (!result.success) {
+        setState(() {
+          _busy = false;
+          _error = 'That code did not match. Try again or tap Resend.';
+        });
+        return;
+      }
+      // Prefer the userId surfaced on /otp/verify (always populated
+      // server-side for purpose=signup). Fall back to the one captured
+      // on /otp/send so a verify response without it still works.
+      final userId = result.userId ?? _userId;
+      if (userId == null || userId.isEmpty) {
+        setState(() {
+          _busy = false;
+          _error = 'Could not start your signup. Please tap Resend.';
+        });
+        return;
+      }
+      // GoRouter's `push` returns a Future for any value the destination
+      // pops back; the signup chain doesn't pop, so we intentionally
+      // discard it.
+      unawaited(context.push('/set-pin', extra: {
+        'phone': widget.phoneNumber,
+        'userId': userId,
+      }));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
     }
   }
 
@@ -259,6 +343,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                 onChanged: (code) {
                   setState(() {
                     _code = code;
+                    if (_error != null) _error = null;
                   });
                 },
               ),
@@ -306,12 +391,25 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                       ),
               ),
 
+              if (_error != null) ...[
+                vSpace(12),
+                Text(
+                  _error!,
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    color: const Color(0xFFE74C3C),
+                  ),
+                ),
+              ],
+
               vSpace(24),
 
               // Continue button
               AppElevatedButton(
-                title: 'Continue',
-                onPressed: _code.length == AppConstants.otpLength ? _verifyCode : null,
+                title: _busy ? 'Please wait...' : 'Continue',
+                onPressed: (!_busy && _code.length == AppConstants.otpLength)
+                    ? _verifyCode
+                    : null,
               ),
 
               vSpace(32),

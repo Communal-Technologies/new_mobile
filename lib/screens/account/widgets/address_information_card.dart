@@ -1,10 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/models/member_profile_details.dart';
 
 class AddressInformationCard extends StatelessWidget {
-  const AddressInformationCard({super.key});
+  const AddressInformationCard({
+    super.key,
+    required this.profile,
+    this.onEdited,
+  });
+
+  final MemberProfileDetails profile;
+  final VoidCallback? onEdited;
+
+  String _orDash(String? v) {
+    final s = (v ?? '').trim();
+    return s.isEmpty ? '—' : s;
+  }
+
+  String get _streetLine {
+    final parts = [profile.addressLine1, profile.addressLine2]
+        .map((s) => (s ?? '').trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+    return parts.isEmpty ? '—' : parts.join(', ');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,22 +59,30 @@ class AddressInformationCard extends StatelessWidget {
             ],
           ),
           vSpace(20),
-          _AddressRow(label: 'Street Address', value: '123 Marina Street'),
+          _AddressRow(label: 'Street Address', value: _streetLine),
           vSpace(16),
-          _AddressRow(label: 'City', value: 'Lagos'),
+          _AddressRow(label: 'City', value: _orDash(profile.city)),
           vSpace(16),
-          _AddressRow(label: 'State', value: 'Lagos State'),
+          _AddressRow(label: 'LGA', value: _orDash(profile.lga)),
+          vSpace(16),
+          _AddressRow(label: 'State', value: _orDash(profile.state)),
+          vSpace(16),
+          _AddressRow(label: 'Postal Code', value: _orDash(profile.postalCode)),
           vSpace(20),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () {
-                context.pushNamed('edit-profile', extra: {'isAddressOnly': true});
+              onPressed: () async {
+                await context.pushNamed('edit-profile', extra: {
+                  'profile': profile,
+                  'isAddressOnly': true,
+                });
+                onEdited?.call();
               },
               icon: Icon(Icons.edit, size: 18.sp),
-              label: Text('Edit Address'),
+              label: const Text('Edit Address'),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: const Color(0xFF7434FF)),
+                side: const BorderSide(color: Color(0xFF7434FF)),
                 foregroundColor: const Color(0xFF7434FF),
                 padding: EdgeInsets.symmetric(vertical: 14.h),
                 shape: RoundedRectangleBorder(
@@ -71,10 +101,7 @@ class _AddressRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const _AddressRow({
-    required this.label,
-    required this.value,
-  });
+  const _AddressRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -104,4 +131,3 @@ class _AddressRow extends StatelessWidget {
     );
   }
 }
-

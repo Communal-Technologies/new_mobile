@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
 import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/repositories/community_repository.dart';
 import 'package:communal_mobile/screens/community/data/sample_communities.dart';
 import 'package:communal_mobile/screens/community/widgets/community_tile.dart';
 import 'package:communal_mobile/screens/community/widgets/featured_community_card.dart';
@@ -118,16 +122,25 @@ class _CommunityScreenState extends State<CommunityScreen> {
   }
 
   Future<void> _showJoinCommunitySheet() async {
-    final inviteCode = await showModalBottomSheet<String>(
+    final result = await showModalBottomSheet<CommunityJoinResult>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => const JoinCommunityInviteSheet(),
     );
 
-    if (!mounted || inviteCode == null) return;
+    if (!mounted || result == null) return;
+    // Refresh user identity so hasCooperativeMembership flips and the
+    // bottom nav, quick actions, and sidebar re-evaluate.
+    context.read<AuthBloc>().add(AuthRefreshUserRequested());
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Invite code submitted: $inviteCode')),
+      SnackBar(
+        content: Text(
+          result.cooperativeName.isEmpty
+              ? 'You have joined the cooperative.'
+              : 'Welcome to ${result.cooperativeName}.',
+        ),
+      ),
     );
   }
 

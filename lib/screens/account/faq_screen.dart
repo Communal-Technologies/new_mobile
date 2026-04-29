@@ -41,7 +41,9 @@ class _FaqScreenState extends State<FaqScreen> {
         appBar: AppBar(
           backgroundColor: Theme.of(context).cardColor,
           elevation: 0,
-          systemOverlayStyle: SystemUiOverlayStyle.dark,
+          // Status-bar overlay must follow the active theme, otherwise
+          // dark icons render invisibly on the dark scaffold.
+          systemOverlayStyle: systemOverlayForTheme(Theme.of(context)),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
@@ -207,8 +209,12 @@ class _FaqScreenState extends State<FaqScreen> {
   }
 
   Widget _buildCategoryTabs() {
+    final theme = Theme.of(context);
     return Container(
-      color: Colors.white,
+      // Tab strip bar reads from the live theme so it flips with the
+      // dark/light toggle. Was hardcoded `Colors.white` which rendered
+      // as a bright stripe on the dark scaffold.
+      color: theme.cardColor,
       padding: EdgeInsets.symmetric(vertical: 12.h),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -224,6 +230,7 @@ class _FaqScreenState extends State<FaqScreen> {
   }
 
   Widget _buildTab(int index) {
+    final theme = Theme.of(context);
     final isSelected = _selectedTab == index;
     return GestureDetector(
       onTap: () => setState(() => _selectedTab = index),
@@ -233,7 +240,7 @@ class _FaqScreenState extends State<FaqScreen> {
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
-              color: isSelected ? const Color(0xFF7434FF) : Colors.transparent,
+              color: isSelected ? theme.primaryColor : Colors.transparent,
               width: 2,
             ),
           ),
@@ -243,7 +250,9 @@ class _FaqScreenState extends State<FaqScreen> {
           style: TextStyle(
             fontSize: 17.sp,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            color: isSelected ? const Color(0xFF7434FF) : Colors.grey.shade600,
+            color: isSelected
+                ? theme.primaryColor
+                : theme.colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ),

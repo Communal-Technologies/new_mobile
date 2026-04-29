@@ -76,7 +76,11 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
       listener: (_, state) {
         if (state is AuthAuthenticated) _load();
       },
-      child: Padding(
+      child: Builder(
+        builder: (context) {
+          final theme = Theme.of(context);
+          final onSurface = theme.colorScheme.onSurface;
+          return Padding(
         padding: EdgeInsets.symmetric(horizontal: 16.w),
         child: Column(
           children: [
@@ -88,7 +92,7 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
                   style: TextStyle(
                     fontSize: 22.sp,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: onSurface,
                   ),
                 ),
                 TextButton(
@@ -102,7 +106,7 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
                     'See all',
                     style: TextStyle(
                       fontSize: 22.sp,
-                      color: Colors.grey.shade700,
+                      color: onSurface.withValues(alpha: 0.7),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -147,7 +151,7 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
                   'No recent transactions',
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: Colors.grey.shade600,
+                    color: onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               )
@@ -170,6 +174,8 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
               ),
           ],
         ),
+      );
+        },
       ),
     );
   }

@@ -59,9 +59,10 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).primaryColor;
+    final theme = Theme.of(context);
+    final primary = theme.primaryColor;
+    final onSurface = theme.colorScheme.onSurface;
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         titleSpacing: 0,
         centerTitle: true,
@@ -135,16 +136,16 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
               style: TextStyle(
                 fontSize: 17.sp,
                 fontWeight: FontWeight.w700,
-                color: const Color(0xFF0F1D40),
+                color: onSurface,
               ),
             ),
             vSpace(10),
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.cardColor,
                 borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(color: const Color(0xFFEAEAEA)),
+                border: Border.all(color: theme.dividerColor),
               ),
               child: Column(
                 children: [
@@ -204,16 +205,16 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
               style: TextStyle(
                 fontSize: 17.sp,
                 fontWeight: FontWeight.w700,
-                color: const Color(0xFF0F1D40),
+                color: onSurface,
               ),
             ),
             vSpace(10),
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.cardColor,
                 borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(color: const Color(0xFFEAEAEA)),
+                border: Border.all(color: theme.dividerColor),
               ),
               child: Column(
                 children: [
@@ -257,7 +258,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                   style: TextStyle(
                     fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F1D40),
+                    color: onSurface,
                   ),
                 ),
                 const Spacer(),
@@ -275,9 +276,9 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.cardColor,
                 borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(color: const Color(0xFFEAEAEA)),
+                border: Border.all(color: theme.dividerColor),
               ),
               child: Column(
                 children: const [
@@ -344,6 +345,8 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
     Widget? trailing,
     VoidCallback? onTap,
   }) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final muted = onSurface.withValues(alpha: 0.6);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12.r),
@@ -370,7 +373,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                     style: TextStyle(
                       fontSize: 17.sp,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF0F1D40),
+                      color: onSurface,
                     ),
                   ),
                   vSpace(2),
@@ -379,7 +382,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                     style: TextStyle(
                       fontSize: 13.sp,
                       fontWeight: FontWeight.w500,
-                      color: Colors.black54,
+                      color: muted,
                     ),
                   ),
                 ],
@@ -390,7 +393,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                 Icon(
                   Icons.arrow_forward_ios,
                   size: 14.sp,
-                  color: Colors.grey.shade500,
+                  color: muted,
                 ),
           ],
         ),
@@ -407,6 +410,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
       child: Row(
@@ -427,7 +431,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                   style: TextStyle(
                     fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F1D40),
+                    color: onSurface,
                   ),
                 ),
                 vSpace(2),
@@ -436,7 +440,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                   style: TextStyle(
                     fontSize: 15.sp,
                     fontWeight: FontWeight.w500,
-                    color: Colors.black54,
+                    color: onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -491,6 +495,9 @@ class _ActivityTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+    final muted = onSurface.withValues(alpha: 0.6);
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
       child: Row(
@@ -519,31 +526,31 @@ class _ActivityTile extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F1D40),
+                    color: onSurface,
                   ),
                 ),
                 vSpace(4),
                 Row(
                   children: [
-                    Icon(Icons.location_on_outlined, size: 13.sp, color: Colors.black54),
+                    Icon(Icons.location_on_outlined, size: 13.sp, color: muted),
                     hSpace(3),
                     Text(
                       location,
                       style: TextStyle(
                         fontSize: 15.sp,
-                        color: Colors.black54,
+                        color: muted,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                     hSpace(4),
-                    Icon(Icons.access_time, size: 13.sp, color: Colors.black54),
+                    Icon(Icons.access_time, size: 13.sp, color: muted),
                     hSpace(3),
                     Expanded(
                       child: Text(
                         time,
                         style: TextStyle(
                           fontSize: 15.sp,
-                          color: Colors.black54,
+                          color: muted,
                           fontWeight: FontWeight.w500,
                         ),
                         overflow: TextOverflow.ellipsis,

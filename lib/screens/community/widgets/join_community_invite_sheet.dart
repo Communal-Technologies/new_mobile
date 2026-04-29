@@ -3,6 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:communal_mobile/core/widgets/bottomsheet_handlebar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/repositories/community_repository.dart';
+import 'package:communal_mobile/injection.dart';
 
 class JoinCommunityInviteSheet extends StatefulWidget {
   const JoinCommunityInviteSheet({super.key});
@@ -15,6 +17,7 @@ class JoinCommunityInviteSheet extends StatefulWidget {
 class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
   final TextEditingController _codeController = TextEditingController();
   bool _isSubmitting = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -23,10 +26,28 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
   }
 
   Future<void> _submit() async {
-    setState(() => _isSubmitting = true);
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
-    Navigator.of(context).pop(_codeController.text.trim());
+    final raw = _codeController.text.trim();
+    if (raw.isEmpty) {
+      setState(() => _errorMessage = 'Please enter your invite code.');
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await getIt<CommunityRepository>().redeemInviteCode(raw);
+      if (!mounted) return;
+      Navigator.of(context).pop(result);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSubmitting = false;
+        _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
   }
 
   @override
@@ -89,6 +110,12 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                     TextField(
                       controller: _codeController,
                       textCapitalization: TextCapitalization.characters,
+                      enabled: !_isSubmitting,
+                      onChanged: (_) {
+                        if (_errorMessage != null) {
+                          setState(() => _errorMessage = null);
+                        }
+                      },
                       decoration: InputDecoration(
                         hintText: 'E.G. COOP-XXXX-XXXX',
                         border: OutlineInputBorder(
@@ -99,14 +126,35 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16.r),
+                          borderSide: BorderSide(
+                            color: _errorMessage == null
+                                ? const Color(0xFF7434FF)
+                                : const Color(0xFFE74C3C),
+                          ),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16.r),
                           borderSide: const BorderSide(
-                            color: Color(0xFF7434FF),
+                            color: Color(0xFFE74C3C),
                           ),
                         ),
                         filled: true,
                         fillColor: const Color(0xFFF7F7FB),
                       ),
                     ),
+                    if (_errorMessage != null) ...[
+                      vSpace(8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          _errorMessage!,
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            color: const Color(0xFFE74C3C),
+                          ),
+                        ),
+                      ),
+                    ],
                     vSpace(16),
                     Container(
                       width: double.infinity,

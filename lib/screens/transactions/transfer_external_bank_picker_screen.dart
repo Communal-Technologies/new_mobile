@@ -45,7 +45,8 @@ class _TransferExternalBankPickerScreenState
   Widget _logoTile({double size = 40}) {
     return CircleAvatar(
       radius: (size / 2).r,
-      backgroundColor: const Color(0xFFE8E8F0),
+      backgroundColor:
+          Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Icon(
         Icons.account_balance,
         size: (size * 0.45).sp,
@@ -120,13 +121,29 @@ class _TransferExternalBankPickerScreenState
               child: TextField(
                 controller: _searchCtrl,
                 onChanged: (_) => setState(() {}),
-                style: TextStyle(fontSize: 17.sp, color: Colors.black87),
+                style: TextStyle(
+                  fontSize: 17.sp,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
                 decoration: InputDecoration(
                   hintText: 'Search banks',
-                  hintStyle: TextStyle(fontSize: 17.sp, color: Colors.grey.shade500),
-                  prefixIcon: Icon(Icons.search, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), size: 24.sp),
+                  hintStyle: TextStyle(
+                    fontSize: 17.sp,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
+                    size: 24.sp,
+                  ),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: Theme.of(context).cardColor,
                   contentPadding:
                       EdgeInsets.symmetric(horizontal: 12.w, vertical: 14.h),
                   border: OutlineInputBorder(
@@ -160,7 +177,7 @@ class _TransferExternalBankPickerScreenState
                       decoration: BoxDecoration(
                         color: Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(color: const Color(0xFFE7E7E7)),
+                        border: Border.all(color: Theme.of(context).dividerColor),
                       ),
                       child: SizedBox(
                         height: 108.h,
@@ -206,7 +223,7 @@ class _TransferExternalBankPickerScreenState
                     decoration: BoxDecoration(
                       color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(12.r),
-                      border: Border.all(color: const Color(0xFFE7E7E7)),
+                      border: Border.all(color: Theme.of(context).dividerColor),
                     ),
                     child: Column(
                       children: [

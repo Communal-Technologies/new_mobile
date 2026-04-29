@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/repositories/account_actions_repository.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/account/widgets/pin_input_field.dart';
 
 class FreezeAccountPinScreen extends StatefulWidget {
-  const FreezeAccountPinScreen({super.key});
+  const FreezeAccountPinScreen({super.key, this.reason});
+
+  /// Reason text passed from freeze_account_screen. Defaults to a
+  /// generic reason if the user didn't supply one — the backend
+  /// requires ≥ 10 chars.
+  final String? reason;
 
   @override
   State<FreezeAccountPinScreen> createState() => _FreezeAccountPinScreenState();
@@ -16,18 +26,34 @@ class FreezeAccountPinScreen extends StatefulWidget {
 class _FreezeAccountPinScreenState extends State<FreezeAccountPinScreen> {
   bool _obscurePin = true;
   bool _showError = false;
+  bool _submitting = false;
+  String? _errorMessage;
 
-  void _handlePinCompleted(String pin) {
-    // TODO: Verify PIN with backend
-    // For now, simulate PIN verification
-    if (pin == '2222') {
-      // Correct PIN - proceed to freeze account
-      // Navigate to success screen
+  Future<void> _handlePinCompleted(String pin) async {
+    if (_submitting) return;
+    setState(() {
+      _submitting = true;
+      _showError = false;
+      _errorMessage = null;
+    });
+    final repo = getIt<AccountActionsRepository>();
+    try {
+      await repo.verifySecurityPin(pin);
+      final reason = (widget.reason?.trim().isNotEmpty == true)
+          ? widget.reason!.trim()
+          : 'Self-frozen via mobile app';
+      await repo.freezeAccount(reason);
+      if (!mounted) return;
+      // Auth state needs to learn about the freeze — auth_status_notifier
+      // gates protected routes off the user's wallet status.
+      context.read<AuthBloc>().add(AuthRefreshUserRequested());
       context.pushReplacementNamed('freeze-account-success');
-    } else {
-      // Incorrect PIN
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
+        _submitting = false;
         _showError = true;
+        _errorMessage = e.toString().replaceFirst('Exception: ', '');
       });
     }
   }
@@ -36,6 +62,7 @@ class _FreezeAccountPinScreenState extends State<FreezeAccountPinScreen> {
     if (_showError && pin.isEmpty) {
       setState(() {
         _showError = false;
+        _errorMessage = null;
       });
     }
   }
@@ -160,7 +187,7 @@ class _FreezeAccountPinScreenState extends State<FreezeAccountPinScreen> {
                         hSpace(12),
                         Expanded(
                           child: Text(
-                            'Incorrect PIN entered, please try again',
+                            _errorMessage ?? 'Incorrect PIN entered, please try again',
                             style: TextStyle(
                               fontSize: 15.sp,
                               color: const Color(0xFFD32F2F),

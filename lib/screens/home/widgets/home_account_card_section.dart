@@ -48,7 +48,16 @@ class _HomeAccountCardSectionState extends State<HomeAccountCardSection> {
   void didUpdateWidget(covariant HomeAccountCardSection oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.user.id != widget.user.id) {
-      _reloadBalanceVisibilityFromPrefs();
+      // User identity flipped (re-login or session takeover) — reload
+      // the persisted preference for the new user AND tell Flutter to
+      // rebuild, otherwise the toggle stays on whatever the previous
+      // session had set.
+      final uid = widget.user.id.trim();
+      if (uid.isNotEmpty) {
+        setState(() {
+          _balanceVisible = _prefs.isBalanceVisible(uid);
+        });
+      }
     }
   }
 
@@ -94,7 +103,7 @@ class _HomeAccountCardSectionState extends State<HomeAccountCardSection> {
             offset: Offset(0, -1.h),
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(16.r),
                 boxShadow: [
                   BoxShadow(
@@ -162,6 +171,8 @@ class _FinanceTabsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final inactive = theme.colorScheme.onSurface.withValues(alpha: 0.6);
     final items = <({IconData icon, String label})>[
       (icon: Icons.account_balance_wallet_outlined, label: 'Savings'),
       (icon: Icons.trending_up_rounded, label: 'Investments'),
@@ -185,7 +196,7 @@ class _FinanceTabsRow extends StatelessWidget {
                   curve: Curves.easeOut,
                   padding: EdgeInsets.symmetric(vertical: 10.h, horizontal: 4.w),
                   decoration: BoxDecoration(
-                    color: sel ? Colors.white : Colors.transparent,
+                    color: sel ? theme.cardColor : Colors.transparent,
                     borderRadius: BorderRadius.vertical(
                       top: Radius.circular(14.r),
                     ),
@@ -206,7 +217,7 @@ class _FinanceTabsRow extends StatelessWidget {
                       Icon(
                         items[i].icon,
                         size: 22.sp,
-                        color: sel ? primary : Colors.grey.shade600,
+                        color: sel ? primary : inactive,
                       ),
                       SizedBox(width: 6.w),
                       Flexible(
@@ -217,7 +228,7 @@ class _FinanceTabsRow extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 17.sp,
                             fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
-                            color: sel ? primary : Colors.grey.shade600,
+                            color: sel ? primary : inactive,
                           ),
                         ),
                       ),
@@ -260,6 +271,9 @@ class _SavingsTabContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final mutedOnSurface =
+        theme.colorScheme.onSurface.withValues(alpha: 0.7);
     final balanceText = CurrencyFormatter.formatNairaFromKoboWithDecimals(
       user.walletBalanceKobo,
     );
@@ -360,7 +374,7 @@ class _SavingsTabContent extends StatelessWidget {
                 text: TextSpan(
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: Colors.grey.shade700,
+                    color: mutedOnSurface,
                     fontWeight: FontWeight.w500,
                   ),
                   children: [
@@ -368,7 +382,7 @@ class _SavingsTabContent extends StatelessWidget {
                     TextSpan(
                       text: '  |  ',
                       style: TextStyle(
-                        color: Colors.grey.shade400,
+                        color: theme.dividerColor,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
@@ -376,7 +390,7 @@ class _SavingsTabContent extends StatelessWidget {
                       text: _accountNo.isEmpty ? '—' : _accountNo,
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
-                        color: Colors.grey.shade700,
+                        color: mutedOnSurface,
                       ),
                     ),
                   ],
@@ -450,7 +464,10 @@ class _PlaceholderTab extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 15.sp,
-              color: Colors.grey.shade600,
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
               height: 1.35,
             ),
           ),

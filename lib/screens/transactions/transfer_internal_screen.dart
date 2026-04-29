@@ -407,7 +407,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                   children: [
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(12.r),
                         ),
                         padding: EdgeInsets.all(14.w),
@@ -434,7 +434,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8.r),
                                   borderSide: BorderSide(
-                                    color: Colors.grey.shade300,
+                                    color: Theme.of(context).dividerColor,
                                   ),
                                 ),
                                 focusedBorder: OutlineInputBorder(

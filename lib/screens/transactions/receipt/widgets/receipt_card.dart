@@ -31,7 +31,7 @@ class ReceiptCard extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 28.h),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(32.r),
         boxShadow: [
           BoxShadow(
@@ -66,7 +66,7 @@ class ReceiptCard extends StatelessWidget {
             gradient: style.amountPillGradient,
           ),
           vSpace(18),
-          Divider(color: Colors.grey.shade200, thickness: 1),
+          Divider(color: Theme.of(context).dividerColor, thickness: 1),
           vSpace(20),
           _ReceiptInfoTable(details: details, statusLabel: style.statusLabel),
           vSpace(24),
@@ -304,7 +304,7 @@ class _ReceiptInfoRow extends StatelessWidget {
             style: TextStyle(
               fontSize: 15.sp,
               fontWeight: FontWeight.w600,
-              color: Colors.grey.shade500,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ),

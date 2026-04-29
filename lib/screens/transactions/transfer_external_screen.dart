@@ -370,7 +370,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
       width: double.infinity,
       padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12.r),
         border: Border.all(color: const Color(0xFFE7E7E7)),
       ),
@@ -595,18 +595,22 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                           child: InputDecorator(
                             decoration: InputDecoration(
                               filled: true,
-                              fillColor: Colors.grey.shade50,
+                              fillColor: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
                               contentPadding: EdgeInsets.symmetric(
                                 horizontal: 14.w,
                                 vertical: 14.h,
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12.r),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
+                                borderSide: BorderSide(
+                                    color: Theme.of(context).dividerColor),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12.r),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
+                                borderSide: BorderSide(
+                                    color: Theme.of(context).dividerColor),
                               ),
                             ),
                             child: Row(
@@ -618,13 +622,24 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                     style: TextStyle(
                                       fontSize: 17.sp,
                                       color: _selectedBank == null
-                                          ? Colors.grey.shade500
-                                          : Colors.black87,
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.5)
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .onSurface,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ),
-                                Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600),
+                                Icon(
+                                  Icons.keyboard_arrow_down,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.6),
+                                ),
                               ],
                             ),
                           ),
@@ -711,7 +726,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8.r),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
+                            borderSide: BorderSide(color: Theme.of(context).dividerColor),
                           ),
                         ),
                         onChanged: (_) => setState(() {}),
@@ -737,7 +752,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                   vertical: 10.h,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: Theme.of(context).cardColor,
                                   borderRadius: BorderRadius.circular(16.r),
                                   border: Border.all(
                                     color: const Color(0xFFE0E0E0),

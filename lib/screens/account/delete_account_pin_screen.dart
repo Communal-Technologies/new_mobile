@@ -4,6 +4,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/repositories/account_actions_repository.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/account/widgets/pin_input_field.dart';
 
 class DeleteAccountPinScreen extends StatefulWidget {
@@ -17,17 +19,27 @@ class DeleteAccountPinScreen extends StatefulWidget {
 class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
   bool _obscurePin = true;
   bool _showError = false;
+  bool _submitting = false;
+  String? _errorMessage;
 
-  void _handlePinCompleted(String pin) {
-    // TODO: Verify PIN with backend
-    // For now, simulate PIN verification
-    if (pin == '2222') {
-      // Correct PIN - proceed to second confirmation screen
+  Future<void> _handlePinCompleted(String pin) async {
+    if (_submitting) return;
+    setState(() {
+      _submitting = true;
+      _showError = false;
+      _errorMessage = null;
+    });
+    try {
+      await getIt<AccountActionsRepository>().verifySecurityPin(pin);
+      if (!mounted) return;
+      // ignore: unawaited_futures
       context.pushNamed('delete-account-final-confirmation');
-    } else {
-      // Incorrect PIN
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
+        _submitting = false;
         _showError = true;
+        _errorMessage = e.toString().replaceFirst('Exception: ', '');
       });
     }
   }
@@ -36,6 +48,7 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
     if (_showError && pin.isEmpty) {
       setState(() {
         _showError = false;
+        _errorMessage = null;
       });
     }
   }
@@ -173,7 +186,7 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
                         hSpace(12),
                         Expanded(
                           child: Text(
-                            'Incorrect PIN entered, please try again',
+                            _errorMessage ?? 'Incorrect PIN entered, please try again',
                             style: TextStyle(
                               fontSize: 15.sp,
                               color: const Color(0xFFD32F2F),

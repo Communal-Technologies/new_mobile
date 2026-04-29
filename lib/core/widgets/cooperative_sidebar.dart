@@ -59,9 +59,11 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final onSurface = theme.colorScheme.onSurface;
+    final isDark = theme.brightness == Brightness.dark;
     return Drawer(
       width: 360.w,
-      backgroundColor: Colors.white,
+      backgroundColor: theme.cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.zero,
       ),
@@ -81,10 +83,15 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                             gradient: LinearGradient(
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
-                              colors: [
-                                Color(0xFFE8E3FF), // Light lavender
-                                Color(0xFFE0D9FF), // Slightly darker lavender
-                              ],
+                              colors: isDark
+                                  ? [
+                                      theme.primaryColor.withValues(alpha: 0.18),
+                                      theme.primaryColor.withValues(alpha: 0.10),
+                                    ]
+                                  : const [
+                                      Color(0xFFE8E3FF),
+                                      Color(0xFFE0D9FF),
+                                    ],
                             ),
                             borderRadius: BorderRadius.circular(12.r),
                             boxShadow: [
@@ -135,14 +142,18 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                                         style: TextStyle(
                                           fontSize: 19.sp,
                                           fontWeight: FontWeight.w600,
-                                          color: Colors.grey.shade800,
+                                          color: isDark
+                                              ? onSurface
+                                              : Colors.grey.shade800,
                                         ),
                                       ),
                                       GestureDetector(
                                         onTap: () => Navigator.pop(context),
                                         child: Icon(
                                           Icons.close,
-                                          color: Colors.grey.shade700,
+                                          color: isDark
+                                              ? onSurface
+                                              : Colors.grey.shade700,
                                           size: 22.sp,
                                         ),
                                       ),
@@ -156,11 +167,11 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                                         height: 44.w,
                                         padding: EdgeInsets.all(5.w),
                                         decoration: BoxDecoration(
-                                          color: Colors.white,
+                                          color: theme.cardColor,
                                           borderRadius:
                                               BorderRadius.circular(8.r),
                                           border: Border.all(
-                                            color: Colors.grey.shade300,
+                                            color: theme.dividerColor,
                                             width: 1,
                                           ),
                                         ),
@@ -185,7 +196,9 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                                                 style: TextStyle(
                                                   fontSize: 17.sp,
                                                   fontWeight: FontWeight.w700,
-                                                  color: Colors.black,
+                                                  color: isDark
+                                                      ? onSurface
+                                                      : Colors.black,
                                                 ),
                                                 maxLines: 2,
                                                 overflow: TextOverflow.ellipsis,
@@ -195,7 +208,10 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                                                 secondaryLine,
                                                 style: TextStyle(
                                                   fontSize: 15.sp,
-                                                  color: Colors.grey.shade700,
+                                                  color: isDark
+                                                      ? onSurface.withValues(
+                                                          alpha: 0.7)
+                                                      : Colors.grey.shade700,
                                                 ),
                                                 maxLines: 2,
                                                 overflow: TextOverflow.ellipsis,
@@ -206,7 +222,9 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                                       ),
                                       Icon(
                                         Icons.more_vert,
-                                        color: Colors.grey.shade600,
+                                        color: isDark
+                                            ? onSurface.withValues(alpha: 0.7)
+                                            : Colors.grey.shade600,
                                         size: 22.sp,
                                       ),
                                     ],
@@ -225,7 +243,7 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                           style: TextStyle(
                             fontSize: 17.sp,
                             fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade800,
+                            color: onSurface,
                           ),
                         ),
 
@@ -242,7 +260,7 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                                   style: TextStyle(
                                     fontSize: 15.sp,
                                     height: 1.35,
-                                    color: Colors.grey.shade700,
+                                    color: onSurface.withValues(alpha: 0.7),
                                   ),
                                 ),
                               ),
@@ -254,6 +272,7 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
 
                         // Bottom Actions
                         _buildBottomAction(
+                          theme: theme,
                           icon: Icons.add_circle_outline,
                           label: 'Join with Invite Code',
                           onTap: () => _openJoinCooperativeSheet(context),
@@ -264,6 +283,7 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                         // sessions, so a non-functional row would just
                         // confuse users.
                         _buildBottomAction(
+                          theme: theme,
                           icon: Icons.settings_outlined,
                           label: 'Settings',
                           onTap: () => _openSettings(context),
@@ -351,7 +371,7 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
             style: TextStyle(
               fontSize: 5.5.sp,
               fontWeight: FontWeight.w600,
-              color: Colors.grey.shade700,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               height: 1.0,
             ),
             maxLines: 1,
@@ -364,10 +384,12 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
   }
 
   Widget _buildBottomAction({
+    required ThemeData theme,
     required IconData icon,
     required String label,
     required VoidCallback onTap,
   }) {
+    final onSurface = theme.colorScheme.onSurface;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -380,7 +402,7 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
               Icon(
                 icon,
                 size: 22.sp,
-                color: Colors.grey.shade700,
+                color: onSurface.withValues(alpha: 0.7),
               ),
               hSpace(12),
               Text(
@@ -388,7 +410,7 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                 style: TextStyle(
                   fontSize: 17.sp,
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade800,
+                  color: onSurface,
                 ),
               ),
             ],

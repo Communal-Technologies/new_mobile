@@ -34,7 +34,7 @@ class QuickActionsSection extends StatelessWidget {
             style: TextStyle(
               fontSize: 22.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: theme.colorScheme.onSurface,
             ),
           ),
           vSpace(14),

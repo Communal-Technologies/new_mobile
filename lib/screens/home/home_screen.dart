@@ -42,12 +42,10 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Scaffold(
         key: _scaffoldKey,
-        backgroundColor: Colors.grey.shade50,
+        backgroundColor: theme.scaffoldBackgroundColor,
         drawer: const CooperativeSidebar(),
         drawerEdgeDragWidth: 50.w,
-        drawerScrimColor: Colors.black.withValues(
-          alpha: 0.4,
-        ), // Darker overlay for better visibility
+        drawerScrimColor: Colors.black.withValues(alpha: 0.4),
         body: SafeArea(
           child: SingleChildScrollView(
             child: Column(

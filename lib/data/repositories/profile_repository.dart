@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/models/member_profile_details.dart';
@@ -52,6 +54,29 @@ class ProfileRepository {
         if (w is String && w.isNotEmpty) anchorWarning = w;
       }
       return ProfileUpdateResult(anchorWarning: anchorWarning);
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  /// Upload + replace the user's avatar. Backend writes the file to
+  /// secure storage and returns a temporarily-signed URL the client
+  /// can render until the next refresh.
+  Future<String> uploadAvatar(File file) async {
+    try {
+      final fileName = file.path.split(Platform.pathSeparator).last;
+      final formData = FormData.fromMap({
+        'avatar': await MultipartFile.fromFile(file.path, filename: fileName),
+      });
+      final response = await _dioClient.postFormData(
+        ApiEndpoints.membersUploadAvatar,
+        data: formData,
+      );
+      final body = response.data;
+      if (body is Map && body['avatar'] is String) {
+        return body['avatar'] as String;
+      }
+      throw Exception('Unexpected response from server.');
     } on DioException catch (e) {
       throw Exception(_messageFromDio(e));
     }

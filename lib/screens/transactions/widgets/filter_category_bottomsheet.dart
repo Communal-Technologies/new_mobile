@@ -158,7 +158,7 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
         decoration: BoxDecoration(
-          color: isSelected ? theme.primaryColor : Colors.grey.shade100,
+          color: isSelected ? theme.primaryColor : theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20.r),
         ),
         child: Text(
@@ -166,7 +166,7 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
           style: TextStyle(
             fontSize: 17.sp,
             fontWeight: FontWeight.w500,
-            color: isSelected ? Colors.white : Colors.grey.shade700,
+            color: isSelected ? Colors.white : theme.colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
       ),
@@ -185,7 +185,7 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
         decoration: BoxDecoration(
-          color: isSelected ? theme.primaryColor : Colors.grey.shade100,
+          color: isSelected ? theme.primaryColor : theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20.r),
         ),
         child: Text(
@@ -193,7 +193,7 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
           style: TextStyle(
             fontSize: 17.sp,
             fontWeight: FontWeight.w500,
-            color: isSelected ? Colors.white : Colors.grey.shade700,
+            color: isSelected ? Colors.white : theme.colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
       ),

@@ -27,6 +27,7 @@ import 'package:communal_mobile/screens/kyc/proof_of_identity_screen.dart';
 import 'package:communal_mobile/screens/kyc/verifying_identity_screen.dart';
 import 'package:communal_mobile/screens/kyc/all_set_screen.dart';
 import 'package:communal_mobile/screens/home/home_screen.dart';
+import 'package:communal_mobile/screens/notifications/notifications_screen.dart';
 import 'package:communal_mobile/data/models/obligation.dart';
 import 'package:communal_mobile/screens/obligations/financial_obligations_screen.dart';
 import 'package:communal_mobile/screens/obligations/obligation_detail_screen.dart';
@@ -382,6 +383,11 @@ final GoRouter appRouter = GoRouter(
       path: '/home',
       name: 'home',
       builder: (context, state) => const HomeScreen(),
+    ),
+    GoRoute(
+      path: '/notifications',
+      name: 'notifications',
+      builder: (context, state) => const NotificationsScreen(),
     ),
     GoRoute(
       path: '/community',

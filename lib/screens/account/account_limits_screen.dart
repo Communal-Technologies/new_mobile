@@ -83,7 +83,7 @@ class AccountLimitsScreen extends StatelessWidget {
           backgroundColor: Theme.of(context).cardColor,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
           title: Text(

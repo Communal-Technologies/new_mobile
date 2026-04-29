@@ -294,7 +294,7 @@ class _SecurityWrapperState extends State<SecurityWrapper>
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey.shade700,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                         height: 1.35,
                       ),
                     ),

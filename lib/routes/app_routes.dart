@@ -554,7 +554,13 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/freeze-account-pin',
       name: 'freeze-account-pin',
-      builder: (context, state) => const FreezeAccountPinScreen(),
+      builder: (context, state) {
+        final extra = state.extra;
+        final reason = extra is Map && extra['reason'] is String
+            ? extra['reason'] as String
+            : null;
+        return FreezeAccountPinScreen(reason: reason);
+      },
     ),
     GoRoute(
       path: '/freeze-account-success',

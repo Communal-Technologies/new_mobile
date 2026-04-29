@@ -216,7 +216,7 @@ class _TransferInternalVerifyScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         titleSpacing: 0,
         leading: IconButton(
@@ -241,7 +241,7 @@ class _TransferInternalVerifyScreenState
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15.sp,
-                color: Colors.black54,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -264,7 +264,7 @@ class _TransferInternalVerifyScreenState
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
-                        fontSize: 13.sp,
+                        fontSize: 14.sp,
                       ),
                     ),
                   ),
@@ -286,15 +286,15 @@ class _TransferInternalVerifyScreenState
                             Icon(
                               Icons.account_balance_outlined,
                               size: 14.sp,
-                              color: Colors.black54,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                             hSpace(4),
                             Expanded(
                               child: Text(
                                 '${widget.recipient.bank} • ${widget.recipient.accountNumber}',
                                 style: TextStyle(
-                                  color: Colors.black54,
-                                  fontSize: 13.sp,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                  fontSize: 14.sp,
                                   fontWeight: FontWeight.w500,
                                 ),
                                 overflow: TextOverflow.ellipsis,
@@ -320,7 +320,7 @@ class _TransferInternalVerifyScreenState
                   'End-to-end encrypted transaction',
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: Colors.black54,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     fontWeight: FontWeight.w500,
                   ),
                 ),

@@ -50,7 +50,7 @@ class _FilterStatusBottomSheetState extends State<FilterStatusBottomSheet> {
             style: TextStyle(
               fontSize: 22.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           vSpace(20),
@@ -107,7 +107,7 @@ class _FilterStatusBottomSheetState extends State<FilterStatusBottomSheet> {
                       style: TextStyle(
                         fontSize: 17.sp,
                         fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade700,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ),

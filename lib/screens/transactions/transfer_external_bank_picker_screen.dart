@@ -49,7 +49,7 @@ class _TransferExternalBankPickerScreenState
       child: Icon(
         Icons.account_balance,
         size: (size * 0.45).sp,
-        color: const Color(0xFF0F1D40),
+        color: Theme.of(context).colorScheme.onSurface,
       ),
     );
   }
@@ -72,7 +72,7 @@ class _TransferExternalBankPickerScreenState
                 style: TextStyle(
                   fontSize: compact ? 15.sp : 16.sp,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFF0F1D40),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ),
@@ -89,7 +89,7 @@ class _TransferExternalBankPickerScreenState
         featured.isNotEmpty && _searchCtrl.text.trim().isEmpty;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -108,7 +108,7 @@ class _TransferExternalBankPickerScreenState
                       style: TextStyle(
                         fontSize: 22.sp,
                         fontWeight: FontWeight.w800,
-                        color: const Color(0xFF0F1D40),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -124,7 +124,7 @@ class _TransferExternalBankPickerScreenState
                 decoration: InputDecoration(
                   hintText: 'Search banks',
                   hintStyle: TextStyle(fontSize: 17.sp, color: Colors.grey.shade500),
-                  prefixIcon: Icon(Icons.search, color: Colors.grey.shade600, size: 24.sp),
+                  prefixIcon: Icon(Icons.search, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), size: 24.sp),
                   filled: true,
                   fillColor: Colors.white,
                   contentPadding:
@@ -150,7 +150,7 @@ class _TransferExternalBankPickerScreenState
                       style: TextStyle(
                         fontSize: 17.sp,
                         fontWeight: FontWeight.w800,
-                        color: const Color(0xFF0F1D40),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     vSpace(10),
@@ -189,7 +189,7 @@ class _TransferExternalBankPickerScreenState
                                         fontSize: 15.sp,
                                         fontWeight: FontWeight.w600,
                                         height: 1.25,
-                                        color: const Color(0xFF0F1D40),
+                                        color: Theme.of(context).colorScheme.onSurface,
                                       ),
                                     ),
                                   ],

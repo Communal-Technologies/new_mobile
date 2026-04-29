@@ -55,7 +55,7 @@ class ReceiptCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 36.sp,
                 fontWeight: FontWeight.w800,
-                color: Colors.black,
+                color: Theme.of(context).colorScheme.onSurface,
                 letterSpacing: -0.5,
               ),
             ),
@@ -123,7 +123,7 @@ class _ReceiptStatusHero extends StatelessWidget {
           style: TextStyle(
             fontSize: 15.sp,
             fontWeight: FontWeight.w500,
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
@@ -151,7 +151,7 @@ class _ReceiptCardHeader extends StatelessWidget {
           style: TextStyle(
             fontSize: 15.sp,
             fontWeight: FontWeight.w600,
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
@@ -275,7 +275,7 @@ class _ReceiptFooterNote extends StatelessWidget {
               note,
               style: TextStyle(
                 fontSize: 12.5.sp,
-                color: Colors.grey.shade700,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 height: 1.4,
               ),
             ),
@@ -316,7 +316,7 @@ class _ReceiptInfoRow extends StatelessWidget {
             style: TextStyle(
               fontSize: 15.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black87,
+              color: Theme.of(context).colorScheme.onSurface,
               height: 1.2,
             ),
           ),

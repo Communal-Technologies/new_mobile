@@ -87,7 +87,7 @@ class _TransferScreenState extends State<TransferScreen> {
         if (state is AuthAuthenticated) _loadRecent();
       },
       child: Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         titleSpacing: 0,
         leading: IconButton(
@@ -303,14 +303,14 @@ class _TransferScreenState extends State<TransferScreen> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
             ),
             Text(
               f.accountNumber,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13.sp, color: Colors.black54),
+              style: TextStyle(fontSize: 14.sp, color: Colors.black54),
             ),
           ],
         ),

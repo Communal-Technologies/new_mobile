@@ -83,7 +83,11 @@ class _BalanceCardState extends State<BalanceCard> {
                   ),
                 ),
                 child: Text(
-                  'Withdraw Funds',
+                  // Closure flow sends users to /transfer rather than
+                  // a non-existent withdrawal screen — moving the
+                  // remaining balance to another account is the only
+                  // valid pre-deletion action.
+                  'Transfer Funds',
                   style: TextStyle(
                     fontSize: 15.sp,
                     fontWeight: FontWeight.w600,

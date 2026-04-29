@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -13,18 +14,14 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-      ),
+      value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).cardColor,
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).cardColor,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            icon: const Icon(Icons.arrow_back),
             onPressed: () {
               // Navigate to home since account is deleted
               context.go('/');
@@ -35,7 +32,7 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
             style: TextStyle(
               fontSize: 19.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           centerTitle: true,
@@ -50,9 +47,9 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
                   vSpace(32),
                   _buildSuccessIcon(),
                   vSpace(24),
-                  _buildSuccessMessage(),
+                  _buildSuccessMessage(context),
                   vSpace(32),
-                  _buildWhatHappensNext(),
+                  _buildWhatHappensNext(context),
                   vSpace(24),
                   const EmailConfirmationBox(
                     email: 'pado.lebari@example.com',
@@ -89,7 +86,7 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSuccessMessage() {
+  Widget _buildSuccessMessage(BuildContext context) {
     return Column(
       children: [
         Text(
@@ -97,7 +94,7 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
           style: TextStyle(
             fontSize: 24.sp,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF0F1D40),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
           textAlign: TextAlign.center,
         ),
@@ -106,7 +103,7 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
           'Your account has been scheduled for permanent deletion',
           style: TextStyle(
             fontSize: 15.sp,
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             height: 1.5,
           ),
           textAlign: TextAlign.center,
@@ -116,7 +113,7 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
           'We\'re sorry to see you go. If you change your mind\nwithin the next 30 days, contact our support team to\nrecover your account.',
           style: TextStyle(
             fontSize: 15.sp,
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             height: 1.5,
           ),
           textAlign: TextAlign.center,
@@ -127,7 +124,7 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
           style: TextStyle(
             fontSize: 17.sp,
             fontWeight: FontWeight.w600,
-            color: const Color(0xFF0F1D40),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
           textAlign: TextAlign.center,
         ),
@@ -135,7 +132,7 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildWhatHappensNext() {
+  Widget _buildWhatHappensNext(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -144,7 +141,7 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
           style: TextStyle(
             fontSize: 19.sp,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF0F1D40),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         vSpace(16),

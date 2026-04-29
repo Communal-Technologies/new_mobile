@@ -256,7 +256,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
         statusBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: const Color(0xFFF4F4F6),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           elevation: 0,
           backgroundColor: Theme.of(context).cardColor,
@@ -324,7 +324,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                     decoration: BoxDecoration(
                       color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(14.r),
-                      border: Border.all(color: Colors.grey.shade300),
+                      border: Border.all(color: Theme.of(context).dividerColor),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<CooperativeCashBankAccount>(
@@ -387,7 +387,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                 style: TextStyle(
                   fontSize: 17.sp,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                 ),
               ),
             ),
@@ -445,7 +445,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
             style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
           ),
           vSpace(16),
-          Divider(color: Colors.grey.shade200),
+          Divider(color: Theme.of(context).dividerColor),
           vSpace(12),
           Row(
             children: [
@@ -501,7 +501,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
               currency,
             ).toMajorString(),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16.r),
               borderSide: BorderSide(color: Theme.of(context).dividerColor),
@@ -600,7 +600,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
               ),
             ),
             if (i < _sourceObligations.length - 1)
-              Divider(height: 1, color: Colors.grey.shade200),
+              Divider(height: 1, color: Theme.of(context).dividerColor),
           ],
         ],
       ),
@@ -613,7 +613,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -923,7 +923,7 @@ class _PickerCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

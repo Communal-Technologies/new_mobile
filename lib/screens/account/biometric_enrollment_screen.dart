@@ -234,7 +234,7 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
         title: Text(
           'Biometric Authentication',
           style: TextStyle(
-            color: Colors.black,
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 17.sp,
             fontWeight: FontWeight.w700,
           ),

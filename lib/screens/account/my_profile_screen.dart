@@ -98,7 +98,10 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 15.sp,
-                                color: Colors.grey.shade700,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.7),
                               ),
                             ),
                             vSpace(12),

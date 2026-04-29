@@ -4,6 +4,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/models/notification_preferences.dart';
+import 'package:communal_mobile/data/repositories/notifications_repository.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/account/widgets/notification_toggle_item.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
@@ -16,22 +19,101 @@ class NotificationSettingsScreen extends StatefulWidget {
 
 class _NotificationSettingsScreenState
     extends State<NotificationSettingsScreen> {
-  // Mute All Notifications
-  bool _muteAllNotifications = false;
+  late final NotificationsRepository _repo;
+  NotificationPreferences? _prefs;
+  bool _loading = true;
+  String? _error;
+  // Tracks the most recent saved-server snapshot so we can restore on
+  // failure. Without this, a network blip after an optimistic toggle
+  // would leave the UI in a state the server doesn't agree with.
+  NotificationPreferences? _lastSaved;
 
-  // General Section
-  bool _pushNotifications = true;
-  bool _emailNotifications = true;
-  bool _smsNotifications = false;
+  @override
+  void initState() {
+    super.initState();
+    _repo = getIt<NotificationsRepository>();
+    _load();
+  }
 
-  // Transactions Section (non-security reminders only)
-  bool _paymentReminders = true;
-  bool _largeTransactions = true;
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final p = await _repo.fetchPreferences();
+      if (!mounted) return;
+      setState(() {
+        _prefs = p;
+        _lastSaved = p;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
 
-  // Marketing & Updates Section
-  bool _promotionalOffers = false;
-  bool _productUpdates = true;
-  bool _newsletters = false;
+  /// Optimistic toggle: update the UI immediately, send the change to
+  /// the backend, revert + show a snackbar on failure.
+  Future<void> _patch(NotificationPreferences next, Map<String, dynamic> change) async {
+    final prev = _prefs;
+    setState(() => _prefs = next);
+    try {
+      final saved = await _repo.updatePreferences(change);
+      if (!mounted) return;
+      setState(() {
+        _prefs = saved;
+        _lastSaved = saved;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _prefs = prev ?? _lastSaved);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _setMuteAll(bool value) {
+    final current = _prefs ?? const NotificationPreferences();
+    if (value) {
+      // Mirrors the existing UX rule: muting flips every individual
+      // channel off so the screen state matches what the server stores.
+      final next = current.copyWith(
+        muteAll: true,
+        pushNotifications: false,
+        emailNotifications: false,
+        smsNotifications: false,
+        paymentReminders: false,
+        largeTransactions: false,
+        promotionalOffers: false,
+        productUpdates: false,
+        newsletters: false,
+      );
+      _patch(next, next.toJson());
+    } else {
+      final next = current.copyWith(muteAll: false);
+      _patch(next, {'mute_all': false});
+    }
+  }
+
+  void _setField(NotificationPreferences next, String key, bool value) {
+    // Whenever an individual channel is enabled, mute_all must turn off
+    // (server-side validator allows both flags to be sent together).
+    final payload = <String, dynamic>{key: value};
+    if (value && (_prefs?.muteAll ?? false)) {
+      payload['mute_all'] = false;
+    }
+    _patch(next, payload);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,155 +142,157 @@ class _NotificationSettingsScreenState
           ),
           centerTitle: true,
         ),
-        body: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              vSpace(16),
-              // Mute All Notifications
-              NotificationToggleItem(
-                icon: Icons.volume_off,
-                title: 'Mute All Notifications',
-                description: 'Temporarily silence all notifications',
-                value: _muteAllNotifications,
-                onChanged: (value) {
-                  setState(() {
-                    _muteAllNotifications = value;
-                    if (value) {
-                      // When muting all, turn off all individual notifications
-                      _pushNotifications = false;
-                      _emailNotifications = false;
-                      _smsNotifications = false;
-                      _paymentReminders = false;
-                      _largeTransactions = false;
-                      _promotionalOffers = false;
-                      _productUpdates = false;
-                      _newsletters = false;
-                    }
-                  });
-                },
-              ),
-              vSpace(16),
-              // General Section
-              _buildSectionHeader('General'),
-              vSpace(12),
-              NotificationToggleItem(
-                icon: Icons.square_outlined,
-                title: 'Push Notifications',
-                description: 'Receive push notifications on this device',
-                value: _pushNotifications,
-                onChanged: (value) {
-                  setState(() {
-                    _pushNotifications = value;
-                    if (value) _muteAllNotifications = false;
-                  });
-                },
-                enabled: !_muteAllNotifications,
-              ),
-              NotificationToggleItem(
-                icon: Icons.mail_outline,
-                title: 'Email Notifications',
-                description: 'Receive notifications via email',
-                value: _emailNotifications,
-                onChanged: (value) {
-                  setState(() {
-                    _emailNotifications = value;
-                    if (value) _muteAllNotifications = false;
-                  });
-                },
-                enabled: !_muteAllNotifications,
-              ),
-              NotificationToggleItem(
-                icon: Icons.chat_bubble_outline,
-                title: 'SMS Notifications',
-                description: 'Receive important alerts via SMS',
-                value: _smsNotifications,
-                onChanged: (value) {
-                  setState(() {
-                    _smsNotifications = value;
-                    if (value) _muteAllNotifications = false;
-                  });
-                },
-                enabled: !_muteAllNotifications,
-                tag: NotificationTag.premium,
-              ),
-              vSpace(16),
-              // Transactions Section
-              _buildSectionHeader('Transactions'),
-              vSpace(12),
-              NotificationToggleItem(
-                icon: Icons.attach_money,
-                title: 'Payment Reminders',
-                description: 'Reminders for upcoming payments',
-                value: _paymentReminders,
-                onChanged: (value) {
-                  setState(() {
-                    _paymentReminders = value;
-                    if (value) _muteAllNotifications = false;
-                  });
-                },
-                enabled: !_muteAllNotifications,
-              ),
-              NotificationToggleItem(
-                icon: Icons.trending_up,
-                title: 'Large Transactions',
-                description: 'Alerts for transactions above ₦50,000',
-                value: _largeTransactions,
-                onChanged: (value) {
-                  setState(() {
-                    _largeTransactions = value;
-                    if (value) _muteAllNotifications = false;
-                  });
-                },
-                enabled: !_muteAllNotifications,
-              ),
-              vSpace(16),
-              // Marketing & Updates Section
-              _buildSectionHeader('Marketing & Updates'),
-              vSpace(12),
-              NotificationToggleItem(
-                icon: Icons.trending_up,
-                title: 'Promotional Offers',
-                description: 'Special offers and discounts',
-                value: _promotionalOffers,
-                onChanged: (value) {
-                  setState(() {
-                    _promotionalOffers = value;
-                    if (value) _muteAllNotifications = false;
-                  });
-                },
-                enabled: !_muteAllNotifications,
-              ),
-              NotificationToggleItem(
-                icon: Icons.notifications_outlined,
-                title: 'Product Updates',
-                description: 'New features and improvements',
-                value: _productUpdates,
-                onChanged: (value) {
-                  setState(() {
-                    _productUpdates = value;
-                    if (value) _muteAllNotifications = false;
-                  });
-                },
-                enabled: !_muteAllNotifications,
-              ),
-              NotificationToggleItem(
-                icon: Icons.mail_outline,
-                title: 'Newsletters',
-                description: 'Monthly newsletter and tips',
-                value: _newsletters,
-                onChanged: (value) {
-                  setState(() {
-                    _newsletters = value;
-                    if (value) _muteAllNotifications = false;
-                  });
-                },
-                enabled: !_muteAllNotifications,
-              ),
-              vSpace(32),
-            ],
-          ),
+        body: _buildBody(),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null && _prefs == null) {
+      return Padding(
+        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 32.h),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline,
+                color: Color(0xFFB42318), size: 36),
+            vSpace(12),
+            Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade700),
+            ),
+            vSpace(12),
+            OutlinedButton(onPressed: _load, child: const Text('Retry')),
+          ],
         ),
+      );
+    }
+    final p = _prefs ?? const NotificationPreferences();
+    final mutedDisabled = p.muteAll;
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          vSpace(16),
+          NotificationToggleItem(
+            icon: Icons.volume_off,
+            title: 'Mute All Notifications',
+            description: 'Temporarily silence all notifications',
+            value: p.muteAll,
+            onChanged: _setMuteAll,
+          ),
+          vSpace(16),
+          _buildSectionHeader('General'),
+          vSpace(12),
+          NotificationToggleItem(
+            icon: Icons.square_outlined,
+            title: 'Push Notifications',
+            description: 'Receive push notifications on this device',
+            value: p.pushNotifications,
+            enabled: !mutedDisabled,
+            onChanged: (v) => _setField(
+              p.copyWith(pushNotifications: v, muteAll: v ? false : p.muteAll),
+              'push_notifications',
+              v,
+            ),
+          ),
+          NotificationToggleItem(
+            icon: Icons.mail_outline,
+            title: 'Email Notifications',
+            description: 'Receive notifications via email',
+            value: p.emailNotifications,
+            enabled: !mutedDisabled,
+            onChanged: (v) => _setField(
+              p.copyWith(emailNotifications: v, muteAll: v ? false : p.muteAll),
+              'email_notifications',
+              v,
+            ),
+          ),
+          NotificationToggleItem(
+            icon: Icons.chat_bubble_outline,
+            title: 'SMS Notifications',
+            description: 'Receive important alerts via SMS',
+            value: p.smsNotifications,
+            enabled: !mutedDisabled,
+            tag: NotificationTag.premium,
+            onChanged: (v) => _setField(
+              p.copyWith(smsNotifications: v, muteAll: v ? false : p.muteAll),
+              'sms_notifications',
+              v,
+            ),
+          ),
+          vSpace(16),
+          _buildSectionHeader('Transactions'),
+          vSpace(12),
+          NotificationToggleItem(
+            icon: Icons.attach_money,
+            title: 'Payment Reminders',
+            description: 'Reminders for upcoming payments',
+            value: p.paymentReminders,
+            enabled: !mutedDisabled,
+            onChanged: (v) => _setField(
+              p.copyWith(paymentReminders: v, muteAll: v ? false : p.muteAll),
+              'payment_reminders',
+              v,
+            ),
+          ),
+          NotificationToggleItem(
+            icon: Icons.trending_up,
+            title: 'Large Transactions',
+            description: 'Alerts for transactions above ₦50,000',
+            value: p.largeTransactions,
+            enabled: !mutedDisabled,
+            onChanged: (v) => _setField(
+              p.copyWith(largeTransactions: v, muteAll: v ? false : p.muteAll),
+              'large_transactions',
+              v,
+            ),
+          ),
+          vSpace(16),
+          _buildSectionHeader('Marketing & Updates'),
+          vSpace(12),
+          NotificationToggleItem(
+            icon: Icons.trending_up,
+            title: 'Promotional Offers',
+            description: 'Special offers and discounts',
+            value: p.promotionalOffers,
+            enabled: !mutedDisabled,
+            onChanged: (v) => _setField(
+              p.copyWith(promotionalOffers: v, muteAll: v ? false : p.muteAll),
+              'promotional_offers',
+              v,
+            ),
+          ),
+          NotificationToggleItem(
+            icon: Icons.notifications_outlined,
+            title: 'Product Updates',
+            description: 'New features and improvements',
+            value: p.productUpdates,
+            enabled: !mutedDisabled,
+            onChanged: (v) => _setField(
+              p.copyWith(productUpdates: v, muteAll: v ? false : p.muteAll),
+              'product_updates',
+              v,
+            ),
+          ),
+          NotificationToggleItem(
+            icon: Icons.mail_outline,
+            title: 'Newsletters',
+            description: 'Monthly newsletter and tips',
+            value: p.newsletters,
+            enabled: !mutedDisabled,
+            onChanged: (v) => _setField(
+              p.copyWith(newsletters: v, muteAll: v ? false : p.muteAll),
+              'newsletters',
+              v,
+            ),
+          ),
+          vSpace(32),
+        ],
       ),
     );
   }
@@ -227,4 +311,3 @@ class _NotificationSettingsScreenState
     );
   }
 }
-

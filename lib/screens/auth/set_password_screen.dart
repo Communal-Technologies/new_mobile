@@ -120,12 +120,12 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
 
   Widget _buildScaffold(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).cardColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back),
           onPressed: _submitting ? null : () => context.pop(),
         ),
       ),
@@ -158,7 +158,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                   style: TextStyle(
                     fontSize: 28.sp,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -172,7 +172,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     height: 1.5,
                   ),
                 ),
@@ -202,7 +202,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                     _obscurePassword
                         ? Icons.visibility_off_outlined
                         : Icons.visibility_outlined,
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                   onPressed: () {
                     setState(() {
@@ -238,7 +238,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                     _obscureConfirmPassword
                         ? Icons.visibility_off_outlined
                         : Icons.visibility_outlined,
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                   onPressed: () {
                     setState(() {
@@ -271,7 +271,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                   'Or sign in with',
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ),
@@ -310,7 +310,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                       style: TextStyle(
                         fontSize: 17.sp,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black87,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -332,8 +332,8 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                     Text(
                       'Licensed by CBN',
                       style: TextStyle(
-                        fontSize: 13.sp,
-                        color: Colors.grey.shade600,
+                        fontSize: 14.sp,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                     hSpace(4),
@@ -359,7 +359,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                     Text(
                       '|',
                       style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: 14.sp,
                         color: Colors.grey.shade400,
                       ),
                     ),
@@ -367,8 +367,8 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                     Text(
                       'Deposits insured by',
                       style: TextStyle(
-                        fontSize: 13.sp,
-                        color: Colors.grey.shade600,
+                        fontSize: 14.sp,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                     hSpace(4),

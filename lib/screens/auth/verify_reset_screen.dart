@@ -286,12 +286,12 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).cardColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
       ),
@@ -320,7 +320,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                   style: TextStyle(
                     fontSize: 28.sp,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -336,7 +336,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                   text: TextSpan(
                     style: TextStyle(
                       fontSize: 15.sp,
-                      color: Colors.grey.shade600,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       height: 1.5,
                     ),
                     children: [
@@ -381,7 +381,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                         'Resend code in ${_resendTimer}s',
                         style: TextStyle(
                           fontSize: 15.sp,
-                          color: Colors.grey.shade600,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       )
                     : _isResending
@@ -401,7 +401,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                                 'Sending code…',
                                 style: TextStyle(
                                   fontSize: 15.sp,
-                                  color: Colors.grey.shade600,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                 ),
                               ),
                             ],
@@ -413,7 +413,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                                 'Didn\'t receive the code?',
                                 style: TextStyle(
                                   fontSize: 15.sp,
-                                  color: Colors.grey.shade600,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                 ),
                               ),
                               hSpace(4),
@@ -444,7 +444,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                     _deliveryInfo!,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 13.sp,
+                      fontSize: 14.sp,
                       color: const Color(0xFF0F8B8D),
                     ),
                   ),

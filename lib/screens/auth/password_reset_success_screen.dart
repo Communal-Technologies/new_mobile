@@ -126,7 +126,7 @@ class PasswordResetSuccessScreen extends StatelessWidget {
                         context.go('/login');
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).cardColor,
                         foregroundColor: theme.primaryColor,
                         elevation: 0,
                         shape: RoundedRectangleBorder(

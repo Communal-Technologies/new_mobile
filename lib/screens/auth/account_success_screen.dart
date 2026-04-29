@@ -99,7 +99,7 @@ class AccountSuccessScreen extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () => pushKycResumeRoute(context),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).cardColor,
                         foregroundColor: theme.primaryColor,
                         elevation: 0,
                         shape: RoundedRectangleBorder(

@@ -57,8 +57,23 @@ class _LoaderOverlayState extends State<LoaderOverlay>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final Color scrim = widget.scrimColor ??
         Colors.black.withValues(alpha: widget.scrimAlpha.clamp(0.0, 1.0));
+    // The loader.gif is a coloured asset whose dark glyphs vanish on
+    // a dark scrim. We don't ship a separate white loader; instead,
+    // tint the existing GIF white in dark mode via a srcIn blend so
+    // the silhouette stays visible while the pulse animation keeps
+    // running. Light mode keeps the original colours.
+    final Image loaderImage = Image.asset(
+      Images.loader,
+      width: widget.loaderSize,
+      height: widget.loaderSize,
+      fit: BoxFit.contain,
+      color: isDark ? Colors.white : null,
+      colorBlendMode: isDark ? BlendMode.srcIn : null,
+    );
     return AbsorbPointer(
       child: ColoredBox(
         color: scrim,
@@ -66,12 +81,7 @@ class _LoaderOverlayState extends State<LoaderOverlay>
           child: Center(
             child: ScaleTransition(
               scale: _scale,
-              child: Image.asset(
-                Images.loader,
-                width: widget.loaderSize,
-                height: widget.loaderSize,
-                fit: BoxFit.contain,
-              ),
+              child: loaderImage,
             ),
           ),
         ),

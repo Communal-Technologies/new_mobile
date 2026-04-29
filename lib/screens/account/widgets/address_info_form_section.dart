@@ -97,13 +97,45 @@ class AddressInfoFormSection extends StatelessWidget {
                 ),
               ],
             ),
+            if (lgaController != null || postalCodeController != null) ...[
+              vSpace(16),
+              Row(
+                children: [
+                  if (lgaController != null)
+                    Expanded(
+                      child: _FormTextField(
+                        controller: lgaController!,
+                        label: 'LGA',
+                      ),
+                    ),
+                  if (lgaController != null && postalCodeController != null)
+                    hSpace(12),
+                  if (postalCodeController != null)
+                    Expanded(
+                      child: _FormTextField(
+                        controller: postalCodeController!,
+                        label: 'Postal Code',
+                      ),
+                    ),
+                ],
+              ),
+            ],
             vSpace(20),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: onSave,
-                icon: Icon(Icons.save, size: 18.sp),
-                label: Text('Save Changes'),
+                onPressed: saving ? null : onSave,
+                icon: saving
+                    ? SizedBox(
+                        height: 16.sp,
+                        width: 16.sp,
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                        ),
+                      )
+                    : Icon(Icons.save, size: 18.sp),
+                label: Text(saving ? 'Saving…' : 'Save Changes'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF7434FF),
                   foregroundColor: Colors.white,

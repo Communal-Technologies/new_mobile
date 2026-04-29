@@ -9,7 +9,9 @@ import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
 import 'package:communal_mobile/core/widgets/bottomsheet_handlebar.dart';
 import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/models/community_membership_model.dart';
 import 'package:communal_mobile/data/repositories/community_repository.dart';
+import 'package:communal_mobile/data/repositories/community_settings_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/community/community_map/community_card.dart';
 import 'package:communal_mobile/screens/community/community_map/join_community_bottom_sheet.dart';
@@ -40,6 +42,10 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
   bool _loading = true;
   String? _loadError;
 
+  /// cooperative_ids the signed-in user already belongs to. Used to
+  /// suppress the Join CTA on the corresponding cards.
+  Set<String> _memberCooperativeIds = const <String>{};
+
   static const double _collapsedSheetSize = 0.34;
   static const double _expandedSheetSize = 0.82;
 
@@ -68,13 +74,31 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
       _loadError = null;
     });
     try {
-      final coops = await getIt<CommunityRepository>().fetchPublicCooperatives();
+      // Fan-out fetches in parallel — the user's memberships and the
+      // public cooperatives list are independent. Failure on the
+      // memberships side is non-fatal: we just don't dim Join CTAs
+      // for already-joined coops, and the backend's 409 still gates
+      // the actual submit.
+      final results = await Future.wait<dynamic>([
+        getIt<CommunityRepository>().fetchPublicCooperatives(),
+        getIt<CommunitySettingsRepository>()
+            .fetchMemberships()
+            .catchError((_) => const <CommunityMembership>[]),
+      ]);
       if (!mounted) return;
+      final coops = results[0] as List;
+      final memberships = results[1] as List;
       final mapped = coops
           .map((c) => CommunityLocation.fromPublicCooperative(c))
           .toList();
+      final memberIds = <String>{
+        for (final m in memberships)
+          if (m.cooperativeId is String && (m.cooperativeId as String).isNotEmpty)
+            m.cooperativeId as String,
+      };
       setState(() {
         _communities = mapped;
+        _memberCooperativeIds = memberIds;
         _loading = false;
         // Default selection: first featured, else the first with
         // coordinates so the featured banner has something to show.
@@ -647,6 +671,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
       community: community,
       isSelected: community.id == _selectedCommunityId,
       accentColor: _markerColorFromHue(community.markerHue),
+      isMember: _memberCooperativeIds.contains(community.id),
       onTap: () => _focusOnCommunity(community),
       onJoinPressed: () => _handleCommunityAction(community),
     );

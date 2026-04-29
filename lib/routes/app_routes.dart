@@ -305,12 +305,28 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/set-pin',
       name: 'set-pin',
-      builder: (context, state) => const SetPinScreen(),
+      builder: (context, state) {
+        final extra = state.extra is Map<String, dynamic>
+            ? state.extra as Map<String, dynamic>
+            : const <String, dynamic>{};
+        return SetPinScreen(
+          phone: extra['phone']?.toString(),
+          userId: extra['userId']?.toString(),
+        );
+      },
     ),
     GoRoute(
       path: '/set-password',
       name: 'set-password',
-      builder: (context, state) => const SetPasswordScreen(),
+      builder: (context, state) {
+        final extra = state.extra is Map<String, dynamic>
+            ? state.extra as Map<String, dynamic>
+            : const <String, dynamic>{};
+        return SetPasswordScreen(
+          phone: extra['phone']?.toString(),
+          userId: extra['userId']?.toString(),
+        );
+      },
     ),
     GoRoute(
       path: '/account-success',

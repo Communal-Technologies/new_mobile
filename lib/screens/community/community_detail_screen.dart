@@ -6,14 +6,48 @@ import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/community_repository.dart';
+import 'package:communal_mobile/data/repositories/community_settings_repository.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/community/community_map/join_community_bottom_sheet.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_details.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_locations.dart';
 
-class CommunityDetailScreen extends StatelessWidget {
+class CommunityDetailScreen extends StatefulWidget {
   const CommunityDetailScreen({super.key, required this.detail});
 
   final CommunityDetail detail;
+
+  @override
+  State<CommunityDetailScreen> createState() => _CommunityDetailScreenState();
+}
+
+class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
+  // Whether the signed-in user already belongs to this cooperative.
+  // Hides the Join CTA in that case — joining a coop you're already
+  // in just produces a 409 from the backend.
+  bool _isMember = false;
+
+  CommunityDetail get detail => widget.detail;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveMembership();
+  }
+
+  Future<void> _resolveMembership() async {
+    try {
+      final memberships =
+          await getIt<CommunitySettingsRepository>().fetchMemberships();
+      if (!mounted) return;
+      final coopId = detail.location.id;
+      final mine = memberships.any((m) => m.cooperativeId == coopId);
+      if (mine != _isMember) setState(() => _isMember = mine);
+    } catch (_) {
+      // Silent: defaulting to "not a member" so the join CTA is at
+      // worst shown when it shouldn't be — backend 409 covers us.
+    }
+  }
 
   bool get _hasStats {
     final s = detail.stats;
@@ -200,24 +234,51 @@ class CommunityDetailScreen extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: ElevatedButton(
-                  onPressed: () => _handleJoin(context, location),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF7434FF),
-                    foregroundColor: Colors.white,
-                    minimumSize: Size(double.infinity, 48.h),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16.r),
-                    ),
-                  ),
-                  child: Text(
-                    'Join Community',
-                    style: TextStyle(
-                      fontSize: 17.sp,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
+                child: _isMember
+                    ? Container(
+                        height: 48.h,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE7F7EE),
+                          borderRadius: BorderRadius.circular(16.r),
+                          border: Border.all(color: const Color(0xFFB6E2C7)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.verified_user,
+                              color: Color(0xFF1F8B4C),
+                            ),
+                            hSpace(8),
+                            Text(
+                              'You are a member',
+                              style: TextStyle(
+                                fontSize: 15.sp,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF1F8B4C),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ElevatedButton(
+                        onPressed: () => _handleJoin(context, location),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF7434FF),
+                          foregroundColor: Colors.white,
+                          minimumSize: Size(double.infinity, 48.h),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16.r),
+                          ),
+                        ),
+                        child: Text(
+                          'Join Community',
+                          style: TextStyle(
+                            fontSize: 17.sp,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
               ),
               hSpace(12),
               Container(

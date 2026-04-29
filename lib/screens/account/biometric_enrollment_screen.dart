@@ -222,7 +222,7 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
     final primary = theme.primaryColor;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7FA),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Theme.of(context).cardColor,
         elevation: 0,

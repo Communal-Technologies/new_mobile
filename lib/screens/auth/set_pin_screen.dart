@@ -272,7 +272,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
                   height: 50.h,
                   decoration: BoxDecoration(
                     border: Border.all(
-                      color: Colors.grey.shade300,
+                      color: Theme.of(context).dividerColor,
                       width: 1.5,
                     ),
                     borderRadius: BorderRadius.circular(25.r),
@@ -333,7 +333,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
                       '|',
                       style: TextStyle(
                         fontSize: 14.sp,
-                        color: Colors.grey.shade400,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                       ),
                     ),
                     hSpace(8),

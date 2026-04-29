@@ -83,8 +83,8 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
         body: SingleChildScrollView(
           child: Container(
             padding: EdgeInsets.all(32.w),
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,

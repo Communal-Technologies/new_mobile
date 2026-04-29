@@ -11,7 +11,7 @@ class VerificationDetailsCard extends StatelessWidget {
       margin: EdgeInsets.symmetric(horizontal: 16.w),
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16.r),
       ),
       child: Column(
@@ -49,7 +49,7 @@ class VerificationDetailsCard extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(12.w),
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: Theme.of(context).dividerColor,
               borderRadius: BorderRadius.circular(8.r),
             ),
             child: Row(

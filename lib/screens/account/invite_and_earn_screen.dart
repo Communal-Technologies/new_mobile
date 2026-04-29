@@ -39,7 +39,7 @@ class InviteAndEarnScreen extends StatelessWidget {
           centerTitle: true,
           actions: [
             IconButton(
-              icon: Icon(Icons.edit, color: Colors.grey.shade400, size: 20.sp),
+              icon: Icon(Icons.edit, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4), size: 20.sp),
               onPressed: () {},
             ),
           ],

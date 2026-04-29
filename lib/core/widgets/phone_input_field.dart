@@ -87,7 +87,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
               color: hasError ? Colors.red : Colors.grey.shade300,
               width: 1.5,
             ),
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
           ),
           clipBehavior: Clip.antiAlias,
           child: InternationalPhoneNumberInput(

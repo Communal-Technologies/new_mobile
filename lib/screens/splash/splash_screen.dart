@@ -329,7 +329,7 @@ class _SplashScreenState extends State<SplashScreen>
       width: 200.w,
       height: 200.w,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(

@@ -96,7 +96,7 @@ class _FreezeAccountPinScreenState extends State<FreezeAccountPinScreen> {
             margin: EdgeInsets.all(16.w),
             padding: EdgeInsets.all(32.w),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(20.r),
             ),
             child: Column(

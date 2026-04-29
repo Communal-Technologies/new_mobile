@@ -70,7 +70,7 @@ class CommunityActionItem extends StatelessWidget {
             ),
             Icon(
               Icons.chevron_right,
-              color: Colors.grey.shade400,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
               size: 22.sp,
             ),
           ],

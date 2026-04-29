@@ -39,11 +39,11 @@ class ContactMethodCard extends StatelessWidget {
         margin: EdgeInsets.symmetric(horizontal: 16.w),
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(12.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.shade200,
+              color: Theme.of(context).dividerColor,
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -90,7 +90,7 @@ class ContactMethodCard extends StatelessWidget {
             ),
             Icon(
               Icons.chevron_right,
-              color: Colors.grey.shade400,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
               size: 20.sp,
             ),
           ],

@@ -1083,7 +1083,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                   height: 80.w,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.grey.shade200,
+                    color: Theme.of(context).dividerColor,
                         ),
                         child: ClipOval(
                           child: Image.network(
@@ -1098,7 +1098,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                                 height: 80.w,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: Colors.grey.shade300,
+                                  color: Theme.of(context).dividerColor,
                                 ),
                                 child: Icon(
                                   Icons.person,
@@ -1116,7 +1116,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                                   height: 80.w,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: Colors.grey.shade200,
+                                    color: Theme.of(context).dividerColor,
                                   ),
                                   child: Icon(
                                     Icons.person,
@@ -1128,7 +1128,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                               return Container(
                                 width: 80.w,
                                 height: 80.w,
-                                color: Colors.grey.shade200,
+                                color: Theme.of(context).dividerColor,
                                 child: Center(
                                   child: CircularProgressIndicator(
                                     value: loadingProgress.expectedTotalBytes != null
@@ -1147,7 +1147,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                         height: 80.w,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.grey.shade300,
+                          color: Theme.of(context).dividerColor,
                         ),
                         child: Icon(
                           Icons.person,

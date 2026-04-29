@@ -19,7 +19,7 @@ class FaqCategorySection extends StatelessWidget {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(16.r),
           topRight: Radius.circular(16.r),
@@ -97,7 +97,7 @@ class _FaqQuestionItemState extends State<_FaqQuestionItem> {
         Divider(
           height: 1,
           thickness: 1,
-          color: Colors.grey.shade200,
+          color: Theme.of(context).dividerColor,
         ),
         InkWell(
           onTap: () => setState(() => _isExpanded = !_isExpanded),

@@ -148,8 +148,12 @@ class WelcomeScreen extends StatelessWidget {
     return RichText(
       textAlign: TextAlign.center,
       text: TextSpan(
+        // Welcome screen sits over a dark photo gradient regardless of
+        // theme, so the disclaimer text always wants a light grey
+        // (theme.onSurface inverts in dark mode and would render dark
+        // on a dark photo — unreadable).
         style: TextStyle(
-          color: Colors.grey.shade400,
+          color: Colors.white.withValues(alpha: 0.7),
           fontSize: 14.sp,
           height: 1.4,
         ),

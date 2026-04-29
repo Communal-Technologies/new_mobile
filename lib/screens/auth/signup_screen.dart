@@ -396,7 +396,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       '|',
                       style: TextStyle(
                         fontSize: 14.sp,
-                        color: Colors.grey.shade400,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                       ),
                     ),
                     hSpace(8),

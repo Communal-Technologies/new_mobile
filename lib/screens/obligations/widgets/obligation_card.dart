@@ -13,6 +13,8 @@ class ObligationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+    final mutedOnSurface = onSurface.withValues(alpha: 0.6);
 
     return InkWell(
       borderRadius: BorderRadius.circular(16.r),
@@ -23,11 +25,11 @@ class ObligationCard extends StatelessWidget {
             width: double.infinity,
             padding: EdgeInsets.all(16.w),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.cardColor,
               borderRadius: BorderRadius.circular(16.r),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -42,7 +44,7 @@ class ObligationCard extends StatelessWidget {
                   children: [
                     _buildTag(
                       obligation.category,
-                      theme.primaryColor.withOpacity(0.15),
+                      theme.primaryColor.withValues(alpha: 0.15),
                       theme.primaryColor,
                     ),
                     _buildTag(
@@ -61,13 +63,13 @@ class ObligationCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 17.sp,
                           fontWeight: FontWeight.w700,
-                          color: Colors.black,
+                          color: onSurface,
                         ),
                       ),
                     ),
                     Icon(
                       Icons.chevron_right,
-                      color: Colors.grey.shade400,
+                      color: mutedOnSurface,
                       size: 22.sp,
                     ),
                   ],
@@ -80,7 +82,7 @@ class ObligationCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 15.sp,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black87,
+                        color: onSurface,
                       ),
                     ),
                     const Spacer(),
@@ -100,7 +102,7 @@ class ObligationCard extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: obligation.progress.clamp(0, 1),
                     minHeight: 10.h,
-                    backgroundColor: Colors.grey.shade200,
+                    backgroundColor: theme.dividerColor,
                     valueColor: AlwaysStoppedAnimation(theme.primaryColor),
                   ),
                 ),
@@ -141,36 +143,40 @@ class ObligationCard extends StatelessWidget {
                         Icon(
                           Icons.check_circle_outline,
                           size: 16.sp,
-                          color: Colors.grey.shade500,
+                          color: mutedOnSurface,
                         ),
                         hSpace(6),
                         Text(
                           obligation.installmentsLabel,
                           style: TextStyle(
                             fontSize: 15.sp,
-                            color: Colors.grey.shade600,
+                            color: mutedOnSurface,
                           ),
                         ),
                       ],
                     ),
                     const Spacer(),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.calendar_today_outlined,
-                          size: 16.sp,
-                          color: Colors.grey.shade500,
-                        ),
-                        hSpace(6),
-                        Text(
-                          obligation.nextDueDateLabel,
-                          style: TextStyle(
-                            fontSize: 15.sp,
-                            color: Colors.grey.shade600,
+                    // Equity is share-based, not date-bound — showing a
+                    // "next due" date there is misleading, so we skip
+                    // the calendar pill for that category.
+                    if (obligation.category != 'Equity')
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 16.sp,
+                            color: mutedOnSurface,
                           ),
-                        ),
-                      ],
-                    ),
+                          hSpace(6),
+                          Text(
+                            'Due ${obligation.nextDueDateLabel}',
+                            style: TextStyle(
+                              fontSize: 15.sp,
+                              color: mutedOnSurface,
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
               ],

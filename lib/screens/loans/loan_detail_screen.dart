@@ -163,6 +163,11 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                   ],
                   vSpace(16),
                   _buildHistoryCard(),
+                  if (_loan.status == LoanStatus.approved &&
+                      _loan.balanceMinor > 0) ...[
+                    vSpace(24),
+                    _buildRepayButton(),
+                  ],
                   if (_loan.status == LoanStatus.pending) ...[
                     vSpace(24),
                     _buildCancelButton(),
@@ -452,7 +457,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
               padding: EdgeInsets.symmetric(vertical: 16.h),
               child: Text(
                 _loan.status == LoanStatus.approved
-                    ? 'No repayments yet. Your cooperative draws repayments from your obligations and wallet.'
+                    ? 'No repayments yet. Tap "Make Repayment" below to pay from your wallet or a non-equity obligation.'
                     : 'No payments recorded yet.',
                 style:
                     TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
@@ -519,6 +524,34 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRepayButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: () => context.pushNamed(
+          'loan-payment',
+          extra: _loan,
+        ),
+        icon: const Icon(Icons.payments_outlined),
+        label: Text(
+          'Make Repayment',
+          style: TextStyle(
+            fontSize: 17.sp,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFE67E22),
+          foregroundColor: Colors.white,
+          minimumSize: Size(double.infinity, 52.h),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18.r),
+          ),
+        ),
       ),
     );
   }

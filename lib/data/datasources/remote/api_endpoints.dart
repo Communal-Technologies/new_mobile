@@ -116,6 +116,14 @@ class ApiEndpoints {
       '/members/loan/fetch-approval-requests/$ledgerNumber';
   static const String membersLoanApplication = '/members/loan/application';
   static const String membersLoanCancelRequest = '/members/loan/cancel-request';
+  /// Member-initiated loan repayment (obligation→loan path).
+  /// Biometric-gated server-side. Mirrors the obligation flow.
+  static const String membersPayLoan = '/members/loan/pay';
+  /// NIP-funded loan repayment record-only path. No biometric; the
+  /// upstream /transfer/initiate already signed the value-moving
+  /// step. Same split as record-nip-obligation-payment.
+  static const String membersRecordNipLoanPayment =
+      '/members/loan/record-nip-payment';
   static const String membersUpdateGuarantorApproval =
       '/members/loan/update-guarantor-approval';
   static const String membersLoanSearchGuarantors =

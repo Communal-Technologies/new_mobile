@@ -321,6 +321,108 @@ class LoanRepository {
     }
   }
 
+  /// Pay down an approved loan from a non-equity obligation balance.
+  /// Hits the biometric-gated `/members/loan/pay` endpoint with
+  /// `gateway='obligation'`. Backend rejects equity sources, so the
+  /// mobile picker is the first line of defense and this call is the
+  /// second.
+  Future<void> payLoanFromObligation({
+    required UserModel user,
+    required String loanId,
+    required String sourceObligationAccountCode,
+    required int amountMinor,
+    String? idempotencyKey,
+    Map<String, String>? biometricHeaders,
+  }) async {
+    final cooperativeId = user.cooperativeId?.trim() ?? '';
+    final ledgerNumber = user.ledgerNumber?.trim() ?? '';
+    final source = sourceObligationAccountCode.trim();
+    final id = loanId.trim();
+    if (cooperativeId.isEmpty || ledgerNumber.isEmpty) {
+      throw Exception('Missing payment details');
+    }
+    if (id.isEmpty) throw Exception('Missing loan');
+    if (source.isEmpty) throw Exception('Missing source obligation');
+    if (amountMinor <= 0) throw Exception('Invalid amount');
+
+    try {
+      final response = await _dio.post(
+        ApiEndpoints.membersPayLoan,
+        data: {
+          'amount': amountMinor.toString(),
+          'loan_id': id,
+          'ledger_number': ledgerNumber,
+          'gateway': 'obligation',
+          'gateway_id': source,
+          'cooperative': cooperativeId,
+        },
+        idempotencyKey: idempotencyKey,
+        extraHeaders: biometricHeaders,
+      );
+      if (response.statusCode == 200) return;
+      final data = response.data;
+      if (data is Map && data['message'] != null) {
+        throw Exception(data['message'].toString());
+      }
+      throw Exception('Unable to record loan repayment');
+    } on DioException catch (e) {
+      throw _wrap(e, 'Unable to record loan repayment');
+    }
+  }
+
+  /// After a successful NIP transfer to the cooperative cash repository,
+  /// record the loan repayment. No biometric headers — the upstream
+  /// `/transfer/initiate` already required a signature, and the
+  /// backend independently re-verifies the transfer belongs to this
+  /// member, completed at Anchor, lands in the right cooperative cash
+  /// repo, and matches the amount.
+  Future<void> recordNipLoanPayment({
+    required UserModel user,
+    required String loanId,
+    required String transferId,
+    required String cashRepositoryId,
+    required int amountMinor,
+    String? idempotencyKey,
+  }) async {
+    final cooperativeId = user.cooperativeId?.trim() ?? '';
+    final ledgerNumber = user.ledgerNumber?.trim() ?? '';
+    final id = loanId.trim();
+    final tid = transferId.trim();
+    final rid = cashRepositoryId.trim();
+    if (cooperativeId.isEmpty ||
+        ledgerNumber.isEmpty ||
+        id.isEmpty ||
+        tid.isEmpty ||
+        rid.isEmpty) {
+      throw Exception('Missing payment details');
+    }
+    if (amountMinor <= 0) throw Exception('Invalid amount');
+
+    try {
+      final response = await _dio.post(
+        ApiEndpoints.membersRecordNipLoanPayment,
+        data: {
+          'amount': amountMinor.toString(),
+          'loan_id': id,
+          'ledger_number': ledgerNumber,
+          'gateway': 'nip_transfer',
+          'gateway_id': tid,
+          'cooperative': cooperativeId,
+          'cash_repository_id': rid,
+        },
+        idempotencyKey: idempotencyKey,
+      );
+      if (response.statusCode == 200) return;
+      final data = response.data;
+      if (data is Map && data['message'] != null) {
+        throw Exception(data['message'].toString());
+      }
+      throw Exception('Unable to record loan repayment');
+    } on DioException catch (e) {
+      throw _wrap(e, 'Unable to record loan repayment');
+    }
+  }
+
   /// Cancel a pending loan application by reference id. Backend route
   /// expects the reference in the request body.
   Future<void> cancelApplication(String referenceId) async {

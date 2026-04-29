@@ -63,6 +63,9 @@ import 'package:communal_mobile/screens/loans/loan_application_step2_screen.dart
 import 'package:communal_mobile/screens/loans/loan_application_step3_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_application_success_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_detail_screen.dart';
+import 'package:communal_mobile/screens/loans/loan_payment_screen.dart';
+import 'package:communal_mobile/screens/loans/loan_confirm_payment_screen.dart';
+import 'package:communal_mobile/screens/loans/data/loan_nip_settlement.dart';
 import 'package:communal_mobile/screens/loans/guarantor_requests_screen.dart';
 import 'package:communal_mobile/screens/loans/data/loan_application_draft.dart';
 import 'package:communal_mobile/screens/account/account_settings_screen.dart';
@@ -511,6 +514,78 @@ final GoRouter appRouter = GoRouter(
       },
     ),
     GoRoute(
+      path: '/loan-payment',
+      name: 'loan-payment',
+      redirect: (context, state) =>
+          state.extra is LoanApplication ? null : '/loans',
+      builder: (context, state) =>
+          LoanPaymentScreen(loan: state.extra as LoanApplication),
+    ),
+    GoRoute(
+      path: '/loan-confirm-payment',
+      name: 'loan-confirm-payment',
+      redirect: (context, state) {
+        final extra = state.extra;
+        if (extra is! Map) return '/loans';
+        if (extra['loan'] is! LoanApplication) return '/loans';
+        return null;
+      },
+      builder: (context, state) {
+        final extra = Map<String, dynamic>.from(state.extra as Map);
+        final loan = extra['loan'] as LoanApplication;
+
+        final maybeAmount = extra['amountMinor'] ?? extra['amount_minor'];
+        final amountMinor = maybeAmount is num
+            ? maybeAmount.toInt()
+            : int.tryParse(maybeAmount?.toString() ?? '') ??
+                loan.monthlyRepaymentMinor;
+
+        final maybeMethod = extra['method'];
+        final method = maybeMethod is String && maybeMethod.isNotEmpty
+            ? maybeMethod
+            : 'Wallet';
+
+        CooperativeCashBankAccount? cashAccount;
+        final rawCash = extra['cash_account'];
+        if (rawCash is Map) {
+          cashAccount = CooperativeCashBankAccount.fromJson(
+            Map<String, dynamic>.from(rawCash),
+          );
+        }
+
+        String? cashRepositoryId;
+        final rawRid = extra['cash_repository_id'];
+        if (rawRid != null) {
+          final rid = rawRid.toString().trim();
+          cashRepositoryId = rid.isEmpty ? null : rid;
+        }
+
+        String? sourceObligationCode;
+        final rawSrcCode = extra['source_obligation_code'];
+        if (rawSrcCode != null) {
+          final code = rawSrcCode.toString().trim();
+          sourceObligationCode = code.isEmpty ? null : code;
+        }
+
+        String? sourceObligationTitle;
+        final rawSrcTitle = extra['source_obligation_title'];
+        if (rawSrcTitle != null) {
+          final title = rawSrcTitle.toString().trim();
+          sourceObligationTitle = title.isEmpty ? null : title;
+        }
+
+        return LoanConfirmPaymentScreen(
+          loan: loan,
+          amountMinor: amountMinor,
+          method: method,
+          cashAccount: cashAccount,
+          cashRepositoryId: cashRepositoryId,
+          sourceObligationCode: sourceObligationCode,
+          sourceObligationTitle: sourceObligationTitle,
+        );
+      },
+    ),
+    GoRoute(
       path: '/guarantor-requests',
       name: 'guarantor-requests',
       builder: (context, state) => const GuarantorRequestsScreen(),
@@ -942,6 +1017,7 @@ final GoRouter appRouter = GoRouter(
         ReceiptAction? action;
 
         ObligationNipSettlement? obligationNipSettlement;
+        LoanNipSettlement? loanNipSettlement;
         if (extra is Map<String, dynamic>) {
           final maybeDetails = extra['details'];
           if (maybeDetails is TransactionDetailsData) {
@@ -955,6 +1031,12 @@ final GoRouter appRouter = GoRouter(
               Map<String, dynamic>.from(sRaw),
             );
           }
+          final lRaw = extra['loanNipSettlement'];
+          if (lRaw is Map) {
+            loanNipSettlement = LoanNipSettlement.tryFromJson(
+              Map<String, dynamic>.from(lRaw),
+            );
+          }
         } else if (extra is TransactionDetailsData) {
           details = extra;
         }
@@ -963,6 +1045,7 @@ final GoRouter appRouter = GoRouter(
           details: details,
           initialAction: action,
           obligationNipSettlement: obligationNipSettlement,
+          loanNipSettlement: loanNipSettlement,
         );
       },
     ),

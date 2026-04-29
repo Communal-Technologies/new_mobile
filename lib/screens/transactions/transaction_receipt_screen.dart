@@ -12,9 +12,11 @@ import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/repositories/loan_repository.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/screens/loans/data/loan_nip_settlement.dart';
 import 'package:communal_mobile/screens/obligations/data/obligation_nip_settlement.dart';
 import 'package:communal_mobile/data/models/obligation.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
@@ -40,6 +42,7 @@ class TransactionReceiptScreen extends StatefulWidget {
     required this.details,
     this.initialAction,
     this.obligationNipSettlement,
+    this.loanNipSettlement,
   });
 
   final TransactionDetailsData details;
@@ -47,6 +50,11 @@ class TransactionReceiptScreen extends StatefulWidget {
 
   /// When the NIP transfer succeeds, post obligation payment then navigate to success.
   final ObligationNipSettlement? obligationNipSettlement;
+
+  /// Same idea but for loan repayments. Receipt screen records the
+  /// loan repayment via the no-biometric record route once the
+  /// upstream transfer reports successful.
+  final LoanNipSettlement? loanNipSettlement;
 
   @override
   State<TransactionReceiptScreen> createState() =>
@@ -57,12 +65,14 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
   final GlobalKey _receiptKey = GlobalKey();
   final _repo = getIt<TransferRepository>();
   final _obligationsRepo = MemberObligationsRepository(getIt());
+  final _loanRepo = LoanRepository(getIt());
   late final ReceiptExportHelper _exporter;
   late TransactionDetailsData _details;
   Timer? _pollTimer;
   int _pollTicks = 0;
   static const int _maxPollTicks = 45;
   bool _obligationNipPosted = false;
+  bool _loanNipPosted = false;
 
   @override
   void initState() {
@@ -114,6 +124,12 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
         // ignore: unawaited_futures
         _postObligationNipIfNeeded();
       });
+    } else if (widget.loanNipSettlement != null &&
+        _details.status == TransactionStatus.successful) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // ignore: unawaited_futures
+        _postLoanNipIfNeeded();
+      });
     }
   }
 
@@ -161,6 +177,8 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
           context.read<AuthBloc>().add(AuthRefreshUserRequested());
           // ignore: unawaited_futures
           _postObligationNipIfNeeded();
+          // ignore: unawaited_futures
+          _postLoanNipIfNeeded();
         });
       }
     } catch (_) {
@@ -218,6 +236,42 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
         SnackBar(
           content: Text(
             'Transfer succeeded but the obligation could not be updated. '
+            '${e.toString().replaceFirst('Exception: ', '')}',
+          ),
+        ),
+      );
+    }
+  }
+
+  /// Loan analogue of [_postObligationNipIfNeeded]. Same shape: posts
+  /// to the no-biometric `/record-nip-payment` route after the
+  /// upstream transfer reports successful, leaves the user on the
+  /// receipt screen (no separate loan-success screen yet — the receipt
+  /// IS the success).
+  Future<void> _postLoanNipIfNeeded() async {
+    final settlement = widget.loanNipSettlement;
+    if (settlement == null || _loanNipPosted) return;
+    if (_details.status != TransactionStatus.successful) return;
+
+    final auth = context.read<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) return;
+
+    _loanNipPosted = true;
+    try {
+      await _loanRepo.recordNipLoanPayment(
+        user: auth.user,
+        loanId: settlement.loanId,
+        transferId: _details.id.trim(),
+        cashRepositoryId: settlement.cashRepositoryId,
+        amountMinor: settlement.amountMinor,
+      );
+    } catch (e) {
+      _loanNipPosted = false;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Transfer succeeded but the loan could not be updated. '
             '${e.toString().replaceFirst('Exception: ', '')}',
           ),
         ),

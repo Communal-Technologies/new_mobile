@@ -69,8 +69,12 @@ class _ProfileCardState extends State<ProfileCard> {
         final showUpgradeChip = user.tierLimits?.isFullyVerified != true;
         final displayName =
             user.name.trim().isNotEmpty ? user.name.trim() : 'Member';
-        final balanceText =
-            CurrencyFormatter.formatNairaFromKobo(user.walletBalanceKobo);
+        // Match the dashboard: render kobo precision (`₦1,234.56`)
+        // instead of rounding to whole naira, otherwise a non-zero
+        // kobo balance silently disappears here while the home card
+        // shows it.
+        final balanceText = CurrencyFormatter.formatNairaFromKoboWithDecimals(
+            user.walletBalanceKobo);
         final avatar = user.avatar;
         final ImageProvider<Object> avatarImage = (avatar != null &&
                 (avatar.startsWith('http://') || avatar.startsWith('https://')))

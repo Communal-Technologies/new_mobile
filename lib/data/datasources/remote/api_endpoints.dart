@@ -58,6 +58,11 @@ class ApiEndpoints {
       '/members/notifications/$id/read';
   static const String membersNotificationsMarkAllRead =
       '/members/notifications/mark-all-read';
+  static const String membersNotificationPreferences =
+      '/members/notification-preferences';
+  static String membersFetchUserDetails(String id) =>
+      '/members/fetch-user-details/$id';
+  static const String membersUpdateProfile = '/members/update-profile';
   static const String membersTransactionStatementExport =
       '/members/transaction-statement/export';
 

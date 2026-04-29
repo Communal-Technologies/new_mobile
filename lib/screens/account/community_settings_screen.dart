@@ -221,7 +221,7 @@ class _CommunitySettingsScreenState extends State<CommunitySettingsScreen> {
                     value: _selectedCooperativeId,
                     style: TextStyle(
                       fontSize: 17.sp,
-                      color: const Color(0xFF0F1D40),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                     items: _memberships
                         .map(
@@ -416,7 +416,7 @@ class _CommunitySettingsScreenState extends State<CommunitySettingsScreen> {
         style: TextStyle(
           fontSize: 19.sp,
           fontWeight: FontWeight.w700,
-          color: const Color(0xFF0F1D40),
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
     );

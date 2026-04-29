@@ -226,7 +226,21 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
           final keys = getIt<BiometricKeyService>();
           final deviceId = await signer.deviceId();
           final localPem = await keys.getPublicKeyPem(deviceId);
-          canUseBiometric = localPem != null && localPem.isNotEmpty;
+          // Per-user gate: BiometricPrefs/Keystore are device-scoped, so
+          // a previous user's enrollment would otherwise be offered to
+          // whoever is currently signed in. Only treat biometric as
+          // enrolled when the current session belongs to the user who
+          // ran the enrollment. Pre-upgrade installs that didn't stamp
+          // an id (null) are also rejected — the user has to re-enrol
+          // once after the upgrade, which is the safer default.
+          final enrolledUserId = prefs.enrolledUserId;
+          final currentUserId = _user?.id ?? '';
+          final userMatches = enrolledUserId != null &&
+              enrolledUserId.isNotEmpty &&
+              enrolledUserId == currentUserId;
+          canUseBiometric = localPem != null &&
+              localPem.isNotEmpty &&
+              userMatches;
         }
       } catch (_) {
         // If any of the enrollment plumbing fails, treat as not enrolled

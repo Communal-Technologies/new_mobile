@@ -32,27 +32,30 @@ class NotificationToggleItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final defaultIconColor = iconColor ?? const Color(0xFF7434FF);
+    final theme = Theme.of(context);
+    final defaultIconColor = iconColor ?? theme.primaryColor;
     final isDisabled = !enabled;
+    final disabledTone = theme.colorScheme.onSurface.withValues(alpha: 0.35);
+    final mutedTone = theme.colorScheme.onSurface.withValues(alpha: 0.6);
 
     return Container(
       margin: EdgeInsets.only(bottom: 1.h),
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-      color: Colors.white,
+      color: theme.cardColor,
       child: Row(
         children: [
           Container(
             width: 40.w,
             height: 40.w,
             decoration: BoxDecoration(
-              color: (isDisabled
-                      ? Colors.grey.shade300
-                      : defaultIconColor.withOpacity(0.1)),
+              color: isDisabled
+                  ? theme.colorScheme.onSurface.withValues(alpha: 0.08)
+                  : defaultIconColor.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(10.r),
             ),
             child: Icon(
               icon,
-              color: isDisabled ? Colors.grey.shade400 : defaultIconColor,
+              color: isDisabled ? disabledTone : defaultIconColor,
               size: 20.sp,
             ),
           ),
@@ -70,8 +73,8 @@ class NotificationToggleItem extends StatelessWidget {
                           fontSize: 17.sp,
                           fontWeight: FontWeight.w600,
                           color: isDisabled
-                              ? Colors.grey.shade400
-                              : Theme.of(context).colorScheme.onSurface,
+                              ? disabledTone
+                              : theme.colorScheme.onSurface,
                         ),
                       ),
                     ),
@@ -86,9 +89,7 @@ class NotificationToggleItem extends StatelessWidget {
                   description,
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: isDisabled
-                        ? Colors.grey.shade400
-                        : Colors.grey.shade600,
+                    color: isDisabled ? disabledTone : mutedTone,
                   ),
                 ),
               ],
@@ -97,7 +98,7 @@ class NotificationToggleItem extends StatelessWidget {
           Switch(
             value: value,
             onChanged: enabled ? onChanged : null,
-            activeThumbColor: const Color(0xFF7434FF),
+            activeThumbColor: theme.primaryColor,
           ),
         ],
       ),

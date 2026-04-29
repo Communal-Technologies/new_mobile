@@ -23,24 +23,28 @@ class CommunityToggleSettingItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+    final mutedTone = onSurface.withValues(alpha: 0.6);
+    final disabledTone = onSurface.withValues(alpha: 0.35);
     return Container(
       margin: EdgeInsets.only(bottom: 1.h),
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-      color: Colors.white,
+      color: theme.cardColor,
       child: Row(
         children: [
           Container(
             width: 40.w,
             height: 40.w,
             decoration: BoxDecoration(
-              color: Theme.of(context).dividerColor,
+              color: theme.dividerColor,
               borderRadius: BorderRadius.circular(10.r),
             ),
             child: Icon(
               icon,
               color: enabled
-                  ? (value ? const Color(0xFF7434FF) : Colors.grey.shade600)
-                  : Colors.grey.shade400,
+                  ? (value ? theme.primaryColor : mutedTone)
+                  : disabledTone,
               size: 22.sp,
             ),
           ),
@@ -54,9 +58,7 @@ class CommunityToggleSettingItem extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 17.sp,
                     fontWeight: FontWeight.w600,
-                    color: enabled
-                        ? const Color(0xFF0F1D40)
-                        : Colors.grey.shade400,
+                    color: enabled ? onSurface : disabledTone,
                   ),
                 ),
                 vSpace(4),
@@ -64,9 +66,7 @@ class CommunityToggleSettingItem extends StatelessWidget {
                   description,
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: enabled
-                        ? Colors.grey.shade600
-                        : Colors.grey.shade400,
+                    color: enabled ? mutedTone : disabledTone,
                   ),
                 ),
               ],
@@ -75,7 +75,7 @@ class CommunityToggleSettingItem extends StatelessWidget {
           Switch(
             value: value,
             onChanged: enabled ? onChanged : null,
-            activeThumbColor: const Color(0xFF7434FF),
+            activeThumbColor: theme.primaryColor,
           ),
         ],
       ),

@@ -28,7 +28,7 @@ class CommunityActionItem extends StatelessWidget {
       child: Container(
         margin: EdgeInsets.only(bottom: 1.h),
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         child: Row(
           children: [
             Container(

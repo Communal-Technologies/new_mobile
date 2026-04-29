@@ -10,7 +10,9 @@ class ManageAccountCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w),
-      padding: EdgeInsets.all(20.w),
+      // Tightened from EdgeInsets.all(20) — the section was reading
+      // too airy next to the Personal Information / Address cards.
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.r),
@@ -36,7 +38,7 @@ class ManageAccountCard extends StatelessWidget {
               ),
             ],
           ),
-          vSpace(20),
+          vSpace(12),
           _ManageAccountItem(
             icon: Icons.pause_circle_outline,
             iconColor: const Color(0xFF1976D2),
@@ -48,7 +50,7 @@ class ManageAccountCard extends StatelessWidget {
               context.pushNamed('freeze-account');
             },
           ),
-          vSpace(16),
+          vSpace(10),
           _ManageAccountItem(
             icon: Icons.delete_outline,
             iconColor: const Color(0xFFD32F2F),
@@ -91,7 +93,7 @@ class _ManageAccountItem extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12.r),
       child: Container(
-        padding: EdgeInsets.all(16.w),
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
         decoration: BoxDecoration(
           border: Border.all(color: Colors.grey.shade200),
           borderRadius: BorderRadius.circular(12.r),
@@ -102,9 +104,9 @@ class _ManageAccountItem extends StatelessWidget {
             Icon(
               icon,
               color: iconColor,
-              size: 24.sp,
+              size: 22.sp,
             ),
-            hSpace(12),
+            hSpace(10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

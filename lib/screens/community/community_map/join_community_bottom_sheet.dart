@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/core/widgets/bottomsheet_handlebar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
@@ -25,11 +26,38 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
   late final TextEditingController _messageController;
   bool _isSubmitting = false;
   String? _errorMessage;
+  // Pre-existing pending request for this cooperative — when set, we
+  // hide the message + submit and show a status tile instead. Stops
+  // duplicate submits at the UI before they hit the backend's 409.
+  CommunityJoinRequest? _existingPending;
+  bool _checkingPending = true;
 
   @override
   void initState() {
     super.initState();
     _messageController = TextEditingController();
+    _checkExistingPending();
+  }
+
+  Future<void> _checkExistingPending() async {
+    try {
+      final mine = await getIt<CommunityRepository>().fetchMyJoinRequests();
+      if (!mounted) return;
+      final match = mine.where(
+        (r) =>
+            r.cooperativeId == widget.community.id &&
+            r.status == JoinRequestStatus.pending,
+      );
+      setState(() {
+        _existingPending = match.isNotEmpty ? match.first : null;
+        _checkingPending = false;
+      });
+    } catch (_) {
+      // Don't block the join attempt on a fetch failure — backend's
+      // 409 still gates the duplicate.
+      if (!mounted) return;
+      setState(() => _checkingPending = false);
+    }
   }
 
   @override
@@ -57,6 +85,132 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
         _errorMessage = e.toString().replaceFirst('Exception: ', '');
       });
     }
+  }
+
+  List<Widget> _submitBody() {
+    return [
+      _MessageField(controller: _messageController),
+      if (_errorMessage != null) ...[
+        vSpace(8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            _errorMessage!,
+            style: TextStyle(
+              fontSize: 13.sp,
+              color: const Color(0xFFE74C3C),
+            ),
+          ),
+        ),
+      ],
+      vSpace(16),
+      const _AlertCard(),
+      vSpace(16),
+      _Actions(
+        isSubmitting: _isSubmitting,
+        onCancel: () => Navigator.of(context).pop(),
+        onSubmit: _submit,
+      ),
+    ];
+  }
+
+  List<Widget> _pendingBody() {
+    return [
+      Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(14.w),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF4E9),
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: const Color(0xFFFFD2B0)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.schedule, color: Color(0xFFEE7B00)),
+            hSpace(12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Application pending',
+                    style: TextStyle(
+                      fontSize: 17.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF9A4F00),
+                    ),
+                  ),
+                  vSpace(4),
+                  Text(
+                    'You already have a request to join '
+                    '${widget.community.name} awaiting admin review. '
+                    'Submitting another would just be a duplicate.',
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      color: const Color(0xFF9A4F00),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      vSpace(20),
+      Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: OutlinedButton.styleFrom(
+                minimumSize: Size(double.infinity, 52.h),
+                side: const BorderSide(color: Color(0xFFE0E0EC)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+              ),
+              child: Text(
+                'Close',
+                style: TextStyle(
+                  fontSize: 17.sp,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF0F1D40),
+                ),
+              ),
+            ),
+          ),
+          hSpace(12),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                context.pushNamed(
+                  'community-application-status',
+                  extra: widget.community,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                minimumSize: Size(double.infinity, 52.h),
+                backgroundColor: const Color(0xFF7434FF),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+              ),
+              child: Text(
+                'View status',
+                style: TextStyle(
+                  fontSize: 17.sp,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ];
   }
 
   @override
@@ -92,28 +246,13 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
                     const BottomSheetHandlebar(),
                     _Header(communityName: widget.community.name),
                     vSpace(16),
-                    _MessageField(controller: _messageController),
-                    if (_errorMessage != null) ...[
-                      vSpace(8),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          _errorMessage!,
-                          style: TextStyle(
-                            fontSize: 13.sp,
-                            color: const Color(0xFFE74C3C),
-                          ),
-                        ),
-                      ),
-                    ],
-                    vSpace(16),
-                    const _AlertCard(),
-                    vSpace(16),
-                    _Actions(
-                      isSubmitting: _isSubmitting,
-                      onCancel: () => Navigator.of(context).pop(),
-                      onSubmit: _submit,
-                    ),
+                    if (_checkingPending)
+                      Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24.h),
+                        child: const Center(child: CircularProgressIndicator()),
+                      )
+                    else if (_existingPending != null) ..._pendingBody()
+                    else ..._submitBody(),
                   ],
                 ),
               ),

@@ -7,7 +7,10 @@ class AddressInfoFormSection extends StatelessWidget {
   final TextEditingController streetAddressController;
   final TextEditingController cityController;
   final TextEditingController stateController;
+  final TextEditingController? lgaController;
+  final TextEditingController? postalCodeController;
   final VoidCallback onSave;
+  final bool saving;
 
   const AddressInfoFormSection({
     super.key,
@@ -15,7 +18,10 @@ class AddressInfoFormSection extends StatelessWidget {
     required this.streetAddressController,
     required this.cityController,
     required this.stateController,
+    this.lgaController,
+    this.postalCodeController,
     required this.onSave,
+    this.saving = false,
   });
 
   @override

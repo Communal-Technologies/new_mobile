@@ -1,20 +1,76 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/cubits/security/security_cubit.dart';
 import 'package:communal_mobile/data/models/member_profile_details.dart';
+import 'package:communal_mobile/data/repositories/profile_repository.dart';
+import 'package:communal_mobile/injection.dart';
 
-class ProfileHeader extends StatelessWidget {
+class ProfileHeader extends StatefulWidget {
   const ProfileHeader({super.key, required this.profile});
 
   final MemberProfileDetails profile;
 
   @override
+  State<ProfileHeader> createState() => _ProfileHeaderState();
+}
+
+class _ProfileHeaderState extends State<ProfileHeader> {
+  bool _uploading = false;
+
+  /// Pick + upload a new avatar. Wraps the picker in the security
+  /// cubit's external-picker guard so returning from the OS picker
+  /// doesn't trigger the idle lock. On success refreshes auth state
+  /// so the home/sidebar avatar picks up the new URL too.
+  Future<void> _pickAndUpload() async {
+    if (_uploading) return;
+    final security = context.read<SecurityCubit>();
+    security.beginExternalFilePickerGuard();
+    try {
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+        withData: false,
+      );
+      if (picked == null || picked.files.isEmpty) return;
+      final path = picked.files.single.path;
+      if (path == null) return;
+
+      setState(() => _uploading = true);
+      try {
+        await getIt<ProfileRepository>().uploadAvatar(File(path));
+        if (!mounted) return;
+        context.read<AuthBloc>().add(AuthRefreshUserRequested());
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile picture updated.')),
+        );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
+          ),
+        );
+      } finally {
+        if (mounted) setState(() => _uploading = false);
+      }
+    } finally {
+      security.cancelExternalFilePickerGuard();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final profile = widget.profile;
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
         final user = authState is AuthAuthenticated ? authState.user : null;
@@ -28,29 +84,76 @@ class ProfileHeader extends StatelessWidget {
                 ? user!.walletAccountNumber!
                 : null;
 
+        final avatarUrl = user?.avatar;
+        final hasNetworkAvatar = avatarUrl != null &&
+            (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://'));
         return Column(
           children: [
-            Container(
-              width: 120.w,
-              height: 120.w,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF7434FF), Color(0xFF1976D2)],
+            Stack(
+              children: [
+                Container(
+                  width: 120.w,
+                  height: 120.w,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF7434FF), Color(0xFF1976D2)],
+                    ),
+                    shape: BoxShape.circle,
+                    image: hasNetworkAvatar
+                        ? DecorationImage(
+                            image: NetworkImage(avatarUrl),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                  child: hasNetworkAvatar
+                      ? null
+                      : Center(
+                          child: Text(
+                            _initialsFor(profile.displayName),
+                            style: TextStyle(
+                              fontSize: 36.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
                 ),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  _initialsFor(profile.displayName),
-                  style: TextStyle(
-                    fontSize: 36.sp,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                // Camera overlay — tap to pick + upload a new avatar.
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: GestureDetector(
+                    onTap: _uploading ? null : _pickAndUpload,
+                    child: Container(
+                      width: 36.w,
+                      height: 36.w,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.grey.shade300, width: 2),
+                      ),
+                      child: _uploading
+                          ? Padding(
+                              padding: EdgeInsets.all(8.w),
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation(
+                                  Color(0xFF7434FF),
+                                ),
+                              ),
+                            )
+                          : Icon(
+                              Icons.camera_alt,
+                              color: const Color(0xFF7434FF),
+                              size: 18.sp,
+                            ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
             vSpace(16),
             Text(
@@ -58,7 +161,7 @@ class ProfileHeader extends StatelessWidget {
               style: TextStyle(
                 fontSize: 24.sp,
                 fontWeight: FontWeight.w700,
-                color: const Color(0xFF0F1D40),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             vSpace(12),

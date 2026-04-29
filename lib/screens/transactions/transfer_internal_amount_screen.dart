@@ -115,7 +115,7 @@ class _TransferInternalAmountScreenState
         : currencySymbolForCode('NGN');
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         titleSpacing: 0,
         leading: IconButton(
@@ -210,7 +210,7 @@ class _TransferInternalAmountScreenState
                     'Amount',
                     style: TextStyle(
                       fontSize: 15.sp,
-                      color: Colors.black54,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -280,7 +280,7 @@ class _TransferInternalAmountScreenState
                     'Naration',
                     style: TextStyle(
                       fontSize: 15.sp,
-                      color: Colors.black54,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       fontWeight: FontWeight.w600,
                     ),
                   ),

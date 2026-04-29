@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -33,21 +34,17 @@ class TransactionDetailsScreen extends StatelessWidget {
     final theme = Theme.of(context);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-      ),
+      value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
         backgroundColor: const Color(0xFFF4F2FA),
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).cardColor,
           elevation: 0,
           surfaceTintColor: Colors.transparent,
           centerTitle: false,
           leading: IconButton(
             icon: Icon(Icons.arrow_back_ios_new_rounded,
-                color: Colors.black87, size: 22.sp),
+                color: Theme.of(context).colorScheme.onSurface, size: 22.sp),
             onPressed: () => Navigator.of(context).maybePop(),
           ),
           title: Text(
@@ -55,7 +52,7 @@ class TransactionDetailsScreen extends StatelessWidget {
             style: TextStyle(
               fontSize: 22.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ),
@@ -70,7 +67,7 @@ class TransactionDetailsScreen extends StatelessWidget {
                 _buildDetailsCard(theme),
                 if (details.note != null) ...[
                   vSpace(16),
-                  _buildNoteCard(theme),
+                  _buildNoteCard(context, theme),
                 ],
                 vSpace(20),
                 _buildActionsSection(context, theme),
@@ -175,7 +172,7 @@ class TransactionDetailsScreen extends StatelessWidget {
                       details.counterpartLabel,
                       style: TextStyle(
                         fontSize: 15.sp,
-                        color: Colors.grey.shade600,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -185,7 +182,7 @@ class TransactionDetailsScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 19.sp,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0F1D40),
+                        color: Theme.of(context).colorScheme.onSurface,
                         height: 1.25,
                       ),
                     ),
@@ -311,7 +308,7 @@ class TransactionDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNoteCard(ThemeData theme) {
+  Widget _buildNoteCard(BuildContext context, ThemeData theme) {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(18.w),
@@ -330,7 +327,7 @@ class TransactionDetailsScreen extends StatelessWidget {
               details.note!,
               style: TextStyle(
                 fontSize: 15.sp,
-                color: Colors.grey.shade700,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 height: 1.4,
               ),
             ),
@@ -362,7 +359,7 @@ class TransactionDetailsScreen extends StatelessWidget {
         label: 'Transfer again',
         subtitle: 'Send money from your wallet',
         icon: Iconsax.send_1,
-        iconColor: const Color(0xFF0F1D40),
+        iconColor: Theme.of(context).colorScheme.onSurface,
         tileColor: Colors.white,
         onTap: () {
           context.pop();
@@ -379,7 +376,7 @@ class TransactionDetailsScreen extends StatelessWidget {
           style: TextStyle(
             fontSize: 17.sp,
             fontWeight: FontWeight.w800,
-            color: const Color(0xFF0F1D40),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         vSpace(10),
@@ -387,7 +384,7 @@ class TransactionDetailsScreen extends StatelessWidget {
           'Tap an option below',
           style: TextStyle(
             fontSize: 15.sp,
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -482,7 +479,7 @@ class _TransactionInfoRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey.shade600,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 height: 1.25,
               ),
             ),
@@ -495,7 +492,7 @@ class _TransactionInfoRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 17.sp,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF0F1D40),
+                color: Theme.of(context).colorScheme.onSurface,
                 height: data.isMultiline ? 1.45 : 1.25,
               ),
             ),
@@ -567,7 +564,7 @@ class _ActionTile extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0F1D40),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     vSpace(4),
@@ -575,7 +572,7 @@ class _ActionTile extends StatelessWidget {
                       data.subtitle,
                       style: TextStyle(
                         fontSize: 15.sp,
-                        color: Colors.grey.shade600,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         fontWeight: FontWeight.w500,
                       ),
                     ),

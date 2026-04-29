@@ -48,7 +48,7 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
             style: TextStyle(
               fontSize: 22.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           vSpace(20),
@@ -67,7 +67,7 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
             style: TextStyle(
               fontSize: 17.sp,
               fontWeight: FontWeight.w600,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           vSpace(12),
@@ -103,7 +103,7 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
                       style: TextStyle(
                         fontSize: 17.sp,
                         fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade700,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ),

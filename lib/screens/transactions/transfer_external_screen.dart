@@ -361,7 +361,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     return CircleAvatar(
       radius: 24.r,
       backgroundColor: const Color(0xFFE8E8F0),
-      child: Icon(Icons.account_balance, size: 24.sp, color: const Color(0xFF0F1D40)),
+      child: Icon(Icons.account_balance, size: 24.sp, color: Theme.of(context).colorScheme.onSurface),
     );
   }
 
@@ -396,13 +396,13 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
       fit: StackFit.expand,
       children: [
         Scaffold(
-          backgroundColor: Colors.grey.shade50,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: AppBar(
             elevation: 0,
-            backgroundColor: Colors.grey.shade50,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             titleSpacing: 0,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: Colors.black),
+              icon: const Icon(Icons.arrow_back_ios_new, size: 20),
               onPressed: () => context.pop(),
             ),
             title: Row(
@@ -412,7 +412,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                   style: TextStyle(
                     fontSize: 17.sp,
                     fontWeight: FontWeight.w800,
-                    color: const Color(0xFF0F1D40),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -512,8 +512,8 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
-                                              fontSize: 13.sp,
-                                              color: Colors.black87,
+                                              fontSize: 14.sp,
+                                              color: Theme.of(context).colorScheme.onSurface,
                                             ),
                                           ),
                                           onTap: () => _onPickRecipient(suggestion),
@@ -555,7 +555,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                               Icon(
                                                 Icons.account_balance,
                                                 size: 22.sp,
-                                                color: const Color(0xFF0F1D40),
+                                                color: Theme.of(context).colorScheme.onSurface,
                                               ),
                                               hSpace(8),
                                               Text(
@@ -563,7 +563,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.w700,
                                                   fontSize: 15.sp,
-                                                  color: const Color(0xFF0F1D40),
+                                                  color: Theme.of(context).colorScheme.onSurface,
                                                 ),
                                               ),
                                             ],
@@ -585,7 +585,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                           style: TextStyle(
                             fontSize: 15.sp,
                             fontWeight: FontWeight.w600,
-                            color: Colors.black54,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                         vSpace(6),
@@ -651,7 +651,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                       style: TextStyle(
                                         fontSize: 15.sp,
                                         fontWeight: FontWeight.w700,
-                                        color: Colors.black87,
+                                        color: Theme.of(context).colorScheme.onSurface,
                                       ),
                                     ),
                                   ),
@@ -673,7 +673,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                 style: TextStyle(
                                   fontSize: 17.sp,
                                   fontWeight: FontWeight.w800,
-                                  color: const Color(0xFF0F1D40),
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                             ],
@@ -692,7 +692,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                         'Amount',
                         style: TextStyle(
                           fontSize: 15.sp,
-                          color: Colors.black54,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           fontWeight: FontWeight.w600,
                         ),
                       ),

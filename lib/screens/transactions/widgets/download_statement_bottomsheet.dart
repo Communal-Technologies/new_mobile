@@ -84,7 +84,7 @@ class _DownloadStatementBottomSheetState
                           style: TextStyle(
                             fontSize: 22.sp,
                             fontWeight: FontWeight.w700,
-                            color: Colors.black,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         vSpace(6),
@@ -92,7 +92,7 @@ class _DownloadStatementBottomSheetState
                           'Generate your statement as PDF or CSV. Email delivery is handled securely by the backend service.',
                           style: TextStyle(
                             fontSize: 17.sp,
-                            color: Colors.grey.shade600,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                       ],
@@ -103,7 +103,7 @@ class _DownloadStatementBottomSheetState
                     child: Icon(
                       Icons.close,
                       size: 26.sp,
-                      color: Colors.grey.shade700,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -114,7 +114,7 @@ class _DownloadStatementBottomSheetState
                   Icon(
                     Icons.calendar_today,
                     size: 20.sp,
-                    color: Colors.grey.shade700,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                   hSpace(8),
                   Text(
@@ -122,7 +122,7 @@ class _DownloadStatementBottomSheetState
                     style: TextStyle(
                       fontSize: 17.sp,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ],
@@ -143,7 +143,7 @@ class _DownloadStatementBottomSheetState
                   Icon(
                     Icons.download,
                     size: 20.sp,
-                    color: Colors.grey.shade700,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                   hSpace(8),
                   Text(
@@ -151,7 +151,7 @@ class _DownloadStatementBottomSheetState
                     style: TextStyle(
                       fontSize: 17.sp,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ],
@@ -173,7 +173,7 @@ class _DownloadStatementBottomSheetState
                     Icon(
                       Icons.email_outlined,
                       size: 20.sp,
-                      color: Colors.grey.shade700,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                     hSpace(8),
                     Text(
@@ -181,7 +181,7 @@ class _DownloadStatementBottomSheetState
                       style: TextStyle(
                         fontSize: 17.sp,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ],
@@ -190,7 +190,7 @@ class _DownloadStatementBottomSheetState
                 TextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  style: TextStyle(fontSize: 17.sp, color: Colors.black),
+                  style: TextStyle(fontSize: 17.sp),
                   decoration: InputDecoration(
                     hintText: 'you@example.com',
                     hintStyle: TextStyle(fontSize: 17.sp),
@@ -215,7 +215,7 @@ class _DownloadStatementBottomSheetState
                   'For security, statements are generated and sent by the backend only.',
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -225,7 +225,7 @@ class _DownloadStatementBottomSheetState
                   Icon(
                     Icons.description_outlined,
                     size: 20.sp,
-                    color: Colors.grey.shade700,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                   hSpace(8),
                   Text(
@@ -233,7 +233,7 @@ class _DownloadStatementBottomSheetState
                     style: TextStyle(
                       fontSize: 17.sp,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ],

@@ -193,7 +193,7 @@ class _TransferInternalReviewScreenState
         : 'NGN';
     final currencySymbol = currencySymbolForCode(currencyCode);
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         titleSpacing: 0,
         leading: IconButton(
@@ -298,14 +298,14 @@ class _TransferInternalReviewScreenState
                                 Icon(
                                   Icons.account_balance_outlined,
                                   size: 14.sp,
-                                  color: Colors.black54,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                 ),
                                 hSpace(4),
                                 Expanded(
                                   child: Text(
                                     '${widget.recipient.bank} • ${widget.recipient.accountNumber}',
                                     style: TextStyle(
-                                      color: Colors.black54,
+                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                       fontSize: 15.sp,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -418,7 +418,7 @@ class _TransferInternalReviewScreenState
                       "You'll need to confirm this transfer with your secure PIN or biometrics",
                       style: TextStyle(
                         fontSize: 15.sp,
-                        color: Colors.black87,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -474,7 +474,7 @@ class _TransferInternalReviewScreenState
             child: Text(
               label,
               style: TextStyle(
-                color: Colors.black54,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
               ),
@@ -486,7 +486,7 @@ class _TransferInternalReviewScreenState
               value,
               textAlign: TextAlign.right,
               style: TextStyle(
-                color: Colors.black87,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w700,
               ),

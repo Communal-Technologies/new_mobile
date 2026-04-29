@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/services.dart';
@@ -284,11 +285,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
     final theme = Theme.of(context);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-      ),
+      value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
         backgroundColor: const Color(0xFFF7F8FB),
         appBar: AppBar(
@@ -298,7 +295,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
             icon: Icon(
               Icons.arrow_back_ios_new,
               size: 18.sp,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
             onPressed: () => Navigator.of(context).maybePop(),
           ),
@@ -307,7 +304,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
             style: TextStyle(
               fontSize: 17.sp,
               fontWeight: FontWeight.w600,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           centerTitle: false,

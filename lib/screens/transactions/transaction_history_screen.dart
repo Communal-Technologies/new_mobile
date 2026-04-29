@@ -18,6 +18,7 @@ import 'package:communal_mobile/screens/transactions/widgets/filter_status_botto
 import 'package:communal_mobile/screens/transactions/widgets/download_statement_bottomsheet.dart';
 import 'package:communal_mobile/screens/transactions/transaction_history_filters.dart';
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'dart:convert';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
@@ -252,20 +253,16 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     final theme = Theme.of(context);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-      ),
+      value: systemOverlayForTheme(Theme.of(context)),
       child: Stack(
         children: [
           Scaffold(
-        backgroundColor: Colors.grey.shade50,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).cardColor,
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: Colors.black, size: 24.sp),
+            icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface, size: 24.sp),
             onPressed: () => context.pop(),
           ),
           title: Text(
@@ -273,7 +270,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             style: TextStyle(
               fontSize: 23.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           actions: [
@@ -310,7 +307,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       Icon(
                         Icons.download,
                         size: 18.sp,
-                        color: Colors.grey.shade700,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                       hSpace(6),
                       Text(
@@ -318,7 +315,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                         style: TextStyle(
                           fontSize: 17.sp,
                           fontWeight: FontWeight.w500,
-                          color: Colors.grey.shade700,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
                     ],
@@ -407,7 +404,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       style: TextStyle(
                         fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
-                        color: Colors.black87,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -454,7 +451,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                   'No transactions yet',
                                   style: TextStyle(
                                     fontSize: 17.sp,
-                                    color: Colors.grey.shade600,
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                   ),
                                 ),
                               ),
@@ -533,7 +530,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                             style: TextStyle(
                               fontSize: 15.sp,
                               fontWeight: FontWeight.w600,
-                              color: Colors.black87,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                         ],
@@ -644,7 +641,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 style: TextStyle(
                   fontSize: 17.sp,
                   fontWeight: FontWeight.w500,
-                  color: Colors.grey.shade700,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ),
@@ -652,7 +649,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             Icon(
               Icons.keyboard_arrow_down,
               size: 18.sp,
-              color: Colors.grey.shade700,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ],
         ),
@@ -706,7 +703,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       style: TextStyle(
                         fontSize: 19.sp,
                         fontWeight: FontWeight.w700,
-                        color: Colors.black,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     hSpace(6),
@@ -714,7 +711,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       isExpanded
                           ? Icons.keyboard_arrow_down
                           : Icons.keyboard_arrow_right,
-                      color: Colors.grey.shade600,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       size: 22.sp,
                     ),
                   ],

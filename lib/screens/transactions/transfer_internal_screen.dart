@@ -378,7 +378,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
       fit: StackFit.expand,
       children: [
         Scaffold(
-          backgroundColor: Colors.grey.shade50,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: AppBar(
             titleSpacing: 0,
             leading: IconButton(
@@ -419,7 +419,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                               style: TextStyle(
                                 fontSize: 15.sp,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.black54,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                               ),
                             ),
                             vSpace(8),
@@ -479,7 +479,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                                         'Searching Account...',
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
-                                          color: Colors.black87,
+                                          color: Theme.of(context).colorScheme.onSurface,
                                           fontSize: 17.sp,
                                           fontWeight: FontWeight.w600,
                                         ),
@@ -558,7 +558,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                                             title: Text(
                                               r.accountName,
                                               style: TextStyle(
-                                                color: Colors.black87,
+                                                color: Theme.of(context).colorScheme.onSurface,
                                                 fontSize: 17.sp,
                                                 fontWeight: FontWeight.w700,
                                               ),
@@ -566,7 +566,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                                             subtitle: Text(
                                               r.accountNumber,
                                               style: TextStyle(
-                                                color: Colors.black54,
+                                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                                 fontSize: 15.sp,
                                                 fontWeight: FontWeight.w500,
                                               ),
@@ -653,7 +653,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                                   style: TextStyle(
                                     fontWeight: FontWeight.w700,
                                     fontSize: 15.sp,
-                                    color: Colors.black54,
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                   ),
                                 ),
                               ),
@@ -718,7 +718,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                             child: Text(
                               l,
                               style: TextStyle(
-                                fontSize: 13.sp,
+                                fontSize: 14.sp,
                                 color: Theme.of(context).primaryColor,
                                 fontWeight: FontWeight.w700,
                               ),

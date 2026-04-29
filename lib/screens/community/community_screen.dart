@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -119,11 +120,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   Widget build(BuildContext context) {
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-      ),
+      value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
         key: _scaffoldKey,
         backgroundColor: const Color(0xFFF2F2F5),
@@ -246,7 +243,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
           child: Text(
             snapshot.error.toString().replaceFirst('Exception: ', ''),
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: 14.sp,
               color: const Color(0xFFB42318),
             ),
           ),
@@ -277,7 +274,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
         style: TextStyle(
           fontSize: 19.sp,
           fontWeight: FontWeight.w700,
-          color: Colors.black,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
       vSpace(12),
@@ -383,7 +380,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     Text(
                       'Your request to join $coopName is awaiting admin review.',
                       style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: 14.sp,
                         color: const Color(0xFF9A4F00),
                       ),
                     ),
@@ -405,7 +402,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     return Row(
       children: [
         IconButton(
-          icon: const Icon(Icons.menu, color: Colors.black),
+          icon: const Icon(Icons.menu),
           onPressed: () {
             _scaffoldKey.currentState?.openDrawer();
           },
@@ -417,7 +414,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
             style: TextStyle(
               fontSize: 22.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ),
@@ -426,7 +423,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
         // community map at your current location"). Hidden until
         // then so it doesn't read as a no-op tap target.
         // IconButton(
-        //   icon: const Icon(Icons.location_on_outlined, color: Colors.black),
+        //   icon: const Icon(Icons.location_on_outlined),
         //   onPressed: () {},
         // ),
         SizedBox(width: 48.w),

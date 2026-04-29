@@ -115,7 +115,7 @@ class _CommunityCardHeader extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 17.sp,
                               fontWeight: FontWeight.w700,
-                              color: const Color(0xFF0F1D40),
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -139,7 +139,7 @@ class _CommunityCardHeader extends StatelessWidget {
                 community.category,
                 style: TextStyle(
                   fontSize: 15.sp,
-                  color: Colors.grey.shade600,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -187,14 +187,14 @@ class _CommunityCardMeta extends StatelessWidget {
         hSpace(4),
         Text(
           community.membersLabel,
-          style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
         ),
         hSpace(12),
         Icon(Icons.place_outlined, size: 16.sp, color: Colors.grey.shade600),
         hSpace(4),
         Text(
           community.distanceLabel,
-          style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
         ),
       ],
     );
@@ -224,8 +224,8 @@ class _CommunityCardFooter extends StatelessWidget {
               Text(
                 'Min. Contribution',
                 style: TextStyle(
-                  fontSize: 13.sp,
-                  color: Colors.grey.shade600,
+                  fontSize: 14.sp,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               vSpace(4),
@@ -254,7 +254,7 @@ class _CommunityCardFooter extends StatelessWidget {
                   child: Text(
                     'Member',
                     style: TextStyle(
-                      fontSize: 13.sp,
+                      fontSize: 14.sp,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF1F8B4C),
                     ),
@@ -280,7 +280,7 @@ class _CommunityCardFooter extends StatelessWidget {
                     child: Text(
                       'Join Community',
                       style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: 14.sp,
                         fontWeight: FontWeight.w700,
                       ),
                     ),

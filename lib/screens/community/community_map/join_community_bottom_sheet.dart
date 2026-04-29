@@ -97,7 +97,7 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
           child: Text(
             _errorMessage!,
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: 14.sp,
               color: const Color(0xFFE74C3C),
             ),
           ),
@@ -147,7 +147,7 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
                     '${widget.community.name} awaiting admin review. '
                     'Submitting another would just be a duplicate.',
                     style: TextStyle(
-                      fontSize: 13.sp,
+                      fontSize: 14.sp,
                       color: const Color(0xFF9A4F00),
                     ),
                   ),
@@ -175,7 +175,7 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
                 style: TextStyle(
                   fontSize: 17.sp,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFF0F1D40),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ),
@@ -292,7 +292,7 @@ class _Header extends StatelessWidget {
           style: TextStyle(
             fontSize: 19.sp,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF0F1D40),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         vSpace(8),
@@ -320,7 +320,7 @@ class _MessageField extends StatelessWidget {
           style: TextStyle(
             fontSize: 15.sp,
             fontWeight: FontWeight.w600,
-            color: const Color(0xFF0F1D40),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         vSpace(8),
@@ -391,7 +391,7 @@ class _AlertCard extends StatelessWidget {
                   'coordinator. You’ll receive a response within 2-3 '
                   'business days.',
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 14.sp,
                     color: const Color(0xFF9A4F00),
                   ),
                 ),
@@ -434,7 +434,7 @@ class _Actions extends StatelessWidget {
               style: TextStyle(
                 fontSize: 17.sp,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF0F1D40),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),

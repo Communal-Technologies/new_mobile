@@ -70,17 +70,14 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   Widget build(BuildContext context) {
     final location = detail.location;
 
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F6FA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF6F6FA),
         elevation: 0,
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Color(0xFF0F1D40)),
-        actionsIconTheme: const IconThemeData(color: Color(0xFF0F1D40)),
-        title: const Text(
+        title: Text(
           'Community Details',
-          style: TextStyle(color: Color(0xFF0F1D40)),
+          style: TextStyle(color: theme.colorScheme.onSurface),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -186,7 +183,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       style: TextStyle(
                         fontSize: 22.sp,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0F1D40),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     vSpace(6),
@@ -202,7 +199,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       child: Text(
                         detail.categoryLabel,
                         style: TextStyle(
-                          fontSize: 13.sp,
+                          fontSize: 14.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF5B5CE2),
                         ),
@@ -308,7 +305,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
           hSpace(6),
           Text(
             label,
-            style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade700),
           ),
         ],
       ),
@@ -390,8 +387,8 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 13.sp,
-                    color: Colors.grey.shade600,
+                    fontSize: 14.sp,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -449,7 +446,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
           hSpace(6),
           Text(
             label,
-            style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade700),
           ),
         ],
       ),
@@ -489,7 +486,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   style: TextStyle(
                     fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F1D40),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 vSpace(4),
@@ -497,7 +494,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   detail.coordinatorRole,
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -530,7 +527,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
               style: TextStyle(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF0F1D40),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),
@@ -572,7 +569,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                         item,
                         style: TextStyle(
                           fontSize: 15.sp,
-                          color: const Color(0xFF0F1D40),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ),
@@ -606,7 +603,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                         item,
                         style: TextStyle(
                           fontSize: 15.sp,
-                          color: const Color(0xFF0F1D40),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ),
@@ -650,7 +647,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                             style: TextStyle(
                               fontSize: 15.sp,
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFF0F1D40),
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           vSpace(4),
@@ -658,7 +655,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                             activity.subtitle,
                             style: TextStyle(
                               fontSize: 12.5.sp,
-                              color: Colors.grey.shade600,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                           ),
                         ],
@@ -736,7 +733,7 @@ class _SectionCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 17.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF0F1D40),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           vSpace(12),

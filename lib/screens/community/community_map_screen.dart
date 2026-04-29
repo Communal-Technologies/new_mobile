@@ -208,7 +208,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       drawer: const CooperativeSidebar(),
       drawerEdgeDragWidth: 50.w,
       drawerScrimColor: Colors.black.withValues(alpha: 0.4),
@@ -319,7 +319,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                 style: TextStyle(
                   fontSize: 19.sp,
                   fontWeight: FontWeight.w700,
-                  color: Colors.black87,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ),
@@ -428,7 +428,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                       Text(
                         '${community.communityType} • ${community.members} members',
                         style: TextStyle(
-                          fontSize: 13.sp,
+                          fontSize: 14.sp,
                           color: Colors.white.withOpacity(0.85),
                         ),
                       ),
@@ -445,7 +445,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 13.sp,
+                            fontSize: 14.sp,
                             color: Colors.white.withOpacity(0.85),
                           ),
                         ),
@@ -550,7 +550,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                       style: TextStyle(
                         fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0F1D40),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     hSpace(8),
@@ -566,7 +566,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                       child: Text(
                         '${communities.length} found',
                         style: TextStyle(
-                          fontSize: 13.sp,
+                          fontSize: 14.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF5B4AC8),
                         ),
@@ -609,7 +609,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 15.sp,
-                                color: Colors.grey.shade700,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                               ),
                             ),
                             vSpace(12),
@@ -638,7 +638,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 15.sp,
-                                color: Colors.grey.shade600,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                               ),
                             ),
                           ],
@@ -706,7 +706,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
       ),
       child: IconButton(
         onPressed: onTap,
-        icon: Icon(icon, color: const Color(0xFF0F1D40)),
+        icon: Icon(icon, color: Theme.of(context).colorScheme.onSurface),
       ),
     );
   }

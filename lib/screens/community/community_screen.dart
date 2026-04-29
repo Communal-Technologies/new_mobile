@@ -13,6 +13,7 @@ import 'package:communal_mobile/data/repositories/community_repository.dart';
 import 'package:communal_mobile/data/repositories/community_settings_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/community/data/sample_communities.dart';
+import 'package:communal_mobile/screens/community/data/sample_community_locations.dart';
 import 'package:communal_mobile/screens/community/widgets/community_tile.dart';
 import 'package:communal_mobile/screens/community/widgets/featured_community_card.dart';
 import 'package:communal_mobile/screens/community/widgets/find_nearby_card.dart';
@@ -30,11 +31,17 @@ class _CommunityScreenState extends State<CommunityScreen> {
   String? _activeCommunityId;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late Future<List<Community>> _communitiesFuture;
+  // Pending join requests survive across app reload — without this, a
+  // user who submitted a request, closed the app, and reopened it
+  // would have no surface to see their pending state and might
+  // re-submit (the backend already 409s, but the UX is bad).
+  List<CommunityJoinRequest> _pendingRequests = const [];
 
   @override
   void initState() {
     super.initState();
     _communitiesFuture = _loadMemberships();
+    _refreshPendingRequests();
   }
 
   Future<List<Community>> _loadMemberships() async {
@@ -43,11 +50,47 @@ class _CommunityScreenState extends State<CommunityScreen> {
     return memberships.map((m) => Community.fromMembership(m)).toList();
   }
 
+  Future<void> _refreshPendingRequests() async {
+    try {
+      final all = await getIt<CommunityRepository>().fetchMyJoinRequests();
+      if (!mounted) return;
+      setState(() {
+        _pendingRequests = all
+            .where((r) => r.status == JoinRequestStatus.pending)
+            .toList();
+      });
+    } catch (_) {
+      // Pending banner is a hint — silent failure is fine; the join
+      // sheet's own backend 409 still gates the duplicate-submit case.
+    }
+  }
+
   Future<void> _refresh() async {
     setState(() {
       _communitiesFuture = _loadMemberships();
     });
-    await _communitiesFuture;
+    await Future.wait([
+      _communitiesFuture,
+      _refreshPendingRequests(),
+    ]);
+  }
+
+  Future<void> _openPendingStatus(CommunityJoinRequest req) async {
+    try {
+      final coop = await getIt<CommunityRepository>()
+          .fetchCooperativeProfile(req.cooperativeId);
+      if (!mounted) return;
+      final location = CommunityLocation.fromPublicCooperative(coop);
+      // ignore: unawaited_futures
+      context.pushNamed('community-application-status', extra: location);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+        ),
+      );
+    }
   }
 
   @override
@@ -83,6 +126,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       _buildTopBar(),
                       vSpace(20),
                       ..._buildBody(snapshot),
+                      if (_pendingRequests.isNotEmpty) ...[
+                        vSpace(16),
+                        ..._pendingRequests.map(_buildPendingBanner),
+                      ],
                       vSpace(24),
                       FindNearbyCard(
                         onTap: () => context.pushNamed('community-map'),
@@ -144,6 +191,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
     setState(() {
       _communitiesFuture = _loadMemberships();
     });
+    // ignore: unawaited_futures
+    _refreshPendingRequests();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -267,6 +316,62 @@ class _CommunityScreenState extends State<CommunityScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPendingBanner(CommunityJoinRequest request) {
+    final coopName = request.cooperativeName.trim().isNotEmpty
+        ? request.cooperativeName
+        : 'a cooperative';
+    return Padding(
+      padding: EdgeInsets.only(bottom: 12.h),
+      child: GestureDetector(
+        onTap: () => _openPendingStatus(request),
+        child: Container(
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF4E9),
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(color: const Color(0xFFFFD2B0)),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.schedule,
+                color: Color(0xFFEE7B00),
+              ),
+              hSpace(12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Application pending',
+                      style: TextStyle(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF9A4F00),
+                      ),
+                    ),
+                    vSpace(2),
+                    Text(
+                      'Your request to join $coopName is awaiting admin review.',
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        color: const Color(0xFF9A4F00),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right,
+                color: Color(0xFF9A4F00),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -60,7 +60,7 @@ class PhoneNumberInputField extends StatelessWidget {
             hintText: hint,
             hintStyle: TextStyle(
               color: colorScheme.outlineVariant,
-              fontSize: 13.sp,
+              fontSize: 14.sp,
             ),
             labelStyle: TextStyle(color: textColor),
           ),
@@ -76,7 +76,7 @@ class PhoneNumberInputField extends StatelessWidget {
             hintText: hint,
             hintStyle: TextStyle(
               color: colorScheme.outlineVariant,
-              fontSize: 13.sp,
+              fontSize: 14.sp,
             ),
             labelStyle: TextStyle(color: textColor),
           ),

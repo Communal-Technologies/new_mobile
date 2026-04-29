@@ -151,11 +151,11 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
             ),
             selectorTextStyle: TextStyle(
               fontSize: 19.sp,
-              color: Colors.black87,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
             textStyle: TextStyle(
               fontSize: 19.sp,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ),

@@ -32,10 +32,15 @@ class HomeAccountCardSection extends StatefulWidget {
 class _HomeAccountCardSectionState extends State<HomeAccountCardSection> {
   int _tabIndex = 0;
   bool _balanceVisible = true;
+  late final HomeWalletPrefs _prefs;
 
   @override
   void initState() {
     super.initState();
+    _prefs = getIt<HomeWalletPrefs>();
+    // Subscribe so toggling visibility on the account-settings profile
+    // card updates this dashboard card live (and vice versa).
+    _prefs.addListener(_onPrefsChanged);
     _reloadBalanceVisibilityFromPrefs();
   }
 
@@ -47,10 +52,26 @@ class _HomeAccountCardSectionState extends State<HomeAccountCardSection> {
     }
   }
 
+  @override
+  void dispose() {
+    _prefs.removeListener(_onPrefsChanged);
+    super.dispose();
+  }
+
+  void _onPrefsChanged() {
+    if (!mounted) return;
+    final uid = widget.user.id.trim();
+    if (uid.isEmpty) return;
+    final visible = _prefs.isBalanceVisible(uid);
+    if (visible != _balanceVisible) {
+      setState(() => _balanceVisible = visible);
+    }
+  }
+
   void _reloadBalanceVisibilityFromPrefs() {
     final uid = widget.user.id.trim();
     if (uid.isEmpty) return;
-    _balanceVisible = getIt<HomeWalletPrefs>().isBalanceVisible(uid);
+    _balanceVisible = _prefs.isBalanceVisible(uid);
   }
 
   @override

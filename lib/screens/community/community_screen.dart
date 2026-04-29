@@ -10,6 +10,8 @@ import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
 import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/community_repository.dart';
+import 'package:communal_mobile/data/repositories/community_settings_repository.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/community/data/sample_communities.dart';
 import 'package:communal_mobile/screens/community/widgets/community_tile.dart';
 import 'package:communal_mobile/screens/community/widgets/featured_community_card.dart';
@@ -25,18 +27,31 @@ class CommunityScreen extends StatefulWidget {
 
 class _CommunityScreenState extends State<CommunityScreen> {
   int _currentIndex = 2;
-  late String _activeCommunityId;
+  String? _activeCommunityId;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  late Future<List<Community>> _communitiesFuture;
 
   @override
   void initState() {
     super.initState();
-    _activeCommunityId = SampleCommunities.all.first.id;
+    _communitiesFuture = _loadMemberships();
+  }
+
+  Future<List<Community>> _loadMemberships() async {
+    final memberships =
+        await getIt<CommunitySettingsRepository>().fetchMemberships();
+    return memberships.map((m) => Community.fromMembership(m)).toList();
+  }
+
+  Future<void> _refresh() async {
+    setState(() {
+      _communitiesFuture = _loadMemberships();
+    });
+    await _communitiesFuture;
   }
 
   @override
   Widget build(BuildContext context) {
-    final featured = SampleCommunities.featured;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(
@@ -51,41 +66,33 @@ class _CommunityScreenState extends State<CommunityScreen> {
         drawerEdgeDragWidth: 50.w,
         drawerScrimColor: Colors.black.withValues(alpha: 0.4),
         body: SafeArea(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildTopBar(),
-                vSpace(20),
-                FeaturedCommunityCard(
-                  community: featured,
-                  onOpenChat: () => _showComingSoon('Open chat'),
-                  onViewCommunity: () => _showComingSoon('View cooperative'),
-                ),
-                vSpace(24),
-                Text(
-                  'Your Communities',
-                  style: TextStyle(
-                    fontSize: 19.sp,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black,
+          child: FutureBuilder<List<Community>>(
+            future: _communitiesFuture,
+            builder: (context, snapshot) {
+              return RefreshIndicator(
+                onRefresh: _refresh,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 16.h,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTopBar(),
+                      vSpace(20),
+                      ..._buildBody(snapshot),
+                      vSpace(24),
+                      FindNearbyCard(
+                        onTap: () => context.pushNamed('community-map'),
+                      ),
+                      vSpace(32),
+                    ],
                   ),
                 ),
-                vSpace(12),
-                ...SampleCommunities.all.map(
-                  (community) => CommunityTile(
-                    community: community,
-                    isActive: community.id == _activeCommunityId,
-                    onSelect: () =>
-                        setState(() => _activeCommunityId = community.id),
-                  ),
-                ),
-                vSpace(24),
-                FindNearbyCard(onTap: () => context.pushNamed('community-map')),
-                vSpace(32),
-              ],
-            ),
+              );
+            },
           ),
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -131,8 +138,12 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
     if (!mounted || result == null) return;
     // Refresh user identity so hasCooperativeMembership flips and the
-    // bottom nav, quick actions, and sidebar re-evaluate.
+    // bottom nav, quick actions, and sidebar re-evaluate, and reload
+    // memberships so the new cooperative appears in this list.
     context.read<AuthBloc>().add(AuthRefreshUserRequested());
+    setState(() {
+      _communitiesFuture = _loadMemberships();
+    });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -140,6 +151,122 @@ class _CommunityScreenState extends State<CommunityScreen> {
               ? 'You have joined the cooperative.'
               : 'Welcome to ${result.cooperativeName}.',
         ),
+      ),
+    );
+  }
+
+  List<Widget> _buildBody(AsyncSnapshot<List<Community>> snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return [
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 48.h),
+          child: const Center(child: CircularProgressIndicator()),
+        ),
+      ];
+    }
+    if (snapshot.hasError) {
+      return [
+        Container(
+          padding: EdgeInsets.all(16.w),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFDECEA),
+            borderRadius: BorderRadius.circular(16.r),
+          ),
+          child: Text(
+            snapshot.error.toString().replaceFirst('Exception: ', ''),
+            style: TextStyle(
+              fontSize: 13.sp,
+              color: const Color(0xFFB42318),
+            ),
+          ),
+        ),
+      ];
+    }
+    final communities = snapshot.data ?? const <Community>[];
+    if (communities.isEmpty) {
+      return [_buildEmptyState()];
+    }
+    final featured = communities.firstWhere(
+      (c) => c.isFeatured,
+      orElse: () => communities.first,
+    );
+    _activeCommunityId ??= featured.id;
+    return [
+      FeaturedCommunityCard(
+        community: featured,
+        onOpenChat: () => _showComingSoon('Open chat'),
+        onViewCommunity: () => _showComingSoon('View cooperative'),
+      ),
+      vSpace(24),
+      Text(
+        'Your Communities',
+        style: TextStyle(
+          fontSize: 19.sp,
+          fontWeight: FontWeight.w700,
+          color: Colors.black,
+        ),
+      ),
+      vSpace(12),
+      ...communities.map(
+        (community) => CommunityTile(
+          community: community,
+          isActive: community.id == _activeCommunityId,
+          onSelect: () => setState(() => _activeCommunityId = community.id),
+        ),
+      ),
+    ];
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(20.w),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F4FF),
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(color: const Color(0xFFE2D2FF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40.w,
+                height: 40.w,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF7434FF),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.group_add,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              hSpace(12),
+              Expanded(
+                child: Text(
+                  'You haven\'t joined a cooperative yet',
+                  style: TextStyle(
+                    fontSize: 17.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF3F2B8F),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          vSpace(8),
+          Text(
+            'Tap “Find Nearby” below to discover open cooperatives, '
+            'or use the + button to redeem an invite code from an admin.',
+            style: TextStyle(
+              fontSize: 15.sp,
+              color: const Color(0xFF4D3C8A),
+            ),
+          ),
+        ],
       ),
     );
   }

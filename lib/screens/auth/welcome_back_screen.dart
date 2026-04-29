@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/constants/images.dart';
@@ -1023,8 +1024,14 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
             //   bridging the unlock → navigate window. The
             //   SecurityCubit listener above clears it on unlock.
             final shouldShowLoader = _waitingForBackendValidation;
-            
-            return Stack(
+
+            // App-lock mode hides the AppBar, which is where the system
+            // overlay style normally sits — wrap the Stack so the
+            // status-bar icons follow the active theme even on the
+            // bare PIN screen.
+            return AnnotatedRegion<SystemUiOverlayStyle>(
+              value: systemOverlayForTheme(theme),
+              child: Stack(
             fit: StackFit.expand,
             children: [
               Scaffold(
@@ -1034,11 +1041,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
             : AppBar(
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
-                systemOverlayStyle: SystemUiOverlayStyle.dark.copyWith(
-                  statusBarColor: Colors.transparent,
-                  statusBarIconBrightness: Brightness.dark,
-                  statusBarBrightness: Brightness.light,
-                ),
+                systemOverlayStyle: systemOverlayForTheme(Theme.of(context)),
         leading: Row(
           children: [
             IconButton(
@@ -1058,11 +1061,15 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
               // Add extra top spacing when app bar is hidden (app lock mode)
               vSpace(widget.isAppLock ? 40 : 10),
 
-              // Logo
+              // Logo — swap to the white asset on dark mode so the
+              // mark stays legible (the coloured logo has dark glyph
+              // strokes that disappear on a dark scaffold).
               Center(
                 child: Image.asset(
-                  Images.coloredLogo,
-                  width: 130.w,
+                  theme.brightness == Brightness.dark
+                      ? Images.whiteLogo
+                      : Images.coloredLogo,
+                  width: 170.w,
                 ),
               ),
 
@@ -1096,7 +1103,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                                 child: Icon(
                                   Icons.person,
                                   size: 40.sp,
-                                  color: Colors.grey.shade600,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                 ),
                               );
                             },
@@ -1114,7 +1121,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                                   child: Icon(
                                     Icons.person,
                                     size: 40.sp,
-                                    color: Colors.grey.shade600,
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                   ),
                                 );
                               }
@@ -1145,7 +1152,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                         child: Icon(
                           Icons.person,
                           size: 40.sp,
-                          color: Colors.grey.shade600,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                 ),
               ),
@@ -1173,9 +1180,9 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                 child: Text(
                   _getMaskedLogin(),
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: theme.primaryColor,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -1202,7 +1209,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                   Text(
                     'Want to switch account? ',
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       color:
                           theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
@@ -1220,9 +1227,9 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                     child: Text(
                       'Logout',
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 17.sp,
                         color: theme.primaryColor,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -1242,7 +1249,8 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                   child: const LoaderOverlay(),
                 ),
             ],
-          );
+          ),
+            );
           },
         ),
       ),

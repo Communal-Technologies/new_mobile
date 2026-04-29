@@ -310,12 +310,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           fit: StackFit.expand,
           children: [
             Scaffold(
-              backgroundColor: Colors.white,
+              backgroundColor: Theme.of(context).cardColor,
               appBar: AppBar(
-                backgroundColor: Colors.white,
+                backgroundColor: Theme.of(context).cardColor,
                 elevation: 0,
                 leading: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.black),
+                  icon: const Icon(Icons.arrow_back),
                   onPressed: _isSubmitting ? null : () => context.pop(),
                 ),
               ),
@@ -348,7 +348,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                           child: Icon(
                             Icons.person,
                             size: 40.sp,
-                            color: Colors.grey.shade600,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                       ),
@@ -362,7 +362,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                           style: TextStyle(
                             fontSize: 24.sp,
                             fontWeight: FontWeight.w700,
-                            color: Colors.black,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ),

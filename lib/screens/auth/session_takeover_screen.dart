@@ -184,12 +184,12 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
       builder: (context, state) {
         final verifying = _isVerifying;
         return Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).cardColor,
           appBar: AppBar(
-            backgroundColor: Colors.white,
+            backgroundColor: Theme.of(context).cardColor,
             elevation: 0,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.black),
+              icon: const Icon(Icons.arrow_back),
               onPressed: verifying
                   ? null
                   : _goToLogin,
@@ -211,7 +211,7 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
                     style: TextStyle(
                       fontSize: 24.sp,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF0F1D40),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   vSpace(10),
@@ -220,7 +220,7 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 15.sp,
-                      color: Colors.grey.shade700,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       height: 1.35,
                     ),
                   ),

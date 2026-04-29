@@ -327,12 +327,12 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).cardColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
       ),
@@ -365,7 +365,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                   style: TextStyle(
                     fontSize: 28.sp,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -379,7 +379,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                   text: TextSpan(
                     style: TextStyle(
                       fontSize: 15.sp,
-                      color: Colors.grey.shade600,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       height: 1.5,
                     ),
                     children: [
@@ -418,7 +418,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                         'Resend code in ${_resendTimer}s',
                         style: TextStyle(
                           fontSize: 15.sp,
-                          color: Colors.grey.shade600,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       )
                     : Row(
@@ -428,7 +428,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                             'Didn\'t receive the code?',
                             style: TextStyle(
                               fontSize: 15.sp,
-                              color: Colors.grey.shade600,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                           ),
                           hSpace(4),
@@ -457,7 +457,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                 Text(
                   _error!,
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 14.sp,
                     color: const Color(0xFFE74C3C),
                   ),
                 ),
@@ -468,7 +468,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                 Text(
                   _deliveryInfo!,
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 14.sp,
                     color: const Color(0xFF0F8B8D),
                   ),
                 ),
@@ -511,7 +511,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                         style: TextStyle(
                           fontSize: 17.sp,
                           fontWeight: FontWeight.w600,
-                          color: Colors.black,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       vSpace(12),
@@ -524,7 +524,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                                   '• ',
                                   style: TextStyle(
                                     fontSize: 15.sp,
-                                    color: Colors.grey.shade700,
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                   ),
                                 ),
                                 Expanded(
@@ -532,7 +532,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                                     step,
                                     style: TextStyle(
                                       fontSize: 15.sp,
-                                      color: Colors.grey.shade700,
+                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                       height: 1.4,
                                     ),
                                   ),
@@ -554,7 +554,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                     'Or Send Code via',
                     style: TextStyle(
                       fontSize: 15.sp,
-                      color: Colors.grey.shade600,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ),
@@ -584,8 +584,8 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                     Text(
                       'Licensed by CBN',
                       style: TextStyle(
-                        fontSize: 13.sp,
-                        color: Colors.grey.shade600,
+                        fontSize: 14.sp,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                     hSpace(4),
@@ -611,7 +611,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                     Text(
                       '|',
                       style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: 14.sp,
                         color: Colors.grey.shade400,
                       ),
                     ),
@@ -619,8 +619,8 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                     Text(
                       'Deposits insured by',
                       style: TextStyle(
-                        fontSize: 13.sp,
-                        color: Colors.grey.shade600,
+                        fontSize: 14.sp,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                     hSpace(4),
@@ -695,7 +695,7 @@ class _MethodButton extends StatelessWidget {
               style: TextStyle(
                 fontSize: 17.sp,
                 fontWeight: FontWeight.w500,
-                color: Colors.black87,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ],

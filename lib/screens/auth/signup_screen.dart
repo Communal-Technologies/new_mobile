@@ -140,12 +140,12 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).cardColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
       ),
@@ -178,7 +178,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   style: TextStyle(
                     fontSize: 28.sp,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -191,7 +191,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   'Enter your phone number to get started',
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ),
@@ -289,7 +289,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         text: TextSpan(
                           style: TextStyle(
                             fontSize: 15.sp,
-                            color: Colors.black87,
+                            color: Theme.of(context).colorScheme.onSurface,
                             height: 1.4,
                           ),
                           children: [
@@ -337,7 +337,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       'Already have a Communal account?',
                       style: TextStyle(
                         fontSize: 15.sp,
-                        color: Colors.grey.shade700,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                     vSpace(12),
@@ -367,8 +367,8 @@ class _SignupScreenState extends State<SignupScreen> {
                     Text(
                       'Licensed by CBN',
                       style: TextStyle(
-                        fontSize: 13.sp,
-                        color: Colors.grey.shade600,
+                        fontSize: 14.sp,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                     hSpace(4),
@@ -395,7 +395,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     Text(
                       '|',
                       style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: 14.sp,
                         color: Colors.grey.shade400,
                       ),
                     ),
@@ -403,8 +403,8 @@ class _SignupScreenState extends State<SignupScreen> {
                     Text(
                       'Deposits insured by',
                       style: TextStyle(
-                        fontSize: 13.sp,
-                        color: Colors.grey.shade600,
+                        fontSize: 14.sp,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                     hSpace(4),

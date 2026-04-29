@@ -46,7 +46,7 @@ class ObligationPaymentSuccessScreen extends StatelessWidget {
     final paidTo = _paidToLine(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F5F7),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Theme.of(context).cardColor,
         elevation: 0,

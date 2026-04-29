@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/widgets/member_avatar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/screens/home/widgets/cooperative_header_badge.dart';
 import 'package:go_router/go_router.dart';
@@ -36,11 +37,6 @@ class HomeHeader extends StatelessWidget {
             : 'Welcome back';
 
         final avatar = user?.avatar;
-        final ImageProvider<Object> avatarImage = (avatar != null &&
-                (avatar.startsWith('http://') || avatar.startsWith('https://')))
-            ? NetworkImage(avatar)
-            : const AssetImage('assets/images/demo_user.png');
-
         final onSurface = theme.colorScheme.onSurface;
         return Container(
           padding:
@@ -139,10 +135,10 @@ class HomeHeader extends StatelessWidget {
                   context.pushNamed('my-profile');
                 },
                 borderRadius: BorderRadius.circular(22.w),
-                child: CircleAvatar(
+                child: MemberAvatar(
+                  url: avatar,
                   radius: 22.w,
                   backgroundColor: theme.dividerColor,
-                  backgroundImage: avatarImage,
                 ),
               ),
             ],

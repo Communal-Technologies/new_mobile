@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:communal_mobile/core/widgets/member_avatar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 
 class ProfileCard extends StatefulWidget {
@@ -76,10 +77,6 @@ class _ProfileCardState extends State<ProfileCard> {
         final balanceText = CurrencyFormatter.formatNairaFromKoboWithDecimals(
             user.walletBalanceKobo);
         final avatar = user.avatar;
-        final ImageProvider<Object> avatarImage = (avatar != null &&
-                (avatar.startsWith('http://') || avatar.startsWith('https://')))
-            ? NetworkImage(avatar)
-            : const AssetImage('assets/images/demo_user.png');
 
         return GestureDetector(
           onTap: () {
@@ -94,10 +91,10 @@ class _ProfileCardState extends State<ProfileCard> {
             ),
             child: Row(
               children: [
-                CircleAvatar(
+                MemberAvatar(
+                  url: avatar,
                   radius: 30.r,
                   backgroundColor: Colors.white.withValues(alpha: 0.2),
-                  backgroundImage: avatarImage,
                 ),
                 hSpace(16),
                 Expanded(

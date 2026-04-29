@@ -170,7 +170,7 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
           child: ElevatedButton(
             onPressed: () => context.goNamed('loans'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF7434FF),
+              backgroundColor: const Color(0xFFE67E22),
               foregroundColor: Colors.white,
               elevation: 0,
               padding: EdgeInsets.symmetric(vertical: 16.h),

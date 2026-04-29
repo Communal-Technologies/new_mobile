@@ -105,6 +105,11 @@ class _ProfileHeaderState extends State<ProfileHeader> {
                         ? DecorationImage(
                             image: NetworkImage(avatarUrl),
                             fit: BoxFit.cover,
+                            // Swallow decode errors (expired secure-upload
+                            // signatures, 404s) instead of throwing to
+                            // the image resource service. Initials show
+                            // through whichever fallback path renders.
+                            onError: (_, __) {},
                           )
                         : null,
                   ),

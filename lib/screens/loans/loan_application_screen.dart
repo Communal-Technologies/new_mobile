@@ -278,7 +278,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
               style: TextStyle(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF7434FF),
+                color: const Color(0xFFE67E22),
               ),
             ),
             Text(
@@ -286,7 +286,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
               style: TextStyle(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF7434FF),
+                color: const Color(0xFFE67E22),
               ),
             ),
           ],
@@ -306,7 +306,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
               child: Container(
                 height: 4.h,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF7434FF),
+                  color: const Color(0xFFE67E22),
                   borderRadius: BorderRadius.circular(2.r),
                 ),
               ),
@@ -511,9 +511,9 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
               Expanded(
                 child: SliderTheme(
                   data: SliderTheme.of(context).copyWith(
-                    activeTrackColor: const Color(0xFF7434FF),
+                    activeTrackColor: const Color(0xFFE67E22),
                     inactiveTrackColor: Colors.grey.shade300,
-                    thumbColor: const Color(0xFF7434FF),
+                    thumbColor: const Color(0xFFE67E22),
                     thumbShape:
                         RoundSliderThumbShape(enabledThumbRadius: 12.r),
                     overlayShape:
@@ -543,7 +543,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             style: TextStyle(
               fontSize: 24.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF7434FF),
+              color: const Color(0xFFE67E22),
             ),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[\d,]')),
@@ -553,7 +553,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
               prefixStyle: TextStyle(
                 fontSize: 24.sp,
                 fontWeight: FontWeight.w700,
-                color: const Color(0xFF7434FF),
+                color: const Color(0xFFE67E22),
               ),
               filled: true,
               fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -568,7 +568,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12.r),
                 borderSide:
-                    const BorderSide(color: Color(0xFF7434FF), width: 2),
+                    const BorderSide(color: Color(0xFFE67E22), width: 2),
               ),
               contentPadding:
                   EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
@@ -660,7 +660,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                       style: TextStyle(
                         fontSize: 22.sp,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF7434FF),
+                        color: const Color(0xFFE67E22),
                       ),
                     ),
                     vSpace(4),
@@ -683,7 +683,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                       style: TextStyle(
                         fontSize: 22.sp,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF7434FF),
+                        color: const Color(0xFFE67E22),
                       ),
                     ),
                     vSpace(4),
@@ -791,14 +791,18 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           padding: EdgeInsets.all(14.w),
           decoration: BoxDecoration(
             color: isDark
-                ? theme.primaryColor.withValues(alpha: 0.16)
-                : const Color(0xFFEEE5FF),
+                ? const Color(0xFFE67E22).withValues(alpha: 0.16)
+                : const Color(0xFFFFF4E9),
             borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: theme.primaryColor, width: 1.5),
+            border: Border.all(
+              color: const Color(0xFFE67E22),
+              width: 1.5,
+            ),
           ),
           child: Row(
             children: [
-              Icon(Icons.lock_outline, size: 18.sp, color: theme.primaryColor),
+              Icon(Icons.lock_outline,
+                  size: 18.sp, color: const Color(0xFFE67E22)),
               hSpace(10),
               Expanded(
                 child: Column(
@@ -809,7 +813,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                       style: TextStyle(
                         fontSize: 15.sp,
                         fontWeight: FontWeight.w700,
-                        color: theme.primaryColor,
+                        color: const Color(0xFFE67E22),
                       ),
                     ),
                     vSpace(4),
@@ -864,7 +868,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12.r),
               borderSide:
-                  const BorderSide(color: Color(0xFF7434FF), width: 2),
+                  const BorderSide(color: Color(0xFFE67E22), width: 2),
             ),
             contentPadding:
                 EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
@@ -901,7 +905,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
               }
             : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF7434FF),
+          backgroundColor: const Color(0xFFE67E22),
           foregroundColor: Colors.white,
           disabledBackgroundColor: Colors.grey.shade300,
           disabledForegroundColor: Colors.grey.shade600,

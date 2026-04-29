@@ -135,7 +135,7 @@ class _LoanApplicationStep3ScreenState
                   style: TextStyle(
                     fontSize: 15.sp,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF7434FF),
+                    color: const Color(0xFFE67E22),
                   ),
                 ),
               ),
@@ -212,7 +212,7 @@ class _LoanApplicationStep3ScreenState
             style: TextStyle(
               fontSize: 15.sp,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF7434FF),
+              color: const Color(0xFFE67E22),
             ),
           ),
         ),
@@ -229,7 +229,7 @@ class _LoanApplicationStep3ScreenState
             Container(
               height: 4.h,
               decoration: BoxDecoration(
-                color: const Color(0xFF7434FF),
+                color: const Color(0xFFE67E22),
                 borderRadius: BorderRadius.circular(2.r),
               ),
             ),
@@ -390,11 +390,11 @@ class _LoanApplicationStep3ScreenState
               height: 24.w,
               decoration: BoxDecoration(
                 color: _agreedToTerms
-                    ? const Color(0xFF7434FF)
+                    ? const Color(0xFFE67E22)
                     : Colors.transparent,
                 border: Border.all(
                   color: _agreedToTerms
-                      ? const Color(0xFF7434FF)
+                      ? const Color(0xFFE67E22)
                       : Colors.grey.shade400,
                   width: 2,
                 ),
@@ -419,7 +419,7 @@ class _LoanApplicationStep3ScreenState
                   TextSpan(
                     text: 'terms and conditions',
                     style: TextStyle(
-                      color: const Color(0xFF7434FF),
+                      color: const Color(0xFFE67E22),
                       decoration: TextDecoration.underline,
                     ),
                   ),
@@ -499,7 +499,7 @@ class _LoanApplicationStep3ScreenState
                 ? () => _submitDebouncer.run(_submit)
                 : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF7434FF),
+              backgroundColor: const Color(0xFFE67E22),
               foregroundColor: Colors.white,
               disabledBackgroundColor: Colors.grey.shade300,
               disabledForegroundColor: Colors.grey.shade600,

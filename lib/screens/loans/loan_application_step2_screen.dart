@@ -239,7 +239,7 @@ class _LoanApplicationStep2ScreenState
                         style: TextStyle(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w700,
-                          color: const Color(0xFF7434FF),
+                          color: const Color(0xFFE67E22),
                         ),
                       ),
                     ),
@@ -270,7 +270,7 @@ class _LoanApplicationStep2ScreenState
                       ),
                     ),
                     Icon(Icons.add_circle_outline,
-                        size: 18.sp, color: const Color(0xFF7434FF)),
+                        size: 18.sp, color: const Color(0xFFE67E22)),
                   ],
                 ),
               ),
@@ -323,7 +323,7 @@ class _LoanApplicationStep2ScreenState
                   style: TextStyle(
                     fontSize: 15.sp,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF7434FF),
+                    color: const Color(0xFFE67E22),
                   ),
                 ),
               ),
@@ -393,7 +393,7 @@ class _LoanApplicationStep2ScreenState
             style: TextStyle(
               fontSize: 15.sp,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF7434FF),
+              color: const Color(0xFFE67E22),
             ),
           ),
         ),
@@ -412,7 +412,7 @@ class _LoanApplicationStep2ScreenState
               child: Container(
                 height: 4.h,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF7434FF),
+                  color: const Color(0xFFE67E22),
                   borderRadius: BorderRadius.circular(2.r),
                 ),
               ),
@@ -506,7 +506,7 @@ class _LoanApplicationStep2ScreenState
               ? 'All guarantors picked'
               : 'Search by name or ledger number',
           hintStyle: TextStyle(fontSize: 15.sp, color: Colors.grey.shade500),
-          prefixIcon: const Icon(Icons.search, color: Color(0xFF7434FF)),
+          prefixIcon: const Icon(Icons.search, color: Color(0xFFE67E22)),
           suffixIcon: _searchController.text.isEmpty
               ? null
               : IconButton(
@@ -528,7 +528,7 @@ class _LoanApplicationStep2ScreenState
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12.r),
-            borderSide: const BorderSide(color: Color(0xFF7434FF), width: 2),
+            borderSide: const BorderSide(color: Color(0xFFE67E22), width: 2),
           ),
           contentPadding:
               EdgeInsets.symmetric(horizontal: 12.w, vertical: 14.h),
@@ -691,7 +691,7 @@ class _LoanApplicationStep2ScreenState
                   }
                 : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF7434FF),
+              backgroundColor: const Color(0xFFE67E22),
               foregroundColor: Colors.white,
               disabledBackgroundColor: Colors.grey.shade300,
               disabledForegroundColor: Colors.grey.shade600,

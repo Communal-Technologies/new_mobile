@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -32,15 +33,11 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final formattedAmount = Money(amountMinor, currency).format();
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-      ),
+      value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
-        backgroundColor: Colors.grey.shade50,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: Colors.grey.shade50,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           elevation: 0,
           automaticallyImplyLeading: false,
           title: Text(
@@ -48,7 +45,7 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
             style: TextStyle(
               fontSize: 19.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           centerTitle: true,
@@ -69,7 +66,7 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 22.sp,
                       fontWeight: FontWeight.w700,
-                      color: Colors.black87,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   vSpace(16),
@@ -79,12 +76,12 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 15.sp,
-                      color: Colors.grey.shade800,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                       height: 1.4,
                     ),
                   ),
                   vSpace(24),
-                  _buildDetails(formattedAmount),
+                  _buildDetails(context, formattedAmount),
                   vSpace(24),
                   _buildActions(context),
                 ],
@@ -108,7 +105,7 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDetails(String formattedAmount) {
+  Widget _buildDetails(BuildContext context, String formattedAmount) {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
@@ -120,22 +117,23 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (referenceId != null && referenceId!.isNotEmpty) ...[
-            _detailRow('Reference', referenceId!),
+            _detailRow(context,'Reference', referenceId!),
             vSpace(20),
             Divider(height: 1, color: Colors.grey.shade300),
             vSpace(20),
           ],
-          _detailRow('Amount Requested', formattedAmount),
+          _detailRow(context,'Amount Requested', formattedAmount),
           vSpace(20),
           Divider(height: 1, color: Colors.grey.shade300),
           vSpace(20),
-          _detailRow('Status', 'Under Review', isStatus: true),
+          _detailRow(context,'Status', 'Under Review', isStatus: true),
         ],
       ),
     );
   }
 
-  Widget _detailRow(String label, String value, {bool isStatus = false}) {
+  Widget _detailRow(BuildContext context, String label, String value,
+      {bool isStatus = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,7 +142,7 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 15.sp,
-            color: Colors.grey.shade700,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             fontWeight: FontWeight.w500,
           ),
         ),

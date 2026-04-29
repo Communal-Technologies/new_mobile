@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -106,18 +107,14 @@ class _LoanApplicationStep3ScreenState
     final scheme = widget.draft.scheme;
     final currency = widget.draft.currency;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-      ),
+      value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).cardColor,
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).cardColor,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            icon: const Icon(Icons.arrow_back),
             onPressed: _submitting ? null : () => context.pop(),
           ),
           title: Text(
@@ -125,7 +122,7 @@ class _LoanApplicationStep3ScreenState
             style: TextStyle(
               fontSize: 19.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           centerTitle: true,
@@ -258,7 +255,7 @@ class _LoanApplicationStep3ScreenState
             style: TextStyle(
               fontSize: 19.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF0F1D40),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           vSpace(20),
@@ -302,7 +299,7 @@ class _LoanApplicationStep3ScreenState
               style: TextStyle(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF0F1D40),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),
@@ -329,7 +326,7 @@ class _LoanApplicationStep3ScreenState
             style: TextStyle(
               fontSize: 19.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF0F1D40),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           vSpace(16),
@@ -350,15 +347,15 @@ class _LoanApplicationStep3ScreenState
                           style: TextStyle(
                             fontSize: 17.sp,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF0F1D40),
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         vSpace(2),
                         Text(
                           g.ledgerNumber,
                           style: TextStyle(
-                            fontSize: 13.sp,
-                            color: Colors.grey.shade600,
+                            fontSize: 14.sp,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                       ],
@@ -414,7 +411,7 @@ class _LoanApplicationStep3ScreenState
               text: TextSpan(
                 style: TextStyle(
                   fontSize: 15.sp,
-                  color: Colors.grey.shade700,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   height: 1.5,
                 ),
                 children: [
@@ -454,15 +451,15 @@ class _LoanApplicationStep3ScreenState
             style: TextStyle(
               fontSize: 15.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF0F1D40),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           vSpace(8),
           Text(
             'Your application will be reviewed by your cooperative. You will be notified of the decision in-app and via SMS.',
             style: TextStyle(
-              fontSize: 13.sp,
-              color: Colors.grey.shade700,
+              fontSize: 14.sp,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               height: 1.4,
             ),
           ),
@@ -490,7 +487,7 @@ class _LoanApplicationStep3ScreenState
               style: TextStyle(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF0F1D40),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),

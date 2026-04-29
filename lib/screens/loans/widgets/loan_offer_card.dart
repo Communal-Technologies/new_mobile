@@ -36,7 +36,7 @@ class LoanOfferCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F1D40),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -50,7 +50,7 @@ class LoanOfferCard extends StatelessWidget {
                   child: Text(
                     scheme.category,
                     style: TextStyle(
-                      fontSize: 13.sp,
+                      fontSize: 14.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
@@ -65,7 +65,7 @@ class LoanOfferCard extends StatelessWidget {
                 : 'No guarantors required',
             style: TextStyle(
               fontSize: 15.sp,
-              color: Colors.grey.shade700,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           vSpace(16),
@@ -73,10 +73,10 @@ class LoanOfferCard extends StatelessWidget {
             spacing: 16.w,
             runSpacing: 8.h,
             children: [
-              _miniStat(Icons.trending_up, scheme.interestRateLabel),
-              _miniStat(Icons.access_time, scheme.durationLabel),
+              _miniStat(context,Icons.trending_up, scheme.interestRateLabel),
+              _miniStat(context,Icons.access_time, scheme.durationLabel),
               if (scheme.serviceCharge > 0)
-                _miniStat(
+                _miniStat(context,
                   Icons.percent,
                   '${scheme.serviceCharge.toStringAsFixed(scheme.serviceCharge.truncateToDouble() == scheme.serviceCharge ? 0 : 2)}% service',
                 ),
@@ -117,7 +117,7 @@ class LoanOfferCard extends StatelessWidget {
     );
   }
 
-  Widget _miniStat(IconData icon, String label) {
+  Widget _miniStat(BuildContext context, IconData icon, String label) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -128,7 +128,7 @@ class LoanOfferCard extends StatelessWidget {
           style: TextStyle(
             fontSize: 15.sp,
             fontWeight: FontWeight.w600,
-            color: const Color(0xFF0F1D40),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],

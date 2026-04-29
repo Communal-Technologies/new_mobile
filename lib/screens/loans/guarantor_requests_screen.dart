@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -97,18 +98,14 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-      ),
+      value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
-        backgroundColor: Colors.grey.shade50,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: Colors.grey.shade50,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
           title: Text(
@@ -116,7 +113,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
             style: TextStyle(
               fontSize: 19.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           centerTitle: true,
@@ -175,7 +172,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
             style: TextStyle(
               fontSize: 17.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF0F1D40),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           vSpace(8),
@@ -227,15 +224,15 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
                       style: TextStyle(
                         fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0F1D40),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     vSpace(2),
                     Text(
                       'Asked you to guarantor • ${req.createdAtLabel}',
                       style: TextStyle(
-                        fontSize: 13.sp,
-                        color: Colors.grey.shade600,
+                        fontSize: 14.sp,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -260,8 +257,8 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
                 Text(
                   'Loan amount',
                   style: TextStyle(
-                    fontSize: 13.sp,
-                    color: Colors.grey.shade700,
+                    fontSize: 14.sp,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
                 const Spacer(),
@@ -270,7 +267,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
                   style: TextStyle(
                     fontSize: 15.sp,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F1D40),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -363,7 +360,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
       child: Text(
         req.statusLabel,
         style: TextStyle(
-          fontSize: 13.sp,
+          fontSize: 14.sp,
           fontWeight: FontWeight.w700,
           color: fg,
         ),

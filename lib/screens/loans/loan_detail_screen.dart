@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -124,18 +125,14 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-      ),
+      value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
-        backgroundColor: Colors.grey.shade50,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: Colors.grey.shade50,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            icon: const Icon(Icons.arrow_back),
             onPressed: _cancelling ? null : () => context.pop(),
           ),
           title: Text(
@@ -143,7 +140,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
             style: TextStyle(
               fontSize: 19.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           centerTitle: true,
@@ -223,7 +220,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                 child: Text(
                   _loan.status.label,
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),
@@ -275,7 +272,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
             Text(
               '${_loan.progressLabel} repaid (${_loan.amountLabel} principal)',
               style: TextStyle(
-                fontSize: 13.sp,
+                fontSize: 14.sp,
                 color: Colors.white.withOpacity(0.85),
               ),
             ),
@@ -301,7 +298,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
             style: TextStyle(
               fontSize: 17.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF0F1D40),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           vSpace(12),
@@ -356,7 +353,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
               style: TextStyle(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF0F1D40),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),
@@ -381,7 +378,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
             style: TextStyle(
               fontSize: 17.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF0F1D40),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           vSpace(12),
@@ -399,7 +396,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                       style: TextStyle(
                         fontSize: 15.sp,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF0F1D40),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -428,7 +425,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
             style: TextStyle(
               fontSize: 17.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF0F1D40),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           vSpace(12),
@@ -493,7 +490,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                   style: TextStyle(
                     fontSize: 15.sp,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF0F1D40),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 vSpace(2),
@@ -502,7 +499,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                       ? DateFormat('MMM dd, yyyy').format(date)
                       : '${DateFormat('MMM dd, yyyy').format(date)} • $mode',
                   style:
-                      TextStyle(fontSize: 13.sp, color: Colors.grey.shade600),
+                      TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
                 ),
               ],
             ),
@@ -512,7 +509,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
             style: TextStyle(
               fontSize: 15.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF0F1D40),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ],

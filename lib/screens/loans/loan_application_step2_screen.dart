@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -236,7 +237,7 @@ class _LoanApplicationStep2ScreenState
                       child: Text(
                         m.initials,
                         style: TextStyle(
-                          fontSize: 13.sp,
+                          fontSize: 14.sp,
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFF7434FF),
                         ),
@@ -254,15 +255,15 @@ class _LoanApplicationStep2ScreenState
                             style: TextStyle(
                               fontSize: 15.sp,
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFF0F1D40),
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           vSpace(2),
                           Text(
                             m.ledgerNumber,
                             style: TextStyle(
-                              fontSize: 13.sp,
-                              color: Colors.grey.shade600,
+                              fontSize: 14.sp,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                           ),
                         ],
@@ -291,18 +292,14 @@ class _LoanApplicationStep2ScreenState
   Widget build(BuildContext context) {
     final canContinue = _required == 0 || _selected.length == _required;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-      ),
+      value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).cardColor,
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).cardColor,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            icon: const Icon(Icons.arrow_back),
             onPressed: () {
               _hideOverlay();
               context.pop();
@@ -313,7 +310,7 @@ class _LoanApplicationStep2ScreenState
             style: TextStyle(
               fontSize: 19.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           centerTitle: true,
@@ -458,7 +455,7 @@ class _LoanApplicationStep2ScreenState
                   style: TextStyle(
                     fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F1D40),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 vSpace(4),
@@ -468,7 +465,7 @@ class _LoanApplicationStep2ScreenState
                       : 'Search by name or ledger number — only members of your cooperative show up.',
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: Colors.grey.shade700,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -489,7 +486,7 @@ class _LoanApplicationStep2ScreenState
       ),
       child: Text(
         'This loan product does not require any guarantors. Tap Continue to review.',
-        style: TextStyle(fontSize: 15.sp, color: const Color(0xFF0F1D40)),
+        style: TextStyle(fontSize: 15.sp, color: Theme.of(context).colorScheme.onSurface),
       ),
     );
   }
@@ -503,7 +500,7 @@ class _LoanApplicationStep2ScreenState
         controller: _searchController,
         focusNode: _searchFocus,
         enabled: !disabled,
-        style: TextStyle(fontSize: 15.sp, color: const Color(0xFF0F1D40)),
+        style: TextStyle(fontSize: 15.sp, color: Theme.of(context).colorScheme.onSurface),
         decoration: InputDecoration(
           hintText: disabled
               ? 'All guarantors picked'
@@ -558,7 +555,7 @@ class _LoanApplicationStep2ScreenState
           style: TextStyle(
             fontSize: 15.sp,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF0F1D40),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         vSpace(8),
@@ -582,7 +579,7 @@ class _LoanApplicationStep2ScreenState
                   child: Text(
                     m.initials,
                     style: TextStyle(
-                      fontSize: 13.sp,
+                      fontSize: 14.sp,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
@@ -600,15 +597,15 @@ class _LoanApplicationStep2ScreenState
                         style: TextStyle(
                           fontSize: 15.sp,
                           fontWeight: FontWeight.w700,
-                          color: const Color(0xFF0F1D40),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       vSpace(2),
                       Text(
                         m.ledgerNumber,
                         style: TextStyle(
-                          fontSize: 13.sp,
-                          color: Colors.grey.shade700,
+                          fontSize: 14.sp,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
                     ],
@@ -675,7 +672,7 @@ class _LoanApplicationStep2ScreenState
               style: TextStyle(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF0F1D40),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),

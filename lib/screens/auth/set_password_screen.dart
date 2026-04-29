@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_event.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/constants/images.dart';
 import 'package:communal_mobile/core/widgets/custom_text_field.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
@@ -7,7 +11,17 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:go_router/go_router.dart';
 
 class SetPasswordScreen extends StatefulWidget {
-  const SetPasswordScreen({super.key});
+  const SetPasswordScreen({
+    super.key,
+    this.phone,
+    this.userId,
+  });
+
+  /// Carried through from the OTP-verify step in the self-signup chain.
+  /// Null when the user lands here directly (we surface an inline error
+  /// telling them to restart from the phone-verification screen).
+  final String? phone;
+  final String? userId;
 
   @override
   State<SetPasswordScreen> createState() => _SetPasswordScreenState();
@@ -20,6 +34,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
   bool _obscureConfirmPassword = true;
   String? _passwordError;
   String? _confirmPasswordError;
+  bool _submitting = false;
 
   @override
   void dispose() {
@@ -34,41 +49,75 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
       _confirmPasswordError = null;
     });
 
-    // Validation
-    if (_passwordController.text.isEmpty) {
-      setState(() {
-        _passwordError = 'Password is required';
-      });
+    // Mobile platform rule (mirrors AuthController::createPassword on
+    // the backend): exactly 6 numeric digits, not all the same digit.
+    // Web's 8+ alphanumeric rule does NOT apply on this platform — the
+    // backend rejects it with 400. Validate up-front so the user gets
+    // a clear message instead of the generic backend error.
+    final pwd = _passwordController.text;
+    if (pwd.isEmpty) {
+      setState(() => _passwordError = 'Password is required');
       return;
     }
-
-    if (_passwordController.text.length < 8) {
-      setState(() {
-        _passwordError = 'Password must be at least 8 characters';
-      });
+    if (pwd.length != 6) {
+      setState(() => _passwordError = 'Password must be exactly 6 digits');
+      return;
+    }
+    if (!RegExp(r'^[0-9]{6}$').hasMatch(pwd)) {
+      setState(() => _passwordError = 'Password must contain only numbers');
+      return;
+    }
+    if (pwd.split('').every((c) => c == pwd[0])) {
+      setState(() => _passwordError =
+          'Password cannot be all the same digit. Use a mix of numbers.');
       return;
     }
 
     if (_confirmPasswordController.text.isEmpty) {
-      setState(() {
-        _confirmPasswordError = 'Please re-enter your password';
-      });
+      setState(() => _confirmPasswordError = 'Please re-enter your password');
+      return;
+    }
+    if (pwd != _confirmPasswordController.text) {
+      setState(() => _confirmPasswordError = 'Passwords do not match');
       return;
     }
 
-    if (_passwordController.text != _confirmPasswordController.text) {
-      setState(() {
-        _confirmPasswordError = 'Passwords do not match';
-      });
+    final userId = widget.userId;
+    if (userId == null || userId.isEmpty) {
+      setState(() => _passwordError =
+          'Please restart signup from the phone-verification screen.');
       return;
     }
 
-    // Navigate to success screen
-    context.push('/account-success');
+    setState(() => _submitting = true);
+    context.read<AuthBloc>().add(
+          CreatePasswordRequested(
+            userId: userId,
+            password: pwd,
+            confirmPassword: _confirmPasswordController.text,
+            contact: widget.phone,
+          ),
+        );
   }
 
   @override
   Widget build(BuildContext context) {
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthAuthenticated && _submitting) {
+          context.go('/account-success');
+        } else if (state is AuthFailure && _submitting) {
+          setState(() {
+            _submitting = false;
+            _passwordError = state.error;
+          });
+        }
+      },
+      child: _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -76,7 +125,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => context.pop(),
+          onPressed: _submitting ? null : () => context.pop(),
         ),
       ),
       body: SafeArea(
@@ -196,8 +245,8 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
 
               // Continue button
               AppElevatedButton(
-                title: 'Continue',
-                onPressed: _validateAndContinue,
+                title: _submitting ? 'Creating account...' : 'Continue',
+                onPressed: _submitting ? null : _validateAndContinue,
               ),
 
               vSpace(20),
@@ -215,11 +264,21 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
 
               vSpace(16),
 
-              // PIN option
+              // PIN option — same userId / phone forwarded so /set-pin
+              // can finish the account creation if the user prefers a
+              // PIN to a numeric password.
               InkWell(
-                onTap: () {
-                  context.pushReplacement('/set-pin');
-                },
+                onTap: _submitting
+                    ? null
+                    : () {
+                        context.pushReplacement(
+                          '/set-pin',
+                          extra: {
+                            'phone': widget.phone,
+                            'userId': widget.userId,
+                          },
+                        );
+                      },
                 borderRadius: BorderRadius.circular(25.r),
                 child: Container(
                   width: double.infinity,

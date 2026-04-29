@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_event.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/constants/images.dart';
 import 'package:communal_mobile/core/widgets/otp_input_field.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
@@ -7,7 +11,17 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:go_router/go_router.dart';
 
 class SetPinScreen extends StatefulWidget {
-  const SetPinScreen({super.key});
+  const SetPinScreen({
+    super.key,
+    this.phone,
+    this.userId,
+  });
+
+  /// Forwarded from the OTP-verify screen so we can hand them off to
+  /// [CreatePasswordRequested]. Null when the user navigates here from
+  /// outside the signup chain (we redirect back to /signup in that case).
+  final String? phone;
+  final String? userId;
 
   @override
   State<SetPinScreen> createState() => _SetPinScreenState();
@@ -17,6 +31,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
   String _pin = '';
   String _confirmPin = '';
   String? _pinError;
+  bool _submitting = false;
 
   void _validateAndContinue() {
     setState(() {
@@ -44,12 +59,57 @@ class _SetPinScreenState extends State<SetPinScreen> {
       return;
     }
 
-    // Navigate to success screen
-    context.push('/account-success');
+    final userId = widget.userId;
+    if (userId == null || userId.isEmpty) {
+      // Stale or direct-link entry — without a userId we can't call
+      // create-account-password. Send them back to the start of the
+      // signup chain so the OTP step mints a fresh user id.
+      setState(() {
+        _pinError = 'Please restart signup from the phone-verification screen.';
+      });
+      return;
+    }
+
+    setState(() => _submitting = true);
+    // The bloc owns the network call (createPassword + getUserInfo +
+    // emit AuthAuthenticated). We listen via BlocConsumer below for
+    // success / failure rather than awaiting here.
+    context.read<AuthBloc>().add(
+          CreatePasswordRequested(
+            userId: userId,
+            password: _pin,
+            confirmPassword: _confirmPin,
+            contact: widget.phone,
+          ),
+        );
   }
 
   @override
   Widget build(BuildContext context) {
+    // BlocListener routes the post-create-password transitions so the
+    // screen can stay declarative: on AuthAuthenticated the new account
+    // is live, advance to the success screen; on AuthFailure surface the
+    // backend error inline. AuthLoading is reflected via [_submitting].
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthAuthenticated && _submitting) {
+          // The create-password handler emits AuthAuthenticated once
+          // the new tokens are persisted and the user fetched. Navigate
+          // straight to the success screen — the router gate I added
+          // in routes/app_routes.dart will then bounce on to KYC.
+          context.go('/account-success');
+        } else if (state is AuthFailure && _submitting) {
+          setState(() {
+            _submitting = false;
+            _pinError = state.error;
+          });
+        }
+      },
+      child: _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -57,7 +117,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => context.pop(),
+          onPressed: _submitting ? null : () => context.pop(),
         ),
       ),
       body: SafeArea(
@@ -172,8 +232,8 @@ class _SetPinScreenState extends State<SetPinScreen> {
 
               // Continue button
               AppElevatedButton(
-                title: 'Continue',
-                onPressed: _validateAndContinue,
+                title: _submitting ? 'Creating account...' : 'Continue',
+                onPressed: _submitting ? null : _validateAndContinue,
               ),
 
               vSpace(20),
@@ -191,11 +251,21 @@ class _SetPinScreenState extends State<SetPinScreen> {
 
               vSpace(16),
 
-              // Password option
+              // Password option — same userId / phone flow forwarded so
+              // /set-password can finish the account creation if the
+              // user prefers a password to a PIN.
               InkWell(
-                onTap: () {
-                  context.pushReplacement('/set-password');
-                },
+                onTap: _submitting
+                    ? null
+                    : () {
+                        context.pushReplacement(
+                          '/set-password',
+                          extra: {
+                            'phone': widget.phone,
+                            'userId': widget.userId,
+                          },
+                        );
+                      },
                 borderRadius: BorderRadius.circular(25.r),
                 child: Container(
                   width: double.infinity,

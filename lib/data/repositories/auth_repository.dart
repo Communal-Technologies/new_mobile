@@ -6,6 +6,18 @@ import 'package:communal_mobile/data/models/login_response.dart';
 import 'package:communal_mobile/core/utils/app_logger.dart';
 import 'package:dio/dio.dart';
 
+/// Thrown by [AuthRepository.requestOtpForSignup] when the backend
+/// reports that an account already exists for the given contact (HTTP
+/// 409 with `error_code: 'account_exists'`). The signup screen catches
+/// this and routes the user to the login screen instead of pushing
+/// forward into the OTP step.
+class AccountAlreadyExistsException implements Exception {
+  AccountAlreadyExistsException(this.message);
+  final String message;
+  @override
+  String toString() => message;
+}
+
 class AuthRepository {
   static const String _tag = 'AuthRepository';
 
@@ -451,6 +463,14 @@ class AuthRepository {
     } on DioException catch (e) {
       if (e.response != null) {
         final data = e.response?.data;
+        if (e.response?.statusCode == 409 &&
+            data is Map &&
+            data['error_code']?.toString() == 'account_exists') {
+          throw AccountAlreadyExistsException(
+            data['message']?.toString() ??
+                'An account already exists for this contact. Please log in instead.',
+          );
+        }
         final msg = data is Map
             ? (data['message']?.toString() ?? 'Unable to send verification code')
             : 'Unable to send verification code';

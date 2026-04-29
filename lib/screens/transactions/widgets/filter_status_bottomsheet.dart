@@ -71,10 +71,10 @@ class _FilterStatusBottomSheetState extends State<FilterStatusBottomSheet> {
                 ),
                 padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 14.h),
                 decoration: BoxDecoration(
-                  color: isSelected ? theme.primaryColor : Colors.white,
+                  color: isSelected ? theme.primaryColor : theme.colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12.r),
                   border: Border.all(
-                    color: isSelected ? theme.primaryColor : Colors.grey.shade200,
+                    color: isSelected ? theme.primaryColor : theme.dividerColor,
                     width: 1,
                   ),
                 ),
@@ -83,7 +83,7 @@ class _FilterStatusBottomSheetState extends State<FilterStatusBottomSheet> {
                   style: TextStyle(
                     fontSize: 17.sp,
                     fontWeight: FontWeight.w500,
-                    color: isSelected ? Colors.white : Colors.grey.shade700,
+                    color: isSelected ? Colors.white : theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ),

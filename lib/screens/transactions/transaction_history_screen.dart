@@ -373,7 +373,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
               children: [
                 if (showLedger)
                   Container(
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                     padding: EdgeInsets.symmetric(horizontal: 16.w),
                     child: Row(
                       children: [
@@ -397,7 +397,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 else
                   Container(
                     width: double.infinity,
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                     padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
                     child: Text(
                       'Communal (Personal)',
@@ -409,7 +409,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     ),
                   ),
                 Container(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 12.h),
                   child: Row(
                     children: [
@@ -564,7 +564,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             style: TextStyle(
               fontSize: 17.sp,
               fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-              color: isActive ? theme.primaryColor : Colors.grey.shade600,
+              color: isActive
+                  ? theme.primaryColor
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           vSpace(8),
@@ -631,7 +633,12 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 18.sp, color: Colors.grey.shade700),
+              Icon(
+                icon,
+                size: 18.sp,
+                color:
+                    Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
               hSpace(6),
             ],
             Flexible(

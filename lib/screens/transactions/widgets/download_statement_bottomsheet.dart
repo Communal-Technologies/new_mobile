@@ -300,10 +300,10 @@ class _DownloadStatementBottomSheetState
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 10.h),
         decoration: BoxDecoration(
-          color: isSelected ? theme.primaryColor : Colors.white,
+          color: isSelected ? theme.primaryColor : theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(10.r),
           border: Border.all(
-            color: isSelected ? theme.primaryColor : Colors.grey.shade300,
+            color: isSelected ? theme.primaryColor : theme.dividerColor,
             width: 1,
           ),
         ),
@@ -314,7 +314,7 @@ class _DownloadStatementBottomSheetState
           style: TextStyle(
             fontSize: 15.sp,
             fontWeight: FontWeight.w500,
-            color: isSelected ? Colors.white : Colors.grey.shade700,
+            color: isSelected ? Colors.white : theme.colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
       ),
@@ -333,10 +333,10 @@ class _DownloadStatementBottomSheetState
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 10.h),
         decoration: BoxDecoration(
-          color: isSelected ? theme.primaryColor : Colors.white,
+          color: isSelected ? theme.primaryColor : theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(10.r),
           border: Border.all(
-            color: isSelected ? theme.primaryColor : Colors.grey.shade300,
+            color: isSelected ? theme.primaryColor : theme.dividerColor,
             width: 1,
           ),
         ),
@@ -347,7 +347,7 @@ class _DownloadStatementBottomSheetState
           style: TextStyle(
             fontSize: 15.sp,
             fontWeight: FontWeight.w500,
-            color: isSelected ? Colors.white : Colors.grey.shade700,
+            color: isSelected ? Colors.white : theme.colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
       ),
@@ -366,10 +366,10 @@ class _DownloadStatementBottomSheetState
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 12.h),
         decoration: BoxDecoration(
-          color: isSelected ? theme.primaryColor : Colors.white,
+          color: isSelected ? theme.primaryColor : theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(10.r),
           border: Border.all(
-            color: isSelected ? theme.primaryColor : Colors.grey.shade300,
+            color: isSelected ? theme.primaryColor : theme.dividerColor,
             width: 1,
           ),
         ),
@@ -379,7 +379,7 @@ class _DownloadStatementBottomSheetState
             Icon(
               icon,
               size: 18.sp,
-              color: isSelected ? Colors.white : Colors.grey.shade700,
+              color: isSelected ? Colors.white : theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             hSpace(6),
             Flexible(
@@ -389,7 +389,7 @@ class _DownloadStatementBottomSheetState
                 style: TextStyle(
                   fontSize: 15.sp,
                   fontWeight: FontWeight.w500,
-                  color: isSelected ? Colors.white : Colors.grey.shade700,
+                  color: isSelected ? Colors.white : theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ),

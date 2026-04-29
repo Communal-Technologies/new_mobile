@@ -8,6 +8,8 @@ import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/theme/colors.dart';
+import 'package:communal_mobile/data/local/theme_mode_controller.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/core/security/session_invalidation_notifier.dart';
 import 'package:communal_mobile/routes/app_routes.dart';
 import 'package:communal_mobile/core/navigation/root_navigator_key.dart';
@@ -893,7 +895,8 @@ class _SecurityWrapperState extends State<SecurityWrapper>
                           key: const ValueKey('locked_material_app'),
                           debugShowCheckedModeBanner: false,
                           theme: AppTheme.light,
-                          themeMode: ThemeMode.light,
+                          darkTheme: AppTheme.dark,
+                          themeMode: getIt<ThemeModeController>().mode,
                           home: RepaintBoundary(
                             child: WelcomeBackScreen(
                               key: const ValueKey('welcome_back_screen_locked'),

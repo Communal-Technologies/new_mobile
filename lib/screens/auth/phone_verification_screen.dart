@@ -18,10 +18,17 @@ class PhoneVerificationScreen extends StatefulWidget {
     super.key,
     required this.phoneNumber,
     this.method = VerificationMethod.sms,
+    this.userId,
   });
 
   final String phoneNumber;
   final VerificationMethod method;
+
+  /// Pre-fetched on the signup screen by an OTP-send call there. When
+  /// supplied we skip the automatic send in [initState] (the OTP has
+  /// already been issued); when null we issue the send ourselves so
+  /// other entry points (legacy navigation, deep links) keep working.
+  final String? userId;
 
   @override
   State<PhoneVerificationScreen> createState() =>
@@ -35,7 +42,8 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   Timer? _timer;
 
   /// Set on first successful OTP send and used in /create-account-password
-  /// later in the chain. Null until the backend responds.
+  /// later in the chain. Hydrated from the route arg when the signup
+  /// screen pre-issued the OTP, or set after our own send.
   String? _userId;
 
   /// True while an in-flight network request would make a tap a no-op
@@ -50,14 +58,16 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   @override
   void initState() {
     super.initState();
+    _userId = widget.userId;
     _startTimer();
-    // Kick off the real OTP send. The signup flow lands on this screen
-    // immediately after the user enters their phone — there is no
-    // intermediate step that would have already sent the code, so we
-    // own the first send here. Errors surface inline; the timer keeps
-    // counting down regardless so the Resend button works even if the
-    // initial send failed (user can retry).
-    WidgetsBinding.instance.addPostFrameCallback((_) => _sendOtp());
+    // The signup screen now owns the first OTP send so the existence
+    // check (HTTP 409 -> account_exists) surfaces *there* instead of
+    // landing the user on this screen with an error. Only auto-send
+    // when no userId was passed in — keeps non-signup entry paths and
+    // deep links working without a duplicate send when there isn't.
+    if (_userId == null || _userId!.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _sendOtp());
+    }
   }
 
   @override

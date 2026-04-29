@@ -482,10 +482,19 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    // In dark mode the original light pastel backgrounds (pink, mint,
+    // pale blue) read as bright washed-out blocks against the near-black
+    // scaffold. Mix the value colour with the surface so the tint stays
+    // perceptible without being eye-strain bright.
+    final cardBg = isDark
+        ? card.valueColor.withValues(alpha: 0.16)
+        : card.color;
     return Container(
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
-        color: card.color,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16.r),
       ),
       child: Column(
@@ -495,7 +504,12 @@ class _SummaryCard extends StatelessWidget {
           vSpace(12),
           Text(
             card.label,
-            style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade700),
+            style: TextStyle(
+              fontSize: 15.sp,
+              color: isDark
+                  ? theme.colorScheme.onSurface.withValues(alpha: 0.85)
+                  : Colors.grey.shade700,
+            ),
           ),
           vSpace(4),
           Text(

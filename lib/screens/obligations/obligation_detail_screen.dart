@@ -325,7 +325,7 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20.r),
       ),
       child: Text(
@@ -427,7 +427,7 @@ class _InfoCard extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20.r),
       ),
       child: Column(
@@ -592,7 +592,7 @@ class _PaymentTile extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: Theme.of(context).dividerColor,
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Row(
@@ -623,7 +623,7 @@ class _PaymentTile extends StatelessWidget {
                   record.reference,
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: Colors.grey.shade500,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -664,8 +664,8 @@ class _LoanPromoCard extends StatelessWidget {
               Container(
                 width: 36.w,
                 height: 36.w,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.trending_up, color: Color(0xFF5B5CE2)),

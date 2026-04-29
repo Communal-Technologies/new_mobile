@@ -1028,11 +1028,11 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
             fit: StackFit.expand,
             children: [
               Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: theme.scaffoldBackgroundColor,
         appBar: widget.isAppLock
             ? null // No app bar for app lock
             : AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
                 systemOverlayStyle: SystemUiOverlayStyle.dark.copyWith(
                   statusBarColor: Colors.transparent,
@@ -1042,7 +1042,8 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
         leading: Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.black),
+              icon: Icon(Icons.arrow_back,
+                  color: theme.colorScheme.onSurface),
               onPressed: () => context.pop(),
             ),
           ],
@@ -1158,7 +1159,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                   style: TextStyle(
                     fontSize: 24.sp,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -1202,7 +1203,8 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                     'Want to switch account? ',
                     style: TextStyle(
                       fontSize: 15.sp,
-                      color: Colors.grey.shade700,
+                      color:
+                          theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                   TextButton(
@@ -1309,13 +1311,15 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                   margin: EdgeInsets.symmetric(horizontal: 3.w),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                    color: hasValue 
+                    color: hasValue
                         ? (hasError ? Colors.red : theme.primaryColor)
-                        : Colors.grey.shade200,
+                        : theme.colorScheme.onSurface.withValues(alpha: 0.08),
                     border: Border.all(
-                      color: hasError 
-                          ? Colors.red 
-                          : (hasValue ? theme.primaryColor : Colors.grey.shade300),
+                      color: hasError
+                          ? Colors.red
+                          : (hasValue
+                              ? theme.primaryColor
+                              : theme.dividerColor),
                       width: hasError ? 2 : 1.5,
                     ),
                   ),

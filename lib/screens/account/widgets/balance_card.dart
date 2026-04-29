@@ -77,35 +77,37 @@ class BalanceCard extends StatelessWidget {
                   color: Colors.white,
                 ),
               ),
-          vSpace(20),
-          Center(
-            child: SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: widget.onWithdraw,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF7434FF),
-                  side: const BorderSide(color: Colors.white, width: 1.5),
-                  padding: EdgeInsets.symmetric(vertical: 12.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                ),
-                child: Text(
-                  // Closure flow sends users to /transfer rather than
-                  // a non-existent withdrawal screen — moving the
-                  // remaining balance to another account is the only
-                  // valid pre-deletion action.
-                  'Transfer Funds',
-                  style: TextStyle(
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w600,
+              vSpace(20),
+              Center(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: onWithdraw,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF7434FF),
+                      side: const BorderSide(color: Colors.white, width: 1.5),
+                      padding: EdgeInsets.symmetric(vertical: 12.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.r),
+                      ),
+                    ),
+                    child: Text(
+                      // Closure flow sends users to /transfer rather than
+                      // a non-existent withdrawal screen — moving the
+                      // remaining balance to another account is the only
+                      // valid pre-deletion action.
+                      'Transfer Funds',
+                      style: TextStyle(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }

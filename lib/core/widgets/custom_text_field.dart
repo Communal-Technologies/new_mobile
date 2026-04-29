@@ -53,7 +53,7 @@ class CustomTextField extends StatelessWidget {
             style: TextStyle(
               fontSize: 19.sp,
               fontWeight: FontWeight.w500,
-              color: Colors.black87,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           SizedBox(height: 8.h),
@@ -71,7 +71,7 @@ class CustomTextField extends StatelessWidget {
           onChanged: onChanged,
           style: TextStyle(
             fontSize: 19.sp,
-            color: Colors.black,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
           decoration: InputDecoration(
             hintText: hintText,

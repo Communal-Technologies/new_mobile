@@ -64,7 +64,7 @@ class _DownloadStatementBottomSheetState
       child: Container(
         padding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 32.h),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
         ),
         child: SingleChildScrollView(
@@ -195,14 +195,14 @@ class _DownloadStatementBottomSheetState
                     hintText: 'you@example.com',
                     hintStyle: TextStyle(fontSize: 17.sp),
                     filled: true,
-                    fillColor: Colors.grey.shade50,
+                    fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10.r),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10.r),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     contentPadding: EdgeInsets.symmetric(
                       horizontal: 14.w,

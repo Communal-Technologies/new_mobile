@@ -250,7 +250,7 @@ class _TransferInternalVerifyScreenState
               width: double.infinity,
               padding: EdgeInsets.all(16.w),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12.r),
                 border: Border.all(color: const Color(0xFFE7E7E7)),
               ),

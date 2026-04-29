@@ -254,7 +254,7 @@ class _TransferInternalReviewScreenState
               width: double.infinity,
               padding: EdgeInsets.all(14.w),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12.r),
                 border: Border.all(color: const Color(0xFFE7E7E7)),
               ),
@@ -327,7 +327,7 @@ class _TransferInternalReviewScreenState
               width: double.infinity,
               padding: EdgeInsets.all(14.w),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12.r),
                 border: Border.all(color: const Color(0xFFE7E7E7)),
               ),
@@ -351,7 +351,7 @@ class _TransferInternalReviewScreenState
               width: double.infinity,
               padding: EdgeInsets.all(14.w),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12.r),
                 border: Border.all(color: const Color(0xFFE7E7E7)),
               ),

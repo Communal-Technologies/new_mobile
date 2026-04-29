@@ -64,7 +64,7 @@ class TransactionDetailsScreen extends StatelessWidget {
               children: [
                 _buildSummaryCard(context, theme),
                 vSpace(14),
-                _buildDetailsCard(theme),
+                _buildDetailsCard(context, theme),
                 if (details.note != null) ...[
                   vSpace(16),
                   _buildNoteCard(context, theme),
@@ -142,7 +142,7 @@ class TransactionDetailsScreen extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 22.h),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20.r),
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
@@ -265,7 +265,7 @@ class TransactionDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailsCard(ThemeData theme) {
+  Widget _buildDetailsCard(BuildContext context, ThemeData theme) {
     final infoRows = [
       _InfoRowData(label: 'Fees', value: details.feesLabel),
       _InfoRowData(
@@ -285,7 +285,7 @@ class TransactionDetailsScreen extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 8.h),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20.r),
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
@@ -581,7 +581,7 @@ class _ActionTile extends StatelessWidget {
               ),
               Icon(
                 Icons.chevron_right_rounded,
-                color: Colors.grey.shade400,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                 size: 26.sp,
               ),
             ],
@@ -652,7 +652,7 @@ class _BankAvatar extends StatelessWidget {
         height: 52.w,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.grey.shade100,
+          color: Theme.of(context).dividerColor,
           image: DecorationImage(
             image: AssetImage(bankLogoAsset!),
             fit: BoxFit.contain,

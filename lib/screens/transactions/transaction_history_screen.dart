@@ -298,7 +298,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     vertical: 10.h,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: Theme.of(context).dividerColor,
                     borderRadius: BorderRadius.circular(20.r),
                   ),
                   child: Row(
@@ -443,7 +443,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                               Icon(
                                 Icons.receipt_long_outlined,
                                 size: 48.sp,
-                                color: Colors.grey.shade400,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                               ),
                               vSpace(12),
                               Center(
@@ -513,7 +513,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                         vertical: 16.h,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(12.r),
                       ),
                       child: Row(
@@ -624,7 +624,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 11.h),
         decoration: BoxDecoration(
-          color: Colors.grey.shade100,
+          color: Theme.of(context).dividerColor,
           borderRadius: BorderRadius.circular(20.r),
         ),
         child: Row(
@@ -691,7 +691,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(12.r),
             ),
             child: Row(

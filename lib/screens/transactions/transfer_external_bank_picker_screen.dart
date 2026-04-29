@@ -131,11 +131,11 @@ class _TransferExternalBankPickerScreenState
                       EdgeInsets.symmetric(horizontal: 12.w, vertical: 14.h),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12.r),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
+                    borderSide: BorderSide(color: Theme.of(context).dividerColor),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12.r),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
+                    borderSide: BorderSide(color: Theme.of(context).dividerColor),
                   ),
                 ),
               ),
@@ -158,7 +158,7 @@ class _TransferExternalBankPickerScreenState
                       width: double.infinity,
                       padding: EdgeInsets.fromLTRB(8.w, 8.h, 8.w, 10.h),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(12.r),
                         border: Border.all(color: const Color(0xFFE7E7E7)),
                       ),
@@ -204,7 +204,7 @@ class _TransferExternalBankPickerScreenState
                   ],
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(12.r),
                       border: Border.all(color: const Color(0xFFE7E7E7)),
                     ),

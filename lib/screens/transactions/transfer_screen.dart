@@ -279,9 +279,9 @@ class _TransferScreenState extends State<TransferScreen> {
         height: 101.h,
         padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(10.r),
-          border: Border.all(color: const Color(0xFFE9E9E9)),
+          border: Border.all(color: Theme.of(context).dividerColor),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -391,11 +391,11 @@ class _TransferScreenState extends State<TransferScreen> {
         width: double.infinity,
         padding: EdgeInsets.all(14.w),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(12.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.shade200,
+              color: Theme.of(context).dividerColor,
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),

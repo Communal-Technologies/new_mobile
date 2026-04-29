@@ -38,7 +38,7 @@ class _FilterStatusBottomSheetState extends State<FilterStatusBottomSheet> {
     return Container(
       padding: EdgeInsets.fromLTRB(24.w, 24.h, 24.w, 32.h),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
       ),
       child: Column(
@@ -98,7 +98,7 @@ class _FilterStatusBottomSheetState extends State<FilterStatusBottomSheet> {
                   child: Container(
                     padding: EdgeInsets.symmetric(vertical: 14.h),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
+                      color: Theme.of(context).dividerColor,
                       borderRadius: BorderRadius.circular(12.r),
                     ),
                     alignment: Alignment.center,

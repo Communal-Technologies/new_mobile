@@ -199,7 +199,7 @@ class _TransferInternalAmountScreenState
               width: double.infinity,
               padding: EdgeInsets.all(14.w),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12.r),
                 border: Border.all(color: const Color(0xFFE7E7E7)),
               ),
@@ -229,7 +229,7 @@ class _TransferInternalAmountScreenState
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8.r),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderSide: BorderSide(color: Theme.of(context).dividerColor),
                       ),
                     ),
                     onChanged: (_) => setState(() {}),
@@ -256,7 +256,7 @@ class _TransferInternalAmountScreenState
                                   vertical: 10.h,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: Theme.of(context).cardColor,
                                   borderRadius: BorderRadius.circular(16.r),
                                   border: Border.all(
                                     color: const Color(0xFFE0E0E0),
@@ -294,7 +294,7 @@ class _TransferInternalAmountScreenState
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8.r),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderSide: BorderSide(color: Theme.of(context).dividerColor),
                       ),
                     ),
                   ),

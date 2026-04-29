@@ -54,12 +54,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         statusBarBrightness: Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: Colors.grey.shade50,
+        // Theme-driven background + AppBar (no explicit colours so the
+        // screen flips with the dark/light toggle).
         appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
           title: Text(
@@ -67,7 +66,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             style: TextStyle(
               fontSize: 19.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
             ),
           ),
           centerTitle: true,

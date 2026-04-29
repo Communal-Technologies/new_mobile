@@ -1,8 +1,11 @@
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/security/biometric_key_service.dart';
+import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/core/security/token_manager.dart';
 import 'package:communal_mobile/core/utils/app_logger.dart';
 import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
+import 'package:communal_mobile/data/local/biometric_prefs.dart';
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
@@ -11,6 +14,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 @injectable
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
@@ -410,6 +414,25 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     // Back-compat: clear the legacy 'login' key so devices upgrading from
     // pre-audit-M5 builds don't carry forward the cached PII identifier.
     await secureStorage.delete(key: 'login');
+
+    // Wipe biometric enrollment state on logout. Without this the
+    // device-scoped Keystore key + global appLogin pref carry over to
+    // the next user who signs in on the same device — and welcome-back
+    // would auto-prompt biometric for them. The next sign-in's user can
+    // re-enrol from the biometric settings screen if they want it.
+    try {
+      final shared = await SharedPreferences.getInstance();
+      await BiometricPrefs(shared).resetAll();
+      final signer = getIt<BiometricSignerService>();
+      final keys = getIt<BiometricKeyService>();
+      final deviceId = await signer.deviceId();
+      await keys.revoke(deviceId);
+    } catch (e) {
+      AppLogger.warn(_tag, 'logout: biometric wipe failed', error: e);
+      // Non-fatal — the per-user gate in welcome-back also prevents the
+      // leak; this is defence-in-depth.
+    }
+
     emit(AuthUnauthenticated());
   }
 

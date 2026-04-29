@@ -27,11 +27,23 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:toastification/toastification.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   _assertBuildTimeConfig();
   await configureDependencies();
+
+  // Push notifications: Firebase init + local-notification channel + foreground
+  // listener. Background handler must be registered before runApp() so a
+  // terminated-app push can wake the isolate. Wrapped because Firebase config
+  // may be absent on some build variants — push is optional, never fatal.
+  try {
+    await PushNotificationService.initializeForApp();
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  } catch (e) {
+    debugPrint('main: push notification setup skipped: $e');
+  }
 
   // Set system UI style (status bar)
   SystemChrome.setSystemUIOverlayStyle(

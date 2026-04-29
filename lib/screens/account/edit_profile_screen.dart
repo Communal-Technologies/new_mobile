@@ -265,12 +265,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         statusBarBrightness: Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: Colors.grey.shade50,
         appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
           title: Text(
@@ -278,7 +275,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             style: TextStyle(
               fontSize: 19.sp,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
             ),
           ),
           centerTitle: true,

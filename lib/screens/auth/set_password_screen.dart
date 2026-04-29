@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
@@ -179,14 +180,23 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
 
               vSpace(32),
 
-              // Create Password
+              // Create Password.
+              // Digits-only keyboard + filter — the welcome-back PIN pad
+              // is numeric, the backend createPassword endpoint rejects
+              // non-numeric on mobile_app, and an alphanumeric keyboard
+              // here would let users set a password they could never log
+              // back in with.
               CustomTextField(
                 controller: _passwordController,
-                labelText: 'Create your Password',
-                hintText: 'Enter password',
+                labelText: 'Create your 6-digit PIN',
+                hintText: 'Enter 6-digit PIN',
                 obscureText: _obscurePassword,
                 errorText: _passwordError,
-                keyboardType: TextInputType.visiblePassword,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(6),
+                ],
                 suffixIcon: IconButton(
                   icon: Icon(
                     _obscurePassword
@@ -211,14 +221,18 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
 
               vSpace(24),
 
-              // Re-enter Password
+              // Re-enter PIN
               CustomTextField(
                 controller: _confirmPasswordController,
-                labelText: 'Re-enter your Password',
-                hintText: 'Re-enter password',
+                labelText: 'Re-enter your 6-digit PIN',
+                hintText: 'Re-enter 6-digit PIN',
                 obscureText: _obscureConfirmPassword,
                 errorText: _confirmPasswordError,
-                keyboardType: TextInputType.visiblePassword,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(6),
+                ],
                 suffixIcon: IconButton(
                   icon: Icon(
                     _obscureConfirmPassword

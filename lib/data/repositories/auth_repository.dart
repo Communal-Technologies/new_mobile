@@ -304,13 +304,20 @@ class AuthRepository {
   }
 
   /// Verifies OTP. [contact] is the same login string as check-login (email or E.164 phone);
-  /// the backend picks SMS vs email from the credential shape.
-  Future<bool> verifyOtp(String contact, String otp) async {
+  /// the backend picks SMS vs email from the credential shape. [purpose]
+  /// stays `verification` for password reset / login OTP and is `signup`
+  /// for the self-signup flow — backend mints `user_id` on the response
+  /// only for `signup` so the next screen can call /create-account-password.
+  Future<bool> verifyOtp(
+    String contact,
+    String otp, {
+    String purpose = 'verification',
+  }) async {
     try {
       final body = <String, dynamic>{
         'login': contact.trim(),
         'otp': otp,
-        'purpose': 'verification',
+        'purpose': purpose,
       };
 
       final response = await dioClient.post(
@@ -338,13 +345,60 @@ class AuthRepository {
     }
   }
 
+  /// Verify OTP for the self-signup flow. Returns `(success, userId)` —
+  /// backend assigns / resolves the user id on first OTP verify with
+  /// `purpose=signup` and surfaces it in the response so we can carry it
+  /// forward to /create-account-password.
+  Future<({bool success, String? userId})> verifyOtpForSignup(
+    String contact,
+    String otp,
+  ) async {
+    try {
+      final response = await dioClient.post(
+        ApiEndpoints.otpVerify,
+        data: <String, dynamic>{
+          'login': contact.trim(),
+          'otp': otp,
+          'purpose': 'signup',
+        },
+        requireAuth: false,
+      );
+
+      if (response.statusCode == 200 && response.data is Map) {
+        final map = response.data as Map<String, dynamic>;
+        final ok = map['success'] == true;
+        final data = map['data'];
+        final userId = data is Map ? data['user_id']?.toString() : null;
+        return (success: ok, userId: userId);
+      }
+      return (success: false, userId: null);
+    } on DioException catch (e) {
+      if (e.response != null) {
+        final data = e.response?.data;
+        final msg = data is Map
+            ? (data['message']?.toString() ?? 'Invalid or expired code')
+            : 'Invalid or expired code';
+        throw Exception(msg);
+      }
+      rethrow;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   /// Request OTP: backend resolves **SMS** vs **email** from [contact] and calls **notificationsvc**
   /// (`/notifications/sms` or `/notifications/email/otp`) when enabled.
-  Future<bool> requestOtp(String contact) async {
+  /// Pass `purpose: 'signup'` for the self-signup flow — backend will
+  /// upsert a User row for the contact and surface its id in the
+  /// response (consumed via [requestOtpForSignup]).
+  Future<bool> requestOtp(
+    String contact, {
+    String purpose = 'verification',
+  }) async {
     try {
       final body = <String, dynamic>{
         'login': contact.trim(),
-        'purpose': 'verification',
+        'purpose': purpose,
       };
 
       final response = await dioClient.post(
@@ -358,6 +412,42 @@ class AuthRepository {
         return map['success'] == true;
       }
       return false;
+    } on DioException catch (e) {
+      if (e.response != null) {
+        final data = e.response?.data;
+        final msg = data is Map
+            ? (data['message']?.toString() ?? 'Unable to send verification code')
+            : 'Unable to send verification code';
+        throw Exception(msg);
+      }
+      rethrow;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Self-signup OTP send. Returns the userId the backend created or
+  /// resumed for this contact, so we can carry it through the rest of
+  /// the signup chain. Returns null when the send failed but didn't
+  /// throw (rare — the request layer normally throws on non-200).
+  Future<String?> requestOtpForSignup(String contact) async {
+    try {
+      final response = await dioClient.post(
+        ApiEndpoints.otpSend,
+        data: <String, dynamic>{
+          'login': contact.trim(),
+          'purpose': 'signup',
+        },
+        requireAuth: false,
+      );
+
+      if (response.statusCode == 200 && response.data is Map) {
+        final map = response.data as Map<String, dynamic>;
+        if (map['success'] != true) return null;
+        final data = map['data'];
+        return data is Map ? data['user_id']?.toString() : null;
+      }
+      return null;
     } on DioException catch (e) {
       if (e.response != null) {
         final data = e.response?.data;

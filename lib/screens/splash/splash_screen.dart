@@ -184,7 +184,7 @@ class _SplashScreenState extends State<SplashScreen>
                                   width: double.infinity,
                                   child: FilledButton(
                                     style: FilledButton.styleFrom(
-                                      backgroundColor: Colors.white,
+                                      backgroundColor: Theme.of(context).cardColor,
                                       foregroundColor: primaryColor,
                                       padding: EdgeInsets.symmetric(vertical: 14.h),
                                     ),

@@ -252,7 +252,7 @@ class _TransferInternalVerifyScreenState
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(color: const Color(0xFFE7E7E7)),
+                border: Border.all(color: Theme.of(context).dividerColor),
               ),
               child: Row(
                 children: [
@@ -314,7 +314,7 @@ class _TransferInternalVerifyScreenState
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.shield_outlined, size: 16.sp, color: Colors.black54),
+                Icon(Icons.shield_outlined, size: 16.sp, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                 hSpace(6),
                 Text(
                   'End-to-end encrypted transaction',
@@ -363,7 +363,7 @@ class _TransferInternalVerifyScreenState
       width: double.infinity,
       padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 18.h),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFE7FF),
+        color: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).primaryColor.withValues(alpha: 0.16) : const Color(0xFFEFE7FF),
         borderRadius: BorderRadius.circular(18.r),
       ),
       child: Column(

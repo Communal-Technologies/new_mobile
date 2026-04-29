@@ -256,7 +256,7 @@ class _TransferInternalReviewScreenState
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(color: const Color(0xFFE7E7E7)),
+                border: Border.all(color: Theme.of(context).dividerColor),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,7 +329,7 @@ class _TransferInternalReviewScreenState
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(color: const Color(0xFFE7E7E7)),
+                border: Border.all(color: Theme.of(context).dividerColor),
               ),
               child: Column(
                 children: [
@@ -353,7 +353,7 @@ class _TransferInternalReviewScreenState
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(color: const Color(0xFFE7E7E7)),
+                border: Border.all(color: Theme.of(context).dividerColor),
               ),
               child: Row(
                 children: [

@@ -186,7 +186,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       child: Text(
                         _biometricEnrolled ? 'Enabled' : 'Disabled',
                         style: TextStyle(
-                          fontSize: 13.sp,
+                          fontSize: 14.sp,
                           fontWeight: FontWeight.w700,
                           color: _biometricEnrolled
                               ? const Color(0xFF1AAE70)
@@ -380,7 +380,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontSize: 13.sp,
+                      fontSize: 14.sp,
                       fontWeight: FontWeight.w500,
                       color: muted,
                     ),

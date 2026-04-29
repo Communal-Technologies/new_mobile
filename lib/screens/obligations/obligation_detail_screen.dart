@@ -596,7 +596,13 @@ class _PaymentTile extends StatelessWidget {
     final outflow = record.isOutflow;
     final iconData = outflow ? Icons.arrow_upward_rounded : Icons.check_circle;
     final iconColor = outflow ? const Color(0xFFD64545) : const Color(0xFF7B61FF);
-    final amountColor = outflow ? const Color(0xFFD64545) : Colors.black;
+    // Inflow rows used hardcoded `Colors.black` for the amount label,
+    // which renders invisibly on the dark scaffold. Resolve from the
+    // active theme's onSurface so the amount stays legible in both
+    // modes; outflow keeps the red accent.
+    final amountColor = outflow
+        ? const Color(0xFFD64545)
+        : Theme.of(context).colorScheme.onSurface;
     return Container(
       padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(

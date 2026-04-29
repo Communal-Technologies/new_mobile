@@ -81,7 +81,7 @@ class HomeAccountFrozenCard extends StatelessWidget {
                           child: Text(
                             'Restricted',
                             style: TextStyle(
-                              fontSize: 13.sp,
+                              fontSize: 14.sp,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
                             ),

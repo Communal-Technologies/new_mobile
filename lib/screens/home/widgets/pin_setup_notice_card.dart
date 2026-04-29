@@ -34,16 +34,16 @@ class PinSetupNoticeCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 15.sp,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF0F1D40),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   vSpace(3),
                   Text(
                     'Protect transfers and sensitive actions by setting your 4-digit PIN.',
                     style: TextStyle(
-                      fontSize: 13.sp,
+                      fontSize: 14.sp,
                       fontWeight: FontWeight.w500,
-                      color: Colors.black54,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                   vSpace(6),

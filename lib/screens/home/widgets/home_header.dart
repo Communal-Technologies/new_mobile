@@ -102,7 +102,7 @@ class HomeHeader extends StatelessWidget {
                           child: Text(
                             roleLabel,
                             style: TextStyle(
-                              fontSize: 13.sp,
+                              fontSize: 14.sp,
                               fontWeight: FontWeight.w600,
                               color: theme.primaryColor,
                             ),
@@ -114,7 +114,7 @@ class HomeHeader extends StatelessWidget {
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: 14.sp,
                         color: onSurface.withValues(alpha: 0.6),
                       ),
                       maxLines: 1,

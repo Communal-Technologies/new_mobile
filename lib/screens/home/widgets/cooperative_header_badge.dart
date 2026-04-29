@@ -40,7 +40,7 @@ class CooperativeHeaderBadge extends StatelessWidget {
           child: Image.network(
             logo,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _textFallback(line1, line2),
+            errorBuilder: (_, __, ___) => _textFallback(context,line1, line2),
             loadingBuilder: (context, child, progress) {
               if (progress == null) return child;
               return Center(
@@ -66,11 +66,11 @@ class CooperativeHeaderBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(6.r),
         border: Border.all(color: Colors.grey.shade200, width: 1),
       ),
-      child: _textFallback(line1, line2),
+      child: _textFallback(context,line1, line2),
     );
   }
 
-  Widget _textFallback(String line1, String line2) {
+  Widget _textFallback(BuildContext context, String line1, String line2) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -78,7 +78,7 @@ class CooperativeHeaderBadge extends StatelessWidget {
         Text(
           line1,
           style: TextStyle(
-            fontSize: 13.sp,
+            fontSize: 14.sp,
             fontWeight: FontWeight.w700,
             color: theme.primaryColor,
           ),
@@ -92,7 +92,7 @@ class CooperativeHeaderBadge extends StatelessWidget {
             style: TextStyle(
               fontSize: 9.sp,
               fontWeight: FontWeight.w600,
-              color: Colors.grey.shade700,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

@@ -46,7 +46,7 @@ class NewFeatureBanner extends StatelessWidget {
                   child: Text(
                     'New Feature',
                     style: TextStyle(
-                      fontSize: 13.sp,
+                      fontSize: 14.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),

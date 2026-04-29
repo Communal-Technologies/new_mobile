@@ -45,7 +45,7 @@ class CommunityCard extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(12.r),
           border: Border.all(
             color: isSelected ? const Color(0xFF7434FF) : Colors.transparent,
@@ -183,18 +183,18 @@ class _CommunityCardMeta extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(Icons.people_alt, size: 16.sp, color: Colors.grey.shade600),
+        Icon(Icons.people_alt, size: 16.sp, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
         hSpace(4),
         Text(
           community.membersLabel,
-          style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 14.sp, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
         ),
         hSpace(12),
-        Icon(Icons.place_outlined, size: 16.sp, color: Colors.grey.shade600),
+        Icon(Icons.place_outlined, size: 16.sp, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
         hSpace(4),
         Text(
           community.distanceLabel,
-          style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 14.sp, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
         ),
       ],
     );

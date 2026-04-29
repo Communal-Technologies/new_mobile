@@ -165,7 +165,7 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
               onPressed: () => Navigator.of(context).pop(),
               style: OutlinedButton.styleFrom(
                 minimumSize: Size(double.infinity, 52.h),
-                side: const BorderSide(color: Color(0xFFE0E0EC)),
+                side: BorderSide(color: Theme.of(context).dividerColor),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12.r),
                 ),
@@ -226,7 +226,7 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
         ),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
           ),
           child: SafeArea(
@@ -299,7 +299,10 @@ class _Header extends StatelessWidget {
         Text(
           'By joining, you agree to the community guidelines and contribution requirements.',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
+          style: TextStyle(
+            fontSize: 15.sp,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
         ),
       ],
     );

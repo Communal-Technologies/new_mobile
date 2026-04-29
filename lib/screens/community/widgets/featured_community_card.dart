@@ -96,28 +96,32 @@ class FeaturedCommunityCard extends StatelessWidget {
           vSpace(18),
           Row(
             children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: onOpenChat,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF9C6BFF),
-                    minimumSize: Size(double.infinity, 46.h),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                  ),
-                  child: Text(
-                    'Open Chat',
-                    style: TextStyle(
-                      fontSize: 15.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-              hSpace(12),
+              // TODO(communal-mobile): re-enable Open Chat once the
+              // in-app cooperative chat is built. Hidden for now so
+              // a non-functional CTA doesn't ship — the View button
+              // expands to fill the row in the meantime.
+              // Expanded(
+              //   child: ElevatedButton(
+              //     onPressed: onOpenChat,
+              //     style: ElevatedButton.styleFrom(
+              //       backgroundColor: const Color(0xFF9C6BFF),
+              //       minimumSize: Size(double.infinity, 46.h),
+              //       elevation: 0,
+              //       shape: RoundedRectangleBorder(
+              //         borderRadius: BorderRadius.circular(12.r),
+              //       ),
+              //     ),
+              //     child: Text(
+              //       'Open Chat',
+              //       style: TextStyle(
+              //         fontSize: 15.sp,
+              //         fontWeight: FontWeight.w600,
+              //         color: Colors.white,
+              //       ),
+              //     ),
+              //   ),
+              // ),
+              // hSpace(12),
               Expanded(
                 child: ElevatedButton(
                   onPressed: onViewCommunity,

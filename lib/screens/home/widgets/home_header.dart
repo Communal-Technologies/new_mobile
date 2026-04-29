@@ -41,10 +41,11 @@ class HomeHeader extends StatelessWidget {
             ? NetworkImage(avatar)
             : const AssetImage('assets/images/demo_user.png');
 
+        final onSurface = theme.colorScheme.onSurface;
         return Container(
           padding:
               EdgeInsets.only(right: 16.w, top: 12.h, bottom: 12.h, left: 0),
-          color: Colors.white,
+          color: theme.cardColor,
           child: Row(
             children: [
               InkWell(
@@ -83,7 +84,7 @@ class HomeHeader extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 17.sp,
                               fontWeight: FontWeight.w700,
-                              color: Colors.grey.shade800,
+                              color: onSurface,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -103,7 +104,7 @@ class HomeHeader extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 13.sp,
                               fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade700,
+                              color: theme.primaryColor,
                             ),
                           ),
                         ),
@@ -114,7 +115,7 @@ class HomeHeader extends StatelessWidget {
                       subtitle,
                       style: TextStyle(
                         fontSize: 13.sp,
-                        color: Colors.grey.shade600,
+                        color: onSurface.withValues(alpha: 0.6),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -128,7 +129,7 @@ class HomeHeader extends StatelessWidget {
                 constraints: const BoxConstraints(),
                 icon: Icon(
                   Icons.notifications_outlined,
-                  color: Colors.grey.shade700,
+                  color: onSurface.withValues(alpha: 0.7),
                   size: 28.sp,
                 ),
               ),
@@ -140,7 +141,7 @@ class HomeHeader extends StatelessWidget {
                 borderRadius: BorderRadius.circular(22.w),
                 child: CircleAvatar(
                   radius: 22.w,
-                  backgroundColor: Colors.grey.shade300,
+                  backgroundColor: theme.dividerColor,
                   backgroundImage: avatarImage,
                 ),
               ),

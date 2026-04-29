@@ -1,12 +1,31 @@
 import 'dart:math' as math;
-import 'package:flutter/material.dart';
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
+import 'package:communal_mobile/core/widgets/loader_overlay.dart';
+import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/models/loan_scheme.dart';
+import 'package:communal_mobile/data/repositories/loan_repository.dart';
+import 'package:communal_mobile/injection.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import 'package:communal_mobile/core/widgets/space.dart';
+/// Loan-area orange (matches LoanOfferCard / detail header / progress).
+const Color _kLoanOrange = Color(0xFFE67E22);
+
+/// Static fallback range / defaults used when the cooperative has no
+/// loan schemes configured (e.g. during onboarding). The calculator
+/// must still work in that window — the cooperative gets to refine
+/// these ranges by adding loan products.
+const double _kFallbackMinAmount = 50000;
+const double _kFallbackMaxAmount = 2000000;
+const int _kFallbackMinDuration = 3;
+const int _kFallbackMaxDuration = 36;
+const double _kFallbackInterestRate = 12.0;
 
 class LoanCalculatorScreen extends StatefulWidget {
   const LoanCalculatorScreen({super.key});
@@ -16,31 +35,144 @@ class LoanCalculatorScreen extends StatefulWidget {
 }
 
 class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
+  final LoanRepository _repo = LoanRepository(getIt());
+
+  /// Cooperative-defined products. When non-empty the calculator's
+  /// interest rate, duration, and service charge come from the
+  /// selected scheme; when empty we fall back to the static defaults
+  /// at the top of the file.
+  List<LoanScheme> _schemes = const [];
+  LoanScheme? _selectedScheme;
+  bool _loadingSchemes = true;
+  String? _schemesError;
+
+  // User-controllable inputs.
   double _loanAmount = 500000;
   int _loanDuration = 12;
-  final double _interestRate = 12.0;
-  final double _minAmount = 50000;
-  final double _maxAmount = 2000000;
-  final int _minDuration = 3;
-  final int _maxDuration = 36;
 
+  // Active calibration values (derived from `_selectedScheme` if set,
+  // otherwise the static fallbacks).
+  double get _interestRate =>
+      _selectedScheme?.interestRate ?? _kFallbackInterestRate;
+  // Service charge from the backend is a flat fee in *minor units*
+  // (kobo for NGN). It's added to the principal-derived interest as
+  // a one-off cost — same shape as `LoanApplicationController`'s
+  // `interest = principal*rate% + service_charge`.
+  double get _serviceChargeMinor => _selectedScheme?.serviceCharge ?? 0;
+  // For the calculator we work in major units (₦) to match the
+  // amount/duration sliders. `serviceCharge` is divided by 100 for
+  // NGN (the only currency we expose ranges for here).
+  double get _serviceChargeMajor => _serviceChargeMinor / 100.0;
+
+  double get _minAmount => _kFallbackMinAmount;
+  double get _maxAmount => _kFallbackMaxAmount;
+
+  int get _minDuration {
+    final scheme = _selectedScheme;
+    if (scheme != null && scheme.durationMonths > 0) {
+      return scheme.durationMonths;
+    }
+    return _kFallbackMinDuration;
+  }
+
+  int get _maxDuration {
+    final scheme = _selectedScheme;
+    if (scheme != null && scheme.durationMonths > 0) {
+      return scheme.durationMonths;
+    }
+    return _kFallbackMaxDuration;
+  }
+
+  /// True when the duration is locked by the selected scheme — the
+  /// scheme model defines a single fixed term, so the slider becomes a
+  /// read-only display. We still keep the slider widget for layout
+  /// continuity, just disabled.
+  bool get _durationLocked =>
+      _selectedScheme != null && _selectedScheme!.durationMonths > 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _loadSchemes();
+    });
+  }
+
+  Future<void> _loadSchemes() async {
+    final auth = context.read<AuthBloc>().state;
+    final coopId = auth is AuthAuthenticated
+        ? (auth.user.cooperativeId?.trim() ?? '')
+        : '';
+    if (coopId.isEmpty) {
+      // No cooperative context; the calculator still works on
+      // fallback values, so don't surface an error.
+      if (!mounted) return;
+      setState(() {
+        _loadingSchemes = false;
+        _schemes = const [];
+        _selectedScheme = null;
+      });
+      return;
+    }
+
+    try {
+      final rows = await _repo.fetchSchemes(coopId);
+      if (!mounted) return;
+      setState(() {
+        _schemes = rows;
+        // Pick the first scheme by default. Snap the duration to its
+        // term so the summary reflects an honest scheme-driven
+        // calculation immediately.
+        if (rows.isNotEmpty) {
+          _selectedScheme = rows.first;
+          if (rows.first.durationMonths > 0) {
+            _loanDuration = rows.first.durationMonths;
+          }
+        } else {
+          _selectedScheme = null;
+        }
+        _loadingSchemes = false;
+        _schemesError = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      // Calculator stays usable on fallback. Surface the error in a
+      // small inline note — don't block the screen.
+      setState(() {
+        _loadingSchemes = false;
+        _schemesError =
+            e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '').trim();
+      });
+    }
+  }
+
+  /// Standard amortizing-loan monthly payment for `_loanAmount` at
+  /// the active interest rate over `_loanDuration` months. Service
+  /// charge is treated as an up-front flat addition to total cost
+  /// (mirrors backend math), not amortized into the monthly figure.
   double get _monthlyPayment {
     if (_loanDuration == 0) return 0;
     final monthlyRate = _interestRate / 100 / 12;
     if (monthlyRate == 0) return _loanAmount / _loanDuration;
-    final numerator = _loanAmount * monthlyRate * math.pow(1 + monthlyRate, _loanDuration);
+    final numerator = _loanAmount *
+        monthlyRate *
+        math.pow(1 + monthlyRate, _loanDuration);
     final denominator = math.pow(1 + monthlyRate, _loanDuration) - 1;
     return numerator / denominator;
   }
 
-  double get _totalRepayment => _monthlyPayment * _loanDuration;
+  double get _totalRepayment =>
+      _monthlyPayment * _loanDuration + _serviceChargeMajor;
   double get _totalInterest => _totalRepayment - _loanAmount;
   int get _numberOfInstallments => _loanDuration;
 
-  DateTime get _firstPaymentDate => DateTime.now().add(const Duration(days: 7));
+  DateTime get _firstPaymentDate =>
+      DateTime.now().add(const Duration(days: 7));
   DateTime get _finalPaymentDate {
     final firstDate = _firstPaymentDate;
-    return DateTime(firstDate.year, firstDate.month + _loanDuration, firstDate.day);
+    return DateTime(
+        firstDate.year, firstDate.month + _loanDuration, firstDate.day);
   }
 
   String _formatCurrency(double amount) {
@@ -71,32 +203,49 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
           ),
           centerTitle: true,
         ),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildInfoBox(),
-              vSpace(24),
-              _buildLoanAmountSection(),
-              vSpace(24),
-              _buildLoanDurationSection(),
-              vSpace(24),
-              _buildInterestRateSection(),
-              vSpace(24),
-              _buildRepaymentSummaryCard(),
-              vSpace(24),
-              _buildPaymentBreakdownSection(),
-              vSpace(24),
-              _buildQuickAmountsSection(),
-              vSpace(24),
-              _buildProceedButton(),
-              vSpace(16),
-              _buildNoteSection(),
-              vSpace(32),
-            ],
-          ),
-        ),
+        body: _loadingSchemes
+            ? const LoaderOverlay()
+            : SingleChildScrollView(
+                padding:
+                    EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildInfoBox(),
+                    if (_schemes.isNotEmpty) ...[
+                      vSpace(20),
+                      _buildSchemePicker(),
+                    ] else if (_schemesError != null) ...[
+                      vSpace(12),
+                      _buildSchemesErrorNote(),
+                    ] else ...[
+                      vSpace(12),
+                      _buildFallbackNote(),
+                    ],
+                    vSpace(24),
+                    _buildLoanAmountSection(),
+                    vSpace(24),
+                    _buildLoanDurationSection(),
+                    vSpace(24),
+                    _buildInterestRateSection(),
+                    if (_serviceChargeMajor > 0) ...[
+                      vSpace(12),
+                      _buildServiceChargeRow(),
+                    ],
+                    vSpace(24),
+                    _buildRepaymentSummaryCard(),
+                    vSpace(24),
+                    _buildPaymentBreakdownSection(),
+                    vSpace(24),
+                    _buildQuickAmountsSection(),
+                    vSpace(24),
+                    _buildProceedButton(),
+                    vSpace(16),
+                    _buildNoteSection(),
+                    vSpace(32),
+                  ],
+                ),
+              ),
       ),
     );
   }
@@ -135,14 +284,122 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                 ),
                 vSpace(4),
                 Text(
-                  'Adjust the loan amount and duration to see your estimated monthly payments and total repayment.',
+                  _schemes.isNotEmpty
+                      ? 'Pick one of your cooperative\'s loan products and adjust the amount to see your estimated repayment.'
+                      : 'Adjust the loan amount and duration to see your estimated monthly payments and total repayment.',
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
                   ),
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSchemePicker() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Loan Product',
+          style: TextStyle(
+            fontSize: 17.sp,
+            fontWeight: FontWeight.w700,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        vSpace(10),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (final scheme in _schemes) ...[
+                _SchemeChip(
+                  scheme: scheme,
+                  selected: _selectedScheme?.loanCode == scheme.loanCode,
+                  onTap: () {
+                    setState(() {
+                      _selectedScheme = scheme;
+                      if (scheme.durationMonths > 0) {
+                        _loanDuration = scheme.durationMonths;
+                      }
+                    });
+                  },
+                ),
+                hSpace(10),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFallbackNote() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: isDark
+            ? _kLoanOrange.withValues(alpha: 0.12)
+            : const Color(0xFFFFF4E9),
+        borderRadius: BorderRadius.circular(10.r),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: _kLoanOrange, size: 18.sp),
+          hSpace(8),
+          Expanded(
+            child: Text(
+              'Your cooperative hasn\'t configured loan products yet. '
+              'These are sample ranges — your actual rate and limits '
+              'will come from your cooperative.',
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.75),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSchemesErrorNote() {
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFDECEA),
+        borderRadius: BorderRadius.circular(10.r),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded,
+              color: const Color(0xFFE74C3C), size: 18.sp),
+          hSpace(8),
+          Expanded(
+            child: Text(
+              'Could not load loan products. Showing sample ranges. '
+              '${_schemesError ?? ''}',
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: const Color(0xFFE74C3C),
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: _loadSchemes,
+            child: const Text('Retry'),
           ),
         ],
       ),
@@ -167,19 +424,20 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
             Expanded(
               child: SliderTheme(
                 data: SliderTheme.of(context).copyWith(
-                  activeTrackColor: const Color(0xFF7434FF),
+                  activeTrackColor: _kLoanOrange,
                   inactiveTrackColor: Theme.of(context).dividerColor,
-                  thumbColor:
-                      Theme.of(context).colorScheme.surface,
-                  thumbShape: RoundSliderThumbShape(enabledThumbRadius: 10.r),
-                  overlayShape: RoundSliderOverlayShape(overlayRadius: 20.r),
+                  thumbColor: Theme.of(context).colorScheme.surface,
+                  thumbShape:
+                      RoundSliderThumbShape(enabledThumbRadius: 10.r),
+                  overlayShape:
+                      RoundSliderOverlayShape(overlayRadius: 20.r),
                   trackHeight: 4.h,
                 ),
                 child: Slider(
-                  value: _loanAmount,
+                  value: _loanAmount.clamp(_minAmount, _maxAmount),
                   min: _minAmount,
                   max: _maxAmount,
-                  divisions: 39,
+                  divisions: ((_maxAmount - _minAmount) / 50000).round(),
                   onChanged: (value) {
                     setState(() {
                       _loanAmount = value;
@@ -194,7 +452,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
               style: TextStyle(
                 fontSize: 17.sp,
                 fontWeight: FontWeight.w700,
-                color: const Color(0xFF7434FF),
+                color: _kLoanOrange,
               ),
             ),
           ],
@@ -207,14 +465,20 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
               _formatCurrency(_minAmount),
               style: TextStyle(
                 fontSize: 14.sp,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
               ),
             ),
             Text(
               _formatCurrency(_maxAmount),
               style: TextStyle(
                 fontSize: 14.sp,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -224,16 +488,40 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
   }
 
   Widget _buildLoanDurationSection() {
+    final locked = _durationLocked;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Loan Duration',
-          style: TextStyle(
-            fontSize: 17.sp,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
+        Row(
+          children: [
+            Text(
+              'Loan Duration',
+              style: TextStyle(
+                fontSize: 17.sp,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            if (locked) ...[
+              hSpace(8),
+              Container(
+                padding:
+                    EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                decoration: BoxDecoration(
+                  color: _kLoanOrange.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Text(
+                  'Set by product',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w600,
+                    color: _kLoanOrange,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
         vSpace(12),
         Row(
@@ -241,24 +529,29 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
             Expanded(
               child: SliderTheme(
                 data: SliderTheme.of(context).copyWith(
-                  activeTrackColor: const Color(0xFF7434FF),
+                  activeTrackColor: _kLoanOrange,
                   inactiveTrackColor: Theme.of(context).dividerColor,
-                  thumbColor:
-                      Theme.of(context).colorScheme.surface,
-                  thumbShape: RoundSliderThumbShape(enabledThumbRadius: 10.r),
-                  overlayShape: RoundSliderOverlayShape(overlayRadius: 20.r),
+                  thumbColor: Theme.of(context).colorScheme.surface,
+                  thumbShape:
+                      RoundSliderThumbShape(enabledThumbRadius: 10.r),
+                  overlayShape:
+                      RoundSliderOverlayShape(overlayRadius: 20.r),
                   trackHeight: 4.h,
                 ),
                 child: Slider(
-                  value: _loanDuration.toDouble(),
+                  value: _loanDuration
+                      .toDouble()
+                      .clamp(_minDuration.toDouble(), _maxDuration.toDouble()),
                   min: _minDuration.toDouble(),
                   max: _maxDuration.toDouble(),
-                  divisions: _maxDuration - _minDuration,
-                  onChanged: (value) {
-                    setState(() {
-                      _loanDuration = value.round();
-                    });
-                  },
+                  divisions: math.max(1, _maxDuration - _minDuration),
+                  onChanged: locked
+                      ? null
+                      : (value) {
+                          setState(() {
+                            _loanDuration = value.round();
+                          });
+                        },
                 ),
               ),
             ),
@@ -281,14 +574,20 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
               '$_minDuration months',
               style: TextStyle(
                 fontSize: 14.sp,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
               ),
             ),
             Text(
               '$_maxDuration months',
               style: TextStyle(
                 fontSize: 14.sp,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -298,6 +597,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
   }
 
   Widget _buildInterestRateSection() {
+    final scheme = _selectedScheme;
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
@@ -308,7 +608,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
         children: [
           Icon(
             Icons.trending_up,
-            color: const Color(0xFF7434FF),
+            color: _kLoanOrange,
             size: 24.sp,
           ),
           hSpace(12),
@@ -320,12 +620,15 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                   'Interest Rate',
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                 ),
                 vSpace(4),
                 Text(
-                  '${_interestRate.toStringAsFixed(0)}% per annum',
+                  _formatRate(_interestRate),
                   style: TextStyle(
                     fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
@@ -334,10 +637,15 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                 ),
                 vSpace(4),
                 Text(
-                  'Based on your cooperative membership tier',
+                  scheme != null
+                      ? 'From "${scheme.title.isNotEmpty ? scheme.title : scheme.loanCode}"'
+                      : 'Sample rate — your cooperative\'s actual rate may differ',
                   style: TextStyle(
                     fontSize: 14.sp,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -348,11 +656,42 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
     );
   }
 
+  Widget _buildServiceChargeRow() {
+    return Row(
+      children: [
+        Icon(Icons.receipt_long_outlined,
+            size: 18.sp,
+            color: Theme.of(context)
+                .colorScheme
+                .onSurface
+                .withValues(alpha: 0.7)),
+        hSpace(8),
+        Expanded(
+          child: Text(
+            'Service charge: ${_formatCurrency(_serviceChargeMajor)} (one-off, added to total)',
+            style: TextStyle(
+              fontSize: 14.sp,
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.75),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatRate(double rate) {
+    final isWhole = rate.truncateToDouble() == rate;
+    return '${rate.toStringAsFixed(isWhole ? 0 : 2)}% per annum';
+  }
+
   Widget _buildRepaymentSummaryCard() {
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
-        color: const Color(0xFF7434FF),
+        color: _kLoanOrange,
         borderRadius: BorderRadius.circular(16.r),
       ),
       child: Column(
@@ -390,13 +729,13 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
             'in $_numberOfInstallments installments',
             style: TextStyle(
               fontSize: 15.sp,
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
           vSpace(20),
           Container(
             height: 1,
-            color: Colors.white.withOpacity(0.3),
+            color: Colors.white.withValues(alpha: 0.3),
           ),
           vSpace(16),
           Row(
@@ -410,7 +749,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                       'Total Repayment',
                       style: TextStyle(
                         fontSize: 15.sp,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                       ),
                     ),
                     vSpace(4),
@@ -433,7 +772,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                       'Total Interest',
                       style: TextStyle(
                         fontSize: 15.sp,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                       ),
                     ),
                     vSpace(4),
@@ -468,7 +807,8 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
           ),
         ),
         vSpace(16),
-        _buildBreakdownRow('Number of Payments', '$_numberOfInstallments months'),
+        _buildBreakdownRow(
+            'Number of Payments', '$_numberOfInstallments months'),
         vSpace(12),
         _buildBreakdownRow('Payment Frequency', 'Monthly'),
         vSpace(12),
@@ -493,7 +833,10 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
           label,
           style: TextStyle(
             fontSize: 15.sp,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+            color: Theme.of(context)
+                .colorScheme
+                .onSurface
+                .withValues(alpha: 0.7),
           ),
         ),
         Text(
@@ -509,7 +852,10 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
   }
 
   Widget _buildQuickAmountsSection() {
-    final amounts = [100000, 250000, 500000, 750000, 1000000, 1500000];
+    final amounts = [100000, 250000, 500000, 750000, 1000000, 1500000]
+        .where((a) => a >= _minAmount && a <= _maxAmount)
+        .toList();
+    if (amounts.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -546,12 +892,12 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
               child: Container(
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? Theme.of(context).primaryColor
+                      ? _kLoanOrange
                       : Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12.r),
                   border: Border.all(
                     color: isSelected
-                        ? Theme.of(context).primaryColor
+                        ? _kLoanOrange
                         : Theme.of(context).dividerColor,
                   ),
                 ),
@@ -561,7 +907,9 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                     style: TextStyle(
                       fontSize: 15.sp,
                       fontWeight: FontWeight.w600,
-                      color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                      color: isSelected
+                          ? Colors.white
+                          : Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ),
@@ -581,10 +929,11 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
           context.pushNamed('loan-application', extra: {
             'amount': _loanAmount,
             'duration': _loanDuration,
+            if (_selectedScheme != null) 'scheme': _selectedScheme,
           });
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF7434FF),
+          backgroundColor: _kLoanOrange,
           foregroundColor: Colors.white,
           elevation: 0,
           padding: EdgeInsets.symmetric(vertical: 16.h),
@@ -637,7 +986,10 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
             'This is an estimated calculation. Final loan terms will be determined by your cooperative and may vary based on your eligibility score and membership history.',
             style: TextStyle(
               fontSize: 14.sp,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.7),
               height: 1.4,
             ),
           ),
@@ -647,3 +999,63 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
   }
 }
 
+class _SchemeChip extends StatelessWidget {
+  const _SchemeChip({
+    required this.scheme,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final LoanScheme scheme;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12.r),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+        decoration: BoxDecoration(
+          color: selected
+              ? _kLoanOrange
+              : theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(
+            color: selected ? _kLoanOrange : theme.dividerColor,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              scheme.title.isNotEmpty ? scheme.title : scheme.loanCode,
+              style: TextStyle(
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w700,
+                color: selected
+                    ? Colors.white
+                    : theme.colorScheme.onSurface,
+              ),
+            ),
+            vSpace(2),
+            Text(
+              '${scheme.interestRateLabel} • ${scheme.durationLabel}',
+              style: TextStyle(
+                fontSize: 13.sp,
+                color: selected
+                    ? Colors.white.withValues(alpha: 0.9)
+                    : theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

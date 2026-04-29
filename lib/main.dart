@@ -21,6 +21,7 @@ import 'package:communal_mobile/core/widgets/connectivity_listener.dart';
 import 'package:communal_mobile/core/widgets/server_status_overlay.dart';
 import 'package:communal_mobile/core/services/push_notification_service.dart';
 import 'package:communal_mobile/core/widgets/security_wrapper.dart';
+import 'package:communal_mobile/data/local/theme_mode_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:toastification/toastification.dart';
@@ -156,10 +157,19 @@ class MyApp extends StatelessWidget {
                   // [MaterialApp] and must not mount a second [ToastificationWrapper]
                   // (the package uses one module-level GlobalKey for the overlay).
                   child: SecurityWrapper(
-                    child: MaterialApp.router(
+                    child: AnimatedBuilder(
+                      // Re-render the whole MaterialApp when the user
+                      // flips the dark-mode toggle. The controller is a
+                      // ChangeNotifier; rebuilding here is the simplest
+                      // way to flip the live theme without restarting.
+                      animation: getIt<ThemeModeController>(),
+                      builder: (context, _) {
+                        final mode = getIt<ThemeModeController>().mode;
+                        return MaterialApp.router(
                       debugShowCheckedModeBanner: false,
                       theme: AppTheme.light,
-                      themeMode: ThemeMode.light,
+                      darkTheme: AppTheme.dark,
+                      themeMode: mode,
                       routerConfig: appRouter,
                       builder: (context, child) {
                         // ServerStatusOverlay sits inside the router
@@ -172,6 +182,8 @@ class MyApp extends StatelessWidget {
                             child: child ?? const SizedBox.shrink(),
                           ),
                         );
+                      },
+                    );
                       },
                     ),
                   ),

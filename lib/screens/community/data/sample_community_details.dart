@@ -128,17 +128,17 @@ class SampleCommunityDetails {
     ),
   };
 
-  static CommunityDetail getById(String id) {
-    if (_details.containsKey(id)) return _details[id]!;
-
-    final fallbackLocation = SampleCommunityLocations.all.firstWhere(
-      (community) => community.id == id,
-      orElse: () => SampleCommunityLocations.all.first,
-    );
-
+  /// Builds a [CommunityDetail] for any [CommunityLocation] — uses the
+  /// hand-curated sample content when the id matches a known fixture,
+  /// otherwise wraps the location with placeholder stats. The detail
+  /// screens read `location.id`, so this preserves the real cooperative
+  /// id whether or not we have rich content to show.
+  static CommunityDetail forLocation(CommunityLocation location) {
+    final cached = _details[location.id];
+    if (cached != null) return cached;
     return CommunityDetail(
-      location: fallbackLocation,
-      categoryLabel: fallbackLocation.communityType,
+      location: location,
+      categoryLabel: location.communityType,
       stats: const CommunityDetailStats(
         totalLoans: '₦0',
         totalSavings: '₦0',
@@ -150,7 +150,7 @@ class SampleCommunityDetails {
       about: 'Community details coming soon.',
       foundedDate: 'Created 2024',
       contributionRange: '₦0 - ₦0',
-      isVerified: false,
+      isVerified: location.isVerified,
       coordinatorName: 'Community Coordinator',
       coordinatorRole: 'Admin',
       meetingSchedule: 'No schedule yet',

@@ -214,7 +214,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
     final thirdFilled = _isSuccess;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         titleSpacing: 0,
         centerTitle: true,

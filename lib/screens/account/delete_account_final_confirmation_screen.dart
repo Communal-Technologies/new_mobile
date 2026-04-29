@@ -4,6 +4,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/repositories/account_actions_repository.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/account/widgets/final_warning_box.dart';
 import 'package:communal_mobile/screens/account/widgets/cancel_deletion_box.dart';
 
@@ -40,11 +42,28 @@ class _DeleteAccountFinalConfirmationScreenState
     });
   }
 
-  void _handleDeleteAccount() {
-    if (_canDelete) {
-      // TODO: Implement final account deletion
-      // Navigate to success screen
+  bool _submitting = false;
+
+  Future<void> _handleDeleteAccount() async {
+    if (!_canDelete || _submitting) return;
+    setState(() => _submitting = true);
+    try {
+      // Account closure isn't instant — submitting creates a pending
+      // request that the cooperative admin reviews. The backend
+      // snapshots the user's debts/EPC at submit time so an admin
+      // approving later still sees the values the member saw.
+      await getIt<AccountActionsRepository>().submitAccountClosure();
+      if (!mounted) return;
       context.pushReplacementNamed('delete-account-success');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: const Color(0xFFD32F2F),
+        ),
+      );
     }
   }
 
@@ -214,7 +233,7 @@ class _DeleteAccountFinalConfirmationScreenState
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: _canDelete ? _handleDeleteAccount : null,
+        onPressed: (_canDelete && !_submitting) ? _handleDeleteAccount : null,
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.resolveWith<Color>(
             (Set<WidgetState> states) {
@@ -242,13 +261,22 @@ class _DeleteAccountFinalConfirmationScreenState
           ),
           elevation: WidgetStateProperty.all(0),
         ),
-        child: Text(
-          'Delete my Account permanently',
-          style: TextStyle(
-            fontSize: 17.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        child: _submitting
+            ? SizedBox(
+                height: 18.sp,
+                width: 18.sp,
+                child: const CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                ),
+              )
+            : Text(
+                'Delete my Account permanently',
+                style: TextStyle(
+                  fontSize: 17.sp,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
       ),
     );
   }

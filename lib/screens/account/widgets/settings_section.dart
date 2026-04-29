@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/screens/account/widgets/setting_item.dart';
 
@@ -9,6 +12,13 @@ class SettingsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Community Settings only makes sense for users that actually
+    // belong to a cooperative — non-coop members would see an empty
+    // surface (their per-membership prefs simply don't exist).
+    final auth = context.watch<AuthBloc>().state;
+    final showCommunitySettings = auth is AuthAuthenticated &&
+        auth.user.hasCooperativeMembership;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -24,14 +34,15 @@ class SettingsSection extends StatelessWidget {
           ),
         ),
         vSpace(12),
-        SettingItem(
-          icon: Icons.people,
-          title: 'Community Settings',
-          description: 'Manage cooperative preferences',
-          onTap: () {
-            context.pushNamed('community-settings');
-          },
-        ),
+        if (showCommunitySettings)
+          SettingItem(
+            icon: Icons.people,
+            title: 'Community Settings',
+            description: 'Manage cooperative preferences',
+            onTap: () {
+              context.pushNamed('community-settings');
+            },
+          ),
         SettingItem(
           icon: Icons.shield,
           title: 'Security Settings',

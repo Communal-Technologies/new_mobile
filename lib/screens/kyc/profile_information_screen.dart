@@ -556,6 +556,20 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    // Forced-KYC mode: a user landed here either from the post-signup
+    // chain or from an app reopen where the router redirected here
+    // because step 1 isn't submitted. In that mode the back arrow
+    // shouldn't escape KYC (going back to /account-success or anywhere
+    // upstream is meaningless and confuses non-coop members). Only
+    // existing coop members who navigated here from the dashboard's
+    // KYC-pending notice should see the arrow — they have a real "back".
+    final auth = context.watch<AuthBloc>().state;
+    final user = auth is AuthAuthenticated ? auth.user : null;
+    final inForcedKyc = user == null
+        ? true
+        : (!user.hasCooperativeMembership || !user.kycStep1Submitted);
+    final showBack = !inForcedKyc && context.canPop();
+
     return KycIdleSuppressor(
       child: Scaffold(
         backgroundColor: Colors.white,
@@ -563,10 +577,13 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
           backgroundColor: Colors.white,
           elevation: 0,
           centerTitle: true,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
-            onPressed: () => context.pop(),
-          ),
+          automaticallyImplyLeading: false,
+          leading: showBack
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.black),
+                  onPressed: () => context.pop(),
+                )
+              : null,
           title: Text(
             'Profile Information',
             style: TextStyle(

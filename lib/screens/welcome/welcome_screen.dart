@@ -80,8 +80,11 @@ class WelcomeScreen extends StatelessWidget {
   Widget _buildLogoSection() {
     return Center(
       child: Image.asset(
+        // Welcome screen sits over a dark photo + gradient overlay in
+        // both themes, so the white mark is correct regardless of the
+        // active brightness.
         Images.whiteLogo,
-        width: 150.w,
+        width: 200.w,
       ),
     );
   }
@@ -147,7 +150,7 @@ class WelcomeScreen extends StatelessWidget {
       text: TextSpan(
         style: TextStyle(
           color: Colors.grey.shade400,
-          fontSize: 13.sp,
+          fontSize: 14.sp,
           height: 1.4,
         ),
         children: [

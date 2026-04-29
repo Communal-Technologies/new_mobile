@@ -166,7 +166,7 @@ class AccountLimitsScreen extends StatelessWidget {
                         'Tier limits will appear here after your profile syncs with the server.',
                         style: TextStyle(
                           fontSize: 17.sp,
-                          color: Colors.grey.shade600,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                     )
@@ -222,7 +222,7 @@ class AccountLimitsScreen extends StatelessWidget {
             style: TextStyle(
               fontSize: 17.sp,
               fontWeight: FontWeight.w600,
-              color: Colors.grey.shade700,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           vSpace(4),
@@ -231,7 +231,7 @@ class AccountLimitsScreen extends StatelessWidget {
             style: TextStyle(
               fontSize: 17.sp,
               height: 1.4,
-              color: Colors.grey.shade600,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ],

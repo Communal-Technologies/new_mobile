@@ -64,6 +64,7 @@ class LoanApplication {
     this.reasonForLoan,
     this.broughtForward = false,
     this.loanTitle = '',
+    this.declineNote,
   });
 
   final String id;
@@ -98,6 +99,11 @@ class LoanApplication {
   final DateTime? dueDate;
   final String? reasonForLoan;
   final bool broughtForward;
+
+  /// Admin's reason when the loan was declined. Surfaced on the loan
+  /// detail screen for status='3' applications instead of repayment
+  /// history (a declined loan never has any).
+  final String? declineNote;
 
   int get balanceMinor {
     final remaining = amountMinor - amountPaidMinor;
@@ -160,6 +166,7 @@ class LoanApplication {
       broughtForward:
           m['brought_forward']?.toString() == '1' ||
           m['brought_forward'] == true,
+      declineNote: m['decline_note']?.toString(),
     );
   }
 

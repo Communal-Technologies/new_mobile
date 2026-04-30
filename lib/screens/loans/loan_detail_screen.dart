@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/money.dart';
+import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/loan_application.dart';
 import 'package:communal_mobile/data/repositories/loan_repository.dart';
@@ -33,7 +34,6 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
   bool _loadingHistory = false;
   bool _cancelling = false;
   String? _historyError;
-  String? _cancelError;
   List<Map<String, dynamic>> _history = const [];
   late LoanApplication _loan;
 
@@ -102,23 +102,16 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
     );
     if (result != true) return;
 
-    setState(() {
-      _cancelling = true;
-      _cancelError = null;
-    });
+    setState(() => _cancelling = true);
     try {
       await _repo.cancelApplication(_loan.referenceId);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Application cancelled')),
-      );
+      AppToast.success('Application cancelled');
       context.pop();
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _cancelling = false;
-        _cancelError = e.toString().replaceFirst('Exception: ', '');
-      });
+      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
+      setState(() => _cancelling = false);
     }
   }
 
@@ -162,7 +155,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                     _buildGuarantorsCard(),
                   ],
                   vSpace(16),
-                  _buildHistoryCard(),
+                  _buildHistoryOrDeclineCard(),
                   if (_loan.status == LoanStatus.approved &&
                       _loan.balanceMinor > 0) ...[
                     vSpace(24),
@@ -171,16 +164,6 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                   if (_loan.status == LoanStatus.pending) ...[
                     vSpace(24),
                     _buildCancelButton(),
-                    if (_cancelError != null) ...[
-                      vSpace(8),
-                      Text(
-                        _cancelError!,
-                        style: TextStyle(
-                          fontSize: 15.sp,
-                          color: const Color(0xFFE74C3C),
-                        ),
-                      ),
-                    ],
                   ],
                   vSpace(32),
                 ],
@@ -214,15 +197,14 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                 child: Text(
                   _loan.loanCode.isNotEmpty ? _loan.loanCode : 'Loan',
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                   ),
                 ),
               ),
               Container(
-                padding:
-                    EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12.r),
@@ -230,7 +212,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                 child: Text(
                   _loan.status.label,
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 16.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),
@@ -242,7 +224,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           Text(
             isApproved ? 'Outstanding Balance' : 'Amount Requested',
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               color: Colors.white.withOpacity(0.85),
             ),
           ),
@@ -282,7 +264,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
             Text(
               '${_loan.progressLabel} repaid (${_loan.amountLabel} principal)',
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 16.sp,
                 color: Colors.white.withOpacity(0.85),
               ),
             ),
@@ -294,11 +276,12 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
 
   Widget _buildMetadataCard() {
     return Container(
+      width: double.infinity,
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,7 +289,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           Text(
             'Loan Details',
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -314,15 +297,20 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           vSpace(12),
           if (_loan.referenceId.isNotEmpty)
             _detailRow('Reference', _loan.referenceId),
-          if (_loan.loanCode.isNotEmpty)
-            _detailRow('Scheme', _loan.loanCode),
+          if (_loan.loanCode.isNotEmpty) _detailRow('Scheme', _loan.loanCode),
           _detailRow('Principal', _loan.amountLabel),
           if (_loan.status == LoanStatus.approved) ...[
-            _detailRow('Repaid', Money(_loan.amountPaidMinor, _loan.currency).format()),
+            _detailRow(
+              'Repaid',
+              Money(_loan.amountPaidMinor, _loan.currency).format(),
+            ),
             _detailRow('Monthly Repayment', _loan.monthlyRepaymentLabel),
           ],
           if (_loan.interestMinor > 0)
-            _detailRow('Interest', Money(_loan.interestMinor, _loan.currency).format()),
+            _detailRow(
+              'Interest',
+              Money(_loan.interestMinor, _loan.currency).format(),
+            ),
           _detailRow('Applied', _loan.createdAtLabel),
           if (_loan.dateApproved != null)
             _detailRow(
@@ -331,8 +319,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
             ),
           if (_loan.dueDateLabel != null)
             _detailRow('Due', _loan.dueDateLabel!),
-          if (_loan.broughtForward)
-            _detailRow('Origin', 'Brought forward'),
+          if (_loan.broughtForward) _detailRow('Origin', 'Brought forward'),
           if (_loan.reasonForLoan != null &&
               _loan.reasonForLoan!.trim().isNotEmpty)
             _detailRow('Purpose', _loan.reasonForLoan!),
@@ -351,8 +338,12 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
             flex: 2,
             child: Text(
               label,
-              style:
-                  TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
+              style: TextStyle(
+                fontSize: 17.sp,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
             ),
           ),
           Expanded(
@@ -361,7 +352,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
               value,
               textAlign: TextAlign.right,
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -374,11 +365,12 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
 
   Widget _buildGuarantorsCard() {
     return Container(
+      width: double.infinity,
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -386,7 +378,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           Text(
             'Guarantors (${_loan.guarantors.length})',
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -397,14 +389,17 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
               padding: EdgeInsets.only(bottom: 8.h),
               child: Row(
                 children: [
-                  Icon(Icons.check_circle,
-                      size: 18.sp, color: const Color(0xFF4CAF50)),
+                  Icon(
+                    Icons.check_circle,
+                    size: 18.sp,
+                    color: const Color(0xFF4CAF50),
+                  ),
                   hSpace(8),
                   Expanded(
                     child: Text(
                       ledger,
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w600,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
@@ -419,13 +414,75 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
     );
   }
 
+  /// Declined loans never had repayments and never will, so the
+  /// admin's reason is the only history that matters here. Anything
+  /// else (approved / pending / cancelled / closed / unknown) falls
+  /// through to the actual repayment history list.
+  Widget _buildHistoryOrDeclineCard() {
+    if (_loan.status == LoanStatus.declined) {
+      return _buildDeclineReasonCard();
+    }
+    return _buildHistoryCard();
+  }
+
+  Widget _buildDeclineReasonCard() {
+    final theme = Theme.of(context);
+    final reason = _loan.declineNote?.trim() ?? '';
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: const Color(0xFFE74C3C).withValues(alpha: 0.4),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.cancel_outlined,
+                size: 20.sp,
+                color: const Color(0xFFE74C3C),
+              ),
+              hSpace(8),
+              Text(
+                'Reason for decline',
+                style: TextStyle(
+                  fontSize: 19.sp,
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+          vSpace(12),
+          Text(
+            reason.isEmpty
+                ? 'Your cooperative declined this application but did not record a reason. Reach out to your admin for more context.'
+                : reason,
+            style: TextStyle(
+              fontSize: 17.sp,
+              height: 1.45,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHistoryCard() {
     return Container(
+      width: double.infinity,
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -433,7 +490,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           Text(
             'Repayment History',
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -447,10 +504,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           else if (_historyError != null)
             Text(
               _historyError!,
-              style: TextStyle(
-                fontSize: 15.sp,
-                color: const Color(0xFFE74C3C),
-              ),
+              style: TextStyle(fontSize: 17.sp, color: const Color(0xFFE74C3C)),
             )
           else if (_history.isEmpty)
             Padding(
@@ -459,8 +513,12 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                 _loan.status == LoanStatus.approved
                     ? 'No repayments yet. Tap "Make Repayment" below to pay from your wallet or a non-equity obligation.'
                     : 'No payments recorded yet.',
-                style:
-                    TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
+                style: TextStyle(
+                  fontSize: 17.sp,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
               ),
             )
           else
@@ -471,9 +529,9 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
   }
 
   Widget _historyRow(Map<String, dynamic> row) {
-    final amountMinor =
-        int.tryParse(row['amount']?.toString() ?? '0') ?? 0;
-    final date = DateTime.tryParse(row['created_at']?.toString() ?? '') ??
+    final amountMinor = int.tryParse(row['amount']?.toString() ?? '0') ?? 0;
+    final date =
+        DateTime.tryParse(row['created_at']?.toString() ?? '') ??
         DateTime.now();
     final mode = row['payment_mode']?.toString().trim() ?? '';
     return Padding(
@@ -488,8 +546,11 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
               color: const Color(0xFFFFF4E9),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.south_west,
-                size: 18.sp, color: const Color(0xFFE67E22)),
+            child: Icon(
+              Icons.south_west,
+              size: 18.sp,
+              color: const Color(0xFFE67E22),
+            ),
           ),
           hSpace(12),
           Expanded(
@@ -499,7 +560,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                 Text(
                   'Repayment',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
@@ -509,8 +570,12 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                   mode.isEmpty
                       ? DateFormat('MMM dd, yyyy').format(date)
                       : '${DateFormat('MMM dd, yyyy').format(date)} • $mode',
-                  style:
-                      TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
                 ),
               ],
             ),
@@ -518,7 +583,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           Text(
             Money(amountMinor, _loan.currency).format(),
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -532,17 +597,11 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
-        onPressed: () => context.pushNamed(
-          'loan-payment',
-          extra: _loan,
-        ),
+        onPressed: () => context.pushNamed('loan-payment', extra: _loan),
         icon: const Icon(Icons.payments_outlined),
         label: Text(
           'Make Repayment',
-          style: TextStyle(
-            fontSize: 17.sp,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(fontSize: 19.sp, fontWeight: FontWeight.w700),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFFE67E22),
@@ -580,7 +639,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
             : Text(
                 'Cancel Application',
                 style: TextStyle(
-                  fontSize: 15.sp,
+                  fontSize: 17.sp,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFFE74C3C),
                 ),

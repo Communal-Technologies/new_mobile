@@ -674,7 +674,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                                 (r) => Padding(
                                   padding: EdgeInsets.only(bottom: 8.h),
                                   child: ListTile(
-                                    tileColor: Colors.white,
+                                    tileColor: Theme.of(context).cardColor,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(10.r),
                                     ),
@@ -712,33 +712,38 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                 ),
               if (letters.isNotEmpty)
                 Positioned(
-                  right: 2.w,
-                  top: 86.h,
-                  bottom: 16.h,
+                  right: 4.w,
+                  // Sit below the search field + tab strip so the strip
+                  // doesn't overlap the row of cooperative tabs at the
+                  // top of the scroll view, and stop short of the
+                  // bottom safe-area so it doesn't run into the system
+                  // gesture bar / next-step CTA when one appears.
+                  top: 220.h,
+                  bottom: 32.h,
                   child: SafeArea(
-                    child: Container(
-                      width: 24.w,
-                      padding: EdgeInsets.symmetric(vertical: 6.h),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.92),
-                        borderRadius: BorderRadius.circular(14.r),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: letters.map((l) {
-                          return GestureDetector(
-                            onTap: () => _jumpToLetter(l),
+                    top: false,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: letters.map((l) {
+                        return GestureDetector(
+                          onTap: () => _jumpToLetter(l),
+                          behavior: HitTestBehavior.opaque,
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 6.w),
                             child: Text(
                               l,
                               style: TextStyle(
                                 fontSize: 14.sp,
-                                color: Theme.of(context).primaryColor,
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.white
+                                    : Theme.of(context).primaryColor,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
-                          );
-                        }).toList(),
-                      ),
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
                 ),

@@ -1,5 +1,7 @@
 import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
+import 'package:communal_mobile/data/mappers/transaction_history_mapper.dart';
+import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 import 'package:dio/dio.dart';
 
 class TransferSuggestion {
@@ -38,10 +40,7 @@ class TransferSuggestion {
 }
 
 class TransferBank {
-  const TransferBank({
-    required this.name,
-    required this.nipCode,
-  });
+  const TransferBank({required this.name, required this.nipCode});
 
   final String name;
   final String nipCode;
@@ -66,10 +65,11 @@ class TransferBank {
       final meta = (json['metadata'] is Map)
           ? Map<String, dynamic>.from(json['metadata'] as Map)
           : const <String, dynamic>{};
-      final nip = meta['nipCode']?.toString()
-          ?? code
-          ?? meta['cbnCode']?.toString()
-          ?? '';
+      final nip =
+          meta['nipCode']?.toString() ??
+          code ??
+          meta['cbnCode']?.toString() ??
+          '';
       return TransferBank(name: label, nipCode: nip);
     }
 
@@ -174,6 +174,7 @@ class RemoteTransferStatus {
   final String statusRaw;
   final String reference;
   final String? failureReason;
+
   /// Anchor amount in kobo when present.
   final int? amountKobo;
   final DateTime? providerOccurredAt;
@@ -188,8 +189,8 @@ class RemoteTransferStatus {
     }
     final updated = json['updated_at']?.toString();
     final created = json['created_at']?.toString();
-    final when = _parseProviderDateTime(updated) ??
-        _parseProviderDateTime(created);
+    final when =
+        _parseProviderDateTime(updated) ?? _parseProviderDateTime(created);
     return RemoteTransferStatus(
       statusRaw: json['status']?.toString() ?? '',
       reference: json['reference']?.toString() ?? '',
@@ -464,6 +465,39 @@ class TransferRepository {
     }
   }
 
+  /// Single-transaction fetch keyed by trx_reference OR
+  /// external_reference. Used by the push-tap deep link — a
+  /// transaction-typed push only carries a reference and the receipt
+  /// screen needs a fully built [TransactionDetailsData] in `extra`.
+  ///
+  /// Returns null when the reference is empty or the row doesn't
+  /// belong to the caller (server returns 404 in that case).
+  Future<TransactionDetailsData?> fetchTransactionByReference(
+    String reference, {
+    required String currencySymbol,
+  }) async {
+    final ref = reference.trim();
+    if (ref.isEmpty) return null;
+    try {
+      final response = await _dioClient.get(
+        ApiEndpoints.membersTransactionByReference(ref),
+      );
+      final data = response.data;
+      final raw = data is Map ? data['transaction'] : null;
+      if (raw is! Map) return null;
+      // Reuse the list-row mapper — same shape returned by
+      // /fetch-transactions, so the existing communal-row builder
+      // handles it without a parallel constructor.
+      final item = mapCommunalTransactionToListItem(
+        Map<String, dynamic>.from(raw),
+        currencySymbol: currencySymbol,
+      );
+      return item.details;
+    } on DioException {
+      return null;
+    }
+  }
+
   Future<RemoteTransferStatus> fetchTransferStatus(String transferId) async {
     final id = transferId.trim();
     if (id.isEmpty) {
@@ -481,9 +515,7 @@ class TransferRepository {
       if (raw is! Map) {
         throw Exception('Invalid transfer status response.');
       }
-      return RemoteTransferStatus.fromDataJson(
-        Map<String, dynamic>.from(raw),
-      );
+      return RemoteTransferStatus.fromDataJson(Map<String, dynamic>.from(raw));
     } on DioException catch (e) {
       throw Exception(_messageFromDio(e));
     }
@@ -491,7 +523,9 @@ class TransferRepository {
 
   Future<List<TransferBeneficiary>> fetchBeneficiaries() async {
     try {
-      final response = await _dioClient.get(ApiEndpoints.membersTransferBeneficiaries);
+      final response = await _dioClient.get(
+        ApiEndpoints.membersTransferBeneficiaries,
+      );
       final data = response.data;
       if (data is! Map || data['status'] != true) {
         throw Exception('Could not load beneficiaries.');

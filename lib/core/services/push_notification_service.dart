@@ -8,6 +8,8 @@ import 'package:communal_mobile/cubits/security/security_cubit.dart';
 import 'package:communal_mobile/data/models/loan_application.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/data/repositories/loan_repository.dart';
+import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
+import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -302,12 +304,58 @@ class PushNotificationService {
       return const DeepLinkIntent(routeName: 'loans');
     }
 
-    if (type == 'transaction-receipt' || legacyRoute == 'transaction-receipt') {
-      // Transaction routes need a fully hydrated TransactionDetailsData
-      // in `extra`. There's no by-reference fetch on the mobile yet,
-      // so we drop on the history list — the user can find the row
-      // there. TODO: jump to receipt directly when the by-reference
-      // endpoint lands.
+    // Obligation-typed pushes carry `obligation_id`. Hydrate the
+    // FinancialObligation + its InternalAccount via the by-id
+    // endpoint and route to obligation-detail. Falls back to the
+    // obligations hub when the id is missing or the fetch fails.
+    if (type == 'obligation' ||
+        type == 'obligation_payment' ||
+        type == 'obligation_status') {
+      final obligationId = (data['obligation_id']?.toString() ?? '').trim();
+      if (obligationId.isNotEmpty) {
+        try {
+          final obligation = await getIt<MemberObligationsRepository>()
+              .fetchObligationById(obligationId);
+          if (obligation != null) {
+            return DeepLinkIntent(
+              routeName: 'obligation-detail',
+              extra: obligation,
+            );
+          }
+        } catch (_) {
+          /* fall through */
+        }
+      }
+      return const DeepLinkIntent(routeName: 'obligations');
+    }
+
+    if (type == 'transaction' ||
+        type == 'transaction-receipt' ||
+        legacyRoute == 'transaction-receipt') {
+      // Backend pushes carry the trx reference under any of these
+      // keys depending on origin (transfer initiate vs. webhook
+      // settlement vs. obligation/loan record-only). Try them in
+      // order — first non-empty wins.
+      final ref =
+          (data['transaction_reference']?.toString() ?? '').trim().isNotEmpty
+          ? data['transaction_reference']!.toString().trim()
+          : (data['trx_reference']?.toString() ?? '').trim().isNotEmpty
+          ? data['trx_reference']!.toString().trim()
+          : (data['external_reference']?.toString() ?? '').trim();
+      if (ref.isNotEmpty) {
+        try {
+          final details = await getIt<TransferRepository>()
+              .fetchTransactionByReference(ref, currencySymbol: '₦');
+          if (details != null) {
+            return DeepLinkIntent(
+              routeName: 'transaction-details',
+              extra: details,
+            );
+          }
+        } catch (_) {
+          /* fall through */
+        }
+      }
       return const DeepLinkIntent(routeName: 'transaction-history');
     }
 

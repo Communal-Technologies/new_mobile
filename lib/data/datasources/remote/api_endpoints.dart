@@ -85,6 +85,16 @@ class ApiEndpoints {
   static String membersTransferStatus(String transferId) =>
       '/members/transfer/transactions/$transferId/status';
 
+  // --- Bill payments (airtime + data via Anchor) --------------------------
+  static const String billsAirtimeProviders = '/bills/airtime/providers';
+  static const String billsDataProviders = '/bills/data/providers';
+  static String billsBillerProducts(String billerId) =>
+      '/bills/billers/${billerId.trim()}/products';
+  static const String billsAirtimePurchase = '/bills/airtime/purchase';
+  static const String billsDataPurchase = '/bills/data/purchase';
+  static String billsTransactionByReference(String reference) =>
+      '/bills/transactions/${reference.trim()}';
+
   // --- Members ledger / obligations ---------------------------------------
   static String membersFinancialObligations(
     String ledgerNumber,
@@ -96,6 +106,18 @@ class ApiEndpoints {
       '/members/fetch-member-transactions/$ledgerNumber';
   static String membersFetchTransactions(String userId) =>
       '/members/fetch-transactions/$userId';
+
+  /// Single-transaction fetch by trx_reference OR external_reference,
+  /// scoped to the authenticated member. Used for push-tap deep
+  /// linking into the receipt screen. 404 outside the caller's scope.
+  static String membersTransactionByReference(String reference) =>
+      '/members/transactions/by-reference/$reference';
+
+  /// Single-obligation fetch keyed by id. Server returns
+  /// `{obligation: …, account: …}` — both halves needed by
+  /// `Obligation.fromBackend`. 404 when the row doesn't belong to
+  /// the authenticated member.
+  static String membersObligationById(String id) => '/members/obligations/$id';
   static const String membersPayObligation = '/members/pay-obligation';
 
   /// Record-only path for NIP-funded obligation payments. Backend skips

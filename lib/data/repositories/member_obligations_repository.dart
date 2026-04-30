@@ -9,13 +9,22 @@ import 'package:dio/dio.dart';
 /// (e.g. `Equity-IA…`) for the credit row and (after the obligation→
 /// obligation fix) `obligation-{account_code}` (lowercase) for the debit
 /// row that hangs off the source obligation. Both cases are covered here.
-bool _ledgerRowMatchesObligation(Map<String, dynamic> row, Obligation obligation) {
+bool _ledgerRowMatchesObligation(
+  Map<String, dynamic> row,
+  Obligation obligation,
+) {
   final code = obligation.accountCode.trim();
   if (code.isEmpty) return false;
 
   final dest = row['destination']?.toString().trim() ?? '';
   if (dest.isNotEmpty) {
-    const prefixes = ['Equity', 'Patronage', 'Custom', 'Obligation', 'obligation'];
+    const prefixes = [
+      'Equity',
+      'Patronage',
+      'Custom',
+      'Obligation',
+      'obligation',
+    ];
     for (final p in prefixes) {
       final prefix = '$p-';
       if (dest.startsWith(prefix) && dest.substring(prefix.length) == code) {
@@ -53,17 +62,54 @@ class CooperativeCashBankAccount {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'bank': bankCode,
-        'account_name': accountName,
-        'account_number': accountNumber,
-      };
+    'id': id,
+    'bank': bankCode,
+    'account_name': accountName,
+    'account_number': accountNumber,
+  };
 }
 
 class MemberObligationsRepository {
   MemberObligationsRepository(this._dioClient);
 
   final DioClient _dioClient;
+
+  /// Single-obligation fetch used by the push-tap deep link. Hits
+  /// `/v1/members/obligations/{id}` which returns `{obligation: {…},
+  /// account: {…}}` — both halves needed by `Obligation.fromBackend`.
+  /// Returns null when the id is empty or the row doesn't exist /
+  /// belongs to a different member (server 404s in both cases).
+  Future<Obligation?> fetchObligationById(
+    String id, {
+    String fallbackCurrency = 'NGN',
+  }) async {
+    final trimmed = id.trim();
+    if (trimmed.isEmpty) return null;
+    try {
+      final response = await _dioClient.get(
+        ApiEndpoints.membersObligationById(trimmed),
+      );
+      final data = response.data;
+      final rawObligation = data is Map ? data['obligation'] : null;
+      if (rawObligation is! Map) return null;
+      final rawAccount = data is Map ? data['account'] : null;
+      return Obligation.fromBackend(
+        obligation: Map<String, dynamic>.from(rawObligation),
+        account: rawAccount is Map
+            ? Map<String, dynamic>.from(rawAccount)
+            : null,
+        fallbackCurrency: fallbackCurrency,
+      );
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        throw Exception(data['message'].toString());
+      }
+      // Soft-fail on network errors — caller (push handler) drops on
+      // the obligations list as a safe fallback.
+      return null;
+    }
+  }
 
   Future<List<Obligation>> fetchMemberObligations(UserModel user) async {
     final cooperativeId = user.cooperativeId?.trim() ?? '';
@@ -74,15 +120,18 @@ class MemberObligationsRepository {
 
     try {
       final responses = await Future.wait([
-        _dioClient.get(ApiEndpoints.membersFinancialObligations(
-            ledgerNumber, cooperativeId)),
+        _dioClient.get(
+          ApiEndpoints.membersFinancialObligations(ledgerNumber, cooperativeId),
+        ),
         _dioClient.get(ApiEndpoints.fetchInternalAccounts(cooperativeId)),
       ]);
 
       final obligationsData = responses[0].data;
       final accountsData = responses[1].data;
 
-      final rawObligations = obligationsData is Map ? obligationsData['obligations'] : null;
+      final rawObligations = obligationsData is Map
+          ? obligationsData['obligations']
+          : null;
       final rawAccounts = accountsData is Map ? accountsData['accounts'] : null;
       if (rawObligations is! List) return const [];
 
@@ -132,16 +181,17 @@ class MemberObligationsRepository {
 
     try {
       final response = await _dioClient.get(
-          ApiEndpoints.membersFetchMemberTransactions(ledgerNumber));
+        ApiEndpoints.membersFetchMemberTransactions(ledgerNumber),
+      );
       final data = response.data;
       final raw = data is Map ? (data['data'] ?? data['transactions']) : null;
       if (raw is! List) return const [];
 
       final coopId = user.cooperativeId?.trim() ?? '';
-      final rows = raw
-          .whereType<Map>()
-          .map((e) => Map<String, dynamic>.from(e))
-          .where((row) {
+      final rows =
+          raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).where((
+            row,
+          ) {
             if (coopId.isNotEmpty) {
               final rCoop = row['cooperative_id']?.toString().trim() ?? '';
               if (rCoop.isNotEmpty && rCoop != coopId) return false;
@@ -168,60 +218,68 @@ class MemberObligationsRepository {
               if (mode != 'obligation') return false;
             }
             return _ledgerRowMatchesObligation(row, obligation);
-          })
-          .toList()
-        ..sort((a, b) {
-          final ad = DateTime.tryParse(a['created_at']?.toString() ?? '') ?? DateTime(1970);
-          final bd = DateTime.tryParse(b['created_at']?.toString() ?? '') ?? DateTime(1970);
-          return bd.compareTo(ad);
-        });
+          }).toList()..sort((a, b) {
+            final ad =
+                DateTime.tryParse(a['created_at']?.toString() ?? '') ??
+                DateTime(1970);
+            final bd =
+                DateTime.tryParse(b['created_at']?.toString() ?? '') ??
+                DateTime(1970);
+            return bd.compareTo(ad);
+          });
 
-      return rows.map((row) {
-        final amountMinor = _parseInt(row['amount']);
-        final date = DateTime.tryParse(row['created_at']?.toString() ?? '') ?? DateTime.now();
-        final mode = row['payment_mode']?.toString().trim();
-        final isBf = row['brought_forward']?.toString().trim() == '1';
-        final isOutflow = row['trx_type']?.toString().trim() == '2';
-        final modeLower = (mode ?? '').toLowerCase();
-        final String title;
-        if (isOutflow) {
-          // Legitimate obligation → obligation outflow (filtered above
-          // to mode == 'obligation'). The backend writes the target's
-          // identifier into the row's `destination` field as either
-          // "obligation-{code}" or "{AccountType}-{code}"; surface it
-          // in the title so the row reads "Used to pay {target}"
-          // instead of an opaque "another obligation".
-          final dest = (row['destination']?.toString() ?? '').trim();
-          final stripped = dest.startsWith('obligation-')
-              ? dest.substring('obligation-'.length)
-              : dest;
-          title = stripped.isEmpty
-              ? 'Used to pay another obligation'
-              : 'Used to pay $stripped';
-        } else if (isBf || modeLower.contains('brought forward')) {
-          title = 'Brought forward';
-        } else {
-          title = 'Payment received';
-        }
-        return PaymentRecord(
-          title: title,
-          date: date,
-          amountMinor: amountMinor,
-          currency: obligation.currency,
-          method: (mode == null || mode.isEmpty) ? 'Wallet' : mode,
-          reference: row['trx_ref_id']?.toString() ?? '',
-          isOutflow: isOutflow,
-        );
-      }).toList(growable: false);
+      return rows
+          .map((row) {
+            final amountMinor = _parseInt(row['amount']);
+            final date =
+                DateTime.tryParse(row['created_at']?.toString() ?? '') ??
+                DateTime.now();
+            final mode = row['payment_mode']?.toString().trim();
+            final isBf = row['brought_forward']?.toString().trim() == '1';
+            final isOutflow = row['trx_type']?.toString().trim() == '2';
+            final modeLower = (mode ?? '').toLowerCase();
+            final String title;
+            if (isOutflow) {
+              // Legitimate obligation → obligation outflow (filtered above
+              // to mode == 'obligation'). The backend writes the target's
+              // identifier into the row's `destination` field as either
+              // "obligation-{code}" or "{AccountType}-{code}"; surface it
+              // in the title so the row reads "Used to pay {target}"
+              // instead of an opaque "another obligation".
+              final dest = (row['destination']?.toString() ?? '').trim();
+              final stripped = dest.startsWith('obligation-')
+                  ? dest.substring('obligation-'.length)
+                  : dest;
+              title = stripped.isEmpty
+                  ? 'Used to pay another obligation'
+                  : 'Used to pay $stripped';
+            } else if (isBf || modeLower.contains('brought forward')) {
+              title = 'Brought forward';
+            } else {
+              title = 'Payment received';
+            }
+            return PaymentRecord(
+              title: title,
+              date: date,
+              amountMinor: amountMinor,
+              currency: obligation.currency,
+              method: (mode == null || mode.isEmpty) ? 'Wallet' : mode,
+              reference: row['trx_ref_id']?.toString() ?? '',
+              isOutflow: isOutflow,
+            );
+          })
+          .toList(growable: false);
     } on DioException {
       return const [];
     }
   }
 
-  Future<List<CooperativeCashBankAccount>> fetchCooperativeCashBankAccounts() async {
+  Future<List<CooperativeCashBankAccount>>
+  fetchCooperativeCashBankAccounts() async {
     try {
       final response = await _dioClient.get(
-          ApiEndpoints.membersCooperativeCashRepositories);
+        ApiEndpoints.membersCooperativeCashRepositories,
+      );
       final data = response.data;
       if (data is! Map || data['status'] != true) {
         return const [];
@@ -230,8 +288,17 @@ class MemberObligationsRepository {
       if (raw is! List) return const [];
       final list = raw
           .whereType<Map>()
-          .map((e) => CooperativeCashBankAccount.fromJson(Map<String, dynamic>.from(e)))
-          .where((e) => e.id.isNotEmpty && e.bankCode.isNotEmpty && e.accountNumber.isNotEmpty)
+          .map(
+            (e) => CooperativeCashBankAccount.fromJson(
+              Map<String, dynamic>.from(e),
+            ),
+          )
+          .where(
+            (e) =>
+                e.id.isNotEmpty &&
+                e.bankCode.isNotEmpty &&
+                e.accountNumber.isNotEmpty,
+          )
           .toList(growable: false);
       if (list.isEmpty) {
         final msg = data['message']?.toString().trim();
@@ -294,7 +361,10 @@ class MemberObligationsRepository {
     final ledgerNumber = user.ledgerNumber?.trim() ?? '';
     final tid = transferId.trim();
     final rid = cashRepositoryId.trim();
-    if (cooperativeId.isEmpty || ledgerNumber.isEmpty || tid.isEmpty || rid.isEmpty) {
+    if (cooperativeId.isEmpty ||
+        ledgerNumber.isEmpty ||
+        tid.isEmpty ||
+        rid.isEmpty) {
       throw Exception('Missing payment details');
     }
     if (amountMinor <= 0) {
@@ -400,8 +470,6 @@ class MemberObligationsRepository {
     if (value is num) return value.toInt();
     final raw = value?.toString().trim() ?? '';
     if (raw.isEmpty) return 0;
-    return int.tryParse(raw) ??
-        double.tryParse(raw)?.toInt() ??
-        0;
+    return int.tryParse(raw) ?? double.tryParse(raw)?.toInt() ?? 0;
   }
 }

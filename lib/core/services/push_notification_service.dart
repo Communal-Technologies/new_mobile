@@ -66,9 +66,13 @@ class PushNotificationService {
     }
 
     // Local notifications plugin — the bridge for Android foreground display.
+    // Use the monochrome status-bar drawable, NOT the colored launcher icon
+    // (Android renders the small icon in both the status bar and the
+    // notification card; the launcher icon is colored and appears as a
+    // white square inside the white expanded notification card).
     try {
       const initSettings = InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        android: AndroidInitializationSettings('@drawable/ic_stat_notification'),
         iOS: DarwinInitializationSettings(),
       );
       await _localNotifications.initialize(initSettings);
@@ -106,7 +110,7 @@ class PushNotificationService {
             _fcmChannelId,
             _fcmChannelName,
             channelDescription: _fcmChannelDescription,
-            icon: android.smallIcon ?? '@mipmap/ic_launcher',
+            icon: android.smallIcon ?? '@drawable/ic_stat_notification',
             importance: Importance.high,
             priority: Priority.high,
           ),

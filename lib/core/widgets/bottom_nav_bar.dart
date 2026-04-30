@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:iconsax/iconsax.dart';
 
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
@@ -41,39 +42,16 @@ class BottomNavBar extends StatelessWidget {
         ? authState.user.hasCooperativeMembership
         : false;
 
+    // Iconsax has a single linear set, so active vs inactive is
+    // differentiated via colour + a tinted pill behind the active icon.
     final items = <_NavItem>[
-      const _NavItem(
-        index: 0,
-        icon: Icons.home_outlined,
-        activeIcon: Icons.home,
-        label: 'Home',
-      ),
+      const _NavItem(index: 0, icon: Iconsax.home_2, label: 'Home'),
       if (hasCooperative)
-        const _NavItem(
-          index: 1,
-          icon: Icons.wallet_outlined,
-          activeIcon: Icons.wallet,
-          label: 'Obligations',
-        ),
-      const _NavItem(
-        index: 2,
-        icon: Icons.people_outline,
-        activeIcon: Icons.people,
-        label: 'Community',
-      ),
+        const _NavItem(index: 1, icon: Iconsax.empty_wallet, label: 'Obligations'),
+      const _NavItem(index: 2, icon: Iconsax.profile_2user, label: 'Community'),
       if (hasCooperative)
-        const _NavItem(
-          index: 3,
-          icon: Icons.trending_up_outlined,
-          activeIcon: Icons.trending_up,
-          label: 'Loans',
-        ),
-      const _NavItem(
-        index: 4,
-        icon: Icons.settings_outlined,
-        activeIcon: Icons.settings,
-        label: 'Account',
-      ),
+        const _NavItem(index: 3, icon: Iconsax.chart_2, label: 'Loans'),
+      const _NavItem(index: 4, icon: Iconsax.user, label: 'Account'),
     ];
 
     return Container(
@@ -110,39 +88,44 @@ class BottomNavBar extends StatelessWidget {
     required ThemeData theme,
   }) {
     final isActive = currentIndex == item.index;
-    final inactiveColor = theme.colorScheme.onSurface.withValues(alpha: 0.6);
+    final isDark = theme.brightness == Brightness.dark;
+    final activeColor = isDark ? Colors.white : theme.primaryColor;
+    final inactiveColor = theme.colorScheme.onSurface.withValues(alpha: 0.55);
 
     return InkWell(
       onTap: () => onTap(item.index),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isActive ? item.activeIcon : item.icon,
-            color: isActive ? theme.primaryColor : inactiveColor,
-            size: 24.sp,
-          ),
-          vSpace(4),
-          Text(
-            item.label,
-            style: TextStyle(
-              fontSize: 14.sp,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-              color: isActive ? theme.primaryColor : inactiveColor,
-            ),
-          ),
-          if (isActive) ...[
-            vSpace(4),
-            Container(
-              width: 20.w,
-              height: 3.h,
+      borderRadius: BorderRadius.circular(16.r),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
               decoration: BoxDecoration(
-                color: theme.primaryColor,
-                borderRadius: BorderRadius.circular(2.r),
+                color: isActive
+                    ? activeColor.withValues(alpha: isDark ? 0.18 : 0.12)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(14.r),
+              ),
+              child: Icon(
+                item.icon,
+                color: isActive ? activeColor : inactiveColor,
+                size: 28.sp,
+              ),
+            ),
+            vSpace(4),
+            Text(
+              item.label,
+              style: TextStyle(
+                fontSize: 13.sp,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                color: isActive ? activeColor : inactiveColor,
               ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }
@@ -152,12 +135,10 @@ class _NavItem {
   const _NavItem({
     required this.index,
     required this.icon,
-    required this.activeIcon,
     required this.label,
   });
 
   final int index;
   final IconData icon;
-  final IconData activeIcon;
   final String label;
 }

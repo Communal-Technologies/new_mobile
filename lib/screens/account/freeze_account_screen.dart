@@ -64,10 +64,32 @@ class _FreezeAccountScreenState extends State<FreezeAccountScreen> {
     }
   }
 
+  /// 1–2 letter initials from a display name. "Pado Lebari" → "PL",
+  /// "Pado" → "P", empty → "•". Matches the avatar fallback used on
+  /// the home / profile screens.
+  String _initialsFor(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return '•';
+    final parts = trimmed
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return '•';
+    if (parts.length == 1) return parts.first[0].toUpperCase();
+    return (parts.first[0] + parts.last[0]).toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final hasOutstandingLoan = _outstandingLoanMinor > 0;
+    final auth = context.watch<AuthBloc>().state;
+    final user = auth is AuthAuthenticated ? auth.user : null;
+    final displayName = user?.name.trim().isNotEmpty == true
+        ? user!.name.trim()
+        : 'Your account';
+    final contact = (user?.phone?.trim().isNotEmpty == true)
+        ? user!.phone!.trim()
+        : (user?.email?.trim() ?? '');
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemOverlayForTheme(Theme.of(context)),
@@ -79,46 +101,59 @@ class _FreezeAccountScreenState extends State<FreezeAccountScreen> {
           ),
           title: Text(
             'Freeze Account',
-            style: TextStyle(
-              fontSize: 19.sp,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(fontSize: 19.sp, fontWeight: FontWeight.w700),
           ),
           centerTitle: true,
         ),
-        body: SingleChildScrollView(
-          child: Container(
-            margin: EdgeInsets.all(16.w),
-            padding: EdgeInsets.all(24.w),
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              borderRadius: BorderRadius.circular(20.r),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const FreezeAccountHeader(
-                  icon: Icons.pause_circle_outline,
-                  title: 'Are you sure you want to Freeze your Account?',
-                  description:
-                      'This will temporarily disable your account and block all transactions until you unfreeze it.',
+        body: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    child: Column(
+                      children: [
+                        vSpace(24),
+                        const FreezeAccountHeader(
+                          icon: Icons.pause_circle_outline,
+                          title:
+                              'Are you sure you want to Freeze your Account?',
+                          description:
+                              'This will temporarily disable your account and block all transactions until you unfreeze it.',
+                        ),
+                        vSpace(32),
+                        AccountToFreezeCard(
+                          name: displayName,
+                          contact: contact,
+                          avatarInitials: _initialsFor(displayName),
+                        ),
+                        vSpace(32),
+                        const FreezeConsequencesSection(),
+                        vSpace(24),
+                        if (hasOutstandingLoan) ...[
+                          LoanOwingBlockCard(
+                            outstandingMinor: _outstandingLoanMinor,
+                            currency: _currency,
+                          ),
+                          vSpace(24),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
-                vSpace(32),
-                const AccountToFreezeCard(),
-                vSpace(32),
-                const FreezeConsequencesSection(),
-                vSpace(40),
-                if (_loanCheckLoading)
-                  const LinearProgressIndicator(minHeight: 2)
-                else if (hasOutstandingLoan)
-                  LoanOwingBlockCard(
-                    outstandingMinor: _outstandingLoanMinor,
-                    currency: _currency,
-                  )
-                else
-                  FreezeActionButtons(),
-              ],
-            ),
+              ),
+              if (_loanCheckLoading)
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: LinearProgressIndicator(minHeight: 2),
+                )
+              else if (!hasOutstandingLoan)
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                  child: const FreezeActionButtons(),
+                ),
+            ],
           ),
         ),
       ),

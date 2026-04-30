@@ -47,12 +47,38 @@ class TransferBank {
   final String nipCode;
 
   factory TransferBank.fromJson(Map<String, dynamic> json) {
+    // Two shapes in the wild:
+    //
+    // 1. New (BankRegistryManager → AnchorNigerianBankRegistry):
+    //      { code: "058", label: "GTB", metadata: { nipCode, cbnCode } }
+    //
+    // 2. Legacy (raw Anchor pass-through some flows still use):
+    //      { id, attributes: { name, nipCode, cbnCode } }
+    //
+    // Read the new shape first because that's what /transfer/banks
+    // currently returns; fall through to attributes for anything
+    // still emitting the old format. Dropping the legacy branch
+    // entirely silently empties the picker (which is what user
+    // reported: list-not-loading was actually list-empty-after-parse).
+    final label = json['label']?.toString();
+    final code = json['code']?.toString();
+    if (label != null && label.isNotEmpty) {
+      final meta = (json['metadata'] is Map)
+          ? Map<String, dynamic>.from(json['metadata'] as Map)
+          : const <String, dynamic>{};
+      final nip = meta['nipCode']?.toString()
+          ?? code
+          ?? meta['cbnCode']?.toString()
+          ?? '';
+      return TransferBank(name: label, nipCode: nip);
+    }
+
     final attr = (json['attributes'] is Map)
         ? Map<String, dynamic>.from(json['attributes'] as Map)
-        : <String, dynamic>{};
+        : const <String, dynamic>{};
     return TransferBank(
       name: attr['name']?.toString() ?? '',
-      nipCode: attr['nipCode']?.toString() ?? '',
+      nipCode: attr['nipCode']?.toString() ?? attr['cbnCode']?.toString() ?? '',
     );
   }
 }

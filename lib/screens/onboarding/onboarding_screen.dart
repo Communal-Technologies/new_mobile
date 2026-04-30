@@ -8,6 +8,8 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/screens/onboarding/widgets/indicator.dart';
 
+const Color _onboardingHeadingLight = Color(0xFF3E28A2);
+
 class OnBoardingScreen extends StatefulWidget {
   const OnBoardingScreen({super.key});
 
@@ -92,24 +94,17 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
                       ? Row(
                           children: [
                             Expanded(
-                              child: AppElevatedButton(
+                              child: AppSecondaryButton(
                                 title: 'Skip',
                                 onPressed: _onSkip,
+                                isDark: false,
                               ),
                             ),
                             hSpace(10),
                             Expanded(
-                              child: ElevatedButton(
+                              child: AppElevatedButton(
+                                title: 'Next',
                                 onPressed: _onNextPressed,
-                                style: ButtonStyle(
-                                  backgroundColor: WidgetStateProperty.all<Color>(
-                                    Theme.of(context).primaryColor,
-                                  ),
-                                  foregroundColor: WidgetStateProperty.all<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
-                                child: const Text('Next'),
                               ),
                             ),
                           ],
@@ -142,58 +137,60 @@ class OnboardingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final headingColor = isDark ? Colors.white : _onboardingHeadingLight;
     return SafeArea(
       child: Stack(
         children: [
-          Center(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 70),
-                  child: Image.asset(
-                    Theme.of(context).brightness == Brightness.dark ? Images.whiteLogo : Images.coloredLogo,
-                    height: 71,
-                    width: 250,
+                Image.asset(
+                  isDark ? Images.whiteLogo : Images.coloredLogo,
+                  height: 71,
+                  width: 250,
+                  fit: BoxFit.contain,
+                ),
+                Text(
+                  text,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.displaySmall!.copyWith(
+                    fontSize: index == 2 ? 40 : 24,
+                    color: headingColor,
+                    shadows: index == 2 && !isDark
+                        ? const [
+                            BoxShadow(
+                              color: Color.fromRGBO(0, 0, 0, 0.19),
+                              offset: Offset(6, 6),
+                              blurRadius: 10,
+                            ),
+                          ]
+                        : null,
                   ),
                 ),
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: index == 2 ? 50 : 60,
-                    vertical: 20,
-                  ),
-                  child: Text(
-                    text,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.displaySmall!.copyWith(
-                      fontSize: index == 2 ? 48 : 24,
-                      color: const Color(0xFF3E28A2),
-                      shadows: index == 2
-                          ? [
-                              const BoxShadow(
-                                color: Color.fromRGBO(0, 0, 0, 0.19),
-                                offset: Offset(11, 10),
-                                blurRadius: 10,
-                              ),
-                            ]
-                          : null,
-                    ),
-                  ),
-                ),
-                Image.asset(image, height: 300, width: 300),
+                Image.asset(image, height: 300, width: 300, fit: BoxFit.contain),
               ],
             ),
           ),
           if (index == 2)
-            Positioned(
-              top: 158,
-              left: 0,
-              child: Image.asset(Images.cake, width: 70, height: 52),
+            Align(
+              alignment: Alignment.topLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 130, left: 8),
+                child: Image.asset(Images.cake, width: 70, height: 52),
+              ),
             ),
           if (index == 2)
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: Image.asset(Images.cake, width: 70, height: 52),
+            Align(
+              alignment: Alignment.bottomRight,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 8, right: 8),
+                child: Image.asset(Images.cake, width: 70, height: 52),
+              ),
             ),
         ],
       ),

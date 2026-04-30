@@ -26,8 +26,7 @@ class LoanRepository {
     final id = cooperativeId.trim();
     if (id.isEmpty) return const [];
     try {
-      final response =
-          await _dio.get(ApiEndpoints.membersFetchLoanSchemes(id));
+      final response = await _dio.get(ApiEndpoints.membersFetchLoanSchemes(id));
       final data = response.data;
       final raw = data is Map ? data['schemes'] : null;
       if (raw is! List) return const [];
@@ -41,22 +40,47 @@ class LoanRepository {
     }
   }
 
+  /// Single-loan fetch used when a push notification (or any other
+  /// surface that only knows the loan id) needs to deep-link into
+  /// the loan-detail screen. Hits the shared auth endpoint
+  /// `/v1/fetch-loan-details/{id}` which already returns a
+  /// `{loanDetail: {…}}` shape with `loan_title` mixed in.
+  /// Returns null when the id is empty / not found.
+  Future<LoanApplication?> fetchLoanById(String id) async {
+    final trimmed = id.trim();
+    if (trimmed.isEmpty) return null;
+    try {
+      final response = await _dio.get(
+        ApiEndpoints.fetchLoanDetailsById(trimmed),
+      );
+      final data = response.data;
+      final raw = data is Map ? data['loanDetail'] : null;
+      if (raw is! Map) return null;
+      return LoanApplication.fromBackend(Map<String, dynamic>.from(raw));
+    } on DioException catch (e) {
+      throw _wrap(e, 'Unable to fetch loan details');
+    }
+  }
+
   Future<List<LoanApplication>> fetchMyLoans(UserModel user) async {
     final ledger = user.ledgerNumber?.trim() ?? '';
     if (ledger.isEmpty) return const [];
     try {
-      final response =
-          await _dio.get(ApiEndpoints.membersFetchUserLoans(ledger));
+      final response = await _dio.get(
+        ApiEndpoints.membersFetchUserLoans(ledger),
+      );
       final data = response.data;
       final raw = data is Map ? data['loans'] : null;
       if (raw is! List) return const [];
       final fallback = resolveCurrencyCode(user);
       return raw
           .whereType<Map>()
-          .map((e) => LoanApplication.fromBackend(
-                Map<String, dynamic>.from(e),
-                fallbackCurrency: fallback,
-              ))
+          .map(
+            (e) => LoanApplication.fromBackend(
+              Map<String, dynamic>.from(e),
+              fallbackCurrency: fallback,
+            ),
+          )
           .toList(growable: false);
     } on DioException catch (e) {
       throw _wrap(e, 'Unable to fetch loans');
@@ -69,8 +93,9 @@ class LoanRepository {
     final coop = cooperativeId.trim();
     if (coop.isEmpty) return null;
     try {
-      final response =
-          await _dio.get(ApiEndpoints.membersLoanEligibility(coop));
+      final response = await _dio.get(
+        ApiEndpoints.membersLoanEligibility(coop),
+      );
       final data = response.data;
       if (data is Map) {
         return LoanEligibility.fromJson(Map<String, dynamic>.from(data));
@@ -86,8 +111,9 @@ class LoanRepository {
     final ledger = ledgerNumber.trim();
     if (ledger.isEmpty) return 0;
     try {
-      final response =
-          await _dio.get(ApiEndpoints.membersFetchLoanBalance(ledger));
+      final response = await _dio.get(
+        ApiEndpoints.membersFetchLoanBalance(ledger),
+      );
       final data = response.data;
       final raw = data is Map ? data['balance'] : null;
       return _asInt(raw);
@@ -118,7 +144,8 @@ class LoanRepository {
     if (ledger.isEmpty || ref.isEmpty) return const [];
     try {
       final response = await _dio.get(
-          ApiEndpoints.membersFetchMemberTransactions(ledger));
+        ApiEndpoints.membersFetchMemberTransactions(ledger),
+      );
       final data = response.data;
       final raw = data is Map ? (data['data'] ?? data['transactions']) : null;
       if (raw is! List) return const [];
@@ -131,6 +158,7 @@ class LoanRepository {
         if (source == 'brought forward correction') return true;
         return false;
       }
+
       return raw
           .whereType<Map>()
           .map((e) => Map<String, dynamic>.from(e))
@@ -144,9 +172,11 @@ class LoanRepository {
           })
           .toList()
         ..sort((a, b) {
-          final ad = DateTime.tryParse(a['created_at']?.toString() ?? '') ??
+          final ad =
+              DateTime.tryParse(a['created_at']?.toString() ?? '') ??
               DateTime(1970);
-          final bd = DateTime.tryParse(b['created_at']?.toString() ?? '') ??
+          final bd =
+              DateTime.tryParse(b['created_at']?.toString() ?? '') ??
               DateTime(1970);
           return bd.compareTo(ad);
         });
@@ -166,11 +196,7 @@ class LoanRepository {
     try {
       final response = await _dio.get(
         ApiEndpoints.membersLoanSearchGuarantors,
-        queryParameters: {
-          'cooperative_id': coop,
-          'q': q,
-          'limit': limit,
-        },
+        queryParameters: {'cooperative_id': coop, 'q': q, 'limit': limit},
       );
       final data = response.data;
       final raw = data is Map ? data['members'] : null;
@@ -189,18 +215,21 @@ class LoanRepository {
     final ledger = user.ledgerNumber?.trim() ?? '';
     if (ledger.isEmpty) return const [];
     try {
-      final response =
-          await _dio.get(ApiEndpoints.membersFetchGuarantorRequests(ledger));
+      final response = await _dio.get(
+        ApiEndpoints.membersFetchGuarantorRequests(ledger),
+      );
       final data = response.data;
       final raw = data is Map ? data['requests'] : null;
       if (raw is! List) return const [];
       final fallback = resolveCurrencyCode(user);
       return raw
           .whereType<Map>()
-          .map((e) => GuarantorRequest.fromBackend(
-                Map<String, dynamic>.from(e),
-                fallbackCurrency: fallback,
-              ))
+          .map(
+            (e) => GuarantorRequest.fromBackend(
+              Map<String, dynamic>.from(e),
+              fallbackCurrency: fallback,
+            ),
+          )
           .toList(growable: false);
     } on DioException catch (e) {
       throw _wrap(e, 'Unable to fetch guarantor requests');
@@ -266,8 +295,8 @@ class LoanRepository {
     }
     final loanSecurity =
         (collateralToken != null && collateralToken.trim().isNotEmpty)
-            ? 'token'
-            : 'guarantors';
+        ? 'token'
+        : 'guarantors';
     if (loanSecurity == 'guarantors' &&
         scheme.numberOfGuarantors > 0 &&
         guarantorLedgers.length != scheme.numberOfGuarantors) {

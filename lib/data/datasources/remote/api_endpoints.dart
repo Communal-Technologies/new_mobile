@@ -26,7 +26,8 @@ class ApiEndpoints {
   static const String refreshToken = '/refresh-token';
   static const String getLoggedInUser = '/get-loggedin-user';
   static const String createAccountPassword = '/create-account-password';
-  static const String generatePasswordResetLink = '/generate-password-reset-link';
+  static const String generatePasswordResetLink =
+      '/generate-password-reset-link';
   static const String verifyPasswordResetPin = '/verify-password-reset-pin';
   static const String resetPassword = '/reset-password';
   static const String otpSend = '/otp/send';
@@ -39,7 +40,8 @@ class ApiEndpoints {
   // --- Members account / settings -----------------------------------------
   static const String membersUpdateSecurityPin = '/members/update-security-pin';
   static const String membersVerifySecurityPin = '/members/verify-security-pin';
-  static const String membersRequestUnfreeze = '/members/account/request-unfreeze';
+  static const String membersRequestUnfreeze =
+      '/members/account/request-unfreeze';
   static const String membersCommunitySettings = '/members/community-settings';
   static String membersCommunitySettingsForCooperative(String cooperativeId) =>
       '/members/community-settings/$cooperativeId';
@@ -65,25 +67,29 @@ class ApiEndpoints {
   static const String membersUpdateProfile = '/members/update-profile';
   static const String membersUploadAvatar = '/members/profile/avatar';
   static const String membersAccountFreeze = '/members/account/freeze';
-  static const String membersAccountClosureSubmit = '/members/account-closure/submit';
+  static const String membersAccountClosureSubmit =
+      '/members/account-closure/submit';
   static const String membersTransactionStatementExport =
       '/members/transaction-statement/export';
 
   // --- Transfer -----------------------------------------------------------
   static const String transferBanks = '/transfer/banks';
   static const String transferBankSuggestions = '/transfer/bank-suggestions';
-  static const String transferCreateCounterParties = '/transfer/create-counter-parties';
+  static const String transferCreateCounterParties =
+      '/transfer/create-counter-parties';
   static String transferVerifyAccount(String bankCode, String accountNumber) =>
       '/transfer/verify-account/${bankCode.trim()}/${accountNumber.trim()}';
   static const String transferInitiate = '/transfer/initiate';
-  static const String membersTransferBeneficiaries = '/members/transfer/beneficiaries';
+  static const String membersTransferBeneficiaries =
+      '/members/transfer/beneficiaries';
   static String membersTransferStatus(String transferId) =>
       '/members/transfer/transactions/$transferId/status';
 
   // --- Members ledger / obligations ---------------------------------------
   static String membersFinancialObligations(
-          String ledgerNumber, String cooperativeId) =>
-      '/members/financial-obligations/$ledgerNumber/$cooperativeId';
+    String ledgerNumber,
+    String cooperativeId,
+  ) => '/members/financial-obligations/$ledgerNumber/$cooperativeId';
   static const String membersCooperativeCashRepositories =
       '/members/cooperative-cash-repositories';
   static String membersFetchMemberTransactions(String ledgerNumber) =>
@@ -91,6 +97,7 @@ class ApiEndpoints {
   static String membersFetchTransactions(String userId) =>
       '/members/fetch-transactions/$userId';
   static const String membersPayObligation = '/members/pay-obligation';
+
   /// Record-only path for NIP-funded obligation payments. Backend skips
   /// the biometric-sig middleware here because the upstream
   /// `/transfer/initiate` already signed the value-moving step; this
@@ -106,19 +113,27 @@ class ApiEndpoints {
       '/members/fetch-loan-schemes/$cooperativeId';
   static String membersFetchUserLoans(String ledgerNumber, [String? status]) =>
       status == null || status.trim().isEmpty
-          ? '/members/loan/fetch-requested/$ledgerNumber'
-          : '/members/loan/fetch-requested/$ledgerNumber/${status.trim()}';
+      ? '/members/loan/fetch-requested/$ledgerNumber'
+      : '/members/loan/fetch-requested/$ledgerNumber/${status.trim()}';
   static String membersFetchLoanBalance(String ledgerNumber) =>
       '/members/loan/fetch-balances/$ledgerNumber';
+
+  /// Loan-by-id fetch used by the push-tap deep-link. Endpoint lives on
+  /// the shared auth group at /v1/fetch-loan-details/{id} (see
+  /// backend routes/api.php:180), and returns
+  /// `{ "loanDetail": { … } }`.
+  static String fetchLoanDetailsById(String id) => '/fetch-loan-details/$id';
   static String membersLoanEligibility(String cooperativeId) =>
       '/members/loan/eligibility/$cooperativeId';
   static String membersFetchGuarantorRequests(String ledgerNumber) =>
       '/members/loan/fetch-approval-requests/$ledgerNumber';
   static const String membersLoanApplication = '/members/loan/application';
   static const String membersLoanCancelRequest = '/members/loan/cancel-request';
+
   /// Member-initiated loan repayment (obligation→loan path).
   /// Biometric-gated server-side. Mirrors the obligation flow.
   static const String membersPayLoan = '/members/loan/pay';
+
   /// NIP-funded loan repayment record-only path. No biometric; the
   /// upstream /transfer/initiate already signed the value-moving
   /// step. Same split as record-nip-obligation-payment.
@@ -145,7 +160,8 @@ class ApiEndpoints {
       '/fetch-internal-accounts/$cooperativeId';
 
   // --- Security / biometric (audit M7, M38) -------------------------------
-  static const String securityVerifyPassword = '/security/transaction/verify-password';
+  static const String securityVerifyPassword =
+      '/security/transaction/verify-password';
   static const String biometricEnroll = '/security/biometric/enroll';
   static const String biometricChallenge = '/security/biometric/challenge';
   static const String biometricRevoke = '/security/biometric/revoke';

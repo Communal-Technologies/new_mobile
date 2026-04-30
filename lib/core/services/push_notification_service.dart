@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:communal_mobile/core/navigation/root_navigator_key.dart';
 import 'package:communal_mobile/core/services/pending_deep_link_service.dart';
 import 'package:communal_mobile/core/services/unread_notifications_service.dart';
 import 'package:communal_mobile/cubits/security/security_cubit.dart';
+import 'package:communal_mobile/data/models/loan_application.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
+import 'package:communal_mobile/data/repositories/loan_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -99,7 +102,7 @@ class PushNotificationService {
           try {
             final raw = jsonDecode(payload);
             if (raw is Map<String, dynamic>) {
-              _routeFromData(raw);
+              unawaited(_routeFromData(raw));
             }
           } catch (_) {
             // Older payloads were `Map.toString()` not JSON; ignore.
@@ -154,7 +157,7 @@ class PushNotificationService {
     // System tray tap while the app is backgrounded — Android delivers
     // the RemoteMessage straight to onMessageOpenedApp.
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      _routeFromData(message.data);
+      unawaited(_routeFromData(message.data));
     });
 
     // System tray tap that launched the app from terminated — the
@@ -165,7 +168,7 @@ class PushNotificationService {
         // Defer to the next frame so the router has actually mounted
         // before we try to push onto it.
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          _routeFromData(initial.data);
+          unawaited(_routeFromData(initial.data));
         });
       }
     } catch (_) {
@@ -200,16 +203,18 @@ class PushNotificationService {
   /// wrapper consumes it on unlock. Same logic also handles the
   /// cold-start case where the user tapped a push from the system
   /// tray and Firebase replays it before our app fully comes up.
-  static void _routeFromData(Map<String, dynamic> data) {
+  static Future<void> _routeFromData(Map<String, dynamic> data) async {
     // Refresh the unread-count badge optimistically — a push usually
     // means a new in-app row landed. Cheap on success, no-op on err.
     try {
+      // Don't await — the badge is decorative; routing is the priority.
+      // ignore: unawaited_futures
       getIt<UnreadNotificationsService>().refresh();
     } catch (_) {
       /* ignore — service may not be registered in tests */
     }
 
-    final intent = _intentForData(data);
+    final intent = await _intentForData(data);
     if (intent == null) return;
 
     final ctx = rootNavigatorKey.currentContext;
@@ -224,6 +229,9 @@ class PushNotificationService {
     bool locked = false;
     if (ctx != null) {
       try {
+        // Safe across the await above — the root navigator's context
+        // outlives the push handler and isn't owned by any State.
+        // ignore: use_build_context_synchronously
         locked = ctx.read<SecurityCubit>().state == SecurityState.locked;
       } catch (_) {
         // Cubit not in scope (e.g. during cold start before runApp's
@@ -239,6 +247,8 @@ class PushNotificationService {
     }
 
     try {
+      // Same root-navigator-context rationale as above.
+      // ignore: use_build_context_synchronously
       ctx.goNamed(intent.routeName, extra: intent.extra);
     } catch (_) {
       // Router refused (mid-rebuild or unknown route) — fall back to
@@ -247,10 +257,15 @@ class PushNotificationService {
     }
   }
 
-  /// Pure mapping from push data → route intent, separated from the
-  /// navigation side-effects so it's easy to test and so the unlock
-  /// replay path can call it without re-deriving the intent.
-  static DeepLinkIntent? _intentForData(Map<String, dynamic> data) {
+  /// Async because some types need to hydrate a model from the
+  /// backend (loan-detail expects a fully built [LoanApplication] in
+  /// `extra`, not just an id). The unlock replay path stashes a
+  /// resolved intent rather than the raw data block, so the fetch
+  /// only happens once per tap regardless of how many lock cycles
+  /// it survives.
+  static Future<DeepLinkIntent?> _intentForData(
+    Map<String, dynamic> data,
+  ) async {
     final type = (data['type']?.toString() ?? '').trim();
     final legacyRoute = (data['route']?.toString() ?? '').trim();
 
@@ -261,7 +276,38 @@ class PushNotificationService {
       return const DeepLinkIntent(routeName: 'guarantor-requests');
     }
 
+    // Loan-typed pushes (rejected guarantor, status change, repayment
+    // reminders, …) carry `loan_id`. Hydrate the LoanApplication so
+    // the detail route gets a fully-built model in `extra`. If the
+    // fetch fails or no id is present, fall through to the loans hub.
+    if (type == 'loan' ||
+        type == 'loan_status' ||
+        type == 'loan_guarantor_rejected' ||
+        type == 'loan_repayment') {
+      final loanId = (data['loan_id']?.toString() ?? '').trim();
+      if (loanId.isNotEmpty) {
+        try {
+          final loan = await getIt<LoanRepository>().fetchLoanById(loanId);
+          if (loan != null) {
+            return DeepLinkIntent(
+              routeName: 'loan-detail',
+              extra: <String, dynamic>{'loan': loan},
+            );
+          }
+        } catch (_) {
+          // Fetch failed (offline, 404, auth refresh in progress) —
+          // dropping on the loans hub is more useful than a crash.
+        }
+      }
+      return const DeepLinkIntent(routeName: 'loans');
+    }
+
     if (type == 'transaction-receipt' || legacyRoute == 'transaction-receipt') {
+      // Transaction routes need a fully hydrated TransactionDetailsData
+      // in `extra`. There's no by-reference fetch on the mobile yet,
+      // so we drop on the history list — the user can find the row
+      // there. TODO: jump to receipt directly when the by-reference
+      // endpoint lands.
       return const DeepLinkIntent(routeName: 'transaction-history');
     }
 

@@ -61,26 +61,21 @@ class _LoaderOverlayState extends State<LoaderOverlay>
     final isDark = theme.brightness == Brightness.dark;
     final Color scrim = widget.scrimColor ??
         Colors.black.withValues(alpha: widget.scrimAlpha.clamp(0.0, 1.0));
-    // The loader.gif is a coloured asset whose purple glyph vanishes
-    // on a dark scrim. We don't ship a separate white loader. Image
-    // .asset's `color` parameter only tints the first frame of an
-    // animated GIF — after the first cycle the subsequent frames
-    // render in their native colours, so dark-mode users were seeing
-    // a brief white flash that then snapped back to purple. Wrapping
-    // in ColorFiltered applies the srcIn blend per-frame, so every
-    // GIF frame stays tinted.
-    Widget loaderImage = Image.asset(
-      Images.loader,
+    // Two pre-tinted GIF assets — no per-frame ColorFiltered. Earlier
+    // approach wrapped the purple loader in ColorFilter.mode(white,
+    // srcIn) so every GIF frame stayed tinted on the dark scaffold,
+    // but srcIn forces a saveLayer per frame, and Mediatek (Transsion)
+    // chipsets log "D/Surface: lockHardwareCanvas" on every locked
+    // canvas — the device our user reproduces on hit ~60 of those a
+    // second while a loader was on screen. Switching at the asset
+    // level keeps the GPU compositor path clean.
+    final asset = isDark ? Images.loaderWhite : Images.loader;
+    final Widget loaderImage = Image.asset(
+      asset,
       width: widget.loaderSize,
       height: widget.loaderSize,
       fit: BoxFit.contain,
     );
-    if (isDark) {
-      loaderImage = ColorFiltered(
-        colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-        child: loaderImage,
-      );
-    }
     return AbsorbPointer(
       child: ColoredBox(
         color: scrim,

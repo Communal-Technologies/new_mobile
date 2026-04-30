@@ -199,7 +199,7 @@ class OnboardingPage extends StatelessWidget {
                     text,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.displaySmall!.copyWith(
-                      fontSize: 48,
+                      fontSize: index == 2 ? 48 : 32,
                       color: headingColor,
                       shadows: [
                         BoxShadow(

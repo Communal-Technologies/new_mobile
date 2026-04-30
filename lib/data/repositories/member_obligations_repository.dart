@@ -146,12 +146,27 @@ class MemberObligationsRepository {
               final rCoop = row['cooperative_id']?.toString().trim() ?? '';
               if (rCoop.isNotEmpty && rCoop != coopId) return false;
             }
-            // Both inflows (`trx_type=1`, money entering this obligation
-            // from wallet/NIP/another obligation) and outflows
-            // (`trx_type=2`, this obligation funding another one) are
-            // surfaced. Other trx_types are unrelated movement.
+            // Inflows (`trx_type=1`, money entering this obligation
+            // from wallet/NIP/another obligation) always count.
+            //
+            // Outflows (`trx_type=2`) are only legitimate when this
+            // obligation actively funded ANOTHER obligation. Backend
+            // (FinancialObligationController::processPayment) writes a
+            // paired type=2 debit alongside the type=1 credit on every
+            // payment regardless of mode — that paired debit is
+            // re-anchored to the source obligation only for
+            // `payment_mode == 'obligation'`. For nip_transfer / gateway
+            // / wallet flows the debit row stays anchored to the target
+            // and shows up here as a phantom "Used to pay another
+            // obligation" entry. Drop those.
             final t = row['trx_type']?.toString().trim();
             if (t != '1' && t != '2') return false;
+            if (t == '2') {
+              final mode = (row['payment_mode']?.toString() ?? '')
+                  .trim()
+                  .toLowerCase();
+              if (mode != 'obligation') return false;
+            }
             return _ledgerRowMatchesObligation(row, obligation);
           })
           .toList()
@@ -170,11 +185,19 @@ class MemberObligationsRepository {
         final modeLower = (mode ?? '').toLowerCase();
         final String title;
         if (isOutflow) {
-          // Source obligation funded another. The backend description
-          // already encodes the target ("…to {AccountType}-{code}")
-          // but we keep the title short and rely on the sign + palette
-          // to convey direction.
-          title = 'Used to pay another obligation';
+          // Legitimate obligation → obligation outflow (filtered above
+          // to mode == 'obligation'). The backend writes the target's
+          // identifier into the row's `destination` field as either
+          // "obligation-{code}" or "{AccountType}-{code}"; surface it
+          // in the title so the row reads "Used to pay {target}"
+          // instead of an opaque "another obligation".
+          final dest = (row['destination']?.toString() ?? '').trim();
+          final stripped = dest.startsWith('obligation-')
+              ? dest.substring('obligation-'.length)
+              : dest;
+          title = stripped.isEmpty
+              ? 'Used to pay another obligation'
+              : 'Used to pay $stripped';
         } else if (isBf || modeLower.contains('brought forward')) {
           title = 'Brought forward';
         } else {

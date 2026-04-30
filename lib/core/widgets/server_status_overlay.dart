@@ -8,6 +8,7 @@ import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/constants/constants.dart';
+import 'package:communal_mobile/core/navigation/root_navigator_key.dart';
 import 'package:communal_mobile/cubits/server_status/server_status_cubit.dart';
 
 /// Blocking dialog shown while [ServerStatusCubit] is `down` post-splash.
@@ -100,13 +101,22 @@ class _ServerStatusOverlayState extends State<ServerStatusOverlay> {
     _watchdogTimer?.cancel();
     _watchdogTimer = Timer(_watchdog, _onWatchdogElapsed);
 
-    // Show the dialog. `barrierDismissible: false` + WillPopScope (via
-    // PopScope on Flutter 3.16+) means the user can't dismiss it.
-    // Use the root navigator so the dialog sits over any nested
-    // MaterialApp (e.g. the SecurityWrapper lock screen).
+    // Show the dialog. `barrierDismissible: false` + PopScope means
+    // the user can't dismiss it. Use rootNavigatorKey directly: this
+    // overlay sits ABOVE MaterialApp.router (so it can react to
+    // server-status across the whole app), which means the local
+    // BuildContext is *not* a Navigator descendant — Navigator.of
+    // would crash with "context that does not include a Navigator".
+    // The root navigator is in the GoRouter and we hold its key.
     if (!mounted) return;
+    final navCtx = rootNavigatorKey.currentContext;
+    if (navCtx == null) {
+      _dialogOpen = false;
+      _stopLoops();
+      return;
+    }
     await showDialog<void>(
-      context: context,
+      context: navCtx,
       barrierDismissible: false,
       useRootNavigator: true,
       builder: (_) => const _ConnectionLostDialog(),
@@ -120,8 +130,10 @@ class _ServerStatusOverlayState extends State<ServerStatusOverlay> {
   void _closeDialog() {
     _stopLoops();
     if (!_dialogOpen) return;
-    final nav = Navigator.of(context, rootNavigator: true);
-    if (nav.canPop()) nav.pop();
+    // Same reason as _openDialog: pop via the root navigator key
+    // rather than Navigator.of(context).
+    final nav = rootNavigatorKey.currentState;
+    if (nav != null && nav.canPop()) nav.pop();
     _dialogOpen = false;
   }
 

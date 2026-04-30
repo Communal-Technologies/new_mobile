@@ -50,7 +50,6 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   final TextEditingController _reasonController = TextEditingController();
 
   bool _loading = false;
-  String? _error;
   List<LoanScheme> _schemes = const [];
   LoanScheme? _selectedScheme;
   LoanEligibility? _eligibility;
@@ -87,13 +86,10 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     if (auth is! AuthAuthenticated) return;
     final coopId = auth.user.cooperativeId?.trim();
     if (coopId == null || coopId.isEmpty) {
-      setState(() => _error = 'Cooperative not linked to your profile');
+      AppToast.error('Cooperative not linked to your profile');
       return;
     }
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    setState(() => _loading = true);
     try {
       // Schemes only when no scheme was preselected from the loans hub.
       // Eligibility is always needed — drives slider bounds + interest
@@ -138,8 +134,8 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      // Backend errors go through the app-wide toast; the inline
-      // `_error` banner is reserved for local form-validation hints.
+      // All loan-application errors (backend + local validation) are
+      // surfaced as toasts so the screen stays uncluttered.
       AppToast.error(e.toString().replaceFirst('Exception: ', ''));
       setState(() => _loading = false);
     }
@@ -250,16 +246,6 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                       _buildRepaymentSummarySection(currency),
                     vSpace(24),
                     _buildReasonSection(),
-                    if (_error != null) ...[
-                      vSpace(16),
-                      Text(
-                        _error!,
-                        style: TextStyle(
-                          fontSize: 17.sp,
-                          color: const Color(0xFFE74C3C),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -1025,7 +1011,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             ? () {
                 final err = _validate();
                 if (err != null) {
-                  setState(() => _error = err);
+                  AppToast.error(err);
                   return;
                 }
                 final draft = LoanApplicationDraft(

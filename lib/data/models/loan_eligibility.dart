@@ -25,8 +25,7 @@ class InterestTypeOption {
   final bool isDefault;
 
   factory InterestTypeOption.fromJson(Map<String, dynamic> m) {
-    bool asBool(dynamic v) =>
-        v == true || v == 1 || v == '1' || v == 'true';
+    bool asBool(dynamic v) => v == true || v == 1 || v == '1' || v == 'true';
     return InterestTypeOption(
       id: m['id']?.toString() ?? '',
       value: m['value']?.toString() ?? '',
@@ -77,6 +76,11 @@ class LoanEligibility {
 
   final List<InterestTypeOption> interestTypes;
 
+  /// All interest treatments the cooperative has enabled, preserving
+  /// the dashboard ordering. Empty when none are configured.
+  List<InterestTypeOption> get enabledInterestTypes =>
+      interestTypes.where((t) => t.enabled).toList(growable: false);
+
   /// The cooperative's chosen default interest treatment, falling back
   /// to the first enabled one if no row is flagged as default.
   InterestTypeOption? get defaultInterestType {
@@ -116,17 +120,19 @@ class LoanEligibility {
     if (raw is List) {
       for (final item in raw) {
         if (item is Map) {
-          list.add(InterestTypeOption.fromJson(
-              Map<String, dynamic>.from(item)));
+          list.add(
+            InterestTypeOption.fromJson(Map<String, dynamic>.from(item)),
+          );
         }
       }
     }
     return LoanEligibility(
       cooperativeId: m['cooperative_id']?.toString() ?? '',
-      currency: (m['currency']?.toString().isNotEmpty == true
-              ? m['currency'].toString()
-              : 'NGN')
-          .toUpperCase(),
+      currency:
+          (m['currency']?.toString().isNotEmpty == true
+                  ? m['currency'].toString()
+                  : 'NGN')
+              .toUpperCase(),
       minAmountMinor: _asInt(m['min_amount_minor']),
       maxAmountMinor: _asInt(m['max_amount_minor']),
       holdingsMinor: _asInt(m['holdings_minor']),

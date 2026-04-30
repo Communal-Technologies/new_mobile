@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/custom_text_field.dart';
 import 'package:communal_mobile/core/widgets/loader_overlay.dart';
@@ -8,6 +10,7 @@ import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
@@ -72,14 +75,40 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
     var beneficiaries = <TransferBeneficiary>[];
 
     try {
+      // Drop the signed-in user's own wallet account from the
+      // suggestions: the recipient picker is for sending TO someone,
+      // and self-transfers either fail at the backend or get caught
+      // on the verify screen — either way the entry is misleading
+      // because the user expects to see other people's accounts here.
+      // Match by walletAccountNumber (canonical) and fall back to
+      // walletAccountName when the wallet number isn't yet hydrated.
+      final authState = context.read<AuthBloc>().state;
+      final selfAcct = authState is AuthAuthenticated
+          ? (authState.user.walletAccountNumber ?? '').trim()
+          : '';
+      final selfName = authState is AuthAuthenticated
+          ? (authState.user.walletAccountName ?? '').trim().toLowerCase()
+          : '';
+      bool isSelf(TransferSuggestion s) {
+        if (selfAcct.isNotEmpty && s.accountNumber.trim() == selfAcct) {
+          return true;
+        }
+        if (selfName.isNotEmpty &&
+            s.accountName.trim().toLowerCase() == selfName) {
+          return true;
+        }
+        return false;
+      }
+
       final allSuggestions = await _repo.fetchBankSuggestions();
-      internalMembers =
-          allSuggestions.where((e) => e.isInternal).toList(growable: false)
-            ..sort(
-              (a, b) => a.accountName.toLowerCase().compareTo(
-                b.accountName.toLowerCase(),
-              ),
-            );
+      internalMembers = allSuggestions
+          .where((e) => e.isInternal && !isSelf(e))
+          .toList(growable: false)
+        ..sort(
+          (a, b) => a.accountName.toLowerCase().compareTo(
+            b.accountName.toLowerCase(),
+          ),
+        );
     } catch (_) {
       // Keep screen usable: manual account entry + Continue still work.
     }

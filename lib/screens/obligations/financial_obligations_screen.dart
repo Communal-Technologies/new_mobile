@@ -28,7 +28,7 @@ class FinancialObligationsScreen extends StatefulWidget {
 }
 
 class _FinancialObligationsScreenState
-    extends State<FinancialObligationsScreen> {
+    extends State<FinancialObligationsScreen> with WidgetsBindingObserver {
   final MemberObligationsRepository _repository =
       MemberObligationsRepository(getIt());
   final _searchController = TextEditingController();
@@ -44,13 +44,27 @@ class _FinancialObligationsScreenState
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadObligations());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Re-fetch on foreground so an admin's dashboard edit (cap,
+    // installment amount, equity settings) reflects in the member app
+    // without forcing the user to navigate away and back. Without this
+    // hook the screen's initState fires once and keeps showing the
+    // snapshot it loaded at first paint.
+    if (state == AppLifecycleState.resumed && mounted && !_loading) {
+      _loadObligations();
+    }
   }
 
   Future<void> _loadObligations() async {
@@ -93,21 +107,28 @@ class _FinancialObligationsScreenState
         body: _loading
             ? const LoaderOverlay()
             : SafeArea(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildHeader(theme),
-                      vSpace(16),
-                      _buildSummaryCards(theme),
-                      vSpace(20),
-                      _buildCategorySelector(theme),
-                      vSpace(16),
-                      _buildSearchBar(theme),
-                      vSpace(20),
-                      ..._buildObligationList(theme),
-                    ],
+                child: RefreshIndicator(
+                  onRefresh: _loadObligations,
+                  color: theme.brightness == Brightness.dark
+                      ? Colors.white
+                      : theme.primaryColor,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildHeader(theme),
+                        vSpace(16),
+                        _buildSummaryCards(theme),
+                        vSpace(20),
+                        _buildCategorySelector(theme),
+                        vSpace(16),
+                        _buildSearchBar(theme),
+                        vSpace(20),
+                        ..._buildObligationList(theme),
+                      ],
+                    ),
                   ),
                 ),
               ),

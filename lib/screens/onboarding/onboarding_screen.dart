@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:communal_mobile/core/constants/images.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -94,14 +95,40 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
                       ? Row(
                           children: [
                             Expanded(
-                              child: AppSecondaryButton(
-                                title: 'Skip',
-                                onPressed: _onSkip,
-                                isDark: false,
+                              flex: 1,
+                              child: SizedBox(
+                                height: 50.h,
+                                child: OutlinedButton(
+                                  onPressed: _onSkip,
+                                  style: OutlinedButton.styleFrom(
+                                    side: BorderSide(
+                                      width: 2,
+                                      color: Theme.of(context).primaryColor,
+                                    ),
+                                    foregroundColor:
+                                        Theme.of(context).primaryColor,
+                                    surfaceTintColor: Colors.transparent,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(25.r),
+                                    ),
+                                    padding:
+                                        EdgeInsets.symmetric(vertical: 14.h),
+                                  ),
+                                  child: Text(
+                                    'Skip',
+                                    style: TextStyle(
+                                      fontSize: 17.sp,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.5,
+                                      color: Theme.of(context).primaryColor,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                             hSpace(10),
                             Expanded(
+                              flex: 2,
                               child: AppElevatedButton(
                                 title: 'Next',
                                 onPressed: _onNextPressed,
@@ -155,21 +182,27 @@ class OnboardingPage extends StatelessWidget {
                   width: 250,
                   fit: BoxFit.contain,
                 ),
-                Text(
-                  text,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.displaySmall!.copyWith(
-                    fontSize: index == 2 ? 40 : 24,
-                    color: headingColor,
-                    shadows: index == 2 && !isDark
-                        ? const [
-                            BoxShadow(
-                              color: Color.fromRGBO(0, 0, 0, 0.19),
-                              offset: Offset(6, 6),
-                              blurRadius: 10,
-                            ),
-                          ]
-                        : null,
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: index == 2 ? 50 : 60,
+                    vertical: 20,
+                  ),
+                  child: Text(
+                    text,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.displaySmall!.copyWith(
+                      fontSize: index == 2 ? 48 : 24,
+                      color: headingColor,
+                      shadows: index == 2 && !isDark
+                          ? const [
+                              BoxShadow(
+                                color: Color.fromRGBO(0, 0, 0, 0.19),
+                                offset: Offset(11, 10),
+                                blurRadius: 10,
+                              ),
+                            ]
+                          : null,
+                    ),
                   ),
                 ),
                 Image.asset(image, height: 300, width: 300, fit: BoxFit.contain),

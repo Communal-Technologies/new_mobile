@@ -21,8 +21,9 @@ class ObligationDetailScreen extends StatefulWidget {
 }
 
 class _ObligationDetailScreenState extends State<ObligationDetailScreen> {
-  final MemberObligationsRepository _repository =
-      MemberObligationsRepository(getIt());
+  final MemberObligationsRepository _repository = MemberObligationsRepository(
+    getIt(),
+  );
   late Obligation _obligation;
   List<PaymentRecord> _history = const [];
   bool _loadingHistory = false;
@@ -39,7 +40,9 @@ class _ObligationDetailScreenState extends State<ObligationDetailScreen> {
     if (auth is! AuthAuthenticated) return;
     setState(() => _loadingHistory = true);
     try {
-      final allObligations = await _repository.fetchMemberObligations(auth.user);
+      final allObligations = await _repository.fetchMemberObligations(
+        auth.user,
+      );
       final updated = allObligations.firstWhere(
         (e) => e.accountCode == _obligation.accountCode,
         orElse: () => _obligation,
@@ -77,48 +80,51 @@ class _ObligationDetailScreenState extends State<ObligationDetailScreen> {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, auth) {
         return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: _DetailAppBar(
-        title: _obligation.title,
-        subtitle: _cooperativeSubtitle(auth),
-      ),
-      body: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _SummaryCard(obligation: _obligation),
-                    vSpace(20),
-                    _AboutSection(
-                      obligation: _obligation,
-                      paymentHistory: _history,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          appBar: _DetailAppBar(
+            title: _obligation.title,
+            subtitle: _cooperativeSubtitle(auth),
+          ),
+          body: SafeArea(
+            top: false,
+            child: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 16.h,
                     ),
-                    if (_obligation.fines.isNotEmpty) ...[
-                      vSpace(20),
-                      _FinesSection(fine: _obligation.fines.first),
-                    ],
-                    vSpace(20),
-                    _PaymentHistorySection(
-                      payments: _history,
-                      loading: _loadingHistory,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _SummaryCard(obligation: _obligation),
+                        vSpace(20),
+                        _AboutSection(
+                          obligation: _obligation,
+                          paymentHistory: _history,
+                        ),
+                        if (_obligation.fines.isNotEmpty) ...[
+                          vSpace(20),
+                          _FinesSection(fine: _obligation.fines.first),
+                        ],
+                        vSpace(20),
+                        _PaymentHistorySection(
+                          payments: _history,
+                          loading: _loadingHistory,
+                        ),
+                        vSpace(20),
+                        _LoanPromoCard(note: _obligation.infoNote),
+                        vSpace(20),
+                      ],
                     ),
-                    vSpace(20),
-                    _LoanPromoCard(note: _obligation.infoNote),
-                    vSpace(20),
-                  ],
+                  ),
                 ),
-              ),
+                _BottomActions(obligation: _obligation, theme: theme),
+              ],
             ),
-            _BottomActions(obligation: _obligation, theme: theme),
-          ],
-        ),
-      ),
-    );
+          ),
+        );
       },
     );
   }
@@ -338,10 +344,7 @@ class _StatusChip extends StatelessWidget {
 }
 
 class _AboutSection extends StatelessWidget {
-  const _AboutSection({
-    required this.obligation,
-    required this.paymentHistory,
-  });
+  const _AboutSection({required this.obligation, required this.paymentHistory});
 
   final Obligation obligation;
   final List<PaymentRecord> paymentHistory;
@@ -357,7 +360,9 @@ class _AboutSection extends StatelessWidget {
             obligation.description,
             style: TextStyle(
               fontSize: 19.sp,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
               height: 1.4,
             ),
           ),
@@ -504,11 +509,7 @@ class _FinesSection extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.error_outline,
-                  color: accent,
-                  size: 18.sp,
-                ),
+                Icon(Icons.error_outline, color: accent, size: 18.sp),
                 hSpace(8),
                 Text(
                   fine.amountLabel,
@@ -543,10 +544,7 @@ class _FinesSection extends StatelessWidget {
 }
 
 class _PaymentHistorySection extends StatefulWidget {
-  const _PaymentHistorySection({
-    required this.payments,
-    required this.loading,
-  });
+  const _PaymentHistorySection({required this.payments, required this.loading});
 
   final List<PaymentRecord> payments;
   final bool loading;
@@ -567,7 +565,9 @@ class _PaymentHistorySectionState extends State<_PaymentHistorySection> {
     final payments = widget.payments;
     final loading = widget.loading;
     final showAll = _expanded || payments.length <= _collapsedLimit;
-    final visible = showAll ? payments : payments.take(_collapsedLimit).toList();
+    final visible = showAll
+        ? payments
+        : payments.take(_collapsedLimit).toList();
     final hiddenCount = payments.length - visible.length;
     return _InfoCard(
       title: 'Payment History',
@@ -643,7 +643,9 @@ class _PaymentTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final outflow = record.isOutflow;
     final iconData = outflow ? Icons.arrow_upward_rounded : Icons.check_circle;
-    final iconColor = outflow ? const Color(0xFFD64545) : const Color(0xFF7B61FF);
+    final iconColor = outflow
+        ? const Color(0xFFD64545)
+        : const Color(0xFF7B61FF);
     // Inflow rows used hardcoded `Colors.black` for the amount label,
     // which renders invisibly on the dark scaffold. Resolve from the
     // active theme's onSurface so the amount stays legible in both
@@ -678,14 +680,18 @@ class _PaymentTile extends StatelessWidget {
                   '${record.dateLabel}  •  ${record.method}',
                   style: TextStyle(
                     fontSize: 17.sp,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
                 Text(
                   record.reference,
                   style: TextStyle(
                     fontSize: 17.sp,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -799,28 +805,35 @@ class _BottomActions extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: OutlinedButton.icon(
+              child: OutlinedButton(
                 onPressed: () {
                   AppToast.success('Contacting admin...');
                 },
-                icon: Icon(
-                  Icons.chat_bubble_outline,
-                  color: liveTheme.primaryColor,
-                  size: 20.sp,
-                ),
-                label: Text(
-                  'Contact Admin',
-                  style: TextStyle(
-                    fontSize: 19.sp,
-                    fontWeight: FontWeight.w600,
-                    color: liveTheme.colorScheme.onSurface,
-                  ),
-                ),
                 style: OutlinedButton.styleFrom(
                   minimumSize: Size(double.infinity, 52.h),
                   side: BorderSide(color: liveTheme.dividerColor),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18.r),
+                  ),
+                  // Tighter horizontal padding so the label has room
+                  // to breathe at the new (bigger) body type scale.
+                  padding: EdgeInsets.symmetric(horizontal: 8.w),
+                ),
+                // Dropped the leading icon and gave the label
+                // maxLines:1 + ellipsis fallback. Earlier the
+                // OutlinedButton.icon ate ~28px of width to show the
+                // chat bubble + spacing, which pushed "Contact Admin"
+                // past the half-row Expanded slot at the post-bump
+                // 19sp body size and wrapped to two lines.
+                child: Text(
+                  'Contact Admin',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 19.sp,
+                    fontWeight: FontWeight.w600,
+                    color: liveTheme.colorScheme.onSurface,
                   ),
                 ),
               ),

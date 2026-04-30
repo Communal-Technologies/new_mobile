@@ -13,6 +13,7 @@ class LoanOfferCard extends StatelessWidget {
   });
 
   final LoanScheme scheme;
+
   /// Currency code (e.g. NGN) used to format the flat service charge.
   /// Backend stores `service_charge` in minor units and adds it to interest
   /// as a flat amount (`interest = principal * rate% + service_charge`),
@@ -58,7 +59,10 @@ class LoanOfferCard extends StatelessWidget {
               ),
               if (scheme.category.isNotEmpty)
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 10.w,
+                    vertical: 4.h,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFE67E22),
                     borderRadius: BorderRadius.circular(12.r),
@@ -66,7 +70,7 @@ class LoanOfferCard extends StatelessWidget {
                   child: Text(
                     scheme.category,
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
@@ -80,8 +84,10 @@ class LoanOfferCard extends StatelessWidget {
                 ? 'Needs ${scheme.numberOfGuarantors} guarantor${scheme.numberOfGuarantors == 1 ? '' : 's'}'
                 : 'No guarantors required',
             style: TextStyle(
-              fontSize: 15.sp,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              fontSize: 17.sp,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           vSpace(16),
@@ -89,8 +95,8 @@ class LoanOfferCard extends StatelessWidget {
             spacing: 16.w,
             runSpacing: 8.h,
             children: [
-              _miniStat(context,Icons.trending_up, scheme.interestRateLabel),
-              _miniStat(context,Icons.access_time, scheme.durationLabel),
+              _miniStat(context, Icons.trending_up, scheme.interestRateLabel),
+              _miniStat(context, Icons.access_time, scheme.durationLabel),
               if (scheme.serviceCharge > 0)
                 _miniStat(
                   context,
@@ -119,7 +125,7 @@ class LoanOfferCard extends StatelessWidget {
                   Text(
                     'Apply Now',
                     style: TextStyle(
-                      fontSize: 17.sp,
+                      fontSize: 19.sp,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -143,7 +149,7 @@ class LoanOfferCard extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w600,
             color: Theme.of(context).colorScheme.onSurface,
           ),

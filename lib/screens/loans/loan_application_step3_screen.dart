@@ -133,7 +133,7 @@ class _LoanApplicationStep3ScreenState
                 child: Text(
                   'Step 3 of 3',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFFE67E22),
                   ),
@@ -192,7 +192,7 @@ class _LoanApplicationStep3ScreenState
           child: Text(
             'Review & Submit',
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w600,
               color: const Color(0xFFE67E22),
             ),
@@ -272,7 +272,7 @@ class _LoanApplicationStep3ScreenState
             flex: 2,
             child: Text(
               label,
-              style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
             ),
           ),
           Expanded(
@@ -281,7 +281,7 @@ class _LoanApplicationStep3ScreenState
               value,
               textAlign: TextAlign.right,
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -332,7 +332,7 @@ class _LoanApplicationStep3ScreenState
                         Text(
                           g.name,
                           style: TextStyle(
-                            fontSize: 17.sp,
+                            fontSize: 19.sp,
                             fontWeight: FontWeight.w600,
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
@@ -341,7 +341,7 @@ class _LoanApplicationStep3ScreenState
                         Text(
                           g.ledgerNumber,
                           style: TextStyle(
-                            fontSize: 14.sp,
+                            fontSize: 16.sp,
                             color: Theme.of(
                               context,
                             ).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -399,7 +399,7 @@ class _LoanApplicationStep3ScreenState
             child: RichText(
               text: TextSpan(
                 style: TextStyle(
-                  fontSize: 15.sp,
+                  fontSize: 17.sp,
                   color: Theme.of(
                     context,
                   ).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -440,7 +440,7 @@ class _LoanApplicationStep3ScreenState
           Text(
             'Important:',
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -449,7 +449,7 @@ class _LoanApplicationStep3ScreenState
           Text(
             'Your application will be reviewed by your cooperative. You will be notified of the decision in-app and via SMS.',
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 16.sp,
               color: Theme.of(
                 context,
               ).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -478,7 +478,7 @@ class _LoanApplicationStep3ScreenState
             child: Text(
               'Back',
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -514,7 +514,7 @@ class _LoanApplicationStep3ScreenState
                 : Text(
                     'Submit Application',
                     style: TextStyle(
-                      fontSize: 17.sp,
+                      fontSize: 19.sp,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

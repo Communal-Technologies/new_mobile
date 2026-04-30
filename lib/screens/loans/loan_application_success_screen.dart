@@ -75,8 +75,10 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
                         'Your loan application for $formattedAmount has been submitted. Your guarantors will review it and your cooperative will reach out with a decision.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 15.sp,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                      fontSize: 17.sp,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.8),
                       height: 1.4,
                     ),
                   ),
@@ -117,23 +119,27 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (referenceId != null && referenceId!.isNotEmpty) ...[
-            _detailRow(context,'Reference', referenceId!),
+            _detailRow(context, 'Reference', referenceId!),
             vSpace(20),
             Divider(height: 1, color: Colors.grey.shade300),
             vSpace(20),
           ],
-          _detailRow(context,'Amount Requested', formattedAmount),
+          _detailRow(context, 'Amount Requested', formattedAmount),
           vSpace(20),
           Divider(height: 1, color: Colors.grey.shade300),
           vSpace(20),
-          _detailRow(context,'Status', 'Under Review', isStatus: true),
+          _detailRow(context, 'Status', 'Under Review', isStatus: true),
         ],
       ),
     );
   }
 
-  Widget _detailRow(BuildContext context, String label, String value,
-      {bool isStatus = false}) {
+  Widget _detailRow(
+    BuildContext context,
+    String label,
+    String value, {
+    bool isStatus = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,8 +147,10 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 15.sp,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+            fontSize: 17.sp,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.7),
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -151,7 +159,7 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
             value,
             textAlign: TextAlign.right,
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w600,
               color: isStatus ? const Color(0xFFE67E22) : Colors.black87,
             ),
@@ -180,7 +188,7 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
             ),
             child: Text(
               'Go to Loans',
-              style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w700),
+              style: TextStyle(fontSize: 19.sp, fontWeight: FontWeight.w700),
             ),
           ),
         ),
@@ -200,7 +208,7 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
             ),
             child: Text(
               'Back to Home',
-              style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 19.sp, fontWeight: FontWeight.w600),
             ),
           ),
         ),

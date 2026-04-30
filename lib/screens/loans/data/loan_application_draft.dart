@@ -77,7 +77,8 @@ class LoanApplicationDraft {
       department: department ?? this.department,
       monthlySalary: monthlySalary ?? this.monthlySalary,
       outstandingLoan: outstandingLoan ?? this.outstandingLoan,
-      otherMonthlyRepayment: otherMonthlyRepayment ?? this.otherMonthlyRepayment,
+      otherMonthlyRepayment:
+          otherMonthlyRepayment ?? this.otherMonthlyRepayment,
     );
   }
 }

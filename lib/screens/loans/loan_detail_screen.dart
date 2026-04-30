@@ -567,7 +567,8 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
     // returns null on the second form and the row rendered as ₦0 even
     // though the repo's filter (num.tryParse > 0) had let it through.
     // num.tryParse + .round handles both shapes.
-    final amountMinor = (num.tryParse(row['amount']?.toString() ?? '0') ?? 0).round();
+    final amountMinor = (num.tryParse(row['amount']?.toString() ?? '0') ?? 0)
+        .round();
     final date =
         DateTime.tryParse(row['created_at']?.toString() ?? '') ??
         DateTime.now();

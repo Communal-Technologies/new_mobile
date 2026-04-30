@@ -20,13 +20,13 @@ class LoanNipSettlement {
   final String currency;
 
   Map<String, dynamic> toJson() => {
-        'cash_repository_id': cashRepositoryId,
-        'cooperative_id': cooperativeId,
-        'loan_id': loanId,
-        'loan_code': loanCode,
-        'amount_minor': amountMinor,
-        'currency': currency,
-      };
+    'cash_repository_id': cashRepositoryId,
+    'cooperative_id': cooperativeId,
+    'loan_id': loanId,
+    'loan_code': loanCode,
+    'amount_minor': amountMinor,
+    'currency': currency,
+  };
 
   static LoanNipSettlement? tryFromJson(dynamic raw) {
     if (raw is! Map) return null;

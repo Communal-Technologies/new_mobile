@@ -86,19 +86,19 @@ class ActiveLoanCard extends StatelessWidget {
                     Text(
                       loan.loanCode.isNotEmpty ? loan.loanCode : 'Loan',
                       style: TextStyle(
-                        fontSize: 17.sp,
+                        fontSize: 19.sp,
                         fontWeight: FontWeight.w700,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     vSpace(4),
                     Text(
-                      loan.referenceId.isNotEmpty
-                          ? loan.referenceId
-                          : loan.id,
+                      loan.referenceId.isNotEmpty ? loan.referenceId : loan.id,
                       style: TextStyle(
-                        fontSize: 14.sp,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        fontSize: 16.sp,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -113,7 +113,7 @@ class ActiveLoanCard extends StatelessWidget {
                 child: Text(
                   loan.status.label,
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 16.sp,
                     fontWeight: FontWeight.w600,
                     color: _statusColor,
                   ),
@@ -126,9 +126,11 @@ class ActiveLoanCard extends StatelessWidget {
             Text(
               'Repayment Progress',
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             vSpace(8),
@@ -163,9 +165,11 @@ class ActiveLoanCard extends StatelessWidget {
               child: Text(
                 loan.progressLabel,
                 style: TextStyle(
-                  fontSize: 14.sp,
+                  fontSize: 16.sp,
                   fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ),
@@ -174,21 +178,21 @@ class ActiveLoanCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _statColumn(context,'Principal', loan.amountLabel),
+                child: _statColumn(context, 'Principal', loan.amountLabel),
               ),
               Expanded(
-                child: _statColumn(context,
+                child: _statColumn(
+                  context,
                   isApproved ? 'Balance' : 'Status',
                   isApproved ? loan.balanceLabel : loan.status.label,
                   highlight: isApproved,
                 ),
               ),
               Expanded(
-                child: _statColumn(context,
+                child: _statColumn(
+                  context,
                   isApproved ? 'Monthly' : 'Applied',
-                  isApproved
-                      ? loan.monthlyRepaymentLabel
-                      : loan.createdAtLabel,
+                  isApproved ? loan.monthlyRepaymentLabel : loan.createdAtLabel,
                 ),
               ),
             ],
@@ -197,14 +201,15 @@ class ActiveLoanCard extends StatelessWidget {
             vSpace(8),
             Row(
               children: [
-                Icon(Icons.event,
-                    size: 14.sp, color: Colors.grey.shade600),
+                Icon(Icons.event, size: 14.sp, color: Colors.grey.shade600),
                 hSpace(6),
                 Text(
                   'Due ${loan.dueDateLabel}',
                   style: TextStyle(
-                    fontSize: 14.sp,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    fontSize: 16.sp,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -226,7 +231,7 @@ class ActiveLoanCard extends StatelessWidget {
                   child: Text(
                     'View Details',
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
@@ -250,7 +255,7 @@ class ActiveLoanCard extends StatelessWidget {
                     child: Text(
                       'Make Payment',
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -264,20 +269,26 @@ class ActiveLoanCard extends StatelessWidget {
     );
   }
 
-  Widget _statColumn(BuildContext context, String label, String value,
-      {bool highlight = false}) {
+  Widget _statColumn(
+    BuildContext context,
+    String label,
+    String value, {
+    bool highlight = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600)),
+        Text(
+          label,
+          style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade600),
+        ),
         vSpace(4),
         Text(
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w700,
             color: highlight
                 ? const Color(0xFFE67E22)

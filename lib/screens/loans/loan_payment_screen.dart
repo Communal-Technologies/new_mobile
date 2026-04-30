@@ -106,8 +106,9 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
       }).toList();
       setState(() {
         _sourceObligations = filtered;
-        _selectedSourceObligation =
-            filtered.length == 1 ? filtered.first : null;
+        _selectedSourceObligation = filtered.length == 1
+            ? filtered.first
+            : null;
         _loadingSourceObligations = false;
       });
     } catch (e) {
@@ -116,8 +117,10 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
         _sourceObligations = const [];
         _selectedSourceObligation = null;
         _loadingSourceObligations = false;
-        _sourceObligationsError =
-            e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '').trim();
+        _sourceObligationsError = e
+            .toString()
+            .replaceFirst(RegExp(r'^Exception:\s*'), '')
+            .trim();
       });
     }
   }
@@ -137,10 +140,10 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      var msg =
-          e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '').trim();
+      var msg = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '').trim();
       if (msg.isEmpty) {
-        msg = 'Unable to load cooperative bank accounts. '
+        msg =
+            'Unable to load cooperative bank accounts. '
             'Please try again or contact your cooperative administrator.';
       }
       setState(() {
@@ -160,8 +163,8 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
       builder: (context, auth) {
         final bankSubtitleExtra = _payMethod == _PayMethod.wallet
             ? (_loadingCashRepos
-                ? 'Loading cooperative accounts…'
-                : (_cashRepoError ?? ''))
+                  ? 'Loading cooperative accounts…'
+                  : (_cashRepoError ?? ''))
             : '';
 
         return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -186,8 +189,7 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
               centerTitle: true,
             ),
             body: SingleChildScrollView(
-              padding:
-                  EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -198,7 +200,7 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
                   Text(
                     'Suggested: ${widget.loan.monthlyRepaymentLabel}',
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       color: Colors.grey.shade600,
                     ),
                   ),
@@ -206,7 +208,7 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
                   Text(
                     'Repayment Source',
                     style: TextStyle(
-                      fontSize: 17.sp,
+                      fontSize: 19.sp,
                       fontWeight: FontWeight.w700,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
@@ -216,7 +218,7 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
                     Text(
                       bankSubtitleExtra,
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 16.sp,
                         color: Colors.grey.shade600,
                       ),
                     ),
@@ -231,7 +233,7 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
                       Text(
                         'Cooperative account',
                         style: TextStyle(
-                          fontSize: 15.sp,
+                          fontSize: 17.sp,
                           fontWeight: FontWeight.w600,
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
@@ -243,7 +245,8 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
                           color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(14.r),
                           border: Border.all(
-                              color: Theme.of(context).dividerColor),
+                            color: Theme.of(context).dividerColor,
+                          ),
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<CooperativeCashBankAccount>(
@@ -271,7 +274,9 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
                       Text(
                         'Paying into: ${_cashRepos.first.accountName} • ${_cashRepos.first.accountNumber}',
                         style: TextStyle(
-                            fontSize: 15.sp, color: Colors.grey.shade700),
+                          fontSize: 17.sp,
+                          color: Colors.grey.shade700,
+                        ),
                       ),
                     ],
                   ] else ...[
@@ -281,7 +286,7 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
                   Text(
                     'Narration (Optional)',
                     style: TextStyle(
-                      fontSize: 17.sp,
+                      fontSize: 19.sp,
                       fontWeight: FontWeight.w700,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
@@ -306,7 +311,7 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
                   child: Text(
                     'Continue',
                     style: TextStyle(
-                      fontSize: 17.sp,
+                      fontSize: 19.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
@@ -340,7 +345,7 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
         children: [
           Text(
             'Repaying',
-            style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade500),
+            style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade500),
           ),
           vSpace(6),
           Text(
@@ -354,7 +359,7 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
           if (widget.loan.referenceId.isNotEmpty)
             Text(
               'Ref: ${widget.loan.referenceId}',
-              style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
             ),
           vSpace(16),
           Divider(color: Theme.of(context).dividerColor),
@@ -392,7 +397,7 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
         Text(
           'Amount to Repay',
           style: TextStyle(
-            fontSize: 17.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w700,
             color: Theme.of(context).colorScheme.onSurface,
           ),
@@ -400,8 +405,7 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
         vSpace(10),
         TextField(
           controller: _amountController,
-          keyboardType:
-              TextInputType.numberWithOptions(decimal: allowDecimal),
+          keyboardType: TextInputType.numberWithOptions(decimal: allowDecimal),
           inputFormatters: [
             FilteringTextInputFormatter.allow(
               RegExp('[0-9$decimalSeparators]'),
@@ -414,8 +418,7 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
               currency,
             ).toMajorString(),
             filled: true,
-            fillColor:
-                Theme.of(context).colorScheme.surfaceContainerHighest,
+            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16.r),
               borderSide: BorderSide(color: Theme.of(context).dividerColor),
@@ -465,8 +468,10 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
 
   Widget _buildNipTransferInfo(AuthState auth) {
     final walletLine = auth is AuthAuthenticated
-        ? Money(auth.user.walletBalanceKobo, resolveCurrencyCode(auth.user))
-            .format()
+        ? Money(
+            auth.user.walletBalanceKobo,
+            resolveCurrencyCode(auth.user),
+          ).format()
         : '—';
     final hasRepo = _cashRepos.isNotEmpty;
     return Container(
@@ -510,7 +515,7 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
                 Text(
                   'Transfer (NIP)',
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
@@ -521,18 +526,17 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
                       ? 'Repayment is sent from your Communal account to your cooperative\'s bank account. Anchor settles this as an outbound NIP transfer.'
                       : 'Your cooperative has not published an active bank account to receive this repayment yet.',
                   style: TextStyle(
-                    fontSize: 15.sp,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
+                    fontSize: 17.sp,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
                 vSpace(6),
                 Text(
                   'Available in Communal: $walletLine',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
@@ -570,7 +574,8 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
       return _PickerCard.message(
         icon: Iconsax.info_circle,
         title: 'No eligible obligations',
-        body: 'You need a non-equity obligation with a contributed '
+        body:
+            'You need a non-equity obligation with a contributed '
             'balance to fund this repayment. Equity contributions cannot '
             'be used to repay a loan.',
         accent: Colors.grey.shade700,
@@ -588,7 +593,8 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
           for (var i = 0; i < _sourceObligations.length; i++) ...[
             _SourceObligationTile(
               obligation: _sourceObligations[i],
-              selected: _selectedSourceObligation?.accountCode ==
+              selected:
+                  _selectedSourceObligation?.accountCode ==
                   _sourceObligations[i].accountCode,
               onTap: () => setState(
                 () => _selectedSourceObligation = _sourceObligations[i],
@@ -622,14 +628,13 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
               hintText: 'Add a note for this repayment...',
               counterText: '',
             ),
-            style: TextStyle(fontSize: 15.sp),
+            style: TextStyle(fontSize: 17.sp),
           ),
           Align(
             alignment: Alignment.centerRight,
             child: Text(
               '${_noteController.text.length}/$_noteLimit',
-              style:
-                  TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade600),
             ),
           ),
         ],
@@ -663,9 +668,7 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
       final source = _selectedSourceObligation;
       if (source == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Select an obligation to repay from.'),
-          ),
+          const SnackBar(content: Text('Select an obligation to repay from.')),
         );
         return;
       }
@@ -791,7 +794,7 @@ class _MethodChip extends StatelessWidget {
                   Text(
                     label,
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w700,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
@@ -799,11 +802,10 @@ class _MethodChip extends StatelessWidget {
                   Text(
                     sublabel,
                     style: TextStyle(
-                      fontSize: 14.sp,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
+                      fontSize: 16.sp,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -867,7 +869,7 @@ class _SourceObligationTile extends StatelessWidget {
                   Text(
                     obligation.title,
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w700,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
@@ -876,11 +878,10 @@ class _SourceObligationTile extends StatelessWidget {
                   Text(
                     '${obligation.category} • Available ${obligation.paidAmountLabel}',
                     style: TextStyle(
-                      fontSize: 14.sp,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.7),
+                      fontSize: 16.sp,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -945,7 +946,7 @@ class _PickerCard extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
@@ -954,17 +955,13 @@ class _PickerCard extends StatelessWidget {
                 Text(
                   body,
                   style: TextStyle(
-                    fontSize: 14.sp,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
+                    fontSize: 16.sp,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
-                if (action != null) ...[
-                  vSpace(6),
-                  action!,
-                ],
+                if (action != null) ...[vSpace(6), action!],
               ],
             ),
           ),
@@ -987,20 +984,21 @@ class _MetricBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final alignment =
-        alignRight ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final alignment = alignRight
+        ? CrossAxisAlignment.end
+        : CrossAxisAlignment.start;
     return Column(
       crossAxisAlignment: alignment,
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
         ),
         vSpace(4),
         Text(
           value,
           style: TextStyle(
-            fontSize: 17.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w700,
             color: Theme.of(context).colorScheme.onSurface,
           ),

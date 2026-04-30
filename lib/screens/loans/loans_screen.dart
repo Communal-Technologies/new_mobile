@@ -218,7 +218,7 @@ class _LoansScreenState extends State<LoansScreen> {
           Text(
             'Outstanding Loan Balance',
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w600,
               color: Colors.white.withOpacity(0.9),
             ),
@@ -256,7 +256,7 @@ class _LoansScreenState extends State<LoansScreen> {
                     user.cooperativeDisplayName,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       color: Colors.white.withOpacity(0.9),
                     ),
                   ),
@@ -279,7 +279,7 @@ class _LoansScreenState extends State<LoansScreen> {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 14.sp,
+          fontSize: 16.sp,
           fontWeight: FontWeight.w600,
           color: Colors.white,
         ),
@@ -361,7 +361,7 @@ class _LoansScreenState extends State<LoansScreen> {
               label,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -421,7 +421,7 @@ class _LoansScreenState extends State<LoansScreen> {
               ),
               child: Text(
                 'View all',
-                style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w600),
               ),
             ),
           ],
@@ -432,7 +432,7 @@ class _LoansScreenState extends State<LoansScreen> {
             'No active or pending applications. Tap View all to see your '
             'declined / cancelled / closed history.',
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               color: Theme.of(
                 context,
               ).colorScheme.onSurface.withValues(alpha: 0.65),
@@ -520,7 +520,7 @@ class _LoansScreenState extends State<LoansScreen> {
           Expanded(
             child: Text(
               message,
-              style: TextStyle(fontSize: 15.sp, color: const Color(0xFFE74C3C)),
+              style: TextStyle(fontSize: 17.sp, color: const Color(0xFFE74C3C)),
             ),
           ),
           TextButton(onPressed: _load, child: const Text('Retry')),
@@ -555,7 +555,7 @@ class _LoansScreenState extends State<LoansScreen> {
           Text(
             title,
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -565,7 +565,7 @@ class _LoansScreenState extends State<LoansScreen> {
             subtitle,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 16.sp,
               color: Theme.of(
                 context,
               ).colorScheme.onSurface.withValues(alpha: 0.6),

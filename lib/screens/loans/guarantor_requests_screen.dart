@@ -119,10 +119,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
           centerTitle: true,
         ),
         body: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: _load,
-            child: _buildBody(),
-          ),
+          child: RefreshIndicator(onRefresh: _load, child: _buildBody()),
         ),
       ),
     );
@@ -137,23 +134,20 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
         padding: EdgeInsets.all(16.w),
         children: [
           vSpace(40),
-          Icon(Icons.error_outline,
-              size: 32.sp, color: const Color(0xFFE74C3C)),
+          Icon(
+            Icons.error_outline,
+            size: 32.sp,
+            color: const Color(0xFFE74C3C),
+          ),
           vSpace(8),
           Text(
             _error!,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 15.sp,
-              color: const Color(0xFFE74C3C),
-            ),
+            style: TextStyle(fontSize: 17.sp, color: const Color(0xFFE74C3C)),
           ),
           vSpace(12),
           Center(
-            child: TextButton(
-              onPressed: _load,
-              child: const Text('Try again'),
-            ),
+            child: TextButton(onPressed: _load, child: const Text('Try again')),
           ),
         ],
       );
@@ -163,14 +157,17 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
         padding: EdgeInsets.all(16.w),
         children: [
           vSpace(80),
-          Icon(Icons.handshake_outlined,
-              size: 48.sp, color: Colors.grey.shade400),
+          Icon(
+            Icons.handshake_outlined,
+            size: 48.sp,
+            color: Colors.grey.shade400,
+          ),
           vSpace(16),
           Text(
             'No guarantor requests',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -179,7 +176,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
           Text(
             'When a fellow member asks you to stand as guarantor for their loan, the request will show up here.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
           ),
         ],
       );
@@ -209,8 +206,11 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
               CircleAvatar(
                 radius: 20.r,
                 backgroundColor: const Color(0xFFEEE5FF),
-                child: Icon(Icons.person,
-                    size: 20.sp, color: const Color(0xFF7434FF)),
+                child: Icon(
+                  Icons.person,
+                  size: 20.sp,
+                  color: const Color(0xFF7434FF),
+                ),
               ),
               hSpace(12),
               Expanded(
@@ -222,7 +222,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
                           ? req.applicantName
                           : 'Member',
                       style: TextStyle(
-                        fontSize: 17.sp,
+                        fontSize: 19.sp,
                         fontWeight: FontWeight.w700,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
@@ -231,8 +231,10 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
                     Text(
                       'Asked you to guarantor • ${req.createdAtLabel}',
                       style: TextStyle(
-                        fontSize: 14.sp,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        fontSize: 16.sp,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -243,29 +245,33 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
           ),
           vSpace(12),
           Container(
-            padding:
-                EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
             decoration: BoxDecoration(
               color: Colors.grey.shade50,
               borderRadius: BorderRadius.circular(10.r),
             ),
             child: Row(
               children: [
-                Icon(Icons.attach_money,
-                    size: 16.sp, color: const Color(0xFF7434FF)),
+                Icon(
+                  Icons.attach_money,
+                  size: 16.sp,
+                  color: const Color(0xFF7434FF),
+                ),
                 hSpace(6),
                 Text(
                   'Loan amount',
                   style: TextStyle(
-                    fontSize: 14.sp,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    fontSize: 16.sp,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
                 const Spacer(),
                 Text(
                   req.amountLabel,
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
@@ -279,8 +285,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed:
-                        processing ? null : () => _respond(req, false),
+                    onPressed: processing ? null : () => _respond(req, false),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Color(0xFFE74C3C)),
                       shape: RoundedRectangleBorder(
@@ -291,7 +296,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
                     child: Text(
                       'Decline',
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFFE74C3C),
                       ),
@@ -324,7 +329,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
                         : Text(
                             'Accept',
                             style: TextStyle(
-                              fontSize: 15.sp,
+                              fontSize: 17.sp,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -360,7 +365,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
       child: Text(
         req.statusLabel,
         style: TextStyle(
-          fontSize: 14.sp,
+          fontSize: 16.sp,
           fontWeight: FontWeight.w700,
           color: fg,
         ),

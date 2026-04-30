@@ -141,8 +141,10 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
       // small inline note — don't block the screen.
       setState(() {
         _loadingSchemes = false;
-        _schemesError =
-            e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '').trim();
+        _schemesError = e
+            .toString()
+            .replaceFirst(RegExp(r'^Exception:\s*'), '')
+            .trim();
       });
     }
   }
@@ -155,9 +157,8 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
     if (_loanDuration == 0) return 0;
     final monthlyRate = _interestRate / 100 / 12;
     if (monthlyRate == 0) return _loanAmount / _loanDuration;
-    final numerator = _loanAmount *
-        monthlyRate *
-        math.pow(1 + monthlyRate, _loanDuration);
+    final numerator =
+        _loanAmount * monthlyRate * math.pow(1 + monthlyRate, _loanDuration);
     final denominator = math.pow(1 + monthlyRate, _loanDuration) - 1;
     return numerator / denominator;
   }
@@ -167,12 +168,14 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
   double get _totalInterest => _totalRepayment - _loanAmount;
   int get _numberOfInstallments => _loanDuration;
 
-  DateTime get _firstPaymentDate =>
-      DateTime.now().add(const Duration(days: 7));
+  DateTime get _firstPaymentDate => DateTime.now().add(const Duration(days: 7));
   DateTime get _finalPaymentDate {
     final firstDate = _firstPaymentDate;
     return DateTime(
-        firstDate.year, firstDate.month + _loanDuration, firstDate.day);
+      firstDate.year,
+      firstDate.month + _loanDuration,
+      firstDate.day,
+    );
   }
 
   String _formatCurrency(double amount) {
@@ -206,8 +209,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
         body: _loadingSchemes
             ? const LoaderOverlay()
             : SingleChildScrollView(
-                padding:
-                    EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -264,11 +266,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.info_outline,
-            color: const Color(0xFF1976D2),
-            size: 24.sp,
-          ),
+          Icon(Icons.info_outline, color: const Color(0xFF1976D2), size: 24.sp),
           hSpace(12),
           Expanded(
             child: Column(
@@ -277,7 +275,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                 Text(
                   'Calculate Your Loan',
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
@@ -288,11 +286,10 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                       ? 'Pick one of your cooperative\'s loan products and adjust the amount to see your estimated repayment.'
                       : 'Adjust the loan amount and duration to see your estimated monthly payments and total repayment.',
                   style: TextStyle(
-                    fontSize: 15.sp,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
+                    fontSize: 17.sp,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -310,7 +307,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
         Text(
           'Loan Product',
           style: TextStyle(
-            fontSize: 17.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w700,
             color: Theme.of(context).colorScheme.onSurface,
           ),
@@ -362,11 +359,10 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
               'These are sample ranges — your actual rate and limits '
               'will come from your cooperative.',
               style: TextStyle(
-                fontSize: 14.sp,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.75),
+                fontSize: 16.sp,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.75),
               ),
             ),
           ),
@@ -384,23 +380,20 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
       ),
       child: Row(
         children: [
-          Icon(Icons.warning_amber_rounded,
-              color: const Color(0xFFE74C3C), size: 18.sp),
+          Icon(
+            Icons.warning_amber_rounded,
+            color: const Color(0xFFE74C3C),
+            size: 18.sp,
+          ),
           hSpace(8),
           Expanded(
             child: Text(
               'Could not load loan products. Showing sample ranges. '
               '${_schemesError ?? ''}',
-              style: TextStyle(
-                fontSize: 14.sp,
-                color: const Color(0xFFE74C3C),
-              ),
+              style: TextStyle(fontSize: 16.sp, color: const Color(0xFFE74C3C)),
             ),
           ),
-          TextButton(
-            onPressed: _loadSchemes,
-            child: const Text('Retry'),
-          ),
+          TextButton(onPressed: _loadSchemes, child: const Text('Retry')),
         ],
       ),
     );
@@ -413,7 +406,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
         Text(
           'Loan Amount',
           style: TextStyle(
-            fontSize: 17.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w600,
             color: Theme.of(context).colorScheme.onSurface,
           ),
@@ -427,10 +420,8 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                   activeTrackColor: _kLoanOrange,
                   inactiveTrackColor: Theme.of(context).dividerColor,
                   thumbColor: Theme.of(context).colorScheme.surface,
-                  thumbShape:
-                      RoundSliderThumbShape(enabledThumbRadius: 10.r),
-                  overlayShape:
-                      RoundSliderOverlayShape(overlayRadius: 20.r),
+                  thumbShape: RoundSliderThumbShape(enabledThumbRadius: 10.r),
+                  overlayShape: RoundSliderOverlayShape(overlayRadius: 20.r),
                   trackHeight: 4.h,
                 ),
                 child: Slider(
@@ -450,7 +441,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
             Text(
               _formatCurrency(_loanAmount),
               style: TextStyle(
-                fontSize: 17.sp,
+                fontSize: 19.sp,
                 fontWeight: FontWeight.w700,
                 color: _kLoanOrange,
               ),
@@ -464,21 +455,19 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
             Text(
               _formatCurrency(_minAmount),
               style: TextStyle(
-                fontSize: 14.sp,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
+                fontSize: 16.sp,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
             Text(
               _formatCurrency(_maxAmount),
               style: TextStyle(
-                fontSize: 14.sp,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
+                fontSize: 16.sp,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -497,7 +486,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
             Text(
               'Loan Duration',
               style: TextStyle(
-                fontSize: 17.sp,
+                fontSize: 19.sp,
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -505,8 +494,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
             if (locked) ...[
               hSpace(8),
               Container(
-                padding:
-                    EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
                 decoration: BoxDecoration(
                   color: _kLoanOrange.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8.r),
@@ -532,16 +520,15 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                   activeTrackColor: _kLoanOrange,
                   inactiveTrackColor: Theme.of(context).dividerColor,
                   thumbColor: Theme.of(context).colorScheme.surface,
-                  thumbShape:
-                      RoundSliderThumbShape(enabledThumbRadius: 10.r),
-                  overlayShape:
-                      RoundSliderOverlayShape(overlayRadius: 20.r),
+                  thumbShape: RoundSliderThumbShape(enabledThumbRadius: 10.r),
+                  overlayShape: RoundSliderOverlayShape(overlayRadius: 20.r),
                   trackHeight: 4.h,
                 ),
                 child: Slider(
-                  value: _loanDuration
-                      .toDouble()
-                      .clamp(_minDuration.toDouble(), _maxDuration.toDouble()),
+                  value: _loanDuration.toDouble().clamp(
+                    _minDuration.toDouble(),
+                    _maxDuration.toDouble(),
+                  ),
                   min: _minDuration.toDouble(),
                   max: _maxDuration.toDouble(),
                   divisions: math.max(1, _maxDuration - _minDuration),
@@ -559,7 +546,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
             Text(
               '$_loanDuration months',
               style: TextStyle(
-                fontSize: 17.sp,
+                fontSize: 19.sp,
                 fontWeight: FontWeight.w700,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -573,21 +560,19 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
             Text(
               '$_minDuration months',
               style: TextStyle(
-                fontSize: 14.sp,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
+                fontSize: 16.sp,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
             Text(
               '$_maxDuration months',
               style: TextStyle(
-                fontSize: 14.sp,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
+                fontSize: 16.sp,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -606,11 +591,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.trending_up,
-            color: _kLoanOrange,
-            size: 24.sp,
-          ),
+          Icon(Icons.trending_up, color: _kLoanOrange, size: 24.sp),
           hSpace(12),
           Expanded(
             child: Column(
@@ -619,18 +600,17 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                 Text(
                   'Interest Rate',
                   style: TextStyle(
-                    fontSize: 15.sp,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
+                    fontSize: 17.sp,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
                 vSpace(4),
                 Text(
                   _formatRate(_interestRate),
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
@@ -641,11 +621,10 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                       ? 'From "${scheme.title.isNotEmpty ? scheme.title : scheme.loanCode}"'
                       : 'Sample rate — your cooperative\'s actual rate may differ',
                   style: TextStyle(
-                    fontSize: 14.sp,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
+                    fontSize: 16.sp,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -659,22 +638,20 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
   Widget _buildServiceChargeRow() {
     return Row(
       children: [
-        Icon(Icons.receipt_long_outlined,
-            size: 18.sp,
-            color: Theme.of(context)
-                .colorScheme
-                .onSurface
-                .withValues(alpha: 0.7)),
+        Icon(
+          Icons.receipt_long_outlined,
+          size: 18.sp,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+        ),
         hSpace(8),
         Expanded(
           child: Text(
             'Service charge: ${_formatCurrency(_serviceChargeMajor)} (one-off, added to total)',
             style: TextStyle(
-              fontSize: 14.sp,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.75),
+              fontSize: 16.sp,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.75),
             ),
           ),
         ),
@@ -699,16 +676,12 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.calculate_outlined,
-                color: Colors.white,
-                size: 24.sp,
-              ),
+              Icon(Icons.calculate_outlined, color: Colors.white, size: 24.sp),
               hSpace(8),
               Text(
                 'Repayment Summary',
                 style: TextStyle(
-                  fontSize: 17.sp,
+                  fontSize: 19.sp,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
                 ),
@@ -728,15 +701,12 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
           Text(
             'in $_numberOfInstallments installments',
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
           vSpace(20),
-          Container(
-            height: 1,
-            color: Colors.white.withValues(alpha: 0.3),
-          ),
+          Container(height: 1, color: Colors.white.withValues(alpha: 0.3)),
           vSpace(16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -748,7 +718,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                     Text(
                       'Total Repayment',
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 17.sp,
                         color: Colors.white.withValues(alpha: 0.9),
                       ),
                     ),
@@ -771,7 +741,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                     Text(
                       'Total Interest',
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 17.sp,
                         color: Colors.white.withValues(alpha: 0.9),
                       ),
                     ),
@@ -801,14 +771,16 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
         Text(
           'Payment Breakdown',
           style: TextStyle(
-            fontSize: 17.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w700,
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         vSpace(16),
         _buildBreakdownRow(
-            'Number of Payments', '$_numberOfInstallments months'),
+          'Number of Payments',
+          '$_numberOfInstallments months',
+        ),
         vSpace(12),
         _buildBreakdownRow('Payment Frequency', 'Monthly'),
         vSpace(12),
@@ -832,17 +804,16 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
         Text(
           label,
           style: TextStyle(
-            fontSize: 15.sp,
-            color: Theme.of(context)
-                .colorScheme
-                .onSurface
-                .withValues(alpha: 0.7),
+            fontSize: 17.sp,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
         Text(
           value,
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w600,
             color: Theme.of(context).colorScheme.onSurface,
           ),
@@ -852,9 +823,14 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
   }
 
   Widget _buildQuickAmountsSection() {
-    final amounts = [100000, 250000, 500000, 750000, 1000000, 1500000]
-        .where((a) => a >= _minAmount && a <= _maxAmount)
-        .toList();
+    final amounts = [
+      100000,
+      250000,
+      500000,
+      750000,
+      1000000,
+      1500000,
+    ].where((a) => a >= _minAmount && a <= _maxAmount).toList();
     if (amounts.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -863,7 +839,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
         Text(
           'Quick Amounts',
           style: TextStyle(
-            fontSize: 17.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w700,
             color: Theme.of(context).colorScheme.onSurface,
           ),
@@ -905,7 +881,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                   child: Text(
                     _formatCurrency(amount.toDouble()),
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w600,
                       color: isSelected
                           ? Colors.white
@@ -926,11 +902,14 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () {
-          context.pushNamed('loan-application', extra: {
-            'amount': _loanAmount,
-            'duration': _loanDuration,
-            if (_selectedScheme != null) 'scheme': _selectedScheme,
-          });
+          context.pushNamed(
+            'loan-application',
+            extra: {
+              'amount': _loanAmount,
+              'duration': _loanDuration,
+              if (_selectedScheme != null) 'scheme': _selectedScheme,
+            },
+          );
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: _kLoanOrange,
@@ -946,10 +925,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
           children: [
             Text(
               'Proceed to Application',
-              style: TextStyle(
-                fontSize: 17.sp,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(fontSize: 19.sp, fontWeight: FontWeight.w700),
             ),
             hSpace(8),
             const Icon(Icons.arrow_forward, size: 20),
@@ -976,7 +952,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
           Text(
             'Note:',
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -985,11 +961,10 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
           Text(
             'This is an estimated calculation. Final loan terms will be determined by your cooperative and may vary based on your eligibility score and membership history.',
             style: TextStyle(
-              fontSize: 14.sp,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.7),
+              fontSize: 16.sp,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
               height: 1.4,
             ),
           ),
@@ -1036,18 +1011,16 @@ class _SchemeChip extends StatelessWidget {
             Text(
               scheme.title.isNotEmpty ? scheme.title : scheme.loanCode,
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w700,
-                color: selected
-                    ? Colors.white
-                    : theme.colorScheme.onSurface,
+                color: selected ? Colors.white : theme.colorScheme.onSurface,
               ),
             ),
             vSpace(2),
             Text(
               '${scheme.interestRateLabel} • ${scheme.durationLabel}',
               style: TextStyle(
-                fontSize: 13.sp,
+                fontSize: 15.sp,
                 color: selected
                     ? Colors.white.withValues(alpha: 0.9)
                     : theme.colorScheme.onSurface.withValues(alpha: 0.7),

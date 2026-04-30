@@ -115,7 +115,9 @@ class _LoanApplicationStep2ScreenState
       if (_searchController.text.trim() != q) return;
       setState(() {
         _results = list
-            .where((m) => !_selected.any((s) => s.ledgerNumber == m.ledgerNumber))
+            .where(
+              (m) => !_selected.any((s) => s.ledgerNumber == m.ledgerNumber),
+            )
             .toList(growable: false);
         _searching = false;
         _searchError = null;
@@ -201,10 +203,7 @@ class _LoanApplicationStep2ScreenState
         padding: EdgeInsets.all(12.w),
         child: Text(
           _searchError!,
-          style: TextStyle(
-            fontSize: 15.sp,
-            color: const Color(0xFFE74C3C),
-          ),
+          style: TextStyle(fontSize: 17.sp, color: const Color(0xFFE74C3C)),
         ),
       );
     } else if (_results.isEmpty) {
@@ -212,7 +211,7 @@ class _LoanApplicationStep2ScreenState
         padding: EdgeInsets.all(12.w),
         child: Text(
           'No matching members in your cooperative',
-          style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade700),
+          style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade700),
         ),
       );
     } else {
@@ -237,7 +236,7 @@ class _LoanApplicationStep2ScreenState
                       child: Text(
                         m.initials,
                         style: TextStyle(
-                          fontSize: 14.sp,
+                          fontSize: 16.sp,
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFFE67E22),
                         ),
@@ -253,7 +252,7 @@ class _LoanApplicationStep2ScreenState
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 15.sp,
+                              fontSize: 17.sp,
                               fontWeight: FontWeight.w600,
                               color: Theme.of(context).colorScheme.onSurface,
                             ),
@@ -262,15 +261,20 @@ class _LoanApplicationStep2ScreenState
                           Text(
                             m.ledgerNumber,
                             style: TextStyle(
-                              fontSize: 14.sp,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              fontSize: 16.sp,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    Icon(Icons.add_circle_outline,
-                        size: 18.sp, color: const Color(0xFFE67E22)),
+                    Icon(
+                      Icons.add_circle_outline,
+                      size: 18.sp,
+                      color: const Color(0xFFE67E22),
+                    ),
                   ],
                 ),
               ),
@@ -321,7 +325,7 @@ class _LoanApplicationStep2ScreenState
                 child: Text(
                   'Step 2 of 3',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFFE67E22),
                   ),
@@ -340,7 +344,9 @@ class _LoanApplicationStep2ScreenState
                 },
                 child: SingleChildScrollView(
                   padding: EdgeInsets.symmetric(
-                      horizontal: 16.w, vertical: 16.h),
+                    horizontal: 16.w,
+                    vertical: 16.h,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -391,7 +397,7 @@ class _LoanApplicationStep2ScreenState
           child: Text(
             'Choose Guarantors',
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w600,
               color: const Color(0xFFE67E22),
             ),
@@ -453,7 +459,7 @@ class _LoanApplicationStep2ScreenState
                       ? 'No guarantors required'
                       : 'Select $n guarantor${n == 1 ? '' : 's'}',
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
@@ -464,8 +470,10 @@ class _LoanApplicationStep2ScreenState
                       ? 'This product is unsecured. You can continue.'
                       : 'Search by name or ledger number — only members of your cooperative show up.',
                   style: TextStyle(
-                    fontSize: 15.sp,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    fontSize: 17.sp,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -486,7 +494,10 @@ class _LoanApplicationStep2ScreenState
       ),
       child: Text(
         'This loan product does not require any guarantors. Tap Continue to review.',
-        style: TextStyle(fontSize: 15.sp, color: Theme.of(context).colorScheme.onSurface),
+        style: TextStyle(
+          fontSize: 17.sp,
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
       ),
     );
   }
@@ -500,12 +511,15 @@ class _LoanApplicationStep2ScreenState
         controller: _searchController,
         focusNode: _searchFocus,
         enabled: !disabled,
-        style: TextStyle(fontSize: 15.sp, color: Theme.of(context).colorScheme.onSurface),
+        style: TextStyle(
+          fontSize: 17.sp,
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
         decoration: InputDecoration(
           hintText: disabled
               ? 'All guarantors picked'
               : 'Search by name or ledger number',
-          hintStyle: TextStyle(fontSize: 15.sp, color: Colors.grey.shade500),
+          hintStyle: TextStyle(fontSize: 17.sp, color: Colors.grey.shade500),
           prefixIcon: const Icon(Icons.search, color: Color(0xFFE67E22)),
           suffixIcon: _searchController.text.isEmpty
               ? null
@@ -530,8 +544,10 @@ class _LoanApplicationStep2ScreenState
             borderRadius: BorderRadius.circular(12.r),
             borderSide: const BorderSide(color: Color(0xFFE67E22), width: 2),
           ),
-          contentPadding:
-              EdgeInsets.symmetric(horizontal: 12.w, vertical: 14.h),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 12.w,
+            vertical: 14.h,
+          ),
         ),
       ),
     );
@@ -543,7 +559,7 @@ class _LoanApplicationStep2ScreenState
         padding: EdgeInsets.symmetric(vertical: 16.h),
         child: Text(
           'No guarantors selected yet — pick ${_required - _selected.length} to continue.',
-          style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
         ),
       );
     }
@@ -553,7 +569,7 @@ class _LoanApplicationStep2ScreenState
         Text(
           'Selected (${_selected.length}/$_required)',
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w700,
             color: Theme.of(context).colorScheme.onSurface,
           ),
@@ -562,8 +578,7 @@ class _LoanApplicationStep2ScreenState
         ..._selected.map(
           (m) => Container(
             margin: EdgeInsets.only(bottom: 8.h),
-            padding:
-                EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
             decoration: BoxDecoration(
               color: const Color(0xFFFFF4E9),
               borderRadius: BorderRadius.circular(12.r),
@@ -579,7 +594,7 @@ class _LoanApplicationStep2ScreenState
                   child: Text(
                     m.initials,
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
@@ -595,7 +610,7 @@ class _LoanApplicationStep2ScreenState
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 15.sp,
+                          fontSize: 17.sp,
                           fontWeight: FontWeight.w700,
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
@@ -604,8 +619,10 @@ class _LoanApplicationStep2ScreenState
                       Text(
                         m.ledgerNumber,
                         style: TextStyle(
-                          fontSize: 14.sp,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          fontSize: 16.sp,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
                     ],
@@ -633,16 +650,12 @@ class _LoanApplicationStep2ScreenState
       ),
       child: Row(
         children: [
-          Icon(Icons.info_outline,
-              color: const Color(0xFF4CAF50), size: 20.sp),
+          Icon(Icons.info_outline, color: const Color(0xFF4CAF50), size: 20.sp),
           hSpace(12),
           Expanded(
             child: Text(
               'Your guarantor${_required == 1 ? '' : 's'} will be notified to approve your loan request.',
-              style: TextStyle(
-                fontSize: 15.sp,
-                color: const Color(0xFF2E7D32),
-              ),
+              style: TextStyle(fontSize: 17.sp, color: const Color(0xFF2E7D32)),
             ),
           ),
         ],
@@ -670,7 +683,7 @@ class _LoanApplicationStep2ScreenState
             child: Text(
               'Back',
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -703,7 +716,7 @@ class _LoanApplicationStep2ScreenState
             ),
             child: Text(
               'Continue',
-              style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w700),
+              style: TextStyle(fontSize: 19.sp, fontWeight: FontWeight.w700),
             ),
           ),
         ),

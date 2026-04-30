@@ -154,7 +154,7 @@ class _LoansHistoryScreenState extends State<LoansHistoryScreen> {
             Text(
               status.label,
               style: TextStyle(
-                fontSize: 17.sp,
+                fontSize: 19.sp,
                 fontWeight: FontWeight.w700,
                 color: theme.colorScheme.onSurface,
               ),
@@ -169,7 +169,7 @@ class _LoansHistoryScreenState extends State<LoansHistoryScreen> {
               child: Text(
                 '${group.length}',
                 style: TextStyle(
-                  fontSize: 13.sp,
+                  fontSize: 15.sp,
                   fontWeight: FontWeight.w600,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
                 ),
@@ -225,7 +225,7 @@ class _LoansHistoryScreenState extends State<LoansHistoryScreen> {
           'up here with their current status.',
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),

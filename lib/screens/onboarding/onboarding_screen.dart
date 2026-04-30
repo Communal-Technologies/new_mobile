@@ -219,13 +219,13 @@ class OnboardingPage extends StatelessWidget {
           if (index == 2)
             Positioned(
               top: 158,
-              left: 0,
+              left: -22,
               child: Image.asset(Images.cake, width: 70, height: 52),
             ),
-          if (index == 2)
+            if (index == 2)
             Positioned(
-              bottom: 0,
-              right: 0,
+              bottom: -16,
+              right: -22,
               child: Image.asset(Images.cake, width: 70, height: 52),
             ),
         ],

@@ -756,7 +756,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
         // and tints the loader GIF white when the active theme is
         // dark.
         if (_isLoading)
-          const Positioned.fill(child: LoaderOverlay(loaderSize: 84)),
+          const Positioned.fill(child: LoaderOverlay()),
       ],
     );
   }

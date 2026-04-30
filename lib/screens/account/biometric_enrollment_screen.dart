@@ -91,6 +91,36 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
     final authSnapshot = context.read<AuthBloc>().state;
     final result = await _showConfirmModal(enabling: nextValue);
     if (result != true) return;
+
+    // When ENABLING: require an actual successful biometric scan
+    // before flipping the toggle. Otherwise the keypair is generated
+    // and the toggle reads "on" without proving the person at the
+    // device is the account holder — anyone with the unlocked phone
+    // could enable transfer-grade auth on the user's account.
+    // (Disabling stays unguarded: a user revoking their own access
+    // shouldn't be blocked by a failing scanner.)
+    if (nextValue) {
+      final auth = LocalAuthentication();
+      try {
+        final didAuth = await auth.authenticate(
+          localizedReason:
+              'Verify your biometrics to enable biometric authentication',
+          options: const AuthenticationOptions(
+            biometricOnly: true,
+            stickyAuth: true,
+          ),
+        );
+        if (!didAuth) return; // user cancelled / failed scan
+      } catch (e) {
+        if (!mounted) return;
+        _showSnack(
+          'Could not verify biometrics: '
+          '${e.toString().replaceFirst('Exception: ', '')}',
+        );
+        return;
+      }
+    }
+
     setState(() => _busy = true);
     try {
       if (nextValue) {

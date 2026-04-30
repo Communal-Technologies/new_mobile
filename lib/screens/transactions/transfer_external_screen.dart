@@ -57,6 +57,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
   TransferBank? _selectedBank;
   TransferFavorite? _verifiedRecipient;
   bool _loadingBanks = false;
+  String? _banksError;
   bool _loadingSuggestions = false;
   bool _verifying = false;
   bool _saveAsFavorite = false;
@@ -103,10 +104,13 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     super.dispose();
   }
 
-  Future<void> _loadBanks() async {
-    setState(() => _loadingBanks = true);
+  Future<void> _loadBanks({bool forceRefresh = false}) async {
+    setState(() {
+      _loadingBanks = true;
+      _banksError = null;
+    });
     try {
-      final rows = await _repo.fetchBanks();
+      final rows = await _repo.fetchBanks(forceRefresh: forceRefresh);
       if (!mounted) return;
       setState(() {
         _banks = rows;
@@ -114,8 +118,11 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
           _selectedBank ??= _matchBankByNip(widget.initialRecipient!.nipCode);
         }
       });
-    } catch (_) {
-      if (mounted) setState(() {});
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _banksError = e.toString().replaceFirst('Exception: ', '');
+      });
     } finally {
       if (mounted) setState(() => _loadingBanks = false);
     }
@@ -595,6 +602,55 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                           ),
                         ),
                         vSpace(6),
+                        if (_banksError != null) ...[
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 12.w,
+                              vertical: 10.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFEEF0),
+                              borderRadius: BorderRadius.circular(10.r),
+                              border: Border.all(
+                                color: const Color(0xFFD7263D)
+                                    .withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.error_outline,
+                                  color: Color(0xFFD7263D),
+                                  size: 18,
+                                ),
+                                hSpace(8),
+                                Expanded(
+                                  child: Text(
+                                    _banksError!,
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      color: const Color(0xFFD7263D),
+                                    ),
+                                  ),
+                                ),
+                                hSpace(8),
+                                GestureDetector(
+                                  onTap: () =>
+                                      _loadBanks(forceRefresh: true),
+                                  child: Text(
+                                    'Retry',
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFFD7263D),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          vSpace(8),
+                        ],
                         InkWell(
                           onTap: _loadingBanks ? null : _openBankPicker,
                           borderRadius: BorderRadius.circular(12.r),

@@ -210,7 +210,24 @@ class TransferRepository {
 
   final DioClient _dioClient;
 
-  Future<List<TransferBank>> fetchBanks() async {
+  // In-memory cache for the bank list. Banks rarely change and the
+  // payload is the same for every user, so re-fetching on every
+  // external-transfer screen open just burns a network round-trip
+  // (and on a flaky link, leaves the picker empty). Cache lives for
+  // the lifetime of the singleton repository (which is app session)
+  // and is invalidated by passing forceRefresh: true.
+  static const Duration _bankCacheTtl = Duration(hours: 24);
+  List<TransferBank>? _cachedBanks;
+  DateTime? _cachedBanksAt;
+
+  Future<List<TransferBank>> fetchBanks({bool forceRefresh = false}) async {
+    if (!forceRefresh && _cachedBanks != null && _cachedBanksAt != null) {
+      final age = DateTime.now().difference(_cachedBanksAt!);
+      if (age < _bankCacheTtl) {
+        return _cachedBanks!;
+      }
+    }
+
     try {
       final response = await _dioClient.get(ApiEndpoints.transferBanks);
       final data = response.data;
@@ -219,12 +236,26 @@ class TransferRepository {
       }
       final raw = data['data'];
       if (raw is! List) return const [];
-      return raw
+      final parsed = raw
           .whereType<Map>()
           .map((e) => TransferBank.fromJson(Map<String, dynamic>.from(e)))
           .where((e) => e.name.trim().isNotEmpty && e.nipCode.trim().isNotEmpty)
           .toList(growable: false);
+      // Only overwrite the cache when the response actually contained
+      // banks; an empty response (transient backend hiccup) shouldn't
+      // poison a perfectly good cache from the previous fetch.
+      if (parsed.isNotEmpty) {
+        _cachedBanks = parsed;
+        _cachedBanksAt = DateTime.now();
+      }
+      return parsed;
     } on DioException catch (e) {
+      // Network/4xx/5xx — fall back to the cached list (if any) so
+      // the user can still pick a bank rather than seeing an empty
+      // picker. Throw only when there is nothing to show.
+      if (_cachedBanks != null && _cachedBanks!.isNotEmpty) {
+        return _cachedBanks!;
+      }
       throw Exception(_messageFromDio(e));
     }
   }

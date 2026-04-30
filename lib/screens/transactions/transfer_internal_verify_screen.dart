@@ -289,6 +289,8 @@ class _TransferInternalVerifyScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // Top block (header + recipient + amount). Fixed height
+              // — the rest of the screen flexes to it.
               Text(
                 'Enter Transaction PIN',
                 textAlign: TextAlign.center,
@@ -307,15 +309,23 @@ class _TransferInternalVerifyScreenState
               ),
               vSpace(12),
               _buildRecipientCard(),
-              vSpace(16),
+              vSpace(12),
               _buildAmountBanner(),
-              vSpace(20),
-              _buildPinDots(),
-              vSpace(16),
-              Expanded(child: _buildKeypad()),
+              // Middle block (PIN squares) sits in its own flex slot
+              // with the keypad so the two share the vertical space
+              // remaining below the cards instead of all clumping at
+              // the top with empty space below.
+              Expanded(
+                flex: 1,
+                child: Center(child: _buildPinSquares()),
+              ),
+              Expanded(
+                flex: 4,
+                child: _buildKeypad(),
+              ),
               if (_submitting)
                 Padding(
-                  padding: EdgeInsets.only(top: 8.h),
+                  padding: EdgeInsets.only(top: 6.h),
                   child: SizedBox(
                     width: 22.w,
                     height: 22.w,
@@ -415,54 +425,74 @@ class _TransferInternalVerifyScreenState
     );
   }
 
-  Widget _buildPinDots() {
-    final activeColor = Theme.of(context).primaryColor;
-    final inactiveColor = Theme.of(context).dividerColor;
+  Widget _buildPinSquares() {
+    final theme = Theme.of(context);
+    final activeColor = theme.primaryColor;
+    final inactiveColor = theme.dividerColor;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(_pinLength, (i) {
         final filled = i < _pin.length;
         return Container(
-          margin: EdgeInsets.symmetric(horizontal: 8.w),
-          width: 14.w,
-          height: 14.w,
+          margin: EdgeInsets.symmetric(horizontal: 6.w),
+          width: 52.w,
+          height: 52.w,
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: filled ? activeColor : Colors.transparent,
+            color: filled
+                ? activeColor.withValues(alpha: 0.08)
+                : Colors.transparent,
             border: Border.all(
               color: filled ? activeColor : inactiveColor,
-              width: 1.5,
+              width: filled ? 2.0 : 1.5,
             ),
+            borderRadius: BorderRadius.circular(10.r),
           ),
+          child: filled
+              ? Center(
+                  child: Container(
+                    width: 12.w,
+                    height: 12.w,
+                    decoration: BoxDecoration(
+                      color: activeColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                )
+              : null,
         );
       }),
     );
   }
 
   Widget _buildKeypad() {
-    // 4 rows × 3 cols. Bottom-left cell is the biometric shortcut so
-    // the shape matches every other transaction PIN screen the user
-    // has seen (1-9 across the top three rows, [bio] [0] [back]
-    // along the bottom).
-    return GridView.count(
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 3,
-      childAspectRatio: 1.6,
-      mainAxisSpacing: 6.h,
-      crossAxisSpacing: 6.w,
+    // Column of Expanded rows so the keypad fills whatever vertical
+    // slot the parent gives it (the previous GridView.count had a
+    // fixed childAspectRatio that left dead space below it on most
+    // device heights). Bottom-left cell is the biometric shortcut so
+    // the layout matches every other transaction PIN screen the user
+    // has seen (1-9 in the top three rows, [bio] [0] [back] across
+    // the bottom).
+    final rows = <List<Widget>>[
+      [_digit('1'), _digit('2'), _digit('3')],
+      [_digit('4'), _digit('5'), _digit('6')],
+      [_digit('7'), _digit('8'), _digit('9')],
+      [_biometricKey(), _digit('0'), _backspaceKey()],
+    ];
+    return Column(
       children: [
-        _digit('1'),
-        _digit('2'),
-        _digit('3'),
-        _digit('4'),
-        _digit('5'),
-        _digit('6'),
-        _digit('7'),
-        _digit('8'),
-        _digit('9'),
-        _biometricKey(),
-        _digit('0'),
-        _backspaceKey(),
+        for (int i = 0; i < rows.length; i++) ...[
+          if (i > 0) SizedBox(height: 4.h),
+          Expanded(
+            child: Row(
+              children: [
+                for (int j = 0; j < rows[i].length; j++) ...[
+                  if (j > 0) SizedBox(width: 4.w),
+                  Expanded(child: rows[i][j]),
+                ],
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }

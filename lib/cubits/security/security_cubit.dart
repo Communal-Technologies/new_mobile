@@ -272,13 +272,14 @@ class SecurityCubit extends Cubit<SecurityState> {
     final idleDuration = DateTime.now().difference(_lastActivityTime!);
     debugPrint('📊   Idle duration: ${idleDuration.inMinutes}m ${idleDuration.inSeconds % 60}s');
     
-    // After 2 minutes idle, lock the app
-    if (idleDuration.inMinutes >= 2) {
+    // After 5 minutes idle, lock the app
+    if (idleDuration.inMinutes >= 5) {
       debugPrint('📊   🔒 Locking app due to idle timeout (${idleDuration.inMinutes}m idle)');
       lockApp(isIdleTimeout: true);
     }
-    // After 1 minute idle, show prompt
-    else if (idleDuration.inMinutes >= 1 && !_isIdlePromptShown) {
+    // After 3 minutes idle, show the "are you still there?" prompt
+    // (gives the user 2 minutes to dismiss before the auto-lock above).
+    else if (idleDuration.inMinutes >= 3 && !_isIdlePromptShown) {
       debugPrint('📊   ⏰ Showing idle prompt (${idleDuration.inMinutes}m idle)');
       _isIdlePromptShown = true;
       emit(SecurityState.idlePrompt);

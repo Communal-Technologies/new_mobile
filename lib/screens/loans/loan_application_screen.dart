@@ -254,7 +254,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                       Text(
                         _error!,
                         style: TextStyle(
-                          fontSize: 15.sp,
+                          fontSize: 17.sp,
                           color: const Color(0xFFE74C3C),
                         ),
                       ),
@@ -292,7 +292,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             Text(
               'Loan Details',
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFFE67E22),
               ),
@@ -300,7 +300,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             Text(
               'Step 1 of 3',
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFFE67E22),
               ),
@@ -361,7 +361,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             Text(
               'No loan products available right now',
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
@@ -370,7 +370,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
               'Ask your cooperative admin to publish one.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 16.sp,
                 color: Theme.of(
                   context,
                 ).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -386,7 +386,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         Text(
           'Loan Product',
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w600,
             color: Theme.of(context).colorScheme.onSurface,
           ),
@@ -447,7 +447,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           Text(
             scheme.title.isNotEmpty ? scheme.title : scheme.loanCode,
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -479,7 +479,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 14.sp,
+          fontSize: 16.sp,
           fontWeight: FontWeight.w600,
           color: Theme.of(context).colorScheme.onSurface,
         ),
@@ -515,7 +515,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                         ? 'You don\'t qualify for a loan yet — your EPC holdings are below your cooperative\'s minimum loan amount.'
                         : 'Loan limits unavailable. Pull to refresh.'),
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 color: Theme.of(
                   context,
                 ).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -527,7 +527,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             children: [
               Text(
                 '$symbol${_formatNoDecimals(_minAmount)}',
-                style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
+                style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
               ),
               Expanded(
                 child: SliderTheme(
@@ -549,7 +549,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
               ),
               Text(
                 '$symbol${_formatNoDecimals(_maxAmount)}',
-                style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
+                style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
               ),
             ],
           ),
@@ -617,13 +617,13 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           vSpace(8),
           Text(
             'Minimum: $symbol${_formatNoDecimals(_minAmount)} | Maximum: $symbol${_formatNoDecimals(_maxAmount)}',
-            style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade600),
           ),
           vSpace(4),
           Text(
             _eligibility?.maxExplanation ??
                 'Your maximum is the sum of your EPC holdings with this cooperative.',
-            style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade500),
+            style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade500),
           ),
         ],
       ],
@@ -672,7 +672,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           Text(
             'Repayment Summary',
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: theme.colorScheme.onSurface,
             ),
@@ -694,7 +694,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           Text(
             'monthly · $installments $installmentLabel · ${scheme.interestRateLabel} interest',
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 16.sp,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
@@ -735,7 +735,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 16.sp,
               color: theme.colorScheme.onSurface.withValues(
                 alpha: emphasised ? 0.85 : 0.65,
               ),
@@ -747,7 +747,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         Text(
           value,
           style: TextStyle(
-            fontSize: emphasised ? 16.sp : 14.sp,
+            fontSize: emphasised ? 18.sp : 16.sp,
             fontWeight: emphasised ? FontWeight.w800 : FontWeight.w600,
             color: emphasised
                 ? const Color(0xFFE67E22)
@@ -790,7 +790,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           Text(
             'Interest treatment',
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onSurface,
             ),
@@ -799,7 +799,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           Text(
             'Your cooperative offers more than one option — pick the one you want.',
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: 15.sp,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
@@ -861,7 +861,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                   Text(
                     title,
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w700,
                       color: selected
                           ? const Color(0xFFE67E22)
@@ -873,7 +873,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                     Text(
                       note,
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 16.sp,
                         color: theme.colorScheme.onSurface.withValues(
                           alpha: 0.75,
                         ),
@@ -912,7 +912,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         Text(
           'Interest treatment',
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w600,
             color: theme.colorScheme.onSurface,
           ),
@@ -943,7 +943,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                     Text(
                       title,
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFFE67E22),
                       ),
@@ -952,7 +952,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                     Text(
                       note,
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 16.sp,
                         color: theme.colorScheme.onSurface.withValues(
                           alpha: 0.75,
                         ),
@@ -987,7 +987,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           textInputAction: TextInputAction.done,
           decoration: InputDecoration(
             hintText: 'e.g., upgrade my business, buy equipment',
-            hintStyle: TextStyle(fontSize: 15.sp, color: Colors.grey.shade400),
+            hintStyle: TextStyle(fontSize: 17.sp, color: Colors.grey.shade400),
             filled: true,
             fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
             border: OutlineInputBorder(
@@ -1008,7 +1008,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             ),
           ),
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
@@ -1055,7 +1055,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         ),
         child: Text(
           'Continue',
-          style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w700),
+          style: TextStyle(fontSize: 19.sp, fontWeight: FontWeight.w700),
         ),
       ),
     );

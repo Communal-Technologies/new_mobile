@@ -391,6 +391,7 @@ class TransferRepository {
     String? currencyCode,
     String? idempotencyKey,
     Map<String, String>? biometricHeaders,
+    String? pin,
   }) async {
     try {
       var ccy = (currencyCode ?? 'NGN').trim().toUpperCase();
@@ -406,11 +407,19 @@ class TransferRepository {
         if (counterPartyId != null && counterPartyId.trim().isNotEmpty)
           'counterPartyId': counterPartyId.trim(),
       };
+      // Caller must supply EITHER biometricHeaders OR pin. The backend
+      // middleware (RequireBiometricSignature) treats them as mutually
+      // exclusive: a partial biometric header set is rejected, and a
+      // missing-biometric request falls through to X-Security-Pin.
+      final headers = <String, String>{
+        if (biometricHeaders != null) ...biometricHeaders,
+        if (pin != null && pin.isNotEmpty) 'X-Security-Pin': pin,
+      };
       final response = await _dioClient.post(
         ApiEndpoints.transferInitiate,
         data: body,
         idempotencyKey: idempotencyKey,
-        extraHeaders: biometricHeaders,
+        extraHeaders: headers.isEmpty ? null : headers,
       );
       final data = response.data;
       if (data is! Map || data['status'] != true) {

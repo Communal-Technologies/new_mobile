@@ -91,7 +91,9 @@ class ObligationCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 15.sp,
                         fontWeight: FontWeight.w700,
-                        color: theme.primaryColor,
+                        color: theme.brightness == Brightness.dark
+                            ? Colors.white
+                            : theme.primaryColor,
                       ),
                     ),
                   ],

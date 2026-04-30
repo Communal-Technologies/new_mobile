@@ -372,12 +372,17 @@ class _FinancialObligationsScreenState
             width: 36.w,
             height: 36.w,
             decoration: BoxDecoration(
-              color: theme.primaryColor.withValues(alpha: 0.1),
+              color: (theme.brightness == Brightness.dark
+                      ? Colors.white
+                      : theme.primaryColor)
+                  .withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10.r),
             ),
             child: Icon(
               Icons.filter_alt_outlined,
-              color: theme.primaryColor,
+              color: theme.brightness == Brightness.dark
+                  ? Colors.white
+                  : theme.primaryColor,
               size: 20.sp,
             ),
           ),

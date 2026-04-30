@@ -58,8 +58,24 @@ class _MemberAvatarState extends State<MemberAvatar> {
           useNetwork ? NetworkImage(widget.url!.trim()) : fallback,
       onBackgroundImageError: useNetwork
           ? (error, stackTrace) {
-              // Swap to the asset on next frame. Don't log — the
-              // expired-signature case is loud and uninteresting.
+              // Debug-only diagnostic: surfaces the URL + first 80
+              // chars of the error so format failures (HEIC/AVIF the
+              // Android decoder rejects with "unimplemented"), 4xx
+              // responses, and HTML-error-bodies-from-presigned-URLs
+              // can be told apart on logcat without instrumenting
+              // each call site. Stripped in release via assert().
+              assert(() {
+                final url = widget.url ?? '';
+                final masked =
+                    url.length > 120 ? '${url.substring(0, 120)}…' : url;
+                final errStr = error.toString();
+                final clipped = errStr.length > 80
+                    ? '${errStr.substring(0, 80)}…'
+                    : errStr;
+                debugPrint(
+                    'MemberAvatar: decode failed url=$masked err=$clipped');
+                return true;
+              }());
               if (!mounted) return;
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!mounted || _networkFailed) return;

@@ -435,6 +435,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: _load,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Theme.of(context).primaryColor,
                     child: _activeMonthly.isEmpty
                         ? ListView(
                             physics: const AlwaysScrollableScrollPhysics(),
@@ -547,6 +550,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
   Widget _buildTab(String label, int index, ThemeData theme) {
     final isActive = _currentTabIndex == index;
+    final activeColor = theme.brightness == Brightness.dark
+        ? Colors.white
+        : theme.primaryColor;
 
     return GestureDetector(
       onTap: () {
@@ -565,7 +571,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
               fontSize: 17.sp,
               fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
               color: isActive
-                  ? theme.primaryColor
+                  ? activeColor
                   : theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
@@ -573,7 +579,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
           Container(
             height: 3.h,
             decoration: BoxDecoration(
-              color: isActive ? theme.primaryColor : Colors.transparent,
+              color: isActive ? activeColor : Colors.transparent,
               borderRadius: BorderRadius.circular(2.r),
             ),
           ),

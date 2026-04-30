@@ -560,7 +560,14 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
   }
 
   Widget _historyRow(Map<String, dynamic> row) {
-    final amountMinor = int.tryParse(row['amount']?.toString() ?? '0') ?? 0;
+    // Backend can serialise the kobo amount as either an int string
+    // ("500000") or a numeric-string with a decimal ("500000.00") —
+    // the latter happens whenever the underlying column is or was a
+    // DECIMAL, or when an intermediate cast emits a float. int.tryParse
+    // returns null on the second form and the row rendered as ₦0 even
+    // though the repo's filter (num.tryParse > 0) had let it through.
+    // num.tryParse + .round handles both shapes.
+    final amountMinor = (num.tryParse(row['amount']?.toString() ?? '0') ?? 0).round();
     final date =
         DateTime.tryParse(row['created_at']?.toString() ?? '') ??
         DateTime.now();

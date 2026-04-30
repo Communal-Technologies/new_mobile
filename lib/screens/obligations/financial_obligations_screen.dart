@@ -11,6 +11,7 @@ import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
 import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
+import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/loader_overlay.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/obligation.dart';
@@ -130,9 +131,7 @@ class _FinancialObligationsScreenState
                       context.goNamed('account-settings');
                       break;
                     default:
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Section coming soon')),
-                      );
+                      AppToast.error('Section coming soon');
                   }
                 },
               ),

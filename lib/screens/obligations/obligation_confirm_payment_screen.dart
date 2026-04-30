@@ -1,3 +1,4 @@
+import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -494,9 +495,7 @@ class _ObligationConfirmPaymentScreenState
   Future<void> _onConfirm() async {
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please sign in again and retry.')),
-      );
+      AppToast.error('Please sign in again and retry.');
       return;
     }
 
@@ -520,9 +519,7 @@ class _ObligationConfirmPaymentScreenState
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-      );
+      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }

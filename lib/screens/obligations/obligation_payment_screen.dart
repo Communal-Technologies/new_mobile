@@ -2,6 +2,7 @@ import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
+import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/obligation.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
@@ -647,22 +648,16 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
     final amountMinor =
         parsed?.amountMinor ?? widget.obligation.perInstallmentMinor;
     if (amountMinor <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid amount to continue.')),
-      );
+      AppToast.error('Enter a valid amount to continue.');
       return;
     }
 
     if (widget.obligation.category == 'Equity') {
       final maxPayMinor = widget.obligation.balanceMinor;
       if (amountMinor > maxPayMinor) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Equity payments cannot exceed your remaining cap '
-              '(${widget.obligation.balanceLabel}).',
-            ),
-          ),
+        AppToast.error(
+          'Equity payments cannot exceed your remaining cap '
+          '(${widget.obligation.balanceLabel}).',
         );
         return;
       }
@@ -671,31 +666,19 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
     if (_payMethod == _PayMethod.obligation) {
       final source = _selectedSourceObligation;
       if (source == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Select an obligation to pay from.'),
-          ),
-        );
+        AppToast.error('Select an obligation to pay from.');
         return;
       }
       // Defensive: equities are filtered out of the picker, but re-check
       // here in case the list ever ships a stale entry.
       if (source.category.toLowerCase() == 'equity') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Equity contributions cannot be used to pay other obligations.'),
-          ),
-        );
+        AppToast.error('Equity contributions cannot be used to pay other obligations.');
         return;
       }
       if (source.paidAmountMinor < amountMinor) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '${source.title} only has ${source.paidAmountLabel} '
-              'available. Reduce the amount or pick another obligation.',
-            ),
-          ),
+        AppToast.error(
+          '${source.title} only has ${source.paidAmountLabel} '
+          'available. Reduce the amount or pick another obligation.',
         );
         return;
       }
@@ -713,20 +696,14 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
     }
 
     if (_cashRepos.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No cooperative bank account is available for this payment.'),
-        ),
-      );
+      AppToast.error('No cooperative bank account is available for this payment.');
       return;
     }
 
     final CooperativeCashBankAccount? cash =
         _cashRepos.length == 1 ? _cashRepos.first : _selectedCashRepo;
     if (cash == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Select the cooperative account to pay into.')),
-      );
+      AppToast.error('Select the cooperative account to pay into.');
       return;
     }
 

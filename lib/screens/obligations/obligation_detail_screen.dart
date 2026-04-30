@@ -1,3 +1,4 @@
+import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -753,9 +754,7 @@ class _BottomActions extends StatelessWidget {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Contacting admin...')),
-                  );
+                  AppToast.success('Contacting admin...');
                 },
                 icon: Icon(
                   Icons.chat_bubble_outline,

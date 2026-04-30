@@ -1,3 +1,4 @@
+import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -125,7 +126,7 @@ class ObligationPaymentSuccessScreen extends StatelessWidget {
                   child: _ActionButton(
                     icon: Icons.download_rounded,
                     label: 'Download',
-                    onTap: () => _showSnack(context, 'Downloading receipt...'),
+                    onTap: () => AppToast.success('Downloading receipt...'),
                   ),
                 ),
                 hSpace(12),
@@ -133,7 +134,7 @@ class ObligationPaymentSuccessScreen extends StatelessWidget {
                   child: _ActionButton(
                     icon: Icons.share_outlined,
                     label: 'Share',
-                    onTap: () => _showSnack(context, 'Sharing receipt...'),
+                    onTap: () => AppToast.success('Sharing receipt...'),
                   ),
                 ),
               ],
@@ -168,11 +169,6 @@ class ObligationPaymentSuccessScreen extends StatelessWidget {
     );
   }
 
-  void _showSnack(BuildContext context, String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
 }
 
 class _DetailsCard extends StatelessWidget {

@@ -197,9 +197,7 @@ class _SplashScreenState extends State<SplashScreen>
                                             width: double.infinity,
                                             child: FilledButton(
                                               style: FilledButton.styleFrom(
-                                                backgroundColor: Theme.of(
-                                                  context,
-                                                ).cardColor,
+                                                backgroundColor: Colors.white,
                                                 foregroundColor: primaryColor,
                                                 padding: EdgeInsets.symmetric(
                                                   vertical: 14.h,
@@ -347,11 +345,15 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Widget _buildLogoCircle() {
+    // Splash is brand-locked to the light palette, so the circle stays white
+    // and the coloured logo is always legible. Reading Theme.of(context) here
+    // would resolve against the State's outer context (above the Theme
+    // override in build()) and re-introduce dark-mode bleed.
     return Container(
       width: 200.w,
       height: 200.w,
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color: Colors.white,
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
@@ -363,11 +365,7 @@ class _SplashScreenState extends State<SplashScreen>
       ),
       child: Center(
         child: Image.asset(
-          // Mark stays legible on the active scaffold — coloured logo
-          // has dark glyph strokes that disappear on the dark surface.
-          Theme.of(context).brightness == Brightness.dark
-              ? Images.whiteLogo
-              : Images.coloredLogo,
+          Images.coloredLogo,
           width: 140.w,
           fit: BoxFit.contain,
         ),

@@ -49,19 +49,10 @@ class ReceiptCard extends StatelessWidget {
           vSpace(18),
           _ReceiptCardHeader(headerTitle: style.cardHeaderTitle),
           vSpace(20),
-          if (style.showHeroAmount) ...[
-            Text(
-              details.amountLabel,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 36.sp,
-                fontWeight: FontWeight.w800,
-                color: Theme.of(context).colorScheme.onSurface,
-                letterSpacing: -0.5,
-              ),
-            ),
-            vSpace(12),
-          ],
+          // The hero amount + pill combo rendered the amount twice on
+          // successful receipts (showHeroAmount is true only for success,
+          // pill always renders). Pill is the consistent visual element
+          // across success/pending/failed; the hero block is dropped.
           _ReceiptAmountPill(
             amountLabel: details.amountLabel,
             gradient: style.amountPillGradient,

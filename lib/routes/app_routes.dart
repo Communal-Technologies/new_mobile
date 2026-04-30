@@ -1000,24 +1000,59 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/transaction-details',
       name: 'transaction-details',
+      redirect: (context, state) {
+        // GoRouter holds `state.extra` in memory only. When Android
+        // kills the app in the background and Flutter restores the
+        // route, extras are gone — the screen would otherwise fall
+        // back to kSampleTransactionDetails (fake data). Try the
+        // route extras cache; if nothing's there, send the user to
+        // their transactions list.
+        if (state.extra is TransactionDetailsData) return null;
+        final cached =
+            _RouteExtrasCache.instance.transactionDetails;
+        if (cached != null) return null;
+        return '/transactions';
+      },
       builder: (context, state) {
         final extra = state.extra;
-        final details = extra is TransactionDetailsData
-            ? extra
-            : kSampleTransactionDetails;
+        TransactionDetailsData details;
+        if (extra is TransactionDetailsData) {
+          details = extra;
+          _RouteExtrasCache.instance.transactionDetails = extra;
+        } else {
+          details = _RouteExtrasCache.instance.transactionDetails ??
+              kSampleTransactionDetails;
+        }
         return TransactionDetailsScreen(details: details);
       },
     ),
     GoRoute(
       path: '/transaction-receipt',
       name: 'transaction-receipt',
+      redirect: (context, state) {
+        // Receipts must never display sample data. If state.extra is
+        // missing AND we have nothing cached (process-killed
+        // restore), bounce to transactions instead of showing the
+        // kSample fallback. Live state.extra OR a cached snapshot is
+        // enough to proceed.
+        final extra = state.extra;
+        if (extra is Map<String, dynamic> &&
+            extra['details'] is TransactionDetailsData) {
+          return null;
+        }
+        if (extra is TransactionDetailsData) return null;
+        final cache = _RouteExtrasCache.instance;
+        if (cache.receiptDetails != null) return null;
+        return '/transactions';
+      },
       builder: (context, state) {
         final extra = state.extra;
-        TransactionDetailsData details = kSampleTransactionDetails;
+        final cache = _RouteExtrasCache.instance;
+        TransactionDetailsData? details;
         ReceiptAction? action;
-
         ObligationNipSettlement? obligationNipSettlement;
         LoanNipSettlement? loanNipSettlement;
+
         if (extra is Map<String, dynamic>) {
           final maybeDetails = extra['details'];
           if (maybeDetails is TransactionDetailsData) {
@@ -1026,8 +1061,7 @@ final GoRouter appRouter = GoRouter(
           action = _parseReceiptAction(extra['action']);
           final sRaw = extra['obligationNipSettlement'];
           if (sRaw is Map) {
-            obligationNipSettlement =
-                ObligationNipSettlement.tryFromJson(
+            obligationNipSettlement = ObligationNipSettlement.tryFromJson(
               Map<String, dynamic>.from(sRaw),
             );
           }
@@ -1037,9 +1071,32 @@ final GoRouter appRouter = GoRouter(
               Map<String, dynamic>.from(lRaw),
             );
           }
+          // Cache the live extras so a transient route rebuild (or
+          // an app-pause / resume that doesn't kill the process) can
+          // recover the actual receipt instead of the kSample
+          // fallback.
+          if (details != null) {
+            cache.receiptDetails = details;
+            cache.receiptObligationSettlement = obligationNipSettlement;
+            cache.receiptLoanSettlement = loanNipSettlement;
+            cache.receiptAction = action;
+          }
         } else if (extra is TransactionDetailsData) {
           details = extra;
+          cache.receiptDetails = extra;
+          cache.receiptObligationSettlement = null;
+          cache.receiptLoanSettlement = null;
+          cache.receiptAction = null;
         }
+
+        // Fall back to the cached snapshot when extras are missing
+        // (route rebuild without state.extra). Redirect above
+        // already bounces away when there's no live state AND no
+        // cache, so reaching here implies one of the two paths.
+        details ??= cache.receiptDetails ?? kSampleTransactionDetails;
+        obligationNipSettlement ??= cache.receiptObligationSettlement;
+        loanNipSettlement ??= cache.receiptLoanSettlement;
+        action ??= cache.receiptAction;
 
         return TransactionReceiptScreen(
           details: details,
@@ -1149,4 +1206,29 @@ class _MissingExtraRedirectState extends State<_MissingExtraRedirect> {
       body: Center(child: CircularProgressIndicator()),
     );
   }
+}
+
+/// In-memory cache that lets the transaction receipt + details
+/// routes recover their data after a transient rebuild (theme /
+/// locale / inspector triggers) or an Android app-pause+resume
+/// where the process is kept alive but Flutter rebuilds the
+/// navigator. GoRouter's `state.extra` is in-memory and not
+/// serialized, so without this cache the receipt would fall back
+/// to `kSampleTransactionDetails` and show fake values for the
+/// user's real transaction.
+///
+/// When the process is killed (low-memory) and restored cold,
+/// neither `state.extra` nor this cache survives — the route
+/// builders' `redirect:` blocks bounce the user to /transactions
+/// instead of rendering sample data.
+class _RouteExtrasCache {
+  _RouteExtrasCache._();
+  static final _RouteExtrasCache instance = _RouteExtrasCache._();
+
+  TransactionDetailsData? receiptDetails;
+  ObligationNipSettlement? receiptObligationSettlement;
+  LoanNipSettlement? receiptLoanSettlement;
+  ReceiptAction? receiptAction;
+
+  TransactionDetailsData? transactionDetails;
 }

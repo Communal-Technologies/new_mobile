@@ -484,6 +484,9 @@ class TransferRepository {
   }
 
   String _messageFromDio(DioException e) {
+    // Server-supplied message wins when there is one. The backend
+    // already shapes these for end users (validation errors,
+    // domain-level failures, etc.).
     final data = e.response?.data;
     if (data is Map) {
       final msg = data['message']?.toString();
@@ -502,6 +505,34 @@ class TransferRepository {
         if (values.isNotEmpty) return values.join(' ');
       }
     }
-    return e.message ?? 'Request failed';
+    // No body / no message → translate the transport failure to copy
+    // the user can act on. Dio's raw `e.message` (e.g. "The request
+    // was canceled.", "Connecting timed out [10s]") leaks
+    // implementation language and was being shown verbatim in
+    // toasts.
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        return 'The server is taking too long to respond. Please try again.';
+      case DioExceptionType.connectionError:
+        return "Couldn't reach the server. Check your internet connection and try again.";
+      case DioExceptionType.cancel:
+        return 'The request was cancelled. Please try again.';
+      case DioExceptionType.badCertificate:
+        return 'Secure connection to the server failed. Please try again later.';
+      case DioExceptionType.badResponse:
+        // Body had no message; status code-only context.
+        final code = e.response?.statusCode;
+        if (code == 401 || code == 403) {
+          return 'You are not authorised. Sign out and back in, then retry.';
+        }
+        if (code != null && code >= 500) {
+          return 'The server is having trouble right now. Please try again in a moment.';
+        }
+        return 'Request failed. Please try again.';
+      case DioExceptionType.unknown:
+        return 'Network error. Please check your connection and try again.';
+    }
   }
 }

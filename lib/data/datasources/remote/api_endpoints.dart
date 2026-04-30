@@ -85,13 +85,22 @@ class ApiEndpoints {
   static String membersTransferStatus(String transferId) =>
       '/members/transfer/transactions/$transferId/status';
 
-  // --- Bill payments (airtime + data via Anchor) --------------------------
+  // --- Bill payments (airtime, data, electricity, television via Anchor) -
   static const String billsAirtimeProviders = '/bills/airtime/providers';
   static const String billsDataProviders = '/bills/data/providers';
+  static const String billsElectricityProviders = '/bills/electricity/providers';
+  static const String billsTelevisionProviders = '/bills/television/providers';
   static String billsBillerProducts(String billerId) =>
       '/bills/billers/${billerId.trim()}/products';
   static const String billsAirtimePurchase = '/bills/airtime/purchase';
   static const String billsDataPurchase = '/bills/data/purchase';
+  static const String billsElectricityPurchase = '/bills/electricity/purchase';
+  static const String billsTelevisionPurchase = '/bills/television/purchase';
+  /// Pre-purchase meter (electricity) or smartcard (television) lookup.
+  /// `billerSlug` is the provider's slug (e.g. `ikeja_electric_prepaid`,
+  /// `dstv`); `accountNumber` is the meter / smartcard.
+  static String billsCustomerValidation(String billerSlug, String accountNumber) =>
+      '/bills/customer-validation/${billerSlug.trim()}/${accountNumber.trim()}';
   static String billsTransactionByReference(String reference) =>
       '/bills/transactions/${reference.trim()}';
 

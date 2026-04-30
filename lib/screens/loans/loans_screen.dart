@@ -9,6 +9,7 @@ import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
+import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
 import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
 import 'package:communal_mobile/core/widgets/loader_overlay.dart';
@@ -80,10 +81,29 @@ class _LoansScreenState extends State<LoansScreen> {
     }
   }
 
+  /// Front-line gate for the Apply Now button and every per-scheme
+  /// Apply card. The backend rejects with 409 when a pending application
+  /// already exists; checking it here stops the user from filling out
+  /// three steps before learning that. Active / declined / cancelled /
+  /// closed loans don't block — only status `pending` does.
+  void _onApplyTapped({LoanScheme? scheme}) {
+    final hasPending = _loans.any((l) => l.status == LoanStatus.pending);
+    if (hasPending) {
+      AppToast.error(
+        'You already have a loan application awaiting approval. '
+        'Wait for it to be approved or declined before submitting a new one.',
+      );
+      return;
+    }
+    context.pushNamed(
+      'loan-application',
+      extra: scheme == null ? null : {'scheme': scheme},
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final showFullLoader =
-        _loading && _loans.isEmpty && _schemes.isEmpty;
+    final showFullLoader = _loading && _loans.isEmpty && _schemes.isEmpty;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
@@ -99,8 +119,10 @@ class _LoansScreenState extends State<LoansScreen> {
                   onRefresh: _load,
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 16.h,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -123,25 +145,25 @@ class _LoansScreenState extends State<LoansScreen> {
         bottomNavigationBar: showFullLoader
             ? null
             : BottomNavBar(
-          currentIndex: _currentNavIndex,
-          onTap: (index) {
-            if (index == _currentNavIndex) return;
-            switch (index) {
-              case 0:
-                context.goNamed('home');
-                break;
-              case 1:
-                context.goNamed('obligations');
-                break;
-              case 2:
-                context.goNamed('community');
-                break;
-              case 4:
-                context.goNamed('account-settings');
-                break;
-            }
-          },
-        ),
+                currentIndex: _currentNavIndex,
+                onTap: (index) {
+                  if (index == _currentNavIndex) return;
+                  switch (index) {
+                    case 0:
+                      context.goNamed('home');
+                      break;
+                    case 1:
+                      context.goNamed('obligations');
+                      break;
+                    case 2:
+                      context.goNamed('community');
+                      break;
+                    case 4:
+                      context.goNamed('account-settings');
+                      break;
+                  }
+                },
+              ),
       ),
     );
   }
@@ -176,10 +198,12 @@ class _LoansScreenState extends State<LoansScreen> {
     final auth = context.watch<AuthBloc>().state;
     final user = auth is AuthAuthenticated ? auth.user : null;
     final currency = user != null ? resolveCurrencyCode(user) : 'NGN';
-    final activeCount =
-        _loans.where((l) => l.status == LoanStatus.approved).length;
-    final pendingCount =
-        _loans.where((l) => l.status == LoanStatus.pending).length;
+    final activeCount = _loans
+        .where((l) => l.status == LoanStatus.approved)
+        .length;
+    final pendingCount = _loans
+        .where((l) => l.status == LoanStatus.pending)
+        .length;
     final balanceLabel = Money(_balanceMinor, currency).format();
 
     return Container(
@@ -221,8 +245,11 @@ class _LoansScreenState extends State<LoansScreen> {
             vSpace(12),
             Row(
               children: [
-                Icon(Icons.bookmark,
-                    size: 16.sp, color: Colors.white.withOpacity(0.8)),
+                Icon(
+                  Icons.bookmark,
+                  size: 16.sp,
+                  color: Colors.white.withOpacity(0.8),
+                ),
                 hSpace(6),
                 Expanded(
                   child: Text(
@@ -287,7 +314,7 @@ class _LoansScreenState extends State<LoansScreen> {
               child: _buildQuickActionButton(
                 icon: Icons.attach_money,
                 label: 'Apply Now',
-                onTap: () => context.pushNamed('loan-application'),
+                onTap: _onApplyTapped,
               ),
             ),
             hSpace(12),
@@ -358,9 +385,10 @@ class _LoansScreenState extends State<LoansScreen> {
 
   Widget _buildLoansSection() {
     final visible = _loans
-        .where((l) =>
-            l.status == LoanStatus.approved ||
-            l.status == LoanStatus.pending)
+        .where(
+          (l) =>
+              l.status == LoanStatus.approved || l.status == LoanStatus.pending,
+        )
         .toList();
     if (visible.isEmpty) return const SizedBox.shrink();
     return Column(
@@ -380,12 +408,10 @@ class _LoansScreenState extends State<LoansScreen> {
             padding: EdgeInsets.only(bottom: 16.h),
             child: ActiveLoanCard(
               loan: loan,
-              onViewDetails: () => context.pushNamed(
-                'loan-detail',
-                extra: {'loan': loan},
-              ),
-              onMakePayment: loan.status == LoanStatus.approved &&
-                      loan.balanceMinor > 0
+              onViewDetails: () =>
+                  context.pushNamed('loan-detail', extra: {'loan': loan}),
+              onMakePayment:
+                  loan.status == LoanStatus.approved && loan.balanceMinor > 0
                   ? () => context.pushNamed('loan-payment', extra: loan)
                   : null,
             ),
@@ -415,25 +441,20 @@ class _LoansScreenState extends State<LoansScreen> {
           ),
         ),
         vSpace(16),
-        ..._schemes.map(
-          (scheme) {
-            final auth = context.read<AuthBloc>().state;
-            final currency = auth is AuthAuthenticated
-                ? resolveCurrencyCode(auth.user)
-                : 'NGN';
-            return Padding(
-              padding: EdgeInsets.only(bottom: 16.h),
-              child: LoanOfferCard(
-                scheme: scheme,
-                currency: currency,
-                onApply: () => context.pushNamed(
-                  'loan-application',
-                  extra: {'scheme': scheme},
-                ),
-              ),
-            );
-          },
-        ),
+        ..._schemes.map((scheme) {
+          final auth = context.read<AuthBloc>().state;
+          final currency = auth is AuthAuthenticated
+              ? resolveCurrencyCode(auth.user)
+              : 'NGN';
+          return Padding(
+            padding: EdgeInsets.only(bottom: 16.h),
+            child: LoanOfferCard(
+              scheme: scheme,
+              currency: currency,
+              onApply: () => _onApplyTapped(scheme: scheme),
+            ),
+          );
+        }),
       ],
     );
   }
@@ -448,26 +469,24 @@ class _LoansScreenState extends State<LoansScreen> {
             : const Color(0xFFFDECEA),
         borderRadius: BorderRadius.circular(12.r),
         border: Border.all(
-            color: const Color(0xFFE74C3C).withValues(alpha: 0.3)),
+          color: const Color(0xFFE74C3C).withValues(alpha: 0.3),
+        ),
       ),
       child: Row(
         children: [
-          Icon(Icons.error_outline,
-              size: 20.sp, color: const Color(0xFFE74C3C)),
+          Icon(
+            Icons.error_outline,
+            size: 20.sp,
+            color: const Color(0xFFE74C3C),
+          ),
           hSpace(12),
           Expanded(
             child: Text(
               message,
-              style: TextStyle(
-                fontSize: 15.sp,
-                color: const Color(0xFFE74C3C),
-              ),
+              style: TextStyle(fontSize: 15.sp, color: const Color(0xFFE74C3C)),
             ),
           ),
-          TextButton(
-            onPressed: _load,
-            child: const Text('Retry'),
-          ),
+          TextButton(onPressed: _load, child: const Text('Retry')),
         ],
       ),
     );
@@ -491,8 +510,9 @@ class _LoansScreenState extends State<LoansScreen> {
           Icon(
             icon,
             size: 32.sp,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.5),
           ),
           vSpace(12),
           Text(
@@ -509,7 +529,9 @@ class _LoansScreenState extends State<LoansScreen> {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14.sp,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ],

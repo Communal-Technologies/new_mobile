@@ -334,7 +334,16 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemOverlayForTheme(Theme.of(context)),
-      child: Scaffold(
+      child: PopScope(
+        // Intercept the system back gesture so it routes by status, the
+        // same way the AppBar arrow now does. canPop:false stops the
+        // default pop; we handle navigation in onPopInvokedWithResult.
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          _handleReceiptBack();
+        },
+        child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
           elevation: 0,
@@ -345,7 +354,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
               size: 18.sp,
               color: Theme.of(context).colorScheme.onSurface,
             ),
-            onPressed: () => Navigator.of(context).maybePop(),
+            onPressed: _handleReceiptBack,
           ),
           title: Text(
             'Transaction Status',
@@ -426,7 +435,146 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
             ),
           ),
         ),
+        ),
       ),
     );
+  }
+
+  /// Receipt back-button routing.
+  ///
+  /// Successful + pending: skip the prior verify/amount screens and
+  /// drop the user back on Home — they're done with this transfer
+  /// either way and the back-stack is noisy with confirmation steps.
+  ///
+  /// Failed: show a sheet asking whether to retry. Yes pops back to
+  /// the verify/amount screen so the user can re-submit; No goes
+  /// straight to Home.
+  void _handleReceiptBack() {
+    switch (_details.status) {
+      case TransactionStatus.successful:
+      case TransactionStatus.pending:
+        context.goNamed('home');
+        break;
+      case TransactionStatus.failed:
+        _showRetrySheet();
+        break;
+    }
+  }
+
+  Future<void> _showRetrySheet() async {
+    final theme = Theme.of(context);
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: theme.cardColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (sheetCtx) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 20.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36.w,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: theme.dividerColor,
+                      borderRadius: BorderRadius.circular(4.r),
+                    ),
+                  ),
+                ),
+                vSpace(16),
+                Text(
+                  'Try this transfer again?',
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                vSpace(6),
+                Text(
+                  'We\'ll take you back to the amount screen so you can '
+                  'fix anything and resend. Choose No to head home.',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    color: theme.colorScheme.onSurface
+                        .withValues(alpha: 0.65),
+                  ),
+                ),
+                vSpace(20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(sheetCtx).pop(false),
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 14.h),
+                          side: BorderSide(color: theme.dividerColor),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                        ),
+                        child: Text(
+                          'No, go home',
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurface,
+                            fontSize: 15.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    hSpace(12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(sheetCtx).pop(true),
+                        style: ElevatedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 14.h),
+                          backgroundColor: theme.primaryColor,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                        ),
+                        child: Text(
+                          'Yes, retry',
+                          style: TextStyle(
+                            fontSize: 15.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (!mounted) return;
+    if (result == true) {
+      // Pop back to whatever screen launched the receipt — usually
+      // the verify screen, which was navigated from the amount
+      // screen. maybePop handles either case (and is a no-op if the
+      // receipt is the only route on the stack, in which case Home
+      // is the safest fallback).
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      } else {
+        context.goNamed('home');
+      }
+    } else if (result == false) {
+      context.goNamed('home');
+    }
+    // result == null → user dismissed by tapping the scrim; stay on
+    // the receipt rather than navigating somewhere they didn't ask for.
   }
 }

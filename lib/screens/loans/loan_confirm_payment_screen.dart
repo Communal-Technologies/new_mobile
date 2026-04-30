@@ -71,8 +71,7 @@ class LoanConfirmPaymentScreen extends StatefulWidget {
       _LoanConfirmPaymentScreenState();
 }
 
-class _LoanConfirmPaymentScreenState
-    extends State<LoanConfirmPaymentScreen> {
+class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
   final LoanRepository _loanRepo = LoanRepository(getIt());
   final MemberObligationsRepository _obligationsRepo =
       MemberObligationsRepository(getIt());
@@ -234,10 +233,7 @@ class _LoanConfirmPaymentScreenState
             icon: const Icon(Icons.fingerprint),
             label: Text(
               _submitting ? 'Processing…' : 'Authorize Repayment',
-              style: TextStyle(
-                fontSize: 17.sp,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w600),
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: _kLoanOrange,
@@ -272,15 +268,14 @@ class _LoanConfirmPaymentScreenState
                   hintStyle: TextStyle(
                     fontSize: 24.sp,
                     letterSpacing: 12,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.4),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.4),
                   ),
                   filled: true,
-                  fillColor: Theme.of(context)
-                      .colorScheme
-                      .surfaceContainerHighest,
+                  fillColor: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14.r),
                     borderSide: BorderSide(
@@ -321,10 +316,7 @@ class _LoanConfirmPaymentScreenState
               onPressed: () => context.pushNamed('biometric-enrollment'),
               child: Text(
                 'Set up biometric instead',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  color: _kLoanOrange,
-                ),
+                style: TextStyle(fontSize: 14.sp, color: _kLoanOrange),
               ),
             ),
           ],
@@ -386,9 +378,7 @@ class _LoanConfirmPaymentScreenState
           ),
           vSpace(4),
           Text(
-            widget.loan.loanCode.isNotEmpty
-                ? 'to ${widget.loan.loanCode}'
-                : 'to your loan',
+            'to ${widget.loan.displayLabel}',
             style: TextStyle(
               fontSize: 15.sp,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -441,10 +431,9 @@ class _LoanConfirmPaymentScreenState
                   'Your transaction is encrypted and secure. Never share your PIN with anyone.',
                   style: TextStyle(
                     fontSize: 15.sp,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -497,10 +486,7 @@ class _LoanConfirmPaymentScreenState
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content:
-              Text(e.toString().replaceFirst('Exception: ', '')),
-        ),
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -513,8 +499,8 @@ class _LoanConfirmPaymentScreenState
   Future<void> _confirmNipFundedRepayment(AuthAuthenticated authState) async {
     CooperativeCashBankAccount? cash = widget.cashAccount;
     if (cash == null || cash.id.isEmpty) {
-      final accounts =
-          await _obligationsRepo.fetchCooperativeCashBankAccounts();
+      final accounts = await _obligationsRepo
+          .fetchCooperativeCashBankAccounts();
       final rid = widget.cashRepositoryId?.trim() ?? '';
       if (rid.isNotEmpty) {
         for (final a in accounts) {
@@ -565,9 +551,7 @@ class _LoanConfirmPaymentScreenState
 
     final currencySymbol = currencySymbolForUser(authState.user);
     final currencyCode = resolveCurrencyCode(authState.user);
-    final narration = widget.loan.loanCode.isNotEmpty
-        ? 'Loan repayment: ${widget.loan.loanCode}'
-        : 'Loan repayment';
+    final narration = 'Loan re-payment: ${widget.loan.displayLabel}';
 
     final authHeaders = await _resolveAuthHeaders(
       transfer: true,
@@ -586,8 +570,7 @@ class _LoanConfirmPaymentScreenState
 
     if (!mounted) return;
     final mapped = transactionStatusFromApi(result.status);
-    final amountMajor =
-        widget.amountMinor / factorFor(widget.loan.currency);
+    final amountMajor = widget.amountMinor / factorFor(widget.loan.currency);
     // ignore: unawaited_futures
     context.pushNamed(
       'transaction-receipt',
@@ -599,12 +582,12 @@ class _LoanConfirmPaymentScreenState
           counterpartyAccount: fav.accountNumber,
           amount: amountMajor,
           currencySymbol: currencySymbol,
-          transactionType: 'NIP Transfer',
+          transactionType: 'Loan re-payment',
           dateTime: DateTime.now(),
           sessionId: result.transferId,
           reference: result.reference,
           description: narration,
-          paymentMethod: 'Wallet',
+          paymentMethod: 'NIP transfer',
           fees: 0,
           isIncoming: false,
           status: mapped,
@@ -621,7 +604,8 @@ class _LoanConfirmPaymentScreenState
   /// Equity sources were filtered out of the picker upstream and are
   /// rejected server-side too.
   Future<void> _confirmObligationFundedRepayment(
-      AuthAuthenticated authState) async {
+    AuthAuthenticated authState,
+  ) async {
     final sourceCode = widget.sourceObligationCode?.trim() ?? '';
     if (sourceCode.isEmpty) {
       throw Exception(
@@ -632,7 +616,7 @@ class _LoanConfirmPaymentScreenState
     final authHeaders = await _resolveAuthHeaders(
       transfer: false,
       promptSubtitle:
-          'Use biometrics to confirm repaying ${widget.loan.loanCode.isNotEmpty ? widget.loan.loanCode : "loan"}',
+          'Use biometrics to confirm repaying ${widget.loan.displayLabel}',
     );
 
     await _loanRepo.payLoanFromObligation(
@@ -651,27 +635,29 @@ class _LoanConfirmPaymentScreenState
         : _idempotencyKey;
     final sourceTitle =
         (widget.sourceObligationTitle?.trim().isNotEmpty ?? false)
-            ? widget.sourceObligationTitle!.trim()
-            : 'Obligation';
-    final narration = widget.loan.loanCode.isNotEmpty
-        ? 'Loan repayment: ${widget.loan.loanCode}'
-        : 'Loan repayment';
-    final amountMajor =
-        widget.amountMinor / factorFor(widget.loan.currency);
+        ? widget.sourceObligationTitle!.trim()
+        : 'Obligation';
+    final narration = 'Loan re-payment: ${widget.loan.displayLabel}';
+    final amountMajor = widget.amountMinor / factorFor(widget.loan.currency);
+    final cooperativeName = (authState.user.cooperativeName ?? '').trim();
     // ignore: unawaited_futures
     context.pushNamed(
       'transaction-receipt',
       extra: {
         'details': TransactionDetailsData(
           id: receiptReference,
-          counterpartyName: widget.loan.loanCode.isNotEmpty
-              ? widget.loan.loanCode
-              : 'Loan',
-          counterpartyBank: '—',
+          // Recipient on a loan repayment is the cooperative — no real
+          // bank movement when the source is an obligation, so we name
+          // the cooperative + the loan being repaid instead of leaving
+          // it as the loan_code with a "—" bank line.
+          counterpartyName: cooperativeName.isNotEmpty
+              ? cooperativeName
+              : 'Cooperative',
+          counterpartyBank: 'Loan: ${widget.loan.displayLabel}',
           counterpartyAccount: widget.loan.referenceId,
           amount: amountMajor,
           currencySymbol: currencySymbol,
-          transactionType: 'Loan repayment',
+          transactionType: 'Loan re-payment',
           dateTime: DateTime.now(),
           sessionId: receiptReference,
           reference: receiptReference,

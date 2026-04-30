@@ -63,11 +63,29 @@ class LoanApplication {
     this.dueDate,
     this.reasonForLoan,
     this.broughtForward = false,
+    this.loanTitle = '',
   });
 
   final String id;
   final String referenceId;
   final String loanCode;
+
+  /// Human-readable scheme title (e.g. "Welfare Loan"). Backend joins
+  /// LoanScheme.title onto the loan list/detail response so we don't show
+  /// the raw `loan_code` on confirm screens and receipts. Falls back to
+  /// the code when the scheme is missing.
+  final String loanTitle;
+
+  /// Best-effort display label: title when populated, otherwise code,
+  /// otherwise reference. Use this everywhere a loan needs a human name.
+  String get displayLabel {
+    final t = loanTitle.trim();
+    if (t.isNotEmpty) return t;
+    final c = loanCode.trim();
+    if (c.isNotEmpty) return c;
+    return referenceId;
+  }
+
   final LoanStatus status;
   final int amountMinor;
   final int amountPaidMinor;
@@ -98,7 +116,8 @@ class LoanApplication {
   String get balanceLabel => Money(balanceMinor, currency).format();
   String get monthlyRepaymentLabel =>
       Money(monthlyRepaymentMinor, currency).format();
-  String get progressLabel => '${(repaymentProgress * 100).toStringAsFixed(0)}%';
+  String get progressLabel =>
+      '${(repaymentProgress * 100).toStringAsFixed(0)}%';
 
   String? get dueDateLabel =>
       dueDate == null ? null : DateFormat('MMM dd, yyyy').format(dueDate!);
@@ -112,19 +131,21 @@ class LoanApplication {
     final guarantors = guarantorsRaw.isEmpty
         ? const <String>[]
         : guarantorsRaw
-            .split(RegExp(r'[,;|\s]+'))
-            .map((s) => s.trim())
-            .where((s) => s.isNotEmpty)
-            .toList();
-    final currency = (m['currency']?.toString().trim().isNotEmpty == true
-            ? m['currency'].toString()
-            : (fallbackCurrency ?? 'NGN'))
-        .toUpperCase();
+              .split(RegExp(r'[,;|\s]+'))
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty)
+              .toList();
+    final currency =
+        (m['currency']?.toString().trim().isNotEmpty == true
+                ? m['currency'].toString()
+                : (fallbackCurrency ?? 'NGN'))
+            .toUpperCase();
 
     return LoanApplication(
       id: m['id']?.toString() ?? '',
       referenceId: m['reference_id']?.toString() ?? '',
       loanCode: m['loan_code']?.toString() ?? '',
+      loanTitle: m['loan_title']?.toString() ?? '',
       status: LoanStatus.fromCode(m['status']),
       amountMinor: _asInt(m['amount']),
       amountPaidMinor: _asInt(m['amount_paid']),
@@ -136,7 +157,8 @@ class LoanApplication {
       dateApproved: _parseDate(m['date_approved']),
       dueDate: _parseDate(m['due_date']),
       reasonForLoan: m['reason_for_loan']?.toString(),
-      broughtForward: m['brought_forward']?.toString() == '1' ||
+      broughtForward:
+          m['brought_forward']?.toString() == '1' ||
           m['brought_forward'] == true,
     );
   }

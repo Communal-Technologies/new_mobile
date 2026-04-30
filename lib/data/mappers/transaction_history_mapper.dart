@@ -6,7 +6,9 @@ import 'package:communal_mobile/screens/transactions/models/transaction_details_
 
 double _amountNairaFromKoboField(dynamic raw) {
   if (raw == null) return 0;
-  final n = (raw is num) ? raw.toDouble() : double.tryParse(raw.toString()) ?? 0;
+  final n = (raw is num)
+      ? raw.toDouble()
+      : double.tryParse(raw.toString()) ?? 0;
   return n / 100.0;
 }
 
@@ -57,55 +59,31 @@ DateTime? _parseDate(dynamic raw) {
     );
   }
   if (t.contains('withdraw')) {
-    return (
-      Icons.north_east_rounded,
-      Colors.white,
-      Colors.orange.shade700,
-    );
+    return (Icons.north_east_rounded, Colors.white, Colors.orange.shade700);
   }
   if (t.contains('loan')) {
-    return (
-      Icons.handshake_rounded,
-      Colors.white,
-      const Color(0xFF00BCD4),
-    );
+    return (Icons.handshake_rounded, Colors.white, const Color(0xFF00BCD4));
   }
   if (t.contains('obligation') || t.contains('cooperative')) {
-    return (
-      Icons.groups_rounded,
-      Colors.white,
-      const Color(0xFF742CE7),
-    );
+    return (Icons.groups_rounded, Colors.white, const Color(0xFF742CE7));
   }
-  return (
-    Icons.receipt_long_rounded,
-    Colors.white,
-    Colors.blueGrey.shade300,
-  );
+  return (Icons.receipt_long_rounded, Colors.white, Colors.blueGrey.shade300);
 }
 
-(IconData, Color, Color) _iconStyleLedger(String obligationType, String description, bool incoming) {
+(IconData, Color, Color) _iconStyleLedger(
+  String obligationType,
+  String description,
+  bool incoming,
+) {
   final d = description.toLowerCase();
   final o = obligationType.toLowerCase();
   if (o.contains('loan') || d.contains('loan')) {
-    return (
-      Icons.handshake_rounded,
-      Colors.white,
-      const Color(0xFF00BCD4),
-    );
+    return (Icons.handshake_rounded, Colors.white, const Color(0xFF00BCD4));
   }
   if (d.contains('electric') || d.contains('bill')) {
-    return (
-      Icons.flash_on_rounded,
-      Colors.white,
-      Colors.orange,
-    );
+    return (Icons.flash_on_rounded, Colors.white, Colors.orange);
   }
-  return (
-    Icons.groups_rounded,
-    Colors.white,
-    const Color(0xFF742CE7),
-  );
+  return (Icons.groups_rounded, Colors.white, const Color(0xFF742CE7));
 }
 
 String _humanizeType(String? raw) {
@@ -155,7 +133,9 @@ TransactionListItem mapCommunalTransactionToListItem(
 
   final details = TransactionDetailsData(
     id: id.isNotEmpty ? id : trxRef,
-    counterpartyName: (cpName != null && cpName.isNotEmpty) ? cpName : 'Communal',
+    counterpartyName: (cpName != null && cpName.isNotEmpty)
+        ? cpName
+        : 'Communal',
     counterpartyBank: 'Communal Wallet',
     counterpartyAccount: (cpAcct != null && cpAcct.isNotEmpty) ? cpAcct : null,
     amount: amountNaira,
@@ -193,9 +173,39 @@ TransactionListItem mapLedgerRowToListItem(
   final dt = _parseDate(json['created_at']) ?? DateTime.now();
   final obligation = json['obligation_type']?.toString().trim() ?? '';
   final desc = json['description']?.toString().trim() ?? '';
-  final titleBase = obligation.isNotEmpty
+  final paymentMode = json['payment_mode']?.toString().trim() ?? '';
+
+  // Derive a friendly transaction-type label. The backend's `payment_mode`
+  // is the source of truth — it already says "Loan repayment from
+  // wallet (NIP)" / "Loan repayment from obligation" — so loan repayments
+  // surface as "Loan re-payment" instead of the bare obligation_type
+  // ("Loan"). Other rows fall back to the obligation_type → description
+  // ladder we used before.
+  final modeLower = paymentMode.toLowerCase();
+  final titleBase = modeLower.contains('loan repayment')
+      ? 'Loan re-payment'
+      : obligation.isNotEmpty
       ? _humanizeType(obligation)
       : (desc.isNotEmpty ? desc : 'Ledger transaction');
+
+  // Derive a payment method that matches reality instead of hardcoding
+  // "Ledger" (which obscures whether the row was a NIP transfer, an
+  // obligation move, or a manual posting). The strings emitted server-side
+  // are stable — see LoanApplicationController::payLoan and
+  // FinancialObligationController::processPayment.
+  String paymentMethod;
+  if (modeLower.contains('(nip)') || modeLower.contains('nip transfer')) {
+    paymentMethod = 'NIP transfer';
+  } else if (modeLower.contains('from obligation')) {
+    paymentMethod = 'Obligation';
+  } else if (modeLower.contains('brought forward')) {
+    paymentMethod = 'Brought forward';
+  } else if (paymentMode.isNotEmpty) {
+    paymentMethod = paymentMode;
+  } else {
+    paymentMethod = 'Ledger';
+  }
+
   final title = '$titleBase · $cooperativeLabel';
   final iconPack = _iconStyleLedger(obligation, desc, incoming);
   final sessionFmt = DateFormat('hh:mm a');
@@ -213,7 +223,7 @@ TransactionListItem mapLedgerRowToListItem(
     sessionId: sessionFmt.format(dt),
     description: desc.isNotEmpty ? desc : titleBase,
     reference: trxRef,
-    paymentMethod: 'Ledger',
+    paymentMethod: paymentMethod,
     status: TransactionStatus.successful,
     isIncoming: incoming,
   );

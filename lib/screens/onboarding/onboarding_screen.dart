@@ -61,6 +61,7 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
+        resizeToAvoidBottomInset: false,
         body: Column(
           children: [
             Expanded(

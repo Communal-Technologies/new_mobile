@@ -9,15 +9,19 @@ class AccountToDeleteCard extends StatelessWidget {
     required this.name,
     required this.email,
     required this.accountNumber,
-    required this.memberSince,
     required this.avatarInitials,
+    this.memberSince,
   });
 
   final String name;
   final String email;
   final String accountNumber;
-  final String memberSince;
   final String avatarInitials;
+
+  /// Optional — backend doesn't always expose a join date for the
+  /// member's communal account. The "Member Since" stat is hidden when
+  /// this is null/empty so the card doesn't render a placeholder.
+  final String? memberSince;
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +40,9 @@ class AccountToDeleteCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 17.sp,
               fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           vSpace(16),
@@ -78,7 +84,9 @@ class AccountToDeleteCard extends StatelessWidget {
                       email,
                       style: TextStyle(
                         fontSize: 17.sp,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -97,7 +105,9 @@ class AccountToDeleteCard extends StatelessWidget {
                       'Account Number',
                       style: TextStyle(
                         fontSize: 16.sp,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                     vSpace(4),
@@ -112,29 +122,32 @@ class AccountToDeleteCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Member Since',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              if (memberSince != null && memberSince!.trim().isNotEmpty)
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Member Since',
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
                       ),
-                    ),
-                    vSpace(4),
-                    Text(
-                      memberSince,
-                      style: TextStyle(
-                        fontSize: 17.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Theme.of(context).colorScheme.onSurface,
+                      vSpace(4),
+                      Text(
+                        memberSince!,
+                        style: TextStyle(
+                          fontSize: 17.sp,
+                          fontWeight: FontWeight.w700,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
         ],
@@ -142,4 +155,3 @@ class AccountToDeleteCard extends StatelessWidget {
     );
   }
 }
-

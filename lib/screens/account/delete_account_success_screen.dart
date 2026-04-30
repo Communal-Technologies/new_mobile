@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/screens/account/widgets/what_happens_next_item.dart';
 import 'package:communal_mobile/screens/account/widgets/email_confirmation_box.dart';
@@ -13,6 +16,10 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthBloc>().state;
+    final email = auth is AuthAuthenticated
+        ? (auth.user.email?.trim() ?? '')
+        : '';
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
@@ -50,10 +57,10 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
                   _buildSuccessMessage(context),
                   vSpace(32),
                   _buildWhatHappensNext(context),
-                  vSpace(24),
-                  const EmailConfirmationBox(
-                    email: 'pado.lebari@example.com',
-                  ),
+                  if (email.isNotEmpty) ...[
+                    vSpace(24),
+                    EmailConfirmationBox(email: email),
+                  ],
                   vSpace(32),
                   _buildCloseButton(context),
                   vSpace(32),
@@ -78,11 +85,7 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
           width: 2,
         ),
       ),
-      child: const Icon(
-        Icons.check,
-        color: Color(0xFF4CAF50),
-        size: 60,
-      ),
+      child: const Icon(Icons.check, color: Color(0xFF4CAF50), size: 60),
     );
   }
 
@@ -103,7 +106,9 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
           'Your account has been scheduled for permanent deletion',
           style: TextStyle(
             fontSize: 17.sp,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.6),
             height: 1.5,
           ),
           textAlign: TextAlign.center,
@@ -113,7 +118,9 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
           'We\'re sorry to see you go. If you change your mind\nwithin the next 30 days, contact our support team to\nrecover your account.',
           style: TextStyle(
             fontSize: 17.sp,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.6),
             height: 1.5,
           ),
           textAlign: TextAlign.center,
@@ -179,13 +186,9 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
         ),
         child: Text(
           'Close',
-          style: TextStyle(
-            fontSize: 19.sp,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(fontSize: 19.sp, fontWeight: FontWeight.w600),
         ),
       ),
     );
   }
 }
-

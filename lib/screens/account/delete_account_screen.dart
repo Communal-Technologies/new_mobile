@@ -79,10 +79,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
           ),
           title: Text(
             'Delete Account',
-            style: TextStyle(
-              fontSize: 19.sp,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(fontSize: 19.sp, fontWeight: FontWeight.w700),
           ),
           centerTitle: true,
         ),
@@ -150,28 +147,32 @@ class _DataLossSection extends StatelessWidget {
         const DataLossItem(
           icon: Icons.people,
           title: 'Cooperative Memberships',
-          description: '2 active cooperative memberships will be lost',
+          description:
+              'Every cooperative you belong to will lose you as a member',
           iconColor: Color(0xFFBA68C8), // Purple
         ),
         vSpace(12),
         const DataLossItem(
           icon: Icons.description,
           title: 'Transaction History',
-          description: '156 transaction records will be permanently deleted',
+          description:
+              'Your full transaction history will be permanently deleted',
           iconColor: Color(0xFF42A5F5), // Blue
         ),
         vSpace(12),
         const DataLossItem(
           icon: Icons.trending_up,
           title: 'Loan Records',
-          description: 'All loan applications and repayment history will be erased',
+          description:
+              'All loan applications and repayment history will be erased',
           iconColor: Color(0xFF66BB6A), // Green
         ),
         vSpace(12),
         const DataLossItem(
           icon: Icons.shield_outlined,
           title: 'Account Balance',
-          description: 'Any balance must be transferred to another account before deletion',
+          description:
+              'Any balance must be transferred to another account before deletion',
           iconColor: Colors.red,
         ),
       ],

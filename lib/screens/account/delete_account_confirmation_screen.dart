@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/screens/account/widgets/account_to_delete_card.dart';
 import 'package:communal_mobile/screens/account/widgets/balance_card.dart';
@@ -28,8 +31,32 @@ class _DeleteAccountConfirmationScreenState
   bool get _allAgreementsAccepted =>
       _agreement1 && _agreement2 && _agreement3 && _agreement4;
 
+  /// 1–2 letter initials from a display name. "Pado Lebari" → "PL".
+  /// Same logic as the freeze flow.
+  String _initialsFor(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return '•';
+    final parts = trimmed
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return '•';
+    if (parts.length == 1) return parts.first[0].toUpperCase();
+    return (parts.first[0] + parts.last[0]).toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthBloc>().state;
+    final user = auth is AuthAuthenticated ? auth.user : null;
+    final displayName = user?.name.trim().isNotEmpty == true
+        ? user!.name.trim()
+        : 'Your account';
+    final email = user?.email?.trim() ?? '';
+    final accountNumber = user?.walletAccountNumber?.trim().isNotEmpty == true
+        ? user!.walletAccountNumber!.trim()
+        : (user?.phone?.trim() ?? '—');
+    final balanceMinor = user?.walletBalanceKobo ?? 0;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
@@ -59,16 +86,18 @@ class _DeleteAccountConfirmationScreenState
               vSpace(24),
               _buildConfirmationQuestion(),
               vSpace(24),
-              const AccountToDeleteCard(
-                name: 'Pado Lebari',
-                email: 'pado.lebari@example.com',
-                accountNumber: '7037334888',
-                memberSince: 'January 2024',
-                avatarInitials: 'PL',
+              AccountToDeleteCard(
+                name: displayName,
+                email: email,
+                accountNumber: accountNumber,
+                avatarInitials: _initialsFor(displayName),
+                // memberSince intentionally omitted — backend doesn't
+                // expose a join date on the auth payload, so the card
+                // hides the column instead of showing a placeholder.
               ),
               vSpace(16),
               BalanceCard(
-                balance: 450000000000,
+                balance: balanceMinor,
                 // Account closure can't proceed while there's a balance.
                 // Send the user into the in-app transfer flow so they
                 // can move funds to another internal account or to an
@@ -78,10 +107,10 @@ class _DeleteAccountConfirmationScreenState
                   context.pushNamed('transfer');
                 },
               ),
-              vSpace(16),
-              const OutstandingBalanceWarning(
-                balance: 450000000000,
-              ),
+              if (balanceMinor > 0) ...[
+                vSpace(16),
+                OutstandingBalanceWarning(balance: balanceMinor),
+              ],
               vSpace(24),
               _buildAgreementSection(),
               vSpace(24),
@@ -96,11 +125,7 @@ class _DeleteAccountConfirmationScreenState
 
   Widget _buildWarningIcon() {
     return Center(
-      child: Icon(
-        Icons.delete_outline,
-        color: Colors.red,
-        size: 60.sp,
-      ),
+      child: Icon(Icons.delete_outline, color: Colors.red, size: 60.sp),
     );
   }
 
@@ -150,7 +175,7 @@ class _DeleteAccountConfirmationScreenState
           vSpace(12),
           DeleteAgreementItem(
             text:
-                'You\'ll be removed from all 2 cooperatives and lose access to shared funds, contributions, and benefits.',
+                'You\'ll be removed from every cooperative you belong to and lose access to shared funds, contributions, and benefits.',
             value: _agreement3,
             onChanged: (value) => setState(() => _agreement3 = value),
           ),
@@ -178,38 +203,33 @@ class _DeleteAccountConfirmationScreenState
                 }
               : null,
           style: ButtonStyle(
-            backgroundColor: WidgetStateProperty.resolveWith<Color>(
-              (Set<WidgetState> states) {
-                if (states.contains(WidgetState.disabled)) {
-                  return Colors.grey.shade300;
-                }
-                return const Color(0xFFFFB3BA); // Light pink when enabled
-              },
-            ),
-            foregroundColor: WidgetStateProperty.resolveWith<Color>(
-              (Set<WidgetState> states) {
-                if (states.contains(WidgetState.disabled)) {
-                  return Colors.grey.shade600;
-                }
-                return Colors.white;
-              },
-            ),
+            backgroundColor: WidgetStateProperty.resolveWith<Color>((
+              Set<WidgetState> states,
+            ) {
+              if (states.contains(WidgetState.disabled)) {
+                return Colors.grey.shade300;
+              }
+              return const Color(0xFFFFB3BA); // Light pink when enabled
+            }),
+            foregroundColor: WidgetStateProperty.resolveWith<Color>((
+              Set<WidgetState> states,
+            ) {
+              if (states.contains(WidgetState.disabled)) {
+                return Colors.grey.shade600;
+              }
+              return Colors.white;
+            }),
             padding: WidgetStateProperty.all(
               EdgeInsets.symmetric(vertical: 16.h),
             ),
             shape: WidgetStateProperty.all(
-              RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r),
-              ),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
             ),
             elevation: WidgetStateProperty.all(0),
           ),
           child: Text(
             'I understand, Delete my Account',
-            style: TextStyle(
-              fontSize: 19.sp,
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(fontSize: 19.sp, fontWeight: FontWeight.w600),
           ),
         ),
       ),
@@ -220,4 +240,3 @@ class _DeleteAccountConfirmationScreenState
     context.pushNamed('delete-account-feedback');
   }
 }
-

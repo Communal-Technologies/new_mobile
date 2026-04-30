@@ -349,36 +349,46 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                     ),
                     vSpace(12),
                     // Title and step counter
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Bank Information',
-                          style: TextStyle(
-                            fontSize: 17.sp,
-                            color: theme.primaryColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          'Step 2 of 3',
-                          style: TextStyle(
-                            fontSize: 17.sp,
-                            color: theme.primaryColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    vSpace(8),
-                    // Progress bar
-                    LinearProgressIndicator(
-                      value: 2 / 3,
-                      backgroundColor: Colors.grey.shade200,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        theme.primaryColor,
-                      ),
-                      minHeight: 4.h,
+                    Builder(
+                      builder: (context) {
+                        final stepColor = theme.brightness == Brightness.dark
+                            ? Colors.white
+                            : theme.primaryColor;
+                        return Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Bank Information',
+                                  style: TextStyle(
+                                    fontSize: 17.sp,
+                                    color: stepColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  'Step 2 of 3',
+                                  style: TextStyle(
+                                    fontSize: 17.sp,
+                                    color: stepColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            vSpace(8),
+                            LinearProgressIndicator(
+                              value: 2 / 3,
+                              backgroundColor: theme.brightness == Brightness.dark
+                                  ? theme.dividerColor
+                                  : Colors.grey.shade200,
+                              valueColor: AlwaysStoppedAnimation<Color>(stepColor),
+                              minHeight: 4.h,
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),

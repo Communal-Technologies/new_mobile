@@ -683,7 +683,9 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                           'Proof of Identity',
                           style: TextStyle(
                             fontSize: 17.sp,
-                            color: theme.primaryColor,
+                            color: theme.brightness == Brightness.dark
+                                ? Colors.white
+                                : theme.primaryColor,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -691,7 +693,9 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                           'Step 3 of 3',
                           style: TextStyle(
                             fontSize: 17.sp,
-                            color: theme.primaryColor,
+                            color: theme.brightness == Brightness.dark
+                                ? Colors.white
+                                : theme.primaryColor,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -701,9 +705,13 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                     // Progress bar
                     LinearProgressIndicator(
                       value: 1.0,
-                      backgroundColor: Colors.grey.shade200,
+                      backgroundColor: theme.brightness == Brightness.dark
+                          ? theme.dividerColor
+                          : Colors.grey.shade200,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        theme.primaryColor,
+                        theme.brightness == Brightness.dark
+                            ? Colors.white
+                            : theme.primaryColor,
                       ),
                       minHeight: 4.h,
                     ),
@@ -868,7 +876,11 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                                 style: TextStyle(
                                   fontSize: 17.sp,
                                   fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  // Pinned: notice card has a fixed light-teal
+                                  // bg, so the title must read dark in both
+                                  // themes (theme.onSurface flips to white in
+                                  // dark mode and disappeared on the light bg).
+                                  color: const Color(0xFF014149),
                                 ),
                               ),
                               vSpace(12),
@@ -952,7 +964,10 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
               text,
               style: TextStyle(
                 fontSize: 17.sp,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                // Pinned dark text — notice card bg is a fixed light teal,
+                // so theme.onSurface (which flips white in dark mode) would
+                // vanish on the bg. Same reason as the title above.
+                color: const Color(0xFF1B4F58),
                 height: 1.4,
               ),
             ),

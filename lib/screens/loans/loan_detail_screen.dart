@@ -194,13 +194,34 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  _loan.loanCode.isNotEmpty ? _loan.loanCode : 'Loan',
-                  style: TextStyle(
-                    fontSize: 19.sp,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
+                // Prefer the scheme title (e.g. "Welfare Loan") over the
+                // raw loan_code so the header is recognisable at a
+                // glance. displayLabel falls back to the code, then the
+                // reference id, when no title is available.
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _loan.displayLabel,
+                      style: TextStyle(
+                        fontSize: 19.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    if (_loan.loanTitle.trim().isNotEmpty &&
+                        _loan.loanCode.trim().isNotEmpty) ...[
+                      vSpace(2),
+                      Text(
+                        _loan.loanCode,
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color: Colors.white.withValues(alpha: 0.85),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
               Container(
@@ -297,7 +318,17 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           vSpace(12),
           if (_loan.referenceId.isNotEmpty)
             _detailRow('Reference', _loan.referenceId),
-          if (_loan.loanCode.isNotEmpty) _detailRow('Scheme', _loan.loanCode),
+          // Surface the scheme title up front so members recognise the
+          // loan; keep the bare code below as a separate Scheme code
+          // row for cross-referencing with admin tooling. When no title
+          // came back from the backend, fall through to the code only.
+          if (_loan.loanTitle.trim().isNotEmpty)
+            _detailRow('Scheme', _loan.loanTitle.trim()),
+          if (_loan.loanCode.trim().isNotEmpty)
+            _detailRow(
+              _loan.loanTitle.trim().isNotEmpty ? 'Scheme code' : 'Scheme',
+              _loan.loanCode.trim(),
+            ),
           _detailRow('Principal', _loan.amountLabel),
           if (_loan.status == LoanStatus.approved) ...[
             _detailRow(

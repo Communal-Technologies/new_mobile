@@ -63,6 +63,7 @@ import 'package:communal_mobile/screens/loans/loan_application_step2_screen.dart
 import 'package:communal_mobile/screens/loans/loan_application_step3_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_application_success_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_detail_screen.dart';
+import 'package:communal_mobile/screens/loans/loans_history_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_payment_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_confirm_payment_screen.dart';
 import 'package:communal_mobile/screens/loans/data/loan_nip_settlement.dart';
@@ -450,6 +451,11 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const LoansScreen(),
     ),
     GoRoute(
+      path: '/loans-history',
+      name: 'loans-history',
+      builder: (context, state) => const LoansHistoryScreen(),
+    ),
+    GoRoute(
       path: '/loan-calculator',
       name: 'loan-calculator',
       builder: (context, state) => const LoanCalculatorScreen(),
@@ -463,8 +469,9 @@ final GoRouter appRouter = GoRouter(
             ? state.extra as Map<String, dynamic>
             : const <String, dynamic>{};
         return LoanApplicationScreen(
-          preselectedScheme:
-              extra['scheme'] is LoanScheme ? extra['scheme'] as LoanScheme : null,
+          preselectedScheme: extra['scheme'] is LoanScheme
+              ? extra['scheme'] as LoanScheme
+              : null,
           initialAmount: (extra['amount'] as num?)?.toDouble(),
         );
       },
@@ -538,7 +545,7 @@ final GoRouter appRouter = GoRouter(
         final amountMinor = maybeAmount is num
             ? maybeAmount.toInt()
             : int.tryParse(maybeAmount?.toString() ?? '') ??
-                loan.monthlyRepaymentMinor;
+                  loan.monthlyRepaymentMinor;
 
         final maybeMethod = extra['method'];
         final method = maybeMethod is String && maybeMethod.isNotEmpty
@@ -771,7 +778,7 @@ final GoRouter appRouter = GoRouter(
         final amountMinor = maybeAmount is num
             ? maybeAmount.toInt()
             : int.tryParse(maybeAmount?.toString() ?? '') ??
-                obligation.perInstallmentMinor;
+                  obligation.perInstallmentMinor;
 
         final maybeMethod = extra['method'];
         final method = maybeMethod is String && maybeMethod.isNotEmpty
@@ -835,7 +842,7 @@ final GoRouter appRouter = GoRouter(
         final amountMinor = maybeAmount is num
             ? maybeAmount.toInt()
             : int.tryParse(maybeAmount?.toString() ?? '') ??
-                obligation.perInstallmentMinor;
+                  obligation.perInstallmentMinor;
 
         final maybeMethod = extra['method'];
         final method = maybeMethod is String && maybeMethod.isNotEmpty
@@ -916,7 +923,8 @@ final GoRouter appRouter = GoRouter(
       name: 'transfer-internal-review',
       builder: (context, state) {
         final extra = _extraAsMap(state.extra);
-        final fav = _extraTransferFavorite(extra) ??
+        final fav =
+            _extraTransferFavorite(extra) ??
             const TransferFavorite(
               source: 'internal',
               accountId: '',
@@ -940,7 +948,8 @@ final GoRouter appRouter = GoRouter(
       name: 'transfer-internal-verify',
       builder: (context, state) {
         final extra = _extraAsMap(state.extra);
-        final fav = _extraTransferFavorite(extra) ??
+        final fav =
+            _extraTransferFavorite(extra) ??
             const TransferFavorite(
               source: 'internal',
               accountId: '',
@@ -964,7 +973,8 @@ final GoRouter appRouter = GoRouter(
       name: 'transfer-external-verify',
       builder: (context, state) {
         final extra = _extraAsMap(state.extra);
-        final fav = _extraTransferFavorite(extra) ??
+        final fav =
+            _extraTransferFavorite(extra) ??
             const TransferFavorite(
               source: 'external',
               accountId: '',
@@ -1008,8 +1018,7 @@ final GoRouter appRouter = GoRouter(
         // route extras cache; if nothing's there, send the user to
         // their transactions list.
         if (state.extra is TransactionDetailsData) return null;
-        final cached =
-            _RouteExtrasCache.instance.transactionDetails;
+        final cached = _RouteExtrasCache.instance.transactionDetails;
         if (cached != null) return null;
         return '/transactions';
       },
@@ -1020,7 +1029,8 @@ final GoRouter appRouter = GoRouter(
           details = extra;
           _RouteExtrasCache.instance.transactionDetails = extra;
         } else {
-          details = _RouteExtrasCache.instance.transactionDetails ??
+          details =
+              _RouteExtrasCache.instance.transactionDetails ??
               kSampleTransactionDetails;
         }
         return TransactionDetailsScreen(details: details);
@@ -1170,9 +1180,7 @@ ObligationNipSettlement? _extraObligationNipSettlement(
 ) {
   final raw = extra['obligationNipSettlement'];
   if (raw is Map) {
-    return ObligationNipSettlement.tryFromJson(
-      Map<String, dynamic>.from(raw),
-    );
+    return ObligationNipSettlement.tryFromJson(Map<String, dynamic>.from(raw));
   }
   return null;
 }
@@ -1202,9 +1210,7 @@ class _MissingExtraRedirectState extends State<_MissingExtraRedirect> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
-    );
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }
 

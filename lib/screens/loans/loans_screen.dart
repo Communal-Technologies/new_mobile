@@ -390,18 +390,55 @@ class _LoansScreenState extends State<LoansScreen> {
               l.status == LoanStatus.approved || l.status == LoanStatus.pending,
         )
         .toList();
-    if (visible.isEmpty) return const SizedBox.shrink();
+    // Always offer the View all entry when at least one loan exists,
+    // even if the hub's pending+approved filter happens to be empty
+    // (e.g. only declined / closed history). Without this the member
+    // had no way to reach declined-or-closed history once the active
+    // bucket emptied.
+    if (_loans.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'My Loans',
-          style: TextStyle(
-            fontSize: 19.sp,
-            fontWeight: FontWeight.w700,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'My Loans',
+                style: TextStyle(
+                  fontSize: 19.sp,
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => context.pushNamed('loans-history'),
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.symmetric(horizontal: 8.w),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                foregroundColor: const Color(0xFFE67E22),
+              ),
+              child: Text(
+                'View all',
+                style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
         ),
+        if (visible.isEmpty) ...[
+          vSpace(8),
+          Text(
+            'No active or pending applications. Tap View all to see your '
+            'declined / cancelled / closed history.',
+            style: TextStyle(
+              fontSize: 15.sp,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.65),
+            ),
+          ),
+        ],
         vSpace(16),
         ...visible.map(
           (loan) => Padding(

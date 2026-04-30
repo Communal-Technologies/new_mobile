@@ -314,7 +314,12 @@ class _SecurityWrapperState extends State<SecurityWrapper>
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Material(
-              color: Colors.white,
+              // Was hard-coded Colors.white — rendered as a white card on
+              // the dark scaffold while the title text fell through to the
+              // theme's onSurface (white-on-white → invisible). Use the
+              // theme's cardColor so the surface flips with the active
+              // brightness.
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(16),
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -323,9 +328,13 @@ class _SecurityWrapperState extends State<SecurityWrapper>
                   children: [
                     const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 34),
                     const SizedBox(height: 10),
-                    const Text(
+                    Text(
                       'Session Ended',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 10),

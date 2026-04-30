@@ -61,19 +61,26 @@ class _LoaderOverlayState extends State<LoaderOverlay>
     final isDark = theme.brightness == Brightness.dark;
     final Color scrim = widget.scrimColor ??
         Colors.black.withValues(alpha: widget.scrimAlpha.clamp(0.0, 1.0));
-    // The loader.gif is a coloured asset whose dark glyphs vanish on
-    // a dark scrim. We don't ship a separate white loader; instead,
-    // tint the existing GIF white in dark mode via a srcIn blend so
-    // the silhouette stays visible while the pulse animation keeps
-    // running. Light mode keeps the original colours.
-    final Image loaderImage = Image.asset(
+    // The loader.gif is a coloured asset whose purple glyph vanishes
+    // on a dark scrim. We don't ship a separate white loader. Image
+    // .asset's `color` parameter only tints the first frame of an
+    // animated GIF — after the first cycle the subsequent frames
+    // render in their native colours, so dark-mode users were seeing
+    // a brief white flash that then snapped back to purple. Wrapping
+    // in ColorFiltered applies the srcIn blend per-frame, so every
+    // GIF frame stays tinted.
+    Widget loaderImage = Image.asset(
       Images.loader,
       width: widget.loaderSize,
       height: widget.loaderSize,
       fit: BoxFit.contain,
-      color: isDark ? Colors.white : null,
-      colorBlendMode: isDark ? BlendMode.srcIn : null,
     );
+    if (isDark) {
+      loaderImage = ColorFiltered(
+        colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+        child: loaderImage,
+      );
+    }
     return AbsorbPointer(
       child: ColoredBox(
         color: scrim,

@@ -428,7 +428,9 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                                   'Resend',
                                   style: TextStyle(
                                     fontSize: 15.sp,
-                                    color: theme.primaryColor,
+                                    color: theme.brightness == Brightness.dark
+                                        ? Colors.white
+                                        : theme.primaryColor,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),

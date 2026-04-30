@@ -247,7 +247,9 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
                       style: TextStyle(
                         fontSize: 17.sp,
                         fontWeight: FontWeight.w600,
-                        color: Theme.of(context).primaryColor,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Theme.of(context).primaryColor,
                       ),
                     ),
                   ),

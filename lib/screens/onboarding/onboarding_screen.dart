@@ -191,26 +191,24 @@ class OnboardingPage extends StatelessWidget {
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: index == 2 ? 50 : 60,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 50,
                     vertical: 20,
                   ),
                   child: Text(
                     text,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.displaySmall!.copyWith(
-                      fontSize: index == 2 ? 48 : 24,
+                      fontSize: 48,
                       color: headingColor,
-                      shadows: index == 2
-                          ? [
-                              BoxShadow(
-                                color: (isDark ? Colors.white : Colors.black)
-                                    .withValues(alpha: 0.19),
-                                offset: const Offset(11, 10),
-                                blurRadius: 10,
-                              ),
-                            ]
-                          : null,
+                      shadows: [
+                        BoxShadow(
+                          color: (isDark ? Colors.white : Colors.black)
+                              .withValues(alpha: 0.19),
+                          offset: const Offset(11, 10),
+                          blurRadius: 10,
+                        ),
+                      ],
                     ),
                   ),
                 ),

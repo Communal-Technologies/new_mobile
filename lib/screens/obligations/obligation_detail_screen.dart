@@ -542,7 +542,7 @@ class _FinesSection extends StatelessWidget {
   }
 }
 
-class _PaymentHistorySection extends StatelessWidget {
+class _PaymentHistorySection extends StatefulWidget {
   const _PaymentHistorySection({
     required this.payments,
     required this.loading,
@@ -552,7 +552,23 @@ class _PaymentHistorySection extends StatelessWidget {
   final bool loading;
 
   @override
+  State<_PaymentHistorySection> createState() => _PaymentHistorySectionState();
+}
+
+class _PaymentHistorySectionState extends State<_PaymentHistorySection> {
+  /// Initial visible rows. Anything beyond this is collapsed behind a
+  /// "View all" toggle so the obligation page doesn't run for screens
+  /// when payments accumulate.
+  static const int _collapsedLimit = 5;
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
+    final payments = widget.payments;
+    final loading = widget.loading;
+    final showAll = _expanded || payments.length <= _collapsedLimit;
+    final visible = showAll ? payments : payments.take(_collapsedLimit).toList();
+    final hiddenCount = payments.length - visible.length;
     return _InfoCard(
       title: 'Payment History',
       child: Column(
@@ -565,10 +581,41 @@ class _PaymentHistorySection extends StatelessWidget {
               style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
             )
           else
-            for (int i = 0; i < payments.length; i++) ...[
-              _PaymentTile(record: payments[i]),
-              if (i != payments.length - 1) vSpace(12),
+            for (int i = 0; i < visible.length; i++) ...[
+              _PaymentTile(record: visible[i]),
+              if (i != visible.length - 1) vSpace(12),
             ],
+          if (hiddenCount > 0) ...[
+            vSpace(12),
+            Center(
+              child: TextButton(
+                onPressed: () => setState(() => _expanded = true),
+                child: Text(
+                  'View all $hiddenCount more',
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+              ),
+            ),
+          ] else if (_expanded && payments.length > _collapsedLimit) ...[
+            vSpace(12),
+            Center(
+              child: TextButton(
+                onPressed: () => setState(() => _expanded = false),
+                child: Text(
+                  'Show less',
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+              ),
+            ),
+          ],
           vSpace(12),
           Align(
             alignment: Alignment.centerRight,

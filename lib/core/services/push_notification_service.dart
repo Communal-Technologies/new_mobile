@@ -1,8 +1,12 @@
+import 'dart:convert';
+
+import 'package:communal_mobile/core/navigation/root_navigator_key.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:go_router/go_router.dart';
 
 /// Channel ID referenced by AndroidManifest.xml's
 /// `com.google.firebase.messaging.default_notification_channel_id` meta-data.
@@ -75,7 +79,25 @@ class PushNotificationService {
         android: AndroidInitializationSettings('@drawable/ic_stat_notification'),
         iOS: DarwinInitializationSettings(),
       );
-      await _localNotifications.initialize(initSettings);
+      await _localNotifications.initialize(
+        initSettings,
+        // Tap on a notification we showed via the local-notifications
+        // plugin (foreground path) — payload is the JSON-encoded
+        // RemoteMessage.data block, parse it back and route the same
+        // way as a system-tray tap.
+        onDidReceiveNotificationResponse: (response) {
+          final payload = response.payload;
+          if (payload == null || payload.isEmpty) return;
+          try {
+            final raw = jsonDecode(payload);
+            if (raw is Map<String, dynamic>) {
+              _routeFromData(raw);
+            }
+          } catch (_) {
+            // Older payloads were `Map.toString()` not JSON; ignore.
+          }
+        },
+      );
 
       const channel = AndroidNotificationChannel(
         _fcmChannelId,
@@ -115,9 +137,59 @@ class PushNotificationService {
             priority: Priority.high,
           ),
         ),
-        payload: message.data.isEmpty ? null : message.data.toString(),
+        payload: message.data.isEmpty ? null : jsonEncode(message.data),
       );
     });
+
+    // System tray tap while the app is backgrounded — Android delivers
+    // the RemoteMessage straight to onMessageOpenedApp.
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      _routeFromData(message.data);
+    });
+
+    // System tray tap that launched the app from terminated — the
+    // initial message is replayed once on first read.
+    try {
+      final initial = await FirebaseMessaging.instance.getInitialMessage();
+      if (initial != null) {
+        // Defer to the next frame so the router has actually mounted
+        // before we try to push onto it.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _routeFromData(initial.data);
+        });
+      }
+    } catch (_) {
+      // No initial message / Firebase config absent → no-op.
+    }
+  }
+
+  /// Translate a notification's `data` block into a navigation. Today
+  /// the only `route` we mint server-side is `transaction-receipt`;
+  /// extend the switch as more push types start carrying a route hint.
+  ///
+  /// Receipt payloads include `trx_reference`, but the receipt screen
+  /// currently demands a fully hydrated [TransactionDetailsData]
+  /// `extra` (no by-id fetch endpoint yet on mobile). Until that
+  /// endpoint lands we drop the user on transaction history — they
+  /// can find the row by reference there. TODO: when
+  /// `getTransactionByReference` is wired, jump straight to receipt
+  /// with the right `extra`.
+  static void _routeFromData(Map<String, dynamic> data) {
+    final route = (data['route']?.toString() ?? '').trim();
+    if (route.isEmpty) return;
+    final ctx = rootNavigatorKey.currentContext;
+    if (ctx == null) return;
+    switch (route) {
+      case 'transaction-receipt':
+        try {
+          ctx.goNamed('transaction-history');
+        } catch (_) {
+          // route name may differ at the time this fires (router
+          // not in a state that accepts goNamed). Swallow — no
+          // navigation is better than a crash on a notification tap.
+        }
+        break;
+    }
   }
 
   /// Permission prompt + token sync to backend. Called after auth.

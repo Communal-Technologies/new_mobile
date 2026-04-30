@@ -98,31 +98,41 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
                               flex: 1,
                               child: SizedBox(
                                 height: 50.h,
-                                child: OutlinedButton(
-                                  onPressed: _onSkip,
-                                  style: OutlinedButton.styleFrom(
-                                    side: BorderSide(
-                                      width: 2,
-                                      color: Theme.of(context).primaryColor,
-                                    ),
-                                    foregroundColor:
-                                        Theme.of(context).primaryColor,
-                                    surfaceTintColor: Colors.transparent,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(25.r),
-                                    ),
-                                    padding:
-                                        EdgeInsets.symmetric(vertical: 14.h),
-                                  ),
-                                  child: Text(
-                                    'Skip',
-                                    style: TextStyle(
-                                      fontSize: 17.sp,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.5,
-                                      color: Theme.of(context).primaryColor,
-                                    ),
-                                  ),
+                                child: Builder(
+                                  builder: (context) {
+                                    final isDark =
+                                        Theme.of(context).brightness ==
+                                            Brightness.dark;
+                                    final skipColor = isDark
+                                        ? Colors.white
+                                        : Theme.of(context).primaryColor;
+                                    return OutlinedButton(
+                                      onPressed: _onSkip,
+                                      style: OutlinedButton.styleFrom(
+                                        side: BorderSide(
+                                          width: 2,
+                                          color: skipColor,
+                                        ),
+                                        foregroundColor: skipColor,
+                                        surfaceTintColor: Colors.transparent,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(25.r),
+                                        ),
+                                        padding:
+                                            EdgeInsets.symmetric(vertical: 14.h),
+                                      ),
+                                      child: Text(
+                                        'Skip',
+                                        style: TextStyle(
+                                          fontSize: 17.sp,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: 0.5,
+                                          color: skipColor,
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                             ),
@@ -193,11 +203,12 @@ class OnboardingPage extends StatelessWidget {
                     style: theme.textTheme.displaySmall!.copyWith(
                       fontSize: index == 2 ? 48 : 24,
                       color: headingColor,
-                      shadows: index == 2 && !isDark
-                          ? const [
+                      shadows: index == 2
+                          ? [
                               BoxShadow(
-                                color: Color.fromRGBO(0, 0, 0, 0.19),
-                                offset: Offset(11, 10),
+                                color: (isDark ? Colors.white : Colors.black)
+                                    .withValues(alpha: 0.19),
+                                offset: const Offset(11, 10),
                                 blurRadius: 10,
                               ),
                             ]

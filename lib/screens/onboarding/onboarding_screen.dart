@@ -174,23 +174,21 @@ class OnboardingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final headingColor = isDark ? Colors.white : _onboardingHeadingLight;
     return SafeArea(
       child: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          Center(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Image.asset(
-                  isDark ? Images.whiteLogo : Images.coloredLogo,
-                  height: 71,
-                  width: 250,
-                  fit: BoxFit.contain,
+                Padding(
+                  padding: const EdgeInsets.only(top: 70),
+                  child: Image.asset(
+                    isDark ? Images.whiteLogo : Images.coloredLogo,
+                    height: 71,
+                    width: 250,
+                  ),
                 ),
                 Padding(
                   padding: EdgeInsets.symmetric(
@@ -200,7 +198,7 @@ class OnboardingPage extends StatelessWidget {
                   child: Text(
                     text,
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.displaySmall!.copyWith(
+                    style: Theme.of(context).textTheme.displaySmall!.copyWith(
                       fontSize: index == 2 ? 48 : 24,
                       color: headingColor,
                       shadows: index == 2
@@ -216,25 +214,21 @@ class OnboardingPage extends StatelessWidget {
                     ),
                   ),
                 ),
-                Image.asset(image, height: 300, width: 300, fit: BoxFit.contain),
+                Image.asset(image, height: 300, width: 300),
               ],
             ),
           ),
           if (index == 2)
-            Align(
-              alignment: Alignment.topLeft,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 130, left: 8),
-                child: Image.asset(Images.cake, width: 70, height: 52),
-              ),
+            Positioned(
+              top: 158,
+              left: 0,
+              child: Image.asset(Images.cake, width: 70, height: 52),
             ),
           if (index == 2)
-            Align(
-              alignment: Alignment.bottomRight,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 8, right: 8),
-                child: Image.asset(Images.cake, width: 70, height: 52),
-              ),
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: Image.asset(Images.cake, width: 70, height: 52),
             ),
         ],
       ),

@@ -240,10 +240,13 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                     vSpace(24),
                     _buildLoanAmountSection(symbol, currency),
                     vSpace(24),
+                    // Interest treatment first — the member's pick (or
+                    // the cooperative's default) drives the math
+                    // rendered below it.
+                    _buildInterestTypeSection(),
+                    vSpace(24),
                     if (_selectedScheme != null && _hasEligibility)
                       _buildRepaymentSummarySection(currency),
-                    vSpace(24),
-                    _buildInterestTypeSection(),
                     vSpace(24),
                     _buildReasonSection(),
                     if (_error != null) ...[
@@ -648,11 +651,20 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         ? principalMinor
         : principalMinor + interestMinor;
 
+    final theme = Theme.of(context);
+    final installments = scheme.durationMonths;
+    final installmentLabel = installments == 1 ? 'installment' : 'installments';
+
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
-        color: Theme.of(context).dividerColor,
+        // Use cardColor + a hairline border instead of dividerColor as a
+        // fill; the previous version painted the outer card and the
+        // inner Total Interest pill with the SAME dividerColor, so the
+        // pill became invisible and the whole card looked off-key.
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: theme.dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -662,106 +674,87 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             style: TextStyle(
               fontSize: 17.sp,
               fontWeight: FontWeight.w700,
-              color: Theme.of(context).colorScheme.onSurface,
+              color: theme.colorScheme.onSurface,
             ),
-          ),
-          vSpace(20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      Money(monthlyMinor, currency).format(),
-                      style: TextStyle(
-                        fontSize: 22.sp,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFFE67E22),
-                      ),
-                    ),
-                    vSpace(4),
-                    Text(
-                      'monthly in ${scheme.durationMonths} installment${scheme.durationMonths == 1 ? '' : 's'}',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      Money(totalMinor, currency).format(),
-                      style: TextStyle(
-                        fontSize: 22.sp,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFFE67E22),
-                      ),
-                    ),
-                    vSpace(4),
-                    Text(
-                      'Total Repayment',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ),
           vSpace(16),
-          Container(
-            padding: EdgeInsets.all(12.w),
-            decoration: BoxDecoration(
-              color: Theme.of(context).dividerColor,
-              borderRadius: BorderRadius.circular(8.r),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Total Interest',
-                  style: TextStyle(
-                    fontSize: 15.sp,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-                Text(
-                  Money(interestMinor, currency).format(),
-                  style: TextStyle(
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          vSpace(12),
+          // Headline: monthly repayment, big and orange. Subtitle pins
+          // the cadence + interest rate in one quiet line so the card
+          // reads top-down instead of needing the eye to ping-pong
+          // between two equal-weight columns.
           Text(
-            'At ${scheme.interestRateLabel} interest rate',
+            Money(monthlyMinor, currency).format(),
             style: TextStyle(
-              fontSize: 15.sp,
-              fontWeight: FontWeight.w600,
+              fontSize: 26.sp,
+              fontWeight: FontWeight.w800,
               color: const Color(0xFFE67E22),
             ),
           ),
+          vSpace(4),
+          Text(
+            'monthly · $installments $installmentLabel · ${scheme.interestRateLabel} interest',
+            style: TextStyle(
+              fontSize: 14.sp,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          vSpace(16),
+          Divider(height: 1, color: theme.dividerColor),
+          vSpace(12),
+          _summaryRow(
+            label: 'Principal',
+            value: Money(principalMinor, currency).format(),
+          ),
+          vSpace(8),
+          _summaryRow(
+            label: 'Total Interest',
+            value: Money(interestMinor, currency).format(),
+          ),
+          vSpace(8),
+          _summaryRow(
+            label: 'Total Repayment',
+            value: Money(totalMinor, currency).format(),
+            emphasised: true,
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _summaryRow({
+    required String label,
+    required String value,
+    bool emphasised = false,
+  }) {
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14.sp,
+              color: theme.colorScheme.onSurface.withValues(
+                alpha: emphasised ? 0.85 : 0.65,
+              ),
+              fontWeight: emphasised ? FontWeight.w600 : FontWeight.w500,
+            ),
+          ),
+        ),
+        hSpace(12),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: emphasised ? 16.sp : 14.sp,
+            fontWeight: emphasised ? FontWeight.w800 : FontWeight.w600,
+            color: emphasised
+                ? const Color(0xFFE67E22)
+                : theme.colorScheme.onSurface,
+          ),
+        ),
+      ],
     );
   }
 

@@ -9,6 +9,7 @@ import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/utils/tap_debouncer.dart';
+import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/loan_scheme.dart';
 import 'package:communal_mobile/data/repositories/loan_repository.dart';
@@ -33,17 +34,16 @@ class _LoanApplicationStep3ScreenState
   final TapDebouncer _submitDebouncer = TapDebouncer();
   bool _agreedToTerms = false;
   bool _submitting = false;
-  String? _error;
 
   int get _principalMinor =>
       (widget.draft.amountMajor * factorFor(widget.draft.currency)).round();
 
   int get _monthlyMinor => estimatedMonthlyRepaymentMinor(
-        principalMinor: _principalMinor,
-        scheme: widget.draft.scheme,
-        interestType: widget.draft.interestType,
-        currency: widget.draft.currency,
-      );
+    principalMinor: _principalMinor,
+    scheme: widget.draft.scheme,
+    interestType: widget.draft.interestType,
+    currency: widget.draft.currency,
+  );
 
   int get _interestMinor =>
       (_principalMinor * widget.draft.scheme.interestRate / 100).round();
@@ -58,7 +58,6 @@ class _LoanApplicationStep3ScreenState
     if (auth is! AuthAuthenticated) return;
     setState(() {
       _submitting = true;
-      _error = null;
     });
     try {
       final guarantorLedgers = widget.draft.guarantors
@@ -95,10 +94,11 @@ class _LoanApplicationStep3ScreenState
       );
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _submitting = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
-      });
+      // Backend errors surface as toasts now — keeps a single, app-wide
+      // pattern for server responses instead of mixing inline error
+      // banners with the toasts every other screen already uses.
+      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
+      setState(() => _submitting = false);
     }
   }
 
@@ -146,8 +146,7 @@ class _LoanApplicationStep3ScreenState
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(
-                    horizontal: 16.w, vertical: 16.h),
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -160,23 +159,6 @@ class _LoanApplicationStep3ScreenState
                     _buildTermsCard(),
                     vSpace(24),
                     _buildNoticeCard(),
-                    if (_error != null) ...[
-                      vSpace(16),
-                      Container(
-                        padding: EdgeInsets.all(12.w),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFDECEA),
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        child: Text(
-                          _error!,
-                          style: TextStyle(
-                            fontSize: 15.sp,
-                            color: const Color(0xFFE74C3C),
-                          ),
-                        ),
-                      ),
-                    ],
                     vSpace(24),
                   ],
                 ),
@@ -259,8 +241,10 @@ class _LoanApplicationStep3ScreenState
             ),
           ),
           vSpace(20),
-          _row('Product',
-              scheme.title.isNotEmpty ? scheme.title : scheme.loanCode),
+          _row(
+            'Product',
+            scheme.title.isNotEmpty ? scheme.title : scheme.loanCode,
+          ),
           _row('Loan Amount', Money(_principalMinor, currency).format()),
           _row('Duration', scheme.durationLabel),
           _row('Interest Rate', scheme.interestRateLabel),
@@ -335,8 +319,11 @@ class _LoanApplicationStep3ScreenState
               padding: EdgeInsets.only(bottom: 12.h),
               child: Row(
                 children: [
-                  Icon(Icons.check_circle,
-                      color: const Color(0xFF4CAF50), size: 22.sp),
+                  Icon(
+                    Icons.check_circle,
+                    color: const Color(0xFF4CAF50),
+                    size: 22.sp,
+                  ),
                   hSpace(12),
                   Expanded(
                     child: Column(
@@ -355,7 +342,9 @@ class _LoanApplicationStep3ScreenState
                           g.ledgerNumber,
                           style: TextStyle(
                             fontSize: 14.sp,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                       ],
@@ -411,7 +400,9 @@ class _LoanApplicationStep3ScreenState
               text: TextSpan(
                 style: TextStyle(
                   fontSize: 15.sp,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
                   height: 1.5,
                 ),
                 children: [
@@ -459,7 +450,9 @@ class _LoanApplicationStep3ScreenState
             'Your application will be reviewed by your cooperative. You will be notified of the decision in-app and via SMS.',
             style: TextStyle(
               fontSize: 14.sp,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
               height: 1.4,
             ),
           ),

@@ -10,6 +10,7 @@ import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
+import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/loan_eligibility.dart';
 import 'package:communal_mobile/data/models/loan_scheme.dart';
@@ -137,10 +138,10 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
-      });
+      // Backend errors go through the app-wide toast; the inline
+      // `_error` banner is reserved for local form-validation hints.
+      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
+      setState(() => _loading = false);
     }
   }
 

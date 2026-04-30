@@ -161,6 +161,20 @@ class BiometricSignerService {
     );
   }
 
+  /// Used by the bill-payment confirm screen (airtime + data, plus any
+  /// future Anchor bill categories sharing the same `/v1/bills/*` route
+  /// family). Backend middleware: `biometric-sig:bill-purchase`.
+  Future<BiometricSignedHeaders> signBillPurchaseIntent({
+    String promptTitle = 'Authorize bill payment',
+    String promptSubtitle = 'Use biometrics to confirm this purchase',
+  }) async {
+    return _signIntent(
+      'bill-purchase',
+      promptTitle: promptTitle,
+      promptSubtitle: promptSubtitle,
+    );
+  }
+
   Future<BiometricSignedHeaders> _signIntent(
     String intent, {
     required String promptTitle,

@@ -97,6 +97,19 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
         }
       });
     }
+    // Wallet balance refresh on terminal status. Pending lands in the
+    // poll loop below (refresh fires when it flips to successful), but
+    // a transfer that returns SUCCESSFUL on the initial response (book
+    // transfers commonly do) used to skip the refresh entirely — so
+    // the home/transfer screens kept showing the pre-transfer balance
+    // until the user navigated away and back. Schedule a refresh on
+    // first frame for any non-pending arrival.
+    if (_details.status != TransactionStatus.pending) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.read<AuthBloc>().add(AuthRefreshUserRequested());
+      });
+    }
     if (_details.status == TransactionStatus.pending &&
         _details.id.trim().isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {

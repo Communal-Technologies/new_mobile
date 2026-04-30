@@ -217,8 +217,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final security = context.read<SecurityCubit>();
     security.beginExternalFilePickerGuard();
     try {
+      // Mirror profile_header._pickAndUpload — only JPG/PNG. HEIC/WebP
+      // upload fine but render as "Invalid image data" elsewhere in the
+      // app, so we cut them at the picker.
       final picked = await FilePicker.platform.pickFiles(
-        type: FileType.image,
+        type: FileType.custom,
+        allowedExtensions: const ['jpg', 'jpeg', 'png'],
         allowMultiple: false,
         withData: false,
       );

@@ -36,8 +36,14 @@ class _ProfileHeaderState extends State<ProfileHeader> {
     final security = context.read<SecurityCubit>();
     security.beginExternalFilePickerGuard();
     try {
+      // JPG / PNG only — HEIC and WebP can come back from iOS / some
+      // Android galleries and Flutter's image decoder rejects them on
+      // the home/sidebar avatar render. Restricting at the picker keeps
+      // the upload pipeline producing bytes every other client can
+      // decode. Backend mime sniff guards this server-side too.
       final picked = await FilePicker.platform.pickFiles(
-        type: FileType.image,
+        type: FileType.custom,
+        allowedExtensions: const ['jpg', 'jpeg', 'png'],
         allowMultiple: false,
         withData: false,
       );

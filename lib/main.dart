@@ -34,16 +34,16 @@ void main() async {
   _assertBuildTimeConfig();
   await configureDependencies();
 
-  // Push notifications: Firebase init + local-notification channel + foreground
-  // listener. Background handler must be registered before runApp() so a
-  // terminated-app push can wake the isolate. Wrapped because Firebase config
-  // may be absent on some build variants — push is optional, never fatal.
-  try {
-    await PushNotificationService.initializeForApp();
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-  } catch (e) {
-    debugPrint('main: push notification setup skipped: $e');
-  }
+  // Push notifications used to live here behind an `await`, blocking
+  // runApp on Firebase.initializeApp + local-notif channel creation +
+  // foreground-listener wiring. On cold start that pushed first paint
+  // back ~1-2s and contributed to the "Skipped 365 frames" choreographer
+  // warning observed in logcat after a hot restart. Now deferred to a
+  // post-first-frame callback (see below). The FCM background-message
+  // handler is plugin-state on the native side, so registering it
+  // slightly later still catches every subsequent terminated-app push;
+  // the only gap is "app launched + immediately killed before first
+  // frame, then push arrives" which is too narrow to optimise for.
 
   // Set system UI style (status bar)
   SystemChrome.setSystemUIOverlayStyle(
@@ -60,8 +60,25 @@ void main() async {
   unawaited(SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
-  ]).then(
-    (_) => runApp(
+  ]).then((_) {
+    // Defer push-notification setup until after the first frame
+    // paints so Firebase.initializeApp doesn't sit on the critical
+    // path. Wrapped in catchError because Firebase config may be
+    // absent on some build variants — push is optional, never fatal.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      PushNotificationService.initializeForApp().then((_) {
+        try {
+          FirebaseMessaging.onBackgroundMessage(
+            firebaseMessagingBackgroundHandler,
+          );
+        } catch (e) {
+          debugPrint('main: FCM background handler skipped: $e');
+        }
+      }).catchError((e) {
+        debugPrint('main: push notification setup skipped: $e');
+      });
+    });
+    runApp(
       MultiBlocProvider(
         providers: [
           BlocProvider(create: (_) => getIt<SplashCubit>()),
@@ -75,8 +92,8 @@ void main() async {
         ],
         child: const MyApp(),
       ),
-    ),
-  ));
+    );
+  }));
 }
 
 /// Surfaces missing build-time `--dart-define` values at startup instead of

@@ -251,6 +251,7 @@ class _TransferInternalVerifyScreenState
           counterpartyAccount: widget.recipient.accountNumber,
           amount: widget.amountMinor / factorFor(widget.currency),
           currencySymbol: currencySymbol,
+          currencyCode: currencyCode,
           transactionType:
               widget.useExternalNipFlow ? 'NIP Transfer' : 'Book Transfer',
           dateTime: DateTime.now(),

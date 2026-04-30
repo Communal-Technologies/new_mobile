@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
 import 'package:communal_mobile/core/utils/app_currency.dart';
-import 'package:communal_mobile/core/utils/money_formatter.dart';
+import 'package:communal_mobile/core/utils/money.dart';
 
 enum TransactionStatus { successful, pending, failed }
 
@@ -44,6 +44,7 @@ class TransactionDetailsData {
     this.status = TransactionStatus.successful,
     this.isIncoming = true,
     this.bankLogoAsset,
+    this.currencyCode,
   });
 
   final String id;
@@ -65,10 +66,31 @@ class TransactionDetailsData {
   final String? note;
   /// Provider reason when status is failed (e.g. INSUFFICIENT_BALANCE).
   final String? failureReason;
+  /// ISO 4217 alpha-3 code for the receipt amount + fees. Optional for
+  /// backwards compat with older constructor sites; absent → 'NGN'.
+  /// New code should always pass it so non-NGN amounts format with the
+  /// right decimal count.
+  final String? currencyCode;
 
-  String get amountLabel => '$currencySymbol${formatMoney(amount)}';
+  // Always show the canonical decimals for the active currency
+  // (kobo for NGN, cents for USD, etc.) so the receipt matches the
+  // review screen — formatMoney drops `.00` on round amounts which
+  // is fine in summary tiles but wrong on a receipt the user reads
+  // as a record. Defaults to NGN when [currencyCode] isn't carried
+  // through (older call sites that only pass [currencySymbol]).
+  String get amountLabel {
+    final code = (currencyCode ?? 'NGN').toUpperCase();
+    final factor = factorFor(code);
+    final minor = (amount * factor).round();
+    return '$currencySymbol${Money(minor, code).format(symbol: false)}';
+  }
 
-  String get feesLabel => '$currencySymbol${formatMoney(fees)}';
+  String get feesLabel {
+    final code = (currencyCode ?? 'NGN').toUpperCase();
+    final factor = factorFor(code);
+    final minor = (fees * factor).round();
+    return '$currencySymbol${Money(minor, code).format(symbol: false)}';
+  }
 
   String get counterpartLabel => isIncoming ? 'Received from' : 'Sent to';
 
@@ -104,6 +126,7 @@ class TransactionDetailsData {
     String? note,
     String? failureReason,
     bool clearFailureReason = false,
+    String? currencyCode,
   }) {
     return TransactionDetailsData(
       id: id ?? this.id,
@@ -126,6 +149,7 @@ class TransactionDetailsData {
       failureReason: clearFailureReason
           ? null
           : (failureReason ?? this.failureReason),
+      currencyCode: currencyCode ?? this.currencyCode,
     );
   }
 }

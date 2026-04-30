@@ -375,9 +375,11 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                           label: 'Download',
                           icon: Iconsax.import,
                           background: theme.brightness == Brightness.dark
-                              ? theme.primaryColor.withValues(alpha: 0.16)
+                              ? Colors.white.withValues(alpha: 0.12)
                               : const Color(0xFFF0E6FF),
-                          foreground: theme.primaryColor,
+                          foreground: theme.brightness == Brightness.dark
+                              ? Colors.white
+                              : theme.primaryColor,
                           onTap: _downloadReceipt,
                         ),
                       ),
@@ -401,9 +403,11 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                     label: 'Make Another Transfer',
                     icon: Iconsax.arrow_swap_horizontal,
                     background: theme.brightness == Brightness.dark
-                        ? theme.primaryColor.withValues(alpha: 0.16)
+                        ? Colors.white.withValues(alpha: 0.12)
                         : const Color(0xFFEFE6FD),
-                    foreground: theme.primaryColor,
+                    foreground: theme.brightness == Brightness.dark
+                        ? Colors.white
+                        : theme.primaryColor,
                     onTap: () => context.goNamed('transfer'),
                   ),
                 ),

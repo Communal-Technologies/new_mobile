@@ -41,7 +41,7 @@ class IdlePromptDialog extends StatelessWidget {
               'You\'ve been idle for a while. Tap Stay to continue, or Leave to lock the app.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 color: onSurface.withValues(alpha: 0.6),
               ),
             ),

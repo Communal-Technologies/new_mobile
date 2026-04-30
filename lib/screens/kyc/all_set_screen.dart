@@ -78,7 +78,7 @@ class AllSetScreen extends StatelessWidget {
                       'Your account has been created successfully, Welcome to communal.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 17.sp,
+                        fontSize: 19.sp,
                         color: Colors.white.withValues(alpha: 0.9),
                         height: 1.4,
                       ),
@@ -127,7 +127,7 @@ class AllSetScreen extends StatelessWidget {
                           'Continue to Dashboard',
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.onSurface,
-                            fontSize: 17.sp,
+                            fontSize: 19.sp,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -190,7 +190,7 @@ class AllSetScreen extends StatelessWidget {
             child: Text(
               title,
               style: TextStyle(
-                fontSize: 17.sp,
+                fontSize: 19.sp,
                 fontWeight: FontWeight.w400,
                 color: Colors.white.withValues(alpha: 0.95),
               ),

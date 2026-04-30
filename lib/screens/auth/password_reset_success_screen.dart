@@ -97,7 +97,7 @@ class PasswordResetSuccessScreen extends StatelessWidget {
                           'Your password has been successfully updated.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 17.sp,
+                            fontSize: 19.sp,
                             color: Colors.white.withValues(alpha: 0.95),
                             height: 1.5,
                           ),
@@ -106,7 +106,7 @@ class PasswordResetSuccessScreen extends StatelessWidget {
                           'You can now sign in with your new password.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 17.sp,
+                            fontSize: 19.sp,
                             color: Colors.white.withValues(alpha: 0.95),
                             height: 1.5,
                           ),
@@ -138,7 +138,7 @@ class PasswordResetSuccessScreen extends StatelessWidget {
                         'Continue to Sign in',
                         style: TextStyle(
                           color: theme.primaryColor,
-                          fontSize: 17.sp,
+                          fontSize: 19.sp,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.5,
                         ),

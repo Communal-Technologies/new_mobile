@@ -85,7 +85,7 @@ class _SocialMediaIcon extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 16.sp,
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),

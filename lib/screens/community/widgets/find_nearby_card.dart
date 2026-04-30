@@ -38,7 +38,7 @@ class FindNearbyCard extends StatelessWidget {
             Text(
               'Find Nearby Communities',
               style: TextStyle(
-                fontSize: 17.sp,
+                fontSize: 19.sp,
                 fontWeight: FontWeight.w700,
                 color: isDark
                     ? theme.colorScheme.onSurface

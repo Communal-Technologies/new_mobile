@@ -99,7 +99,7 @@ class _StatCard extends StatelessWidget {
           Text(
             title,
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),

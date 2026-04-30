@@ -175,7 +175,7 @@ class _TransferInternalAmountScreenState
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
-                            fontSize: 17.sp,
+                            fontSize: 19.sp,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -184,7 +184,7 @@ class _TransferInternalAmountScreenState
                           widget.recipient.accountNumber,
                           style: TextStyle(
                             color: Colors.white70,
-                            fontSize: 15.sp,
+                            fontSize: 17.sp,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -209,7 +209,7 @@ class _TransferInternalAmountScreenState
                   Text(
                     'Amount',
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       fontWeight: FontWeight.w600,
                     ),
@@ -287,7 +287,7 @@ class _TransferInternalAmountScreenState
                                 child: Text(
                                   '$currencySymbol${v >= 1000 ? '${(v ~/ 1000)}k' : v}',
                                   style: TextStyle(
-                                    fontSize: 15.sp,
+                                    fontSize: 17.sp,
                                     fontWeight: FontWeight.w600,
                                     color: Theme.of(context)
                                         .colorScheme
@@ -304,7 +304,7 @@ class _TransferInternalAmountScreenState
                   Text(
                     'Naration',
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       fontWeight: FontWeight.w600,
                     ),
@@ -364,7 +364,7 @@ class _TransferInternalAmountScreenState
                   'Continue',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

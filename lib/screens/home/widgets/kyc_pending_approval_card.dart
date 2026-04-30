@@ -96,7 +96,7 @@ class _KycPendingApprovalCardState extends State<KycPendingApprovalCard> {
             'and update your account shortly. Expected review time: 1–3 business days.',
             textAlign: TextAlign.start,
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               height: 1.45,
             ),

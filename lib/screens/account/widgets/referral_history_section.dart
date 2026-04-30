@@ -15,7 +15,7 @@ class ReferralHistorySection extends StatelessWidget {
           Text(
             'Referral History',
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -130,7 +130,7 @@ class _ReferralHistoryItem extends StatelessWidget {
               Text(
                 name,
                 style: TextStyle(
-                  fontSize: 17.sp,
+                  fontSize: 19.sp,
                   fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -139,7 +139,7 @@ class _ReferralHistoryItem extends StatelessWidget {
               Text(
                 date,
                 style: TextStyle(
-                  fontSize: 14.sp,
+                  fontSize: 16.sp,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
@@ -152,7 +152,7 @@ class _ReferralHistoryItem extends StatelessWidget {
             Text(
               amount,
               style: TextStyle(
-                fontSize: 17.sp,
+                fontSize: 19.sp,
                 fontWeight: FontWeight.w700,
                 color: Theme.of(context).colorScheme.onSurface,
               ),

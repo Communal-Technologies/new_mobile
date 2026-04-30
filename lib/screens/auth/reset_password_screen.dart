@@ -378,7 +378,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                   ? _maskContact(widget.contact!)
                                   : 'Enter a 6-digit numeric PIN',
                           style: TextStyle(
-                            fontSize: 15.sp,
+                            fontSize: 17.sp,
                             color: Theme.of(context).primaryColor,
                             fontWeight: FontWeight.w500,
                           ),
@@ -455,7 +455,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         Text(
                           _passwordError!,
                           style: TextStyle(
-                            fontSize: 15.sp,
+                            fontSize: 17.sp,
                             color: Colors.red,
                             fontWeight: FontWeight.w500,
                           ),

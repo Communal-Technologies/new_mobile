@@ -56,7 +56,7 @@ class CommunityToggleSettingItem extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w600,
                     color: enabled ? onSurface : disabledTone,
                   ),
@@ -65,7 +65,7 @@ class CommunityToggleSettingItem extends StatelessWidget {
                 Text(
                   description,
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: enabled ? mutedTone : disabledTone,
                   ),
                 ),

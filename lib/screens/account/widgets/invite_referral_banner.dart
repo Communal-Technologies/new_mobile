@@ -36,7 +36,7 @@ class InviteReferralBanner extends StatelessWidget {
             'Earn up to ₦5,000 for every friend who signs up and completes their first transaction',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               color: Colors.white.withOpacity(0.9),
               height: 1.5,
             ),

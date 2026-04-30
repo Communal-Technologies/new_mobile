@@ -265,7 +265,7 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
           'Biometric Authentication',
           style: TextStyle(
             color: Theme.of(context).colorScheme.onSurface,
-            fontSize: 17.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -296,7 +296,7 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
             'biometric is enrolled in device settings.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               height: 1.4,
             ),
@@ -328,7 +328,7 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
               'Use $method to quickly and securely access your account',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 height: 1.4,
               ),
@@ -516,7 +516,7 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       text,
       style: TextStyle(
-        fontSize: 17.sp,
+        fontSize: 19.sp,
         fontWeight: FontWeight.w700,
         color: const Color(0xFF1F1F1F),
       ),
@@ -555,7 +555,7 @@ class _MasterEnableCard extends StatelessWidget {
                 Text(
                   'Enable Biometric Authentication',
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -563,7 +563,7 @@ class _MasterEnableCard extends StatelessWidget {
                 Text(
                   'Use your $method for secure access',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
@@ -635,7 +635,7 @@ class _GranularToggleCard extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
@@ -644,7 +644,7 @@ class _GranularToggleCard extends StatelessWidget {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 16.sp,
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
@@ -772,7 +772,7 @@ class _RegisteredBiometricRow extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
                     color: isActive ? Colors.black : Colors.black54,
                   ),
@@ -781,7 +781,7 @@ class _RegisteredBiometricRow extends StatelessWidget {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 16.sp,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
@@ -821,7 +821,7 @@ class _StatusBadge extends StatelessWidget {
           Text(
             isActive ? 'Active' : 'Inactive',
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 16.sp,
               fontWeight: FontWeight.w700,
               color: color,
             ),
@@ -910,7 +910,7 @@ class _BiometricConfirmModal extends StatelessWidget {
               body,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 height: 1.4,
               ),
@@ -930,7 +930,7 @@ class _BiometricConfirmModal extends StatelessWidget {
                 ),
                 child: Text(
                   primaryLabel,
-                  style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 19.sp, fontWeight: FontWeight.w700),
                 ),
               ),
             ),
@@ -955,7 +955,7 @@ class _BiometricConfirmModal extends StatelessWidget {
                 child: Text(
                   'Cancel',
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),

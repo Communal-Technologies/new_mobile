@@ -335,7 +335,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                   textAlign: TextAlign.center,
                   text: TextSpan(
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       height: 1.5,
                     ),
@@ -380,7 +380,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                     ? Text(
                         'Resend code in ${_resendTimer}s',
                         style: TextStyle(
-                          fontSize: 15.sp,
+                          fontSize: 17.sp,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       )
@@ -400,7 +400,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                               Text(
                                 'Sending code…',
                                 style: TextStyle(
-                                  fontSize: 15.sp,
+                                  fontSize: 17.sp,
                                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                 ),
                               ),
@@ -412,7 +412,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                               Text(
                                 'Didn\'t receive the code?',
                                 style: TextStyle(
-                                  fontSize: 15.sp,
+                                  fontSize: 17.sp,
                                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                 ),
                               ),
@@ -427,7 +427,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                                 child: Text(
                                   'Resend',
                                   style: TextStyle(
-                                    fontSize: 15.sp,
+                                    fontSize: 17.sp,
                                     color: theme.brightness == Brightness.dark
                                         ? Colors.white
                                         : theme.primaryColor,
@@ -446,7 +446,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                     _deliveryInfo!,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 16.sp,
                       color: const Color(0xFF0F8B8D),
                     ),
                   ),

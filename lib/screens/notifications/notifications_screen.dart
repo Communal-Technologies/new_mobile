@@ -86,7 +86,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 child: Text(
                   _markingAll ? 'Marking…' : 'Mark all read',
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 16.sp,
                     color: const Color(0xFF7434FF),
                     fontWeight: FontWeight.w600,
                   ),
@@ -180,7 +180,7 @@ class _NotificationTile extends StatelessWidget {
                     Text(
                       notification.message,
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 17.sp,
                         color: Theme.of(context).colorScheme.onSurface,
                         fontWeight:
                             unread ? FontWeight.w600 : FontWeight.w500,
@@ -234,7 +234,7 @@ class _EmptyState extends StatelessWidget {
           Text(
             'No notifications yet',
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
@@ -268,7 +268,7 @@ class _ErrorState extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),

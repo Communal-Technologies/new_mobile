@@ -204,7 +204,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 14.sp,
+          fontSize: 16.sp,
           fontWeight: FontWeight.w600,
           color: color,
         ),
@@ -250,7 +250,7 @@ class _AccountNumberCard extends StatelessWidget {
           Text(
             'Account Number',
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               color: Colors.white.withValues(alpha: 0.9),
             ),
           ),

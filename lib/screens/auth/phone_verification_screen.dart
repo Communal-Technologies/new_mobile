@@ -378,7 +378,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                   textAlign: TextAlign.center,
                   text: TextSpan(
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       height: 1.5,
                     ),
@@ -417,7 +417,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                     ? Text(
                         'Resend code in ${_resendTimer}s',
                         style: TextStyle(
-                          fontSize: 15.sp,
+                          fontSize: 17.sp,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       )
@@ -427,7 +427,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                           Text(
                             'Didn\'t receive the code?',
                             style: TextStyle(
-                              fontSize: 15.sp,
+                              fontSize: 17.sp,
                               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                           ),
@@ -442,7 +442,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                             child: Text(
                               'Resend',
                               style: TextStyle(
-                                fontSize: 15.sp,
+                                fontSize: 17.sp,
                                 color: theme.brightness == Brightness.dark
                                     ? Colors.white
                                     : theme.primaryColor,
@@ -459,7 +459,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                 Text(
                   _error!,
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 16.sp,
                     color: const Color(0xFFE74C3C),
                   ),
                 ),
@@ -470,7 +470,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                 Text(
                   _deliveryInfo!,
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 16.sp,
                     color: const Color(0xFF0F8B8D),
                   ),
                 ),
@@ -511,7 +511,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                             ? 'Check the Code'
                             : 'How to check the Code',
                         style: TextStyle(
-                          fontSize: 17.sp,
+                          fontSize: 19.sp,
                           fontWeight: FontWeight.w600,
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
@@ -525,7 +525,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                                 Text(
                                   '• ',
                                   style: TextStyle(
-                                    fontSize: 15.sp,
+                                    fontSize: 17.sp,
                                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                   ),
                                 ),
@@ -533,7 +533,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                                   child: Text(
                                     step,
                                     style: TextStyle(
-                                      fontSize: 15.sp,
+                                      fontSize: 17.sp,
                                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                       height: 1.4,
                                     ),
@@ -555,7 +555,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                   child: Text(
                     'Or Send Code via',
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
@@ -586,7 +586,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                     Text(
                       'Licensed by CBN',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 16.sp,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
@@ -613,7 +613,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                     Text(
                       '|',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 16.sp,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                       ),
                     ),
@@ -621,7 +621,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                     Text(
                       'Deposits insured by',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 16.sp,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
@@ -695,7 +695,7 @@ class _MethodButton extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontSize: 17.sp,
+                fontSize: 19.sp,
                 fontWeight: FontWeight.w500,
                 color: Theme.of(context).colorScheme.onSurface,
               ),

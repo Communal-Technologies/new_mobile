@@ -248,7 +248,7 @@ class _FaqScreenState extends State<FaqScreen> {
         child: Text(
           _tabs[index],
           style: TextStyle(
-            fontSize: 17.sp,
+            fontSize: 19.sp,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
             color: isSelected
                 ? theme.primaryColor
@@ -279,7 +279,7 @@ class _FaqScreenState extends State<FaqScreen> {
           decoration: InputDecoration(
             hintText: 'Search for help...',
             hintStyle: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
             prefixIcon: Icon(

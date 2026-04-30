@@ -256,7 +256,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
               ),
               for (final label in _kycIdTypeDisplayLabels)
                 ListTile(
-                  title: Text(label, style: TextStyle(fontSize: 17.sp)),
+                  title: Text(label, style: TextStyle(fontSize: 19.sp)),
                   trailing: _selectedIdType == label
                       ? Icon(Icons.check_circle, color: theme.primaryColor)
                       : null,
@@ -338,7 +338,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
           SizedBox(height: 4.h),
           Text(
             _idTypeError!,
-            style: TextStyle(color: Colors.red, fontSize: 17.sp),
+            style: TextStyle(color: Colors.red, fontSize: 19.sp),
           ),
         ],
       ],
@@ -602,7 +602,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                   textAlign: TextAlign.center,
                   text: TextSpan(
                     style: TextStyle(
-                      fontSize: 17.sp,
+                      fontSize: 19.sp,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                     children: [
@@ -669,7 +669,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                       child: Text(
                         'Verify your identity',
                         style: TextStyle(
-                          fontSize: 17.sp,
+                          fontSize: 19.sp,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
@@ -682,7 +682,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                         Text(
                           'Proof of Identity',
                           style: TextStyle(
-                            fontSize: 17.sp,
+                            fontSize: 19.sp,
                             color: theme.brightness == Brightness.dark
                                 ? Colors.white
                                 : theme.primaryColor,
@@ -692,7 +692,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                         Text(
                           'Step 3 of 3',
                           style: TextStyle(
-                            fontSize: 17.sp,
+                            fontSize: 19.sp,
                             color: theme.brightness == Brightness.dark
                                 ? Colors.white
                                 : theme.primaryColor,
@@ -844,7 +844,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                         SizedBox(height: 4.h),
                         Text(
                           _documentError!,
-                          style: TextStyle(color: Colors.red, fontSize: 17.sp),
+                          style: TextStyle(color: Colors.red, fontSize: 19.sp),
                         ),
                       ],
 
@@ -874,7 +874,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                               Text(
                                 'Important Notice',
                                 style: TextStyle(
-                                  fontSize: 17.sp,
+                                  fontSize: 19.sp,
                                   fontWeight: FontWeight.w600,
                                   // Pinned: notice card has a fixed light-teal
                                   // bg, so the title must read dark in both
@@ -957,13 +957,13 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
         children: [
           Text(
             '• ',
-            style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 19.sp, color: Colors.grey.shade700),
           ),
           Expanded(
             child: Text(
               text,
               style: TextStyle(
-                fontSize: 17.sp,
+                fontSize: 19.sp,
                 // Pinned dark text — notice card bg is a fixed light teal,
                 // so theme.onSurface (which flips white in dark mode) would
                 // vanish on the bg. Same reason as the title above.
@@ -1033,7 +1033,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
           SizedBox(height: 4.h),
           Text(
             errorText,
-            style: TextStyle(color: Colors.red, fontSize: 17.sp),
+            style: TextStyle(color: Colors.red, fontSize: 19.sp),
           ),
         ],
       ],

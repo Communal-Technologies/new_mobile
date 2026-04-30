@@ -157,7 +157,7 @@ class _NotificationSettingsScreenState
               _error!,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
@@ -303,7 +303,7 @@ class _NotificationSettingsScreenState
         builder: (context) => Text(
           title,
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w600,
             color: Theme.of(context)
                 .colorScheme

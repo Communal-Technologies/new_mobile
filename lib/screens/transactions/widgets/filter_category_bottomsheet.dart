@@ -65,7 +65,7 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
           Text(
             'Payment Type',
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -101,7 +101,7 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
                     child: Text(
                       'Cancel',
                       style: TextStyle(
-                        fontSize: 17.sp,
+                        fontSize: 19.sp,
                         fontWeight: FontWeight.w600,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
@@ -131,7 +131,7 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
                     child: Text(
                       'Apply',
                       style: TextStyle(
-                        fontSize: 17.sp,
+                        fontSize: 19.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
@@ -164,7 +164,7 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 17.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w500,
             color: isSelected ? Colors.white : theme.colorScheme.onSurface.withValues(alpha: 0.7),
           ),
@@ -191,7 +191,7 @@ class _FilterCategoryBottomSheetState extends State<FilterCategoryBottomSheet> {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 17.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w500,
             color: isSelected ? Colors.white : theme.colorScheme.onSurface.withValues(alpha: 0.7),
           ),

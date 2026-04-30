@@ -122,13 +122,13 @@ class _TransferExternalBankPickerScreenState
                 controller: _searchCtrl,
                 onChanged: (_) => setState(() {}),
                 style: TextStyle(
-                  fontSize: 17.sp,
+                  fontSize: 19.sp,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
                 decoration: InputDecoration(
                   hintText: 'Search banks',
                   hintStyle: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
@@ -172,7 +172,7 @@ class _TransferExternalBankPickerScreenState
                     Text(
                       'Featured Banks',
                       style: TextStyle(
-                        fontSize: 17.sp,
+                        fontSize: 19.sp,
                         fontWeight: FontWeight.w800,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
@@ -210,7 +210,7 @@ class _TransferExternalBankPickerScreenState
                                       overflow: TextOverflow.ellipsis,
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
-                                        fontSize: 15.sp,
+                                        fontSize: 17.sp,
                                         fontWeight: FontWeight.w600,
                                         height: 1.25,
                                         color: Theme.of(context).colorScheme.onSurface,

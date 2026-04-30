@@ -97,7 +97,7 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
           child: Text(
             _errorMessage!,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 16.sp,
               color: const Color(0xFFE74C3C),
             ),
           ),
@@ -136,7 +136,7 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
                   Text(
                     'Application pending',
                     style: TextStyle(
-                      fontSize: 17.sp,
+                      fontSize: 19.sp,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF9A4F00),
                     ),
@@ -147,7 +147,7 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
                     '${widget.community.name} awaiting admin review. '
                     'Submitting another would just be a duplicate.',
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 16.sp,
                       color: const Color(0xFF9A4F00),
                     ),
                   ),
@@ -173,7 +173,7 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
               child: Text(
                 'Close',
                 style: TextStyle(
-                  fontSize: 17.sp,
+                  fontSize: 19.sp,
                   fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -202,7 +202,7 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
               child: Text(
                 'View status',
                 style: TextStyle(
-                  fontSize: 17.sp,
+                  fontSize: 19.sp,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -300,7 +300,7 @@ class _Header extends StatelessWidget {
           'By joining, you agree to the community guidelines and contribution requirements.',
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
@@ -321,7 +321,7 @@ class _MessageField extends StatelessWidget {
         Text(
           'Add a message (optional)',
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w600,
             color: Theme.of(context).colorScheme.onSurface,
           ),
@@ -383,7 +383,7 @@ class _AlertCard extends StatelessWidget {
                 Text(
                   'Application Review Required',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF9A4F00),
                   ),
@@ -394,7 +394,7 @@ class _AlertCard extends StatelessWidget {
                   'coordinator. You’ll receive a response within 2-3 '
                   'business days.',
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 16.sp,
                     color: const Color(0xFF9A4F00),
                   ),
                 ),
@@ -435,7 +435,7 @@ class _Actions extends StatelessWidget {
             child: Text(
               'Cancel',
               style: TextStyle(
-                fontSize: 17.sp,
+                fontSize: 19.sp,
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -467,7 +467,7 @@ class _Actions extends StatelessWidget {
                 : Text(
                     'Submit Request',
                     style: TextStyle(
-                      fontSize: 17.sp,
+                      fontSize: 19.sp,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

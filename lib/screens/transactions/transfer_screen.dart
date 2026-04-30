@@ -104,7 +104,7 @@ class _TransferScreenState extends State<TransferScreen> {
             children: [
               Text(
                 'Choose Transfer Type',
-                style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w700),
+                style: TextStyle(fontSize: 19.sp, fontWeight: FontWeight.w700),
               ),
               vSpace(12),
               _optionCard(
@@ -130,7 +130,7 @@ class _TransferScreenState extends State<TransferScreen> {
                     Text(
                       'Your Favourites',
                       style: TextStyle(
-                        fontSize: 17.sp,
+                        fontSize: 19.sp,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -163,7 +163,7 @@ class _TransferScreenState extends State<TransferScreen> {
                   Text(
                     'Recent Transfers',
                     style: TextStyle(
-                      fontSize: 17.sp,
+                      fontSize: 19.sp,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -200,7 +200,7 @@ class _TransferScreenState extends State<TransferScreen> {
                         child: Text(
                           _recentError!,
                           style: TextStyle(
-                            fontSize: 15.sp,
+                            fontSize: 17.sp,
                             color: Colors.red.shade700,
                           ),
                         ),
@@ -217,7 +217,7 @@ class _TransferScreenState extends State<TransferScreen> {
                   padding: EdgeInsets.symmetric(vertical: 12.h),
                   child: Text(
                     'No recent transfers',
-                    style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
+                    style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
                   ),
                 )
               else
@@ -303,7 +303,7 @@ class _TransferScreenState extends State<TransferScreen> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
             ),
             Text(
               f.accountNumber,
@@ -311,7 +311,7 @@ class _TransferScreenState extends State<TransferScreen> {
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 16.sp,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),

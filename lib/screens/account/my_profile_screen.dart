@@ -94,7 +94,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                   .replaceFirst('Exception: ', ''),
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontSize: 15.sp,
+                                fontSize: 17.sp,
                                 color: Theme.of(context)
                                     .colorScheme
                                     .onSurface

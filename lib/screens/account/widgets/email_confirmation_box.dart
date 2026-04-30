@@ -38,7 +38,7 @@ class EmailConfirmationBox extends StatelessWidget {
                 Text(
                   'A confirmation email has been sent to',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: const Color(0xFF2196F3),
                   ),
                 ),
@@ -46,7 +46,7 @@ class EmailConfirmationBox extends StatelessWidget {
                 Text(
                   email,
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF2196F3),
                   ),

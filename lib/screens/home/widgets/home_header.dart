@@ -78,7 +78,7 @@ class HomeHeader extends StatelessWidget {
                           child: Text(
                             displayName,
                             style: TextStyle(
-                              fontSize: 17.sp,
+                              fontSize: 19.sp,
                               fontWeight: FontWeight.w700,
                               color: onSurface,
                             ),
@@ -98,7 +98,7 @@ class HomeHeader extends StatelessWidget {
                           child: Text(
                             roleLabel,
                             style: TextStyle(
-                              fontSize: 14.sp,
+                              fontSize: 16.sp,
                               fontWeight: FontWeight.w600,
                               color: theme.primaryColor,
                             ),
@@ -110,7 +110,7 @@ class HomeHeader extends StatelessWidget {
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 16.sp,
                         color: onSurface.withValues(alpha: 0.6),
                       ),
                       maxLines: 1,

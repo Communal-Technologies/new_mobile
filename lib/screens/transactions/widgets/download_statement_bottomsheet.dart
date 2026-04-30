@@ -91,7 +91,7 @@ class _DownloadStatementBottomSheetState
                         Text(
                           'Generate your statement as PDF or CSV. Email delivery is handled securely by the backend service.',
                           style: TextStyle(
-                            fontSize: 17.sp,
+                            fontSize: 19.sp,
                             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
@@ -120,7 +120,7 @@ class _DownloadStatementBottomSheetState
                   Text(
                     'Period',
                     style: TextStyle(
-                      fontSize: 17.sp,
+                      fontSize: 19.sp,
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
@@ -149,7 +149,7 @@ class _DownloadStatementBottomSheetState
                   Text(
                     'Delivery',
                     style: TextStyle(
-                      fontSize: 17.sp,
+                      fontSize: 19.sp,
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
@@ -179,7 +179,7 @@ class _DownloadStatementBottomSheetState
                     Text(
                       'Email',
                       style: TextStyle(
-                        fontSize: 17.sp,
+                        fontSize: 19.sp,
                         fontWeight: FontWeight.w600,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
@@ -190,10 +190,10 @@ class _DownloadStatementBottomSheetState
                 TextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  style: TextStyle(fontSize: 17.sp),
+                  style: TextStyle(fontSize: 19.sp),
                   decoration: InputDecoration(
                     hintText: 'you@example.com',
-                    hintStyle: TextStyle(fontSize: 17.sp),
+                    hintStyle: TextStyle(fontSize: 19.sp),
                     filled: true,
                     fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                     border: OutlineInputBorder(
@@ -214,7 +214,7 @@ class _DownloadStatementBottomSheetState
                 Text(
                   'For security, statements are generated and sent by the backend only.',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
@@ -231,7 +231,7 @@ class _DownloadStatementBottomSheetState
                   Text(
                     'Format',
                     style: TextStyle(
-                      fontSize: 17.sp,
+                      fontSize: 19.sp,
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
@@ -272,7 +272,7 @@ class _DownloadStatementBottomSheetState
                       Text(
                         'Continue',
                         style: TextStyle(
-                          fontSize: 17.sp,
+                          fontSize: 19.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
                         ),
@@ -312,7 +312,7 @@ class _DownloadStatementBottomSheetState
           label,
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w500,
             color: isSelected ? Colors.white : theme.colorScheme.onSurface.withValues(alpha: 0.7),
           ),
@@ -345,7 +345,7 @@ class _DownloadStatementBottomSheetState
           label,
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.w500,
             color: isSelected ? Colors.white : theme.colorScheme.onSurface.withValues(alpha: 0.7),
           ),
@@ -387,7 +387,7 @@ class _DownloadStatementBottomSheetState
                 label,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 15.sp,
+                  fontSize: 17.sp,
                   fontWeight: FontWeight.w500,
                   color: isSelected ? Colors.white : theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 ),

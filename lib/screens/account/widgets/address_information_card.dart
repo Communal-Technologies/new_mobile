@@ -51,7 +51,7 @@ class AddressInformationCard extends StatelessWidget {
               Text(
                 'Address Information',
                 style: TextStyle(
-                  fontSize: 17.sp,
+                  fontSize: 19.sp,
                   fontWeight: FontWeight.w700,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -112,7 +112,7 @@ class _AddressRow extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
@@ -121,7 +121,7 @@ class _AddressRow extends StatelessWidget {
             value,
             textAlign: TextAlign.right,
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.onSurface,
             ),

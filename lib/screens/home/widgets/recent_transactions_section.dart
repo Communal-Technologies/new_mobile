@@ -135,7 +135,7 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
                       child: Text(
                         _error!,
                         style: TextStyle(
-                          fontSize: 15.sp,
+                          fontSize: 17.sp,
                           color: Colors.red.shade700,
                         ),
                       ),
@@ -150,7 +150,7 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
                 child: Text(
                   'No recent transactions',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: onSurface.withValues(alpha: 0.6),
                   ),
                 ),

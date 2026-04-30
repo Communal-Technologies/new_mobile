@@ -282,7 +282,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                         label: Text(
                           'Go back',
                           style: TextStyle(
-                            fontSize: 15.sp,
+                            fontSize: 17.sp,
                             fontWeight: FontWeight.w700,
                             color: Theme.of(context).primaryColor,
                           ),
@@ -322,7 +322,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                           _subtitleText,
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 15.sp,
+                            fontSize: 17.sp,
                             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                             fontWeight: FontWeight.w500,
                           ),
@@ -391,7 +391,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                           Text(
                             'Show PIN',
                             style: TextStyle(
-                              fontSize: 15.sp,
+                              fontSize: 17.sp,
                               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                               fontWeight: FontWeight.w600,
                             ),
@@ -425,7 +425,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                               child: Text(
                                 _errorText!,
                                 style: TextStyle(
-                                  fontSize: 14.sp,
+                                  fontSize: 16.sp,
                                   color: const Color(0xFFC62828),
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -456,7 +456,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                                 Text(
                                   'Security Tip',
                                   style: TextStyle(
-                                    fontSize: 15.sp,
+                                    fontSize: 17.sp,
                                     fontWeight: FontWeight.w700,
                                     color: primary,
                                   ),
@@ -465,7 +465,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                                 Text(
                                   'Never share your PIN wth anyone.\nCommunal HQ will never ask for your PIN via email, SMS or phone call.',
                                   style: TextStyle(
-                                    fontSize: 14.sp,
+                                    fontSize: 16.sp,
                                     color: Theme.of(context).colorScheme.onSurface,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -498,7 +498,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                     Text(
                       'PIN Security Tips',
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
@@ -550,7 +550,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                         _isSuccess ? 'Done' : 'Continue',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 17.sp,
+                          fontSize: 19.sp,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -583,7 +583,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
           Text(
             '•',
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface,
             ),

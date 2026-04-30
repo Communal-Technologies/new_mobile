@@ -196,7 +196,7 @@ class _FinancialObligationsScreenState
               Text(
                 coopLine,
                 style: TextStyle(
-                  fontSize: 15.sp,
+                  fontSize: 17.sp,
                   color: onSurface.withValues(alpha: 0.6),
                 ),
               ),
@@ -377,12 +377,12 @@ class _FinancialObligationsScreenState
           Expanded(
             child: TextField(
               controller: _searchController,
-              style: TextStyle(color: onSurface, fontSize: 15.sp),
+              style: TextStyle(color: onSurface, fontSize: 17.sp),
               decoration: InputDecoration.collapsed(
                 hintText: 'Search obligations...',
                 hintStyle: TextStyle(
                   color: onSurface.withValues(alpha: 0.5),
-                  fontSize: 15.sp,
+                  fontSize: 17.sp,
                 ),
               ),
               onChanged: (_) => setState(() {}),
@@ -421,7 +421,7 @@ class _FinancialObligationsScreenState
               Text(
                 _error!,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 15.sp, color: Colors.red.shade400),
+                style: TextStyle(fontSize: 17.sp, color: Colors.red.shade400),
               ),
               vSpace(8),
               TextButton(onPressed: _loadObligations, child: const Text('Retry')),
@@ -447,7 +447,7 @@ class _FinancialObligationsScreenState
         Center(
           child: Text(
             'No obligations found for $_selectedCategory.',
-            style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
           ),
         ),
       ];
@@ -530,7 +530,7 @@ class _SummaryCard extends StatelessWidget {
           Text(
             card.label,
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               color: isDark
                   ? theme.colorScheme.onSurface.withValues(alpha: 0.85)
                   : Colors.grey.shade700,
@@ -540,7 +540,7 @@ class _SummaryCard extends StatelessWidget {
           Text(
             card.value,
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: card.valueColor,
             ),

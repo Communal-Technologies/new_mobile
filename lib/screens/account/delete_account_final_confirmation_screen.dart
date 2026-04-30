@@ -165,7 +165,7 @@ class _DeleteAccountFinalConfirmationScreenState
         Text(
           'This is your last chance to cancel.',
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
@@ -180,7 +180,7 @@ class _DeleteAccountFinalConfirmationScreenState
         RichText(
           text: TextSpan(
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -207,14 +207,14 @@ class _DeleteAccountFinalConfirmationScreenState
             controller: _deleteController,
             textCapitalization: TextCapitalization.characters,
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.onSurface,
             ),
             decoration: InputDecoration(
               hintText: 'Type DELETE in capital letters',
               hintStyle: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
               border: InputBorder.none,
@@ -270,7 +270,7 @@ class _DeleteAccountFinalConfirmationScreenState
             : Text(
                 'Delete my Account permanently',
                 style: TextStyle(
-                  fontSize: 17.sp,
+                  fontSize: 19.sp,
                   fontWeight: FontWeight.w600,
                 ),
               ),

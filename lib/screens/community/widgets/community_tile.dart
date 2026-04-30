@@ -62,7 +62,7 @@ class CommunityTile extends StatelessWidget {
                           child: Text(
                             community.name,
                             style: TextStyle(
-                              fontSize: 17.sp,
+                              fontSize: 19.sp,
                               fontWeight: FontWeight.w700,
                               color: Theme.of(context).colorScheme.onSurface,
                             ),
@@ -91,7 +91,7 @@ class CommunityTile extends StatelessWidget {
                         Text(
                           community.membersLabel,
                           style: TextStyle(
-                            fontSize: 14.sp,
+                            fontSize: 16.sp,
                             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
@@ -105,7 +105,7 @@ class CommunityTile extends StatelessWidget {
                         Text(
                           'Since ${community.sinceLabel}',
                           style: TextStyle(
-                            fontSize: 14.sp,
+                            fontSize: 16.sp,
                             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
@@ -138,7 +138,7 @@ class CommunityTile extends StatelessWidget {
             child: Text(
               community.membershipLabel,
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF5B5CE2),
               ),
@@ -158,7 +158,7 @@ class CommunityTile extends StatelessWidget {
               child: Text(
                 'Switch to this Community',
                 style: TextStyle(
-                  fontSize: 15.sp,
+                  fontSize: 17.sp,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF7434FF),
                 ),
@@ -197,7 +197,7 @@ class CommunityTile extends StatelessWidget {
         child: Text(
           initials,
           style: TextStyle(
-            fontSize: 17.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w700,
             color: Colors.white,
           ),

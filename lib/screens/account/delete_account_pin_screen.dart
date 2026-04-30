@@ -113,7 +113,7 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
                   'Enter your transaction PIN to confirm deleting of your account.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     height: 1.5,
                   ),
@@ -145,7 +145,7 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
                       Text(
                         'Show PIN',
                         style: TextStyle(
-                          fontSize: 15.sp,
+                          fontSize: 17.sp,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
@@ -173,7 +173,7 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
                             child: Text(
                               '!',
                               style: TextStyle(
-                                fontSize: 15.sp,
+                                fontSize: 17.sp,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white,
                               ),
@@ -185,7 +185,7 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
                           child: Text(
                             _errorMessage ?? 'Incorrect PIN entered, please try again',
                             style: TextStyle(
-                              fontSize: 15.sp,
+                              fontSize: 17.sp,
                               color: const Color(0xFFD32F2F),
                             ),
                           ),

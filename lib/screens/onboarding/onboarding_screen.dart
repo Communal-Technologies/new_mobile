@@ -126,7 +126,7 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
                                       child: Text(
                                         'Skip',
                                         style: TextStyle(
-                                          fontSize: 17.sp,
+                                          fontSize: 19.sp,
                                           fontWeight: FontWeight.w600,
                                           letterSpacing: 0.5,
                                           color: skipColor,

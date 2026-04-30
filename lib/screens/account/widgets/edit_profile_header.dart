@@ -93,7 +93,7 @@ class EditProfileHeader extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 14.sp,
+          fontSize: 16.sp,
           fontWeight: FontWeight.w600,
           color: color,
         ),

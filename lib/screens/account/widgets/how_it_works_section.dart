@@ -15,7 +15,7 @@ class HowItWorksSection extends StatelessWidget {
           Text(
             'How It Works',
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -82,7 +82,7 @@ class _StepItem extends StatelessWidget {
             child: Text(
               '$stepNumber',
               style: TextStyle(
-                fontSize: 17.sp,
+                fontSize: 19.sp,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
               ),
@@ -97,7 +97,7 @@ class _StepItem extends StatelessWidget {
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 17.sp,
+                  fontSize: 19.sp,
                   fontWeight: FontWeight.w700,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -106,7 +106,7 @@ class _StepItem extends StatelessWidget {
               Text(
                 description,
                 style: TextStyle(
-                  fontSize: 15.sp,
+                  fontSize: 17.sp,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   height: 1.4,
                 ),

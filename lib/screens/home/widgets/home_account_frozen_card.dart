@@ -65,7 +65,7 @@ class HomeAccountFrozenCard extends StatelessWidget {
                         Text(
                           'Account Frozen',
                           style: TextStyle(
-                            fontSize: 17.sp,
+                            fontSize: 19.sp,
                             fontWeight: FontWeight.w700,
                             color: _accent,
                           ),
@@ -81,7 +81,7 @@ class HomeAccountFrozenCard extends StatelessWidget {
                           child: Text(
                             'Restricted',
                             style: TextStyle(
-                              fontSize: 14.sp,
+                              fontSize: 16.sp,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
                             ),
@@ -96,7 +96,7 @@ class HomeAccountFrozenCard extends StatelessWidget {
               Text(
                 'Your account is temporarily disabled. All transactions are blocked, some features have also been disabled for your safety',
                 style: TextStyle(
-                  fontSize: 15.sp,
+                  fontSize: 17.sp,
                   height: 1.45,
                   fontWeight: FontWeight.w500,
                   color: _accent,
@@ -120,7 +120,7 @@ class HomeAccountFrozenCard extends StatelessWidget {
                             Text(
                               'Unfreeze Account',
                               style: TextStyle(
-                                fontSize: 17.sp,
+                                fontSize: 19.sp,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white,
                               ),

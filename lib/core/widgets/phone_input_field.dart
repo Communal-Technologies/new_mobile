@@ -67,7 +67,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
             ),
             child: Text(
               'Allowed countries could not be loaded. Check your connection and try again.',
-              style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade800),
+              style: TextStyle(fontSize: 19.sp, color: Colors.grey.shade800),
             ),
           ),
         ],
@@ -167,7 +167,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
               widget.errorText!,
               style: TextStyle(
                 color: Colors.red,
-                fontSize: 17.sp,
+                fontSize: 19.sp,
               ),
             ),
           ),

@@ -41,7 +41,7 @@ class DeleteAccountWarningSection extends StatelessWidget {
         Text(
           'This action is permanent and cannot be undone. All your data will be permanently deleted.',
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             height: 1.5,
           ),

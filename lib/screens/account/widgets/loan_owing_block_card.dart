@@ -59,7 +59,7 @@ class LoanOwingBlockCard extends StatelessWidget {
                 child: Text(
                   'Outstanding loan blocks closure',
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
                     color: accent,
                   ),
@@ -72,7 +72,7 @@ class LoanOwingBlockCard extends StatelessWidget {
             'You currently owe $amountLabel on an active loan. '
             'Account freeze and deletion are disabled until the loan is fully repaid.',
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               height: 1.4,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
             ),
@@ -86,7 +86,7 @@ class LoanOwingBlockCard extends StatelessWidget {
               label: Text(
                 'Repay Loan',
                 style: TextStyle(
-                  fontSize: 16.sp,
+                  fontSize: 18.sp,
                   fontWeight: FontWeight.w700,
                 ),
               ),

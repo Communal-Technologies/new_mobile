@@ -313,7 +313,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       Text(
                         _exporting ? 'Exporting...' : 'Statement',
                         style: TextStyle(
-                          fontSize: 17.sp,
+                          fontSize: 19.sp,
                           fontWeight: FontWeight.w500,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
@@ -356,7 +356,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       Text(
                         _error!,
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 17.sp),
+                        style: TextStyle(fontSize: 19.sp),
                       ),
                       vSpace(16),
                       FilledButton(
@@ -402,7 +402,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     child: Text(
                       'Communal (Personal)',
                       style: TextStyle(
-                        fontSize: 17.sp,
+                        fontSize: 19.sp,
                         fontWeight: FontWeight.w700,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
@@ -453,7 +453,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                 child: Text(
                                   'No transactions yet',
                                   style: TextStyle(
-                                    fontSize: 17.sp,
+                                    fontSize: 19.sp,
                                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                   ),
                                 ),
@@ -531,7 +531,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                           Text(
                             'Generating statement...',
                             style: TextStyle(
-                              fontSize: 15.sp,
+                              fontSize: 17.sp,
                               fontWeight: FontWeight.w600,
                               color: Theme.of(context).colorScheme.onSurface,
                             ),
@@ -568,7 +568,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
               color: isActive
                   ? activeColor
@@ -652,7 +652,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 label,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 17.sp,
+                  fontSize: 19.sp,
                   fontWeight: FontWeight.w500,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
@@ -733,7 +733,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 Text(
                   'In: $currencySymbol${formatMoney(incoming)}',
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.green,
                   ),
@@ -742,7 +742,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 Text(
                   'Out: $currencySymbol${formatMoney(outgoing)}',
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.red,
                   ),

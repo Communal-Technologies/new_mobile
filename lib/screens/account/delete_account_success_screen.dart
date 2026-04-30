@@ -102,7 +102,7 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
         Text(
           'Your account has been scheduled for permanent deletion',
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             height: 1.5,
           ),
@@ -112,7 +112,7 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
         Text(
           'We\'re sorry to see you go. If you change your mind\nwithin the next 30 days, contact our support team to\nrecover your account.',
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             height: 1.5,
           ),
@@ -122,7 +122,7 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
         Text(
           'Thank you for using our services!',
           style: TextStyle(
-            fontSize: 17.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w600,
             color: Theme.of(context).colorScheme.onSurface,
           ),
@@ -180,7 +180,7 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
         child: Text(
           'Close',
           style: TextStyle(
-            fontSize: 17.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w600,
           ),
         ),

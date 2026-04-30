@@ -72,7 +72,7 @@ class KycCurrentTierCard extends StatelessWidget {
                       child: Text(
                         'Current',
                         style: TextStyle(
-                          fontSize: 15.sp,
+                          fontSize: 17.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
                         ),
@@ -91,7 +91,7 @@ class KycCurrentTierCard extends StatelessWidget {
                       child: Text(
                         statusBadgeLabel!,
                         style: TextStyle(
-                          fontSize: 15.sp,
+                          fontSize: 17.sp,
                           fontWeight: FontWeight.w700,
                           color: statusBadgeColor ?? Colors.white,
                         ),
@@ -118,7 +118,7 @@ class KycCurrentTierCard extends StatelessWidget {
                   Text(
                     'Status',
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       color: Colors.white.withOpacity(0.9),
                     ),
                   ),
@@ -130,7 +130,7 @@ class KycCurrentTierCard extends StatelessWidget {
           Text(
             current.label,
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               color: Colors.white.withOpacity(0.9),
             ),
           ),
@@ -140,7 +140,7 @@ class KycCurrentTierCard extends StatelessWidget {
               'You are not on a verification tier yet. Complete profile and bank '
               'verification to get your account number and Tier 1 limits.',
               style: TextStyle(
-                fontSize: 17.sp,
+                fontSize: 19.sp,
                 height: 1.35,
                 color: Colors.white.withOpacity(0.92),
               ),
@@ -183,7 +183,7 @@ class KycCurrentTierCard extends StatelessWidget {
                           ? 'Upgrade to Tier 2'
                           : 'Continue verification'),
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -205,7 +205,7 @@ class KycCurrentTierCard extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 17.sp,
+            fontSize: 19.sp,
             color: Colors.white.withOpacity(0.82),
           ),
         ),

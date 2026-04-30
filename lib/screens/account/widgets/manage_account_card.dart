@@ -33,7 +33,7 @@ class ManageAccountCard extends StatelessWidget {
               Text(
                 'Manage Account',
                 style: TextStyle(
-                  fontSize: 17.sp,
+                  fontSize: 19.sp,
                   fontWeight: FontWeight.w700,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -120,7 +120,7 @@ class _ManageAccountItem extends StatelessWidget {
                       Text(
                         title,
                         style: TextStyle(
-                          fontSize: 17.sp,
+                          fontSize: 19.sp,
                           fontWeight: FontWeight.w700,
                           color: onSurface,
                         ),
@@ -147,7 +147,7 @@ class _ManageAccountItem extends StatelessWidget {
                   Text(
                     description,
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 16.sp,
                       color: onSurface.withValues(alpha: 0.6),
                       height: 1.4,
                     ),

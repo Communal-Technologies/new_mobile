@@ -162,7 +162,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
                   'Set a 6-digit PIN to sign in, for account security.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     height: 1.5,
                   ),
@@ -175,7 +175,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
               Text(
                 'Create your PIN',
                 style: TextStyle(
-                  fontSize: 15.sp,
+                  fontSize: 17.sp,
                   fontWeight: FontWeight.w500,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -199,7 +199,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
               Text(
                 'Re-enter your PIN',
                 style: TextStyle(
-                  fontSize: 15.sp,
+                  fontSize: 17.sp,
                   fontWeight: FontWeight.w500,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -223,7 +223,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
                   _pinError!,
                   style: TextStyle(
                     color: Colors.red,
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                   ),
                 ),
               ],
@@ -243,7 +243,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
                 child: Text(
                   'Or sign in with',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
@@ -281,7 +281,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
                     child: Text(
                       'Password (Alpha-numeric)',
                       style: TextStyle(
-                        fontSize: 17.sp,
+                        fontSize: 19.sp,
                         fontWeight: FontWeight.w600,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
@@ -305,7 +305,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
                     Text(
                       'Licensed by CBN',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 16.sp,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
@@ -332,7 +332,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
                     Text(
                       '|',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 16.sp,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                       ),
                     ),
@@ -340,7 +340,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
                     Text(
                       'Deposits insured by',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 16.sp,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),

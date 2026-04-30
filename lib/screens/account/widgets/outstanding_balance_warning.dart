@@ -49,7 +49,7 @@ class OutstandingBalanceWarning extends StatelessWidget {
                 Text(
                   'Outstanding Balance',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
                     color: Colors.red.shade700,
                   ),
@@ -58,7 +58,7 @@ class OutstandingBalanceWarning extends StatelessWidget {
                 Text(
                   'You have ${CurrencyFormatter.formatNaira(balance)} in your account. You must withdraw all funds before deletion.',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: Colors.red.shade700,
                     height: 1.4,
                   ),

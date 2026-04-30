@@ -246,7 +246,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
           child: Text(
             snapshot.error.toString().replaceFirst('Exception: ', ''),
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 16.sp,
               color: const Color(0xFFB42318),
             ),
           ),
@@ -331,7 +331,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 child: Text(
                   'You haven\'t joined a cooperative yet',
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF3F2B8F),
                   ),
@@ -344,7 +344,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
             'Tap “Find Nearby” below to discover open cooperatives, '
             'or use the + button to redeem an invite code from an admin.',
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               color: const Color(0xFF4D3C8A),
             ),
           ),
@@ -390,7 +390,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     Text(
                       'Application pending',
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF9A4F00),
                       ),
@@ -399,7 +399,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     Text(
                       'Your request to join $coopName is awaiting admin review.',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 16.sp,
                         color: const Color(0xFF9A4F00),
                       ),
                     ),

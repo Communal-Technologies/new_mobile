@@ -446,7 +446,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                             Text(
                               'Enter Account Number',
                               style: TextStyle(
-                                fontSize: 15.sp,
+                                fontSize: 17.sp,
                                 fontWeight: FontWeight.w600,
                                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                               ),
@@ -522,7 +522,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
                                           color: Theme.of(context).colorScheme.onSurface,
-                                          fontSize: 17.sp,
+                                          fontSize: 19.sp,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
@@ -535,7 +535,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                                   'Invalid account number, please enter a valid communal account',
                                   style: TextStyle(
                                     color: const Color(0xFFD32F2F),
-                                    fontSize: 17.sp,
+                                    fontSize: 19.sp,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 )
@@ -593,7 +593,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                                                 style: TextStyle(
                                                   color: Colors.white,
                                                   fontWeight: FontWeight.w700,
-                                                  fontSize: 15.sp,
+                                                  fontSize: 17.sp,
                                                 ),
                                               ),
                                             ),
@@ -601,7 +601,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                                               r.accountName,
                                               style: TextStyle(
                                                 color: Theme.of(context).colorScheme.onSurface,
-                                                fontSize: 17.sp,
+                                                fontSize: 19.sp,
                                                 fontWeight: FontWeight.w700,
                                               ),
                                             ),
@@ -609,7 +609,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                                               r.accountNumber,
                                               style: TextStyle(
                                                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                                                fontSize: 15.sp,
+                                                fontSize: 17.sp,
                                                 fontWeight: FontWeight.w500,
                                               ),
                                             ),
@@ -626,7 +626,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                       Text(
                         'Search Account',
                         style: TextStyle(
-                          fontSize: 17.sp,
+                          fontSize: 19.sp,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -694,7 +694,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                                   letter,
                                   style: TextStyle(
                                     fontWeight: FontWeight.w700,
-                                    fontSize: 15.sp,
+                                    fontSize: 17.sp,
                                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                   ),
                                 ),
@@ -762,7 +762,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                             child: Text(
                               l,
                               style: TextStyle(
-                                fontSize: 14.sp,
+                                fontSize: 16.sp,
                                 color: Theme.of(context).brightness ==
                                         Brightness.dark
                                     ? Colors.white

@@ -32,7 +32,7 @@ class SettingsInfoBox extends StatelessWidget {
                 Text(
                   'Per-cooperative settings',
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
@@ -42,7 +42,7 @@ class SettingsInfoBox extends StatelessWidget {
                   'Each switch applies only to the cooperative selected above. '
                   'Your choices are saved to your account and apply on this device when you are online.',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                     height: 1.45,
                   ),

@@ -195,7 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ? 'Enter your phone number to get started'
                       : 'Enter your email to get started',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
@@ -267,7 +267,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ? 'Use email instead'
                         : 'Use phone number instead',
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       color: Theme.of(context).primaryColor,
                       fontWeight: FontWeight.w600,
                     ),
@@ -358,7 +358,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text(
                       'Don\'t have a Communal account?',
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 17.sp,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
@@ -387,7 +387,7 @@ class _LoginScreenState extends State<LoginScreen> {
               //   child: Row(
               //     mainAxisAlignment: MainAxisAlignment.center,
               //     children: [
-              //       Text('Licensed by CBN', style: TextStyle(fontSize: 14.sp,
+              //       Text('Licensed by CBN', style: TextStyle(fontSize: 16.sp,
               //         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
               //       hSpace(4),
               //       Container(width: 20.w, height: 20.w,
@@ -395,10 +395,10 @@ class _LoginScreenState extends State<LoginScreen> {
               //         child: Center(child: Text('CBN',
               //           style: TextStyle(fontSize: 6.sp, color: Colors.green.shade800, fontWeight: FontWeight.bold)))),
               //       hSpace(8),
-              //       Text('|', style: TextStyle(fontSize: 14.sp,
+              //       Text('|', style: TextStyle(fontSize: 16.sp,
               //         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4))),
               //       hSpace(8),
-              //       Text('Deposits insured by', style: TextStyle(fontSize: 14.sp,
+              //       Text('Deposits insured by', style: TextStyle(fontSize: 16.sp,
               //         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
               //       hSpace(4),
               //       Container(width: 40.w, height: 20.w,

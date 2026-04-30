@@ -71,7 +71,7 @@ class FeaturedCommunityCard extends StatelessWidget {
                     vSpace(4),
                     Text(
                       '${community.role} · ${community.membersLabel}',
-                      style: TextStyle(fontSize: 15.sp, color: Colors.white70),
+                      style: TextStyle(fontSize: 17.sp, color: Colors.white70),
                     ),
                   ],
                 ),
@@ -85,7 +85,7 @@ class FeaturedCommunityCard extends StatelessWidget {
                 child: Text(
                   'Active',
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 16.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),
@@ -114,7 +114,7 @@ class FeaturedCommunityCard extends StatelessWidget {
               //     child: Text(
               //       'Open Chat',
               //       style: TextStyle(
-              //         fontSize: 15.sp,
+              //         fontSize: 17.sp,
               //         fontWeight: FontWeight.w600,
               //         color: Colors.white,
               //       ),
@@ -135,7 +135,7 @@ class FeaturedCommunityCard extends StatelessWidget {
                   child: Text(
                     'View Cooperative',
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w700,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
@@ -177,7 +177,7 @@ class FeaturedCommunityCard extends StatelessWidget {
         child: Text(
           initials,
           style: TextStyle(
-            fontSize: 17.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w700,
             color: Colors.white,
           ),

@@ -183,7 +183,7 @@ class _ObligationConfirmPaymentScreenState
             Text(
               _subheaderForMode(),
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
             ),
             vSpace(24),
             _buildAmountBanner(),
@@ -244,7 +244,7 @@ class _ObligationConfirmPaymentScreenState
             label: Text(
               _submitting ? 'Processing…' : 'Authorize Payment',
               style: TextStyle(
-                fontSize: 17.sp,
+                fontSize: 19.sp,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -311,7 +311,7 @@ class _ObligationConfirmPaymentScreenState
                 label: Text(
                   _submitting ? 'Processing…' : 'Authorize Payment',
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -334,7 +334,7 @@ class _ObligationConfirmPaymentScreenState
               child: Text(
                 'Set up biometric instead',
                 style: TextStyle(
-                  fontSize: 14.sp,
+                  fontSize: 16.sp,
                   color: Theme.of(context).primaryColor,
                 ),
               ),
@@ -356,7 +356,7 @@ class _ObligationConfirmPaymentScreenState
             child: Text(
               'Retry',
               style: TextStyle(
-                fontSize: 17.sp,
+                fontSize: 19.sp,
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).primaryColor,
               ),
@@ -383,7 +383,7 @@ class _ObligationConfirmPaymentScreenState
           Text(
             "You're paying",
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
@@ -400,14 +400,14 @@ class _ObligationConfirmPaymentScreenState
           Text(
             'to ${widget.obligation.category}',
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           Text(
             widget.obligation.title,
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -441,7 +441,7 @@ class _ObligationConfirmPaymentScreenState
                 Text(
                   'Secure Payment',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
@@ -450,7 +450,7 @@ class _ObligationConfirmPaymentScreenState
                 Text(
                   'Your transaction is encrypted and secure. Never share your PIN with anyone.',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),

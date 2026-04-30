@@ -113,7 +113,7 @@ class _CommunityCardHeader extends StatelessWidget {
                           child: Text(
                             community.name,
                             style: TextStyle(
-                              fontSize: 17.sp,
+                              fontSize: 19.sp,
                               fontWeight: FontWeight.w700,
                               color: Theme.of(context).colorScheme.onSurface,
                             ),
@@ -138,7 +138,7 @@ class _CommunityCardHeader extends StatelessWidget {
               Text(
                 community.category,
                 style: TextStyle(
-                  fontSize: 15.sp,
+                  fontSize: 17.sp,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
@@ -162,7 +162,7 @@ class _CommunityCardHeader extends StatelessWidget {
               Text(
                 community.rating.toStringAsFixed(1),
                 style: TextStyle(
-                  fontSize: 15.sp,
+                  fontSize: 17.sp,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFFB46A00),
                 ),
@@ -187,14 +187,14 @@ class _CommunityCardMeta extends StatelessWidget {
         hSpace(4),
         Text(
           community.membersLabel,
-          style: TextStyle(fontSize: 14.sp, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+          style: TextStyle(fontSize: 16.sp, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
         ),
         hSpace(12),
         Icon(Icons.place_outlined, size: 16.sp, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
         hSpace(4),
         Text(
           community.distanceLabel,
-          style: TextStyle(fontSize: 14.sp, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+          style: TextStyle(fontSize: 16.sp, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
         ),
       ],
     );
@@ -224,7 +224,7 @@ class _CommunityCardFooter extends StatelessWidget {
               Text(
                 'Min. Contribution',
                 style: TextStyle(
-                  fontSize: 14.sp,
+                  fontSize: 16.sp,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
@@ -254,7 +254,7 @@ class _CommunityCardFooter extends StatelessWidget {
                   child: Text(
                     'Member',
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF1F8B4C),
                     ),
@@ -280,7 +280,7 @@ class _CommunityCardFooter extends StatelessWidget {
                     child: Text(
                       'Join Community',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 16.sp,
                         fontWeight: FontWeight.w700,
                       ),
                     ),

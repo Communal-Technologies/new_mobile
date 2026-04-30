@@ -43,7 +43,7 @@ class DataLossItem extends StatelessWidget {
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 15.sp,
+                  fontSize: 17.sp,
                   fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -52,7 +52,7 @@ class DataLossItem extends StatelessWidget {
               Text(
                 description,
                 style: TextStyle(
-                  fontSize: 15.sp,
+                  fontSize: 17.sp,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   height: 1.4,
                 ),

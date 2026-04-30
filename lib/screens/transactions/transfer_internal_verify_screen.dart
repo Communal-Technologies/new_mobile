@@ -301,7 +301,7 @@ class _TransferInternalVerifyScreenState
                 'Enter your 4-digit PIN to authorise this transfer.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 13.sp,
+                  fontSize: 15.sp,
                   color: Theme.of(context).colorScheme.onSurface
                       .withValues(alpha: 0.6),
                   fontWeight: FontWeight.w500,
@@ -360,7 +360,7 @@ class _TransferInternalVerifyScreenState
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
-                fontSize: 14.sp,
+                fontSize: 16.sp,
               ),
             ),
           ),
@@ -371,7 +371,7 @@ class _TransferInternalVerifyScreenState
               children: [
                 Text(
                   widget.recipient.accountName,
-                  style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w700),
                 ),
                 vSpace(2),
                 Text(
@@ -379,7 +379,7 @@ class _TransferInternalVerifyScreenState
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurface
                         .withValues(alpha: 0.6),
-                    fontSize: 13.sp,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.w500,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -409,7 +409,7 @@ class _TransferInternalVerifyScreenState
         children: [
           Text(
             "You're sending",
-            style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade700),
           ),
           vSpace(2),
           Text(

@@ -606,7 +606,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                       child: Text(
                         'Tell us about yourself',
                         style: TextStyle(
-                          fontSize: 17.sp,
+                          fontSize: 19.sp,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
@@ -625,7 +625,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                                 Text(
                                   'Profile Information',
                                   style: TextStyle(
-                                    fontSize: 17.sp,
+                                    fontSize: 19.sp,
                                     color: stepColor,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -633,7 +633,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                                 Text(
                                   'Step 1 of 3',
                                   style: TextStyle(
-                                    fontSize: 17.sp,
+                                    fontSize: 19.sp,
                                     color: stepColor,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -727,7 +727,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                       Text(
                         'Phone number',
                         style: TextStyle(
-                          fontSize: 17.sp,
+                          fontSize: 19.sp,
                           fontWeight: FontWeight.w500,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
@@ -958,7 +958,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                   itemBuilder: (_, index) {
                     final item = items[index];
                     return ListTile(
-                      title: Text(item, style: TextStyle(fontSize: 17.sp)),
+                      title: Text(item, style: TextStyle(fontSize: 19.sp)),
                       trailing: value == item
                           ? Icon(
                               Icons.check_circle,
@@ -1058,7 +1058,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
           SizedBox(height: 4.h),
           Text(
             errorText,
-            style: TextStyle(color: Colors.red, fontSize: 17.sp),
+            style: TextStyle(color: Colors.red, fontSize: 19.sp),
           ),
         ],
       ],

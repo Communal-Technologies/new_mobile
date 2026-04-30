@@ -73,7 +73,7 @@ class KycTierInfoCard extends StatelessWidget {
                   child: Text(
                     'Current',
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
@@ -90,7 +90,7 @@ class KycTierInfoCard extends StatelessWidget {
                   child: Text(
                     statusBadgeLabel!,
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w700,
                       color: statusBadgeColor ?? Colors.white,
                     ),
@@ -113,7 +113,7 @@ class KycTierInfoCard extends StatelessWidget {
           Text(
             'Requirements:',
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
@@ -135,14 +135,14 @@ class KycTierInfoCard extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 17.sp,
+            fontSize: 19.sp,
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
         Text(
           value,
           style: TextStyle(
-            fontSize: 17.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF7434FF),
           ),
@@ -170,7 +170,7 @@ class KycTierInfoCard extends StatelessWidget {
             child: Text(
               requirement,
               style: TextStyle(
-                fontSize: 17.sp,
+                fontSize: 19.sp,
                 height: 1.35,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),

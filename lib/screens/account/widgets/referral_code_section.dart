@@ -16,7 +16,7 @@ class ReferralCodeSection extends StatelessWidget {
           Text(
             'Your Referral Code',
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -96,7 +96,7 @@ class _ReferralItem extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 14.sp,
+                  fontSize: 16.sp,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
@@ -104,7 +104,7 @@ class _ReferralItem extends StatelessWidget {
               Text(
                 value,
                 style: TextStyle(
-                  fontSize: 17.sp,
+                  fontSize: 19.sp,
                   fontWeight: FontWeight.w700,
                   color: valueColor,
                 ),

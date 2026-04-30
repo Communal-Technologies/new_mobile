@@ -28,7 +28,7 @@ class FeedbackInfoBox extends StatelessWidget {
               child: Text(
                 'i',
                 style: TextStyle(
-                  fontSize: 17.sp,
+                  fontSize: 19.sp,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
                 ),
@@ -40,7 +40,7 @@ class FeedbackInfoBox extends StatelessWidget {
             child: Text(
               'Your feedback helps us improve our services for everyone. Thank you for sharing.',
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 height: 1.4,
               ),

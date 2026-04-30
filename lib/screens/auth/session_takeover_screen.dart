@@ -219,7 +219,7 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
                     'Another device is still signed in. Enter the code we sent to your $channelLabel (${_maskedDestination.isEmpty ? 'your account contact' : _maskedDestination}).',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       height: 1.35,
                     ),
@@ -245,7 +245,7 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
                           ? 'Resend code in ${_resendTimer}s'
                           : (_isResending ? 'Sending…' : 'Resend code'),
                       style: TextStyle(
-                        fontSize: 17.sp,
+                        fontSize: 19.sp,
                         fontWeight: FontWeight.w600,
                         color: Theme.of(context).brightness == Brightness.dark
                             ? Colors.white

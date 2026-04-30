@@ -24,7 +24,7 @@ class FreezeSuggestionBox extends StatelessWidget {
           Text(
             'Consider Freezing Instead?',
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF2196F3),
             ),
@@ -33,7 +33,7 @@ class FreezeSuggestionBox extends StatelessWidget {
           Text(
             'If you just need a break, consider freezing your account instead. You can unfreeze it anytime and keep all your data.',
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               height: 1.4,
             ),

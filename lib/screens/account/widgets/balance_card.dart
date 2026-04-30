@@ -48,7 +48,7 @@ class BalanceCard extends StatelessWidget {
                   Text(
                     'Total Balance',
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       color: Colors.white.withValues(alpha: 0.9),
                     ),
                   ),
@@ -98,7 +98,7 @@ class BalanceCard extends StatelessWidget {
                       // valid pre-deletion action.
                       'Transfer Funds',
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

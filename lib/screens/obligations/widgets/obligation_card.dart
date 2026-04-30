@@ -61,7 +61,7 @@ class ObligationCard extends StatelessWidget {
                       child: Text(
                         obligation.title,
                         style: TextStyle(
-                          fontSize: 17.sp,
+                          fontSize: 19.sp,
                           fontWeight: FontWeight.w700,
                           color: onSurface,
                         ),
@@ -80,7 +80,7 @@ class ObligationCard extends StatelessWidget {
                     Text(
                       obligation.amountBreakdown,
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w600,
                         color: onSurface,
                       ),
@@ -89,7 +89,7 @@ class ObligationCard extends StatelessWidget {
                     Text(
                       obligation.progressLabel,
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
                         color: theme.brightness == Brightness.dark
                             ? Colors.white
@@ -128,7 +128,7 @@ class ObligationCard extends StatelessWidget {
                           child: Text(
                             '${obligation.fines.first.amountLabel} — ${obligation.fines.first.description}',
                             style: TextStyle(
-                              fontSize: 15.sp,
+                              fontSize: 17.sp,
                               color: const Color(0xFFD7263D),
                             ),
                           ),
@@ -151,7 +151,7 @@ class ObligationCard extends StatelessWidget {
                         Text(
                           obligation.installmentsLabel,
                           style: TextStyle(
-                            fontSize: 15.sp,
+                            fontSize: 17.sp,
                             color: mutedOnSurface,
                           ),
                         ),
@@ -173,7 +173,7 @@ class ObligationCard extends StatelessWidget {
                           Text(
                             'Due ${obligation.nextDueDateLabel}',
                             style: TextStyle(
-                              fontSize: 15.sp,
+                              fontSize: 17.sp,
                               color: mutedOnSurface,
                             ),
                           ),
@@ -200,7 +200,7 @@ class ObligationCard extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 14.sp,
+          fontSize: 16.sp,
           fontWeight: FontWeight.w600,
           color: fg,
         ),

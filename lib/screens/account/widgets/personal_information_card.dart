@@ -55,7 +55,7 @@ class PersonalInformationCard extends StatelessWidget {
               Text(
                 'Personal Information',
                 style: TextStyle(
-                  fontSize: 17.sp,
+                  fontSize: 19.sp,
                   fontWeight: FontWeight.w700,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -143,7 +143,7 @@ class _InfoRow extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 17.sp,
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
@@ -152,7 +152,7 @@ class _InfoRow extends StatelessWidget {
             value,
             textAlign: TextAlign.right,
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -191,7 +191,7 @@ class _InfoRowWithIcon extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
@@ -202,7 +202,7 @@ class _InfoRowWithIcon extends StatelessWidget {
             value,
             textAlign: TextAlign.right,
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.onSurface,
             ),

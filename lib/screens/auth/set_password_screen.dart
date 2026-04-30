@@ -171,7 +171,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                   'Set a password to sign in, for account security.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     height: 1.5,
                   ),
@@ -270,7 +270,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                 child: Text(
                   'Or sign in with',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
@@ -308,7 +308,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                     child: Text(
                       '6-digit PIN (numbers)',
                       style: TextStyle(
-                        fontSize: 17.sp,
+                        fontSize: 19.sp,
                         fontWeight: FontWeight.w600,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
@@ -332,7 +332,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                     Text(
                       'Licensed by CBN',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 16.sp,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
@@ -359,7 +359,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                     Text(
                       '|',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 16.sp,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                       ),
                     ),
@@ -367,7 +367,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                     Text(
                       'Deposits insured by',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 16.sp,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),

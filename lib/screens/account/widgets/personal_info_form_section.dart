@@ -53,7 +53,7 @@ class PersonalInfoFormSection extends StatelessWidget {
                 Text(
                   'Personal Information',
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
@@ -196,7 +196,7 @@ class _FormTextField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(
-          fontSize: 15.sp,
+          fontSize: 17.sp,
           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         ),
         filled: true,
@@ -243,7 +243,7 @@ class _FormTextFieldWithIcon extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(
-          fontSize: 15.sp,
+          fontSize: 17.sp,
           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         ),
         prefixIcon: Icon(
@@ -321,7 +321,7 @@ class _DateOfBirthField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: 'Date of Birth',
         labelStyle: TextStyle(
-          fontSize: 15.sp,
+          fontSize: 17.sp,
           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         ),
         prefixIcon: Icon(

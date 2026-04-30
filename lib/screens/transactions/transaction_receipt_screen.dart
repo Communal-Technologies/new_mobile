@@ -372,7 +372,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
           title: Text(
             'Transaction Status',
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -515,7 +515,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                   'We\'ll take you back to the amount screen so you can '
                   'fix anything and resend. Choose No to head home.',
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 16.sp,
                     color: theme.colorScheme.onSurface
                         .withValues(alpha: 0.65),
                   ),
@@ -537,7 +537,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                           'No, go home',
                           style: TextStyle(
                             color: theme.colorScheme.onSurface,
-                            fontSize: 15.sp,
+                            fontSize: 17.sp,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -558,7 +558,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                         child: Text(
                           'Yes, retry',
                           style: TextStyle(
-                            fontSize: 15.sp,
+                            fontSize: 17.sp,
                             fontWeight: FontWeight.w600,
                           ),
                         ),

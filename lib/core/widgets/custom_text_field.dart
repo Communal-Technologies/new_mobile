@@ -85,7 +85,7 @@ class CustomTextField extends StatelessWidget {
             hintText: hintText,
             hintStyle: TextStyle(
               color: hintColor,
-              fontSize: 17.sp,
+              fontSize: 19.sp,
             ),
             prefixIcon: prefixIcon,
             suffixIcon: suffixIcon,
@@ -142,7 +142,7 @@ class CustomTextField extends StatelessWidget {
               errorText!,
               style: TextStyle(
                 color: Colors.red,
-                fontSize: 17.sp,
+                fontSize: 19.sp,
               ),
             ),
           ),

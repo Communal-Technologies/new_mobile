@@ -42,7 +42,7 @@ class TransactionTile extends StatelessWidget {
                   Text(
                     item.title,
                     style: TextStyle(
-                      fontSize: 17.sp,
+                      fontSize: 19.sp,
                       fontWeight: FontWeight.w600,
                       color: onSurface,
                     ),
@@ -51,7 +51,7 @@ class TransactionTile extends StatelessWidget {
                   Text(
                     item.subtitle,
                     style: TextStyle(
-                      fontSize: 17.sp,
+                      fontSize: 19.sp,
                       color: onSurface.withValues(alpha: 0.6),
                     ),
                   ),

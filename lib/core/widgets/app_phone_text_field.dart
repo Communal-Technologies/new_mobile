@@ -28,7 +28,7 @@ class PhoneNumberInputField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (label != null)
-          SmallAppText(label!, color: textColor, fontSize: 17.sp),
+          SmallAppText(label!, color: textColor, fontSize: 19.sp),
         vSpace(5),
         InternationalPhoneNumberInput(
           onInputChanged: (PhoneNumber number) {},
@@ -60,7 +60,7 @@ class PhoneNumberInputField extends StatelessWidget {
             hintText: hint,
             hintStyle: TextStyle(
               color: colorScheme.outlineVariant,
-              fontSize: 14.sp,
+              fontSize: 16.sp,
             ),
             labelStyle: TextStyle(color: textColor),
           ),
@@ -76,7 +76,7 @@ class PhoneNumberInputField extends StatelessWidget {
             hintText: hint,
             hintStyle: TextStyle(
               color: colorScheme.outlineVariant,
-              fontSize: 14.sp,
+              fontSize: 16.sp,
             ),
             labelStyle: TextStyle(color: textColor),
           ),

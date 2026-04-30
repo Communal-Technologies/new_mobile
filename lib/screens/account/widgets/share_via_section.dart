@@ -15,7 +15,7 @@ class ShareViaSection extends StatelessWidget {
           Text(
             'Share Via',
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -101,7 +101,7 @@ class _ShareOption extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: 16.sp,
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),

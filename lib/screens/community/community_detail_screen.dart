@@ -199,7 +199,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       child: Text(
                         detail.categoryLabel,
                         style: TextStyle(
-                          fontSize: 14.sp,
+                          fontSize: 16.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF5B5CE2),
                         ),
@@ -250,7 +250,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                             Text(
                               'You are a member',
                               style: TextStyle(
-                                fontSize: 15.sp,
+                                fontSize: 17.sp,
                                 fontWeight: FontWeight.w600,
                                 color: const Color(0xFF1F8B4C),
                               ),
@@ -271,7 +271,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                         child: Text(
                           'Join Community',
                           style: TextStyle(
-                            fontSize: 17.sp,
+                            fontSize: 19.sp,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -305,7 +305,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
           hSpace(6),
           Text(
             label,
-            style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade700),
           ),
         ],
       ),
@@ -378,7 +378,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
                     color: valueColor,
                   ),
@@ -387,7 +387,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 16.sp,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
@@ -446,7 +446,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
           hSpace(6),
           Text(
             label,
-            style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade700),
           ),
         ],
       ),
@@ -470,7 +470,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                         .join()
                   : 'CC',
               style: TextStyle(
-                fontSize: 17.sp,
+                fontSize: 19.sp,
                 fontWeight: FontWeight.w700,
                 color: const Color(0xFF4328B8),
               ),
@@ -484,7 +484,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                 Text(
                   detail.coordinatorName,
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
@@ -493,7 +493,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                 Text(
                   detail.coordinatorRole,
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
@@ -525,7 +525,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
             child: Text(
               detail.meetingSchedule,
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -534,7 +534,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
           Text(
             detail.meetingTime,
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF7434FF),
             ),
@@ -568,7 +568,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       child: Text(
                         item,
                         style: TextStyle(
-                          fontSize: 15.sp,
+                          fontSize: 17.sp,
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
@@ -602,7 +602,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       child: Text(
                         item,
                         style: TextStyle(
-                          fontSize: 15.sp,
+                          fontSize: 17.sp,
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
@@ -645,7 +645,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                           Text(
                             activity.title,
                             style: TextStyle(
-                              fontSize: 15.sp,
+                              fontSize: 17.sp,
                               fontWeight: FontWeight.w600,
                               color: Theme.of(context).colorScheme.onSurface,
                             ),
@@ -731,7 +731,7 @@ class _SectionCard extends StatelessWidget {
           Text(
             title,
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface,
             ),

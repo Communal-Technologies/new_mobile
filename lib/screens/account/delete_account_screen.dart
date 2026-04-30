@@ -141,7 +141,7 @@ class _DataLossSection extends StatelessWidget {
         Text(
           'Here\'s what you\'ll lose',
           style: TextStyle(
-            fontSize: 17.sp,
+            fontSize: 19.sp,
             fontWeight: FontWeight.w700,
             color: Theme.of(context).colorScheme.onSurface,
           ),

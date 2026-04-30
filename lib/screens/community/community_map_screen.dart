@@ -428,7 +428,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                       Text(
                         '${community.communityType} • ${community.members} members',
                         style: TextStyle(
-                          fontSize: 14.sp,
+                          fontSize: 16.sp,
                           color: Colors.white.withOpacity(0.85),
                         ),
                       ),
@@ -445,7 +445,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 14.sp,
+                            fontSize: 16.sp,
                             color: Colors.white.withOpacity(0.85),
                           ),
                         ),
@@ -473,7 +473,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                   Text(
                     'Open',
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
@@ -562,7 +562,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                     Text(
                       'Nearby Communities',
                       style: TextStyle(
-                        fontSize: 17.sp,
+                        fontSize: 19.sp,
                         fontWeight: FontWeight.w700,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
@@ -582,7 +582,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                       child: Text(
                         '${communities.length} found',
                         style: TextStyle(
-                          fontSize: 14.sp,
+                          fontSize: 16.sp,
                           fontWeight: FontWeight.w600,
                           color: Theme.of(context).primaryColor,
                         ),
@@ -594,7 +594,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                       child: Text(
                         'View all',
                         style: TextStyle(
-                          fontSize: 15.sp,
+                          fontSize: 17.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF7434FF),
                         ),
@@ -624,7 +624,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                               _loadError!,
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontSize: 15.sp,
+                                fontSize: 17.sp,
                                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                               ),
                             ),
@@ -653,7 +653,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                                   : 'No communities match your search',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontSize: 15.sp,
+                                fontSize: 17.sp,
                                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                               ),
                             ),

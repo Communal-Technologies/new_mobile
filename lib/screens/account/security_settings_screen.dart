@@ -110,7 +110,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                         Text(
                           'Secure Acctount',
                           style: TextStyle(
-                            fontSize: 17.sp,
+                            fontSize: 19.sp,
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF12784C),
                           ),
@@ -119,7 +119,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                         Text(
                           'Your account is protected. Keep your security settings up to date.',
                           style: TextStyle(
-                            fontSize: 15.sp,
+                            fontSize: 17.sp,
                             color: const Color(0xFF196C4A),
                             fontWeight: FontWeight.w500,
                           ),
@@ -134,7 +134,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
             Text(
               'Authentication',
               style: TextStyle(
-                fontSize: 17.sp,
+                fontSize: 19.sp,
                 fontWeight: FontWeight.w700,
                 color: onSurface,
               ),
@@ -186,7 +186,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       child: Text(
                         _biometricEnrolled ? 'Enabled' : 'Disabled',
                         style: TextStyle(
-                          fontSize: 14.sp,
+                          fontSize: 16.sp,
                           fontWeight: FontWeight.w700,
                           color: _biometricEnrolled
                               ? const Color(0xFF1AAE70)
@@ -203,7 +203,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
             Text(
               'Security Alerts',
               style: TextStyle(
-                fontSize: 17.sp,
+                fontSize: 19.sp,
                 fontWeight: FontWeight.w700,
                 color: onSurface,
               ),
@@ -256,7 +256,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                 Text(
                   'Recent activity',
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
                     color: onSurface,
                   ),
@@ -265,7 +265,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                 Text(
                   'See all',
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: primary,
                     fontWeight: FontWeight.w700,
                   ),
@@ -315,7 +315,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                   Text(
                     'Security Tips',
                     style: TextStyle(
-                      fontSize: 17.sp,
+                      fontSize: 19.sp,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF12427A),
                     ),
@@ -371,7 +371,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                   Text(
                     title,
                     style: TextStyle(
-                      fontSize: 17.sp,
+                      fontSize: 19.sp,
                       fontWeight: FontWeight.w700,
                       color: onSurface,
                     ),
@@ -380,7 +380,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.w500,
                       color: muted,
                     ),
@@ -429,7 +429,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
                     color: onSurface,
                   ),
@@ -438,7 +438,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w500,
                     color: onSurface.withValues(alpha: 0.6),
                   ),
@@ -470,7 +470,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
             child: Text(
               text,
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w500,
                 color: const Color(0xFF1B3F6B),
               ),
@@ -524,7 +524,7 @@ class _ActivityTile extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
                     color: onSurface,
                   ),
@@ -537,7 +537,7 @@ class _ActivityTile extends StatelessWidget {
                     Text(
                       location,
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 17.sp,
                         color: muted,
                         fontWeight: FontWeight.w500,
                       ),
@@ -549,7 +549,7 @@ class _ActivityTile extends StatelessWidget {
                       child: Text(
                         time,
                         style: TextStyle(
-                          fontSize: 15.sp,
+                          fontSize: 17.sp,
                           color: muted,
                           fontWeight: FontWeight.w500,
                         ),

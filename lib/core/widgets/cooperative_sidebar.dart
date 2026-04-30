@@ -194,7 +194,7 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                                               Text(
                                                 primaryTitle,
                                                 style: TextStyle(
-                                                  fontSize: 17.sp,
+                                                  fontSize: 19.sp,
                                                   fontWeight: FontWeight.w700,
                                                   color: isDark
                                                       ? onSurface
@@ -207,7 +207,7 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                                               Text(
                                                 secondaryLine,
                                                 style: TextStyle(
-                                                  fontSize: 15.sp,
+                                                  fontSize: 17.sp,
                                                   color: isDark
                                                       ? onSurface.withValues(
                                                           alpha: 0.7)
@@ -241,7 +241,7 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                         Text(
                           'Other cooperatives',
                           style: TextStyle(
-                            fontSize: 17.sp,
+                            fontSize: 19.sp,
                             fontWeight: FontWeight.w600,
                             color: onSurface,
                           ),
@@ -258,7 +258,7 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
                                   'You can use Communal without belonging to a cooperative. '
                                   'When you join one (or more) with an invite code, they will show here.',
                                   style: TextStyle(
-                                    fontSize: 15.sp,
+                                    fontSize: 17.sp,
                                     height: 1.35,
                                     color: onSurface.withValues(alpha: 0.7),
                                   ),
@@ -408,7 +408,7 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 17.sp,
+                  fontSize: 19.sp,
                   fontWeight: FontWeight.w600,
                   color: onSurface,
                 ),

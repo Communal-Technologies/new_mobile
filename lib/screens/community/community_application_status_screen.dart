@@ -257,7 +257,7 @@ class _CommunityApplicationStatusScreenState
             child: Text(
               widget.detail.categoryLabel,
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF5B5CE2),
               ),
@@ -343,7 +343,7 @@ class _CommunityApplicationStatusScreenState
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
                     color: valueColor,
                   ),
@@ -352,7 +352,7 @@ class _CommunityApplicationStatusScreenState
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: 16.sp,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
@@ -378,7 +378,7 @@ class _CommunityApplicationStatusScreenState
           Text(
             'About',
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -414,7 +414,7 @@ class _CommunityApplicationStatusScreenState
         hSpace(4),
         Text(
           label,
-          style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade600),
         ),
       ],
     );
@@ -434,7 +434,7 @@ class _CommunityApplicationStatusScreenState
           hSpace(6),
           Text(
             label,
-            style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade700),
           ),
         ],
       ),
@@ -464,7 +464,7 @@ class _CommunityApplicationStatusScreenState
           child: Text(
             'Cancel Request',
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w600,
               color: const Color(0xFFE74C3C),
             ),
@@ -516,7 +516,7 @@ class _Banner extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 19.sp,
                     fontWeight: FontWeight.w700,
                     color: textColor,
                   ),
@@ -525,7 +525,7 @@ class _Banner extends StatelessWidget {
                 Text(
                   body,
                   style: TextStyle(
-                    fontSize: 15.sp,
+                    fontSize: 17.sp,
                     color: textColor,
                   ),
                 ),

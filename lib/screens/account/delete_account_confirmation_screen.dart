@@ -128,7 +128,7 @@ class _DeleteAccountConfirmationScreenState
           Text(
             'Agree to continue',
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -207,7 +207,7 @@ class _DeleteAccountConfirmationScreenState
           child: Text(
             'I understand, Delete my Account',
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 19.sp,
               fontWeight: FontWeight.w600,
             ),
           ),

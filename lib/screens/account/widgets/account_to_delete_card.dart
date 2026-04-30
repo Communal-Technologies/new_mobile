@@ -34,7 +34,7 @@ class AccountToDeleteCard extends StatelessWidget {
           Text(
             'Account to be deleted',
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
@@ -68,7 +68,7 @@ class AccountToDeleteCard extends StatelessWidget {
                     Text(
                       name,
                       style: TextStyle(
-                        fontSize: 17.sp,
+                        fontSize: 19.sp,
                         fontWeight: FontWeight.w700,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
@@ -77,7 +77,7 @@ class AccountToDeleteCard extends StatelessWidget {
                     Text(
                       email,
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 17.sp,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
@@ -96,7 +96,7 @@ class AccountToDeleteCard extends StatelessWidget {
                     Text(
                       'Account Number',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 16.sp,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
@@ -104,7 +104,7 @@ class AccountToDeleteCard extends StatelessWidget {
                     Text(
                       accountNumber,
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
@@ -119,7 +119,7 @@ class AccountToDeleteCard extends StatelessWidget {
                     Text(
                       'Member Since',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 16.sp,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
@@ -127,7 +127,7 @@ class AccountToDeleteCard extends StatelessWidget {
                     Text(
                       memberSince,
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),

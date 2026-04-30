@@ -124,7 +124,7 @@ class _PreferenceItem extends StatelessWidget {
                         Text(
                           'Appearance',
                           style: TextStyle(
-                            fontSize: 17.sp,
+                            fontSize: 19.sp,
                             fontWeight: FontWeight.w600,
                             color: onSurface,
                           ),
@@ -133,7 +133,7 @@ class _PreferenceItem extends StatelessWidget {
                         Text(
                           description,
                           style: TextStyle(
-                            fontSize: 15.sp,
+                            fontSize: 17.sp,
                             color: onSurface.withValues(alpha: 0.6),
                           ),
                         ),
@@ -207,7 +207,7 @@ class _ThemeSegment extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: 17.sp,
               fontWeight: FontWeight.w600,
               color: selected
                   ? Colors.white

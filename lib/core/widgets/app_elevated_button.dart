@@ -110,11 +110,14 @@ class AppOutlinedButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final color = theme.brightness == Brightness.dark
+        ? Colors.white
+        : theme.primaryColor;
 
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
-        side: BorderSide(width: 1.0, color: theme.primaryColor),
+        side: BorderSide(width: 1.0, color: color),
         minimumSize: Size(double.infinity, 50.h),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10.r),
@@ -124,7 +127,7 @@ class AppOutlinedButton extends StatelessWidget {
           child ??
           SmallAppText(
             title,
-            color: theme.primaryColor,
+            color: color,
             fontWeight: FontWeight.w600,
             fontSize: 17.sp,
           ),
@@ -162,14 +165,11 @@ class AppSecondaryButton extends StatelessWidget {
       borderColor = Colors.white;
       textColor = Colors.white;
     } else {
-      // Theme-driven secondary: use the primary brand colour for both
-      // the border and text so the button stays visible on light AND
-      // dark scaffolds. (The previous theme.dividerColor border read as
-      // near-invisible on the dark scaffold, and a foregroundColor +
-      // inner Text color combo on OutlinedButton was occasionally
-      // producing low-contrast text on dark mode.)
-      borderColor = theme.primaryColor;
-      textColor = theme.primaryColor;
+      // Theme-driven secondary: white in dark mode (so the outline
+      // reads against a dark scaffold), brand purple in light mode.
+      final isDarkTheme = theme.brightness == Brightness.dark;
+      borderColor = isDarkTheme ? Colors.white : theme.primaryColor;
+      textColor = isDarkTheme ? Colors.white : theme.primaryColor;
     }
 
     return SizedBox(

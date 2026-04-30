@@ -1,7 +1,12 @@
 import 'dart:convert';
 
 import 'package:communal_mobile/core/navigation/root_navigator_key.dart';
+import 'package:communal_mobile/core/services/pending_deep_link_service.dart';
+import 'package:communal_mobile/core/services/unread_notifications_service.dart';
+import 'package:communal_mobile/cubits/security/security_cubit.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
+import 'package:communal_mobile/injection.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/widgets.dart';
@@ -60,11 +65,12 @@ class PushNotificationService {
 
     // iOS: surface foreground notifications as banners. No-op on Android.
     try {
-      await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+      await FirebaseMessaging.instance
+          .setForegroundNotificationPresentationOptions(
+            alert: true,
+            badge: true,
+            sound: true,
+          );
     } catch (e) {
       debugPrint('PushNotificationService: foreground options skipped: $e');
     }
@@ -76,7 +82,9 @@ class PushNotificationService {
     // white square inside the white expanded notification card).
     try {
       const initSettings = InitializationSettings(
-        android: AndroidInitializationSettings('@drawable/ic_stat_notification'),
+        android: AndroidInitializationSettings(
+          '@drawable/ic_stat_notification',
+        ),
         iOS: DarwinInitializationSettings(),
       );
       await _localNotifications.initialize(
@@ -111,7 +119,9 @@ class PushNotificationService {
           >()
           ?.createNotificationChannel(channel);
     } catch (e) {
-      debugPrint('PushNotificationService: local notifications init skipped: $e');
+      debugPrint(
+        'PushNotificationService: local notifications init skipped: $e',
+      );
     }
 
     // Foreground listener: when a notification-payload message arrives while
@@ -167,28 +177,118 @@ class PushNotificationService {
   /// the only `route` we mint server-side is `transaction-receipt`;
   /// extend the switch as more push types start carrying a route hint.
   ///
-  /// Receipt payloads include `trx_reference`, but the receipt screen
-  /// currently demands a fully hydrated [TransactionDetailsData]
-  /// `extra` (no by-id fetch endpoint yet on mobile). Until that
-  /// endpoint lands we drop the user on transaction history — they
-  /// can find the row by reference there. TODO: when
-  /// `getTransactionByReference` is wired, jump straight to receipt
-  /// with the right `extra`.
+  /// Translate an FCM data block into a route intent and navigate.
+  ///
+  /// Backend convention (see `ProcessPushNotifications::handle` —
+  /// every caller-supplied data key is forwarded verbatim into the
+  /// FCM data block):
+  ///
+  ///   type='guarantor_loan_approval'
+  ///       carries `loan_ref`, `notification_id`. Tap → guarantor
+  ///       requests screen.
+  ///
+  ///   type='transaction-receipt' (legacy `route` key still respected)
+  ///       carries `trx_reference`. The receipt screen needs a
+  ///       hydrated TransactionDetailsData `extra` and we don't
+  ///       have a by-id fetch yet — drop on transaction-history,
+  ///       same as before. TODO: jump to receipt when the by-id
+  ///       fetch is wired.
+  ///
+  /// When the SecurityCubit has the app locked, `goNamed` is a no-op
+  /// because the locked overlay replaces the entire MaterialApp.
+  /// Stash the intent in [PendingDeepLinkService]; the security
+  /// wrapper consumes it on unlock. Same logic also handles the
+  /// cold-start case where the user tapped a push from the system
+  /// tray and Firebase replays it before our app fully comes up.
   static void _routeFromData(Map<String, dynamic> data) {
-    final route = (data['route']?.toString() ?? '').trim();
-    if (route.isEmpty) return;
+    // Refresh the unread-count badge optimistically — a push usually
+    // means a new in-app row landed. Cheap on success, no-op on err.
+    try {
+      getIt<UnreadNotificationsService>().refresh();
+    } catch (_) {
+      /* ignore — service may not be registered in tests */
+    }
+
+    final intent = _intentForData(data);
+    if (intent == null) return;
+
+    final ctx = rootNavigatorKey.currentContext;
+    final pending = (() {
+      try {
+        return getIt<PendingDeepLinkService>();
+      } catch (_) {
+        return null;
+      }
+    })();
+
+    bool locked = false;
+    if (ctx != null) {
+      try {
+        locked = ctx.read<SecurityCubit>().state == SecurityState.locked;
+      } catch (_) {
+        // Cubit not in scope (e.g. during cold start before runApp's
+        // tree mounts). Treat as locked-ish so the intent gets
+        // queued and replayed once the tree is ready.
+        locked = true;
+      }
+    }
+
+    if (ctx == null || locked) {
+      pending?.store(intent);
+      return;
+    }
+
+    try {
+      ctx.goNamed(intent.routeName, extra: intent.extra);
+    } catch (_) {
+      // Router refused (mid-rebuild or unknown route) — fall back to
+      // queuing so the next safe moment can replay.
+      pending?.store(intent);
+    }
+  }
+
+  /// Pure mapping from push data → route intent, separated from the
+  /// navigation side-effects so it's easy to test and so the unlock
+  /// replay path can call it without re-deriving the intent.
+  static DeepLinkIntent? _intentForData(Map<String, dynamic> data) {
+    final type = (data['type']?.toString() ?? '').trim();
+    final legacyRoute = (data['route']?.toString() ?? '').trim();
+
+    if (type == 'guarantor_loan_approval') {
+      // No id-based hydration needed — the guarantor-requests screen
+      // fetches its own list. Mobile marks the source notification
+      // read once the guarantor approves / declines from there.
+      return const DeepLinkIntent(routeName: 'guarantor-requests');
+    }
+
+    if (type == 'transaction-receipt' || legacyRoute == 'transaction-receipt') {
+      return const DeepLinkIntent(routeName: 'transaction-history');
+    }
+
+    // Unknown / generic push: drop the user on the in-app list so
+    // they can read the message and follow up if needed.
+    return const DeepLinkIntent(routeName: 'notifications');
+  }
+
+  /// Replay a pending deep-link AFTER the app finishes any in-progress
+  /// unlock step. Wired into the SecurityCubit listener in main /
+  /// security_wrapper. Safe to call when no intent is pending (no-op).
+  static void replayPendingDeepLink() {
+    final pending = (() {
+      try {
+        return getIt<PendingDeepLinkService>();
+      } catch (_) {
+        return null;
+      }
+    })();
+    final intent = pending?.consume();
+    if (intent == null) return;
     final ctx = rootNavigatorKey.currentContext;
     if (ctx == null) return;
-    switch (route) {
-      case 'transaction-receipt':
-        try {
-          ctx.goNamed('transaction-history');
-        } catch (_) {
-          // route name may differ at the time this fires (router
-          // not in a state that accepts goNamed). Swallow — no
-          // navigation is better than a crash on a notification tap.
-        }
-        break;
+    try {
+      ctx.goNamed(intent.routeName, extra: intent.extra);
+    } catch (_) {
+      /* swallow — better no nav than a crash on resume */
     }
   }
 

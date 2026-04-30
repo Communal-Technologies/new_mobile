@@ -7,6 +7,8 @@ import 'package:communal_mobile/data/local/theme_mode_controller.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:communal_mobile/data/repositories/account_actions_repository.dart';
 import 'package:communal_mobile/data/repositories/community_repository.dart';
+import 'package:communal_mobile/core/services/pending_deep_link_service.dart';
+import 'package:communal_mobile/core/services/unread_notifications_service.dart';
 import 'package:communal_mobile/data/repositories/notifications_repository.dart';
 import 'package:communal_mobile/data/repositories/profile_repository.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
@@ -50,6 +52,16 @@ Future<void> configureDependencies() async {
   if (!getIt.isRegistered<NotificationsRepository>()) {
     getIt.registerLazySingleton<NotificationsRepository>(
       () => NotificationsRepository(getIt()),
+    );
+  }
+  if (!getIt.isRegistered<UnreadNotificationsService>()) {
+    getIt.registerLazySingleton<UnreadNotificationsService>(
+      () => UnreadNotificationsService(getIt()),
+    );
+  }
+  if (!getIt.isRegistered<PendingDeepLinkService>()) {
+    getIt.registerLazySingleton<PendingDeepLinkService>(
+      () => PendingDeepLinkService(),
     );
   }
   if (!getIt.isRegistered<ProfileRepository>()) {

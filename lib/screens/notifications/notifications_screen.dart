@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 
+import 'package:communal_mobile/core/services/unread_notifications_service.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/notification_model.dart';
 import 'package:communal_mobile/data/repositories/notifications_repository.dart';
@@ -37,6 +40,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (!n.isUnread) return;
     try {
       await getIt<NotificationsRepository>().markAsRead(n.id);
+      // Local-decrement first so the home bell drops the dot
+      // immediately; refresh() reconciles to the authoritative count.
+      getIt<UnreadNotificationsService>().decrement();
+      unawaited(getIt<UnreadNotificationsService>().refresh());
       if (mounted) await _refresh();
     } catch (_) {
       // Silent: tap-to-read is a soft action; refresh on next pull.
@@ -48,13 +55,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     setState(() => _markingAll = true);
     try {
       await getIt<NotificationsRepository>().markAllAsRead();
+      getIt<UnreadNotificationsService>().clear();
+      unawaited(getIt<UnreadNotificationsService>().refresh());
       if (mounted) await _refresh();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString().replaceFirst('Exception: ', '')),
-          ),
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
         );
       }
     } finally {
@@ -106,7 +113,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             }
             if (snapshot.hasError) {
               return _ErrorState(
-                message: snapshot.error.toString().replaceFirst('Exception: ', ''),
+                message: snapshot.error.toString().replaceFirst(
+                  'Exception: ',
+                  '',
+                ),
                 onRetry: _refresh,
               );
             }
@@ -182,17 +192,20 @@ class _NotificationTile extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 17.sp,
                         color: Theme.of(context).colorScheme.onSurface,
-                        fontWeight:
-                            unread ? FontWeight.w600 : FontWeight.w500,
+                        fontWeight: unread ? FontWeight.w600 : FontWeight.w500,
                       ),
                     ),
                     if (notification.createdAt != null) ...[
                       vSpace(4),
                       Text(
-                        DateFormat('MMM d, h:mm a').format(notification.createdAt!),
+                        DateFormat(
+                          'MMM d, h:mm a',
+                        ).format(notification.createdAt!),
                         style: TextStyle(
                           fontSize: 12.sp,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -235,7 +248,9 @@ class _EmptyState extends StatelessWidget {
             'No notifications yet',
             style: TextStyle(
               fontSize: 17.sp,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -258,18 +273,16 @@ class _ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.error_outline,
-              color: Color(0xFFB42318),
-              size: 36,
-            ),
+            const Icon(Icons.error_outline, color: Color(0xFFB42318), size: 36),
             vSpace(12),
             Text(
               message,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 17.sp,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             vSpace(12),

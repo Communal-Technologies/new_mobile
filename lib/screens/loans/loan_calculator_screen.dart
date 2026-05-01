@@ -69,26 +69,29 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
 
   int get _minDuration {
     final scheme = _selectedScheme;
-    if (scheme != null && scheme.durationMonths > 0) {
-      return scheme.durationMonths;
+    if (scheme != null && scheme.effectiveMinDuration > 0) {
+      return scheme.effectiveMinDuration;
     }
     return _kFallbackMinDuration;
   }
 
   int get _maxDuration {
     final scheme = _selectedScheme;
-    if (scheme != null && scheme.durationMonths > 0) {
-      return scheme.durationMonths;
+    if (scheme != null && scheme.effectiveMaxDuration > 0) {
+      return scheme.effectiveMaxDuration;
     }
     return _kFallbackMaxDuration;
   }
 
-  /// True when the duration is locked by the selected scheme — the
-  /// scheme model defines a single fixed term, so the slider becomes a
-  /// read-only display. We still keep the slider widget for layout
-  /// continuity, just disabled.
-  bool get _durationLocked =>
-      _selectedScheme != null && _selectedScheme!.durationMonths > 0;
+  /// Duration is locked only when the selected scheme has no real
+  /// range (min == max). Member-pickable schemes (the new shape from
+  /// Phase 1) leave the slider live so the member can pick any term
+  /// inside the cooperative's window.
+  bool get _durationLocked {
+    final scheme = _selectedScheme;
+    if (scheme == null) return false;
+    return !scheme.hasDurationRange;
+  }
 
   @override
   void initState() {
@@ -121,13 +124,16 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
       if (!mounted) return;
       setState(() {
         _schemes = rows;
-        // Pick the first scheme by default. Snap the duration to its
-        // term so the summary reflects an honest scheme-driven
-        // calculation immediately.
+        // Pick the first scheme by default. Snap the duration to the
+        // scheme's max so the summary reflects the most-conservative
+        // (longest term, lowest monthly) calculation immediately;
+        // the member can then drag the slider down within
+        // [min..max] for a faster repayment.
         if (rows.isNotEmpty) {
           _selectedScheme = rows.first;
-          if (rows.first.durationMonths > 0) {
-            _loanDuration = rows.first.durationMonths;
+          final picked = rows.first.effectiveMaxDuration;
+          if (picked > 0) {
+            _loanDuration = picked;
           }
         } else {
           _selectedScheme = null;
@@ -324,8 +330,12 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                   onTap: () {
                     setState(() {
                       _selectedScheme = scheme;
-                      if (scheme.durationMonths > 0) {
-                        _loanDuration = scheme.durationMonths;
+                      // Snap to max on switch so the new scheme's
+                      // longest term is the visible default; member
+                      // can drag down within the new [min..max].
+                      final picked = scheme.effectiveMaxDuration;
+                      if (picked > 0) {
+                        _loanDuration = picked;
                       }
                     });
                   },
@@ -501,6 +511,23 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                 ),
                 child: Text(
                   'Set by product',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w600,
+                    color: _kLoanOrange,
+                  ),
+                ),
+              ),
+            ] else if (_selectedScheme != null) ...[
+              hSpace(8),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                decoration: BoxDecoration(
+                  color: _kLoanOrange.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Text(
+                  '${_selectedScheme!.effectiveMinDuration}–${_selectedScheme!.effectiveMaxDuration} months',
                   style: TextStyle(
                     fontSize: 12.sp,
                     fontWeight: FontWeight.w600,

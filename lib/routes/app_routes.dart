@@ -53,6 +53,12 @@ import 'package:communal_mobile/screens/transactions/transfer_internal_screen.da
 import 'package:communal_mobile/screens/transactions/transfer_internal_verify_screen.dart';
 import 'package:communal_mobile/screens/transactions/transfer_internal_review_screen.dart';
 import 'package:communal_mobile/screens/transactions/transfer_screen.dart';
+import 'package:communal_mobile/screens/bills/bills_landing_screen.dart';
+import 'package:communal_mobile/screens/bills/airtime_purchase_screen.dart';
+import 'package:communal_mobile/screens/bills/data_purchase_screen.dart';
+import 'package:communal_mobile/screens/bills/electricity_purchase_screen.dart';
+import 'package:communal_mobile/screens/bills/television_purchase_screen.dart';
+import 'package:communal_mobile/screens/bills/bill_confirm_screen.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:communal_mobile/data/models/loan_scheme.dart';
 import 'package:communal_mobile/data/models/loan_application.dart';
@@ -872,6 +878,46 @@ final GoRouter appRouter = GoRouter(
       path: '/transactions',
       name: 'transactions',
       builder: (context, state) => const TransactionHistoryScreen(),
+    ),
+
+    // Bill payments (airtime + data via Anchor). Result screen handles
+    // POSTs and reuses an idempotency key across in-screen retries — see
+    // bill_result_screen.dart for the args contract.
+    GoRoute(
+      path: '/bills',
+      name: 'bills',
+      builder: (context, state) => const BillsLandingScreen(),
+    ),
+    GoRoute(
+      path: '/bills/airtime',
+      name: 'bills-airtime',
+      builder: (context, state) => const AirtimePurchaseScreen(),
+    ),
+    GoRoute(
+      path: '/bills/data',
+      name: 'bills-data',
+      builder: (context, state) => const DataPurchaseScreen(),
+    ),
+    GoRoute(
+      path: '/bills/electricity',
+      name: 'bills-electricity',
+      builder: (context, state) => const ElectricityPurchaseScreen(),
+    ),
+    GoRoute(
+      path: '/bills/television',
+      name: 'bills-television',
+      builder: (context, state) => const TelevisionPurchaseScreen(),
+    ),
+    GoRoute(
+      path: '/bills/confirm',
+      name: 'bill-confirm',
+      builder: (context, state) {
+        final extra = state.extra;
+        final args = extra is Map<String, dynamic>
+            ? extra
+            : (extra is Map ? Map<String, dynamic>.from(extra) : <String, dynamic>{});
+        return BillConfirmScreen(args: args);
+      },
     ),
     GoRoute(
       path: '/transfer',

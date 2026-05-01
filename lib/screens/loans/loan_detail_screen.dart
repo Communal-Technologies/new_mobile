@@ -12,6 +12,7 @@ import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/loan_application.dart';
+import 'package:communal_mobile/data/models/loan_installment.dart';
 import 'package:communal_mobile/data/repositories/loan_repository.dart';
 import 'package:communal_mobile/injection.dart';
 
@@ -37,11 +38,46 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
   List<Map<String, dynamic>> _history = const [];
   late LoanApplication _loan;
 
+  // Phase 8 Loan-detail extras — installments, regrant chain. Fines
+  // already surface in the existing Fine tab on the obligations
+  // screen via the 1526 → 'Fine' mapping; we surface the count here
+  // as a small chip + a "View fines" link for in-context discovery.
+  bool _loadingExtras = false;
+  List<LoanInstallment> _installments = const [];
+  List<LoanApplication> _regrantChain = const [];
+
   @override
   void initState() {
     super.initState();
     _loan = widget.loan;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadHistory());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadHistory();
+      _loadExtras();
+    });
+  }
+
+  /// Fetch installment schedule + regrant chain in parallel. Both
+  /// endpoints 404 silently for legacy loans (no schedule materialised
+  /// or single-loan chain) — the empty-state cards handle that
+  /// gracefully without surfacing an error.
+  Future<void> _loadExtras() async {
+    if (_loan.id.isEmpty) return;
+    setState(() => _loadingExtras = true);
+    try {
+      final results = await Future.wait([
+        _repo.fetchInstallments(_loan.id).catchError((_) => <LoanInstallment>[]),
+        _repo.fetchRegrantChain(loanId: _loan.id).catchError((_) => <LoanApplication>[]),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _installments = results[0] as List<LoanInstallment>;
+        _regrantChain = results[1] as List<LoanApplication>;
+        _loadingExtras = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingExtras = false);
+    }
   }
 
   Future<void> _loadHistory() async {
@@ -156,6 +192,14 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                   ],
                   vSpace(16),
                   _buildHistoryOrDeclineCard(),
+                  if (_regrantChain.length > 1) ...[
+                    vSpace(16),
+                    _buildRegrantChainCard(),
+                  ],
+                  if (_loadingExtras || _installments.isNotEmpty) ...[
+                    vSpace(16),
+                    _buildInstallmentsCard(),
+                  ],
                   if (_loan.status == LoanStatus.approved &&
                       _loan.balanceMinor > 0) ...[
                     vSpace(24),
@@ -683,6 +727,241 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                   color: const Color(0xFFE74C3C),
                 ),
               ),
+      ),
+    );
+  }
+
+  /// Phase 8 — Installments card. Surfaces the materialised
+  /// `loan_installments` rows for this loan. Empty for legacy loans
+  /// (pre-Phase-2 approval) — the loading state covers the slow
+  /// network case; an empty result after load renders nothing because
+  /// the parent column already gates on `isNotEmpty`.
+  Widget _buildInstallmentsCard() {
+    final theme = Theme.of(context);
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: theme.dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.calendar_month_outlined,
+                  color: theme.colorScheme.onSurface, size: 22.sp),
+              hSpace(8),
+              Text(
+                'Repayment Schedule',
+                style: TextStyle(
+                  fontSize: 17.sp,
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+          vSpace(12),
+          if (_loadingExtras && _installments.isEmpty)
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: 16.h),
+              child: const Center(
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            )
+          else
+            for (final inst in _installments) _installmentRow(inst),
+        ],
+      ),
+    );
+  }
+
+  Widget _installmentRow(LoanInstallment inst) {
+    final theme = Theme.of(context);
+    final statusColor = _installmentStatusColor(inst.status);
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 6.h),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 28.w,
+            child: Text(
+              '#${inst.sequence}',
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  DateFormat('MMM d, yyyy').format(inst.dueDate),
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                Text(
+                  '${inst.principalLabel} principal • ${inst.interestLabel} interest',
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                inst.totalDueLabel,
+                style: TextStyle(
+                  fontSize: 15.sp,
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Text(
+                  inst.status,
+                  style: TextStyle(
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w600,
+                    color: statusColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _installmentStatusColor(String status) {
+    switch (status) {
+      case 'paid':
+        return const Color(0xFF27AE60);
+      case 'overdue':
+        return const Color(0xFFE67E22);
+      case 'fined':
+        return const Color(0xFFE74C3C);
+      case 'waived':
+        return const Color(0xFF7F8C8D);
+      case 'pending':
+      default:
+        return const Color(0xFF1976D2);
+    }
+  }
+
+  /// Phase 8 — Regrant chain card. Renders only when the chain has
+  /// more than one entry; single-loan chains (the common case for
+  /// every fresh application) are noise.
+  Widget _buildRegrantChainCard() {
+    final theme = Theme.of(context);
+    final me = _regrantChain.indexWhere((row) => row.id == _loan.id);
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: theme.dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.history_toggle_off,
+                  color: theme.colorScheme.onSurface, size: 22.sp),
+              hSpace(8),
+              Text(
+                'Regrant Chain',
+                style: TextStyle(
+                  fontSize: 17.sp,
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                me >= 0
+                    ? 'Loan ${me + 1} of ${_regrantChain.length}'
+                    : '${_regrantChain.length} loans',
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
+          ),
+          vSpace(12),
+          for (var i = 0; i < _regrantChain.length; i++)
+            _regrantChainRow(_regrantChain[i], i + 1, _regrantChain[i].id == _loan.id),
+        ],
+      ),
+    );
+  }
+
+  Widget _regrantChainRow(LoanApplication row, int displayIndex, bool isCurrent) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 6.h),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 28.w,
+            child: Text(
+              '$displayIndex.',
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '#${row.referenceId}${isCurrent ? '  (this loan)' : ''}',
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w700,
+                    color: isCurrent
+                        ? const Color(0xFFE67E22)
+                        : theme.colorScheme.onSurface,
+                  ),
+                ),
+                Text(
+                  Money(row.amountMinor, row.currency).format(),
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

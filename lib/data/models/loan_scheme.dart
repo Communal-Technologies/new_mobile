@@ -32,7 +32,7 @@ class LoanScheme {
   /// Legacy single-value duration. Kept for one release while the
   /// backend writes both `duration` and the new
   /// `min_duration_months` / `max_duration_months` columns. Prefer
-  /// {@link effectiveMinDuration} / {@link effectiveMaxDuration} for
+  /// [effectiveMinDuration] / [effectiveMaxDuration] for
   /// any new code.
   final int durationMonths;
   final double interestRate;
@@ -43,7 +43,7 @@ class LoanScheme {
 
   /// Member-pickable duration window. Null on schemes that haven't
   /// been re-saved since the Phase 1 schema migration; callers should
-  /// use {@link effectiveMinDuration} / {@link effectiveMaxDuration}
+  /// use [effectiveMinDuration] / [effectiveMaxDuration]
   /// to get sensible fallbacks.
   final int? minDurationMonths;
   final int? maxDurationMonths;

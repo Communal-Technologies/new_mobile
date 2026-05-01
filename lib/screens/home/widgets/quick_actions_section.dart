@@ -18,11 +18,19 @@ class QuickActionsSection extends StatelessWidget {
     // Loan is a cooperative-only feature — drop it from the quick
     // actions grid for users with no cooperative attached, and keep
     // the row visually balanced by promoting "Pay Bills" up from the
-    // second row.
+    // second row. Invest and Buy Now Pay Later are hidden — see TODO
+    // below.
     final authState = context.watch<AuthBloc>().state;
     final hasCooperative = authState is AuthAuthenticated
         ? authState.user.hasCooperativeMembership
         : false;
+
+    final payBillsTile = QuickActionButton(
+      icon: Icons.credit_card,
+      label: 'Pay Bills',
+      theme: theme,
+      onTap: () => context.pushNamed('bills'),
+    );
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
@@ -52,12 +60,14 @@ class QuickActionsSection extends StatelessWidget {
                 icon: Icons.phone_android,
                 label: 'Buy Data',
                 theme: theme,
+                onTap: () => context.pushNamed('bills-data'),
               ),
               hSpace(10),
               QuickActionButton(
                 icon: Icons.phone,
                 label: 'Airtime',
                 theme: theme,
+                onTap: () => context.pushNamed('bills-airtime'),
               ),
               hSpace(10),
               if (hasCooperative)
@@ -68,38 +78,27 @@ class QuickActionsSection extends StatelessWidget {
                   onTap: () => context.pushNamed('loans'),
                 )
               else
-                QuickActionButton(
-                  icon: Icons.credit_card,
-                  label: 'Pay Bills',
-                  theme: theme,
-                ),
+                payBillsTile,
             ],
           ),
-          vSpace(10),
-          // Second row - 3 buttons (or 2 when Pay Bills was promoted up)
-          Row(
-            children: [
-              QuickActionButton(
-                icon: Icons.account_balance,
-                label: 'Invest',
-                theme: theme,
-              ),
-              hSpace(10),
-              QuickActionButton(
-                icon: Icons.account_balance,
-                label: 'Buy Now, Pay Later',
-                theme: theme,
-              ),
-              if (hasCooperative) ...[
+          // Second row hosts Pay Bills for cooperative members only.
+          // TODO: re-introduce Invest and Buy Now Pay Later tiles
+          // once those features ship — until then, keep the surface
+          // tight so we don't promise something the user can't tap.
+          if (hasCooperative) ...[
+            vSpace(10),
+            Row(
+              children: [
+                payBillsTile,
                 hSpace(10),
-                QuickActionButton(
-                  icon: Icons.credit_card,
-                  label: 'Pay Bills',
-                  theme: theme,
-                ),
+                Expanded(child: SizedBox.shrink()),
+                hSpace(10),
+                Expanded(child: SizedBox.shrink()),
+                hSpace(10),
+                Expanded(child: SizedBox.shrink()),
               ],
-            ],
-          ),
+            ),
+          ],
         ],
       ),
     );

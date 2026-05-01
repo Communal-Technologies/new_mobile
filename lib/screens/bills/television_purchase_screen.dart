@@ -385,15 +385,22 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
 
   Widget _buildPlanTile() {
     final selected = _selectedProduct;
+    final theme = Theme.of(context);
     return InkWell(
       onTap: _openProductSheet,
       borderRadius: BorderRadius.circular(14.r),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.h),
         decoration: BoxDecoration(
-          color: Colors.grey.shade50,
+          // theme.cardColor + theme.dividerColor instead of grey.shade50
+          // / grey.shade300 so the tile follows the active theme. The
+          // hardcoded shades stayed near-white in dark mode and made
+          // the field read as a stuck-on-light artifact next to the
+          // theme-aware smartcard/phone TextFields above. Mirrors the
+          // data plan tile in DataPurchaseScreen._buildProductTile.
+          color: theme.cardColor,
           borderRadius: BorderRadius.circular(14.r),
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(color: theme.dividerColor),
         ),
         child: Row(
           children: [
@@ -409,12 +416,15 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
                 style: TextStyle(
                   fontSize: 17.sp,
                   color: selected == null
-                      ? Colors.grey.shade600
-                      : Theme.of(context).colorScheme.onSurface,
+                      ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
+                      : theme.colorScheme.onSurface,
                 ),
               ),
             ),
-            const Icon(Icons.keyboard_arrow_down_rounded),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
           ],
         ),
       ),

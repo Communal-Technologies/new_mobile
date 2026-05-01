@@ -84,7 +84,7 @@ class ActiveLoanCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      loan.loanCode.isNotEmpty ? loan.loanCode : 'Loan',
+                      loan.displayLabel,
                       style: TextStyle(
                         fontSize: 19.sp,
                         fontWeight: FontWeight.w700,
@@ -93,7 +93,11 @@ class ActiveLoanCard extends StatelessWidget {
                     ),
                     vSpace(4),
                     Text(
-                      loan.referenceId.isNotEmpty ? loan.referenceId : loan.id,
+                      loan.loanCode.isNotEmpty
+                          ? loan.loanCode
+                          : (loan.referenceId.isNotEmpty
+                                ? loan.referenceId
+                                : loan.id),
                       style: TextStyle(
                         fontSize: 16.sp,
                         color: Theme.of(

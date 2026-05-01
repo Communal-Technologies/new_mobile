@@ -100,18 +100,20 @@ class PersonalInformationCard extends StatelessWidget {
           vSpace(20),
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton.icon(
+            child: ElevatedButton.icon(
               onPressed: () async {
                 await context.pushNamed('edit-profile', extra: {
                   'profile': profile,
                 });
                 onEdited?.call();
               },
-              icon: Icon(Icons.edit, size: 18.sp),
+              icon: Icon(Icons.edit, size: 18.sp, color: Colors.white),
               label: const Text('Edit Profile'),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Color(0xFF7434FF)),
-                foregroundColor: const Color(0xFF7434FF),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF7434FF),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                side: const BorderSide(color: Colors.white, width: 1.5),
                 padding: EdgeInsets.symmetric(vertical: 14.h),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12.r),

@@ -339,6 +339,13 @@ class Obligation {
         return 'Patronage';
       case '1525':
         return 'Custom';
+      // 1526 is the loan late-payment fine (and admin manual loan
+      // fine) account type — written by the backend
+      // LateFeeFineService into a per-cooperative `internal_accounts`
+      // row of account_type=1526. Surfaces under the existing Fine
+      // tab in financial_obligations_screen.dart.
+      case '1526':
+        return 'Fine';
       default:
         return 'Custom';
     }

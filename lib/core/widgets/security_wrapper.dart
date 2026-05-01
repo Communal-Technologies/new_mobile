@@ -793,33 +793,31 @@ class _SecurityWrapperState extends State<SecurityWrapper>
             },
             child: BlocBuilder<SecurityCubit, SecurityState>(
               buildWhen: (previous, current) {
-                // CRITICAL: Always rebuild when transitioning to unlocked OR when already unlocked
-                // This ensures dashboard is shown immediately after correct PIN
-                // Even if state was already unlocked (re-emitted), we need to rebuild to show dashboard
-                if (current == SecurityState.unlocked) {
-                  debugPrint(
-                    '📊   🔓 SECURITY WRAPPER buildWhen - State is unlocked, ALWAYS rebuilding',
-                  );
-                  debugPrint('📊   🔓 Previous: $previous, Current: $current');
-                  // CRITICAL: Always rebuild when unlocked, even if previous was also unlocked
-                  // This ensures the MaterialApp is replaced with widget.child
-                  return true;
+                // Only rebuild on actual transitions. The previous
+                // shape — `if (current == unlocked) return true` —
+                // forced a rebuild on every duplicate `unlocked`
+                // emission (the cubit re-emits on activity resets,
+                // post-frame unlock callbacks, etc). Each duplicate
+                // rebuild returned `widget.child`, which contains
+                // `MaterialApp.router(routerConfig: appRouter)` with
+                // the module-level `rootNavigatorKey` GlobalKey. When
+                // a duplicate fired during the lock → unlock
+                // transition (while the previous build's lock subtree
+                // was still in deactivation), the framework saw the
+                // same GlobalKey trying to attach in two places —
+                // hence the intermittent "_lifecycleState == inactive"
+                // assertion + "Duplicate GlobalKey detected" pair the
+                // user hit on unlock.
+                if (previous == current) {
+                  return false; // No transition, nothing to do.
                 }
 
-                // CRITICAL: Also rebuild when transitioning from locked to unlocked
-                // This is the most important transition - must rebuild to show dashboard
                 if (previous == SecurityState.locked &&
                     current == SecurityState.unlocked) {
                   debugPrint(
-                    '📊   🔓 SECURITY WRAPPER buildWhen - locked → unlocked, FORCING rebuild',
+                    '📊   🔓 SECURITY WRAPPER buildWhen - locked → unlocked, rebuilding',
                   );
                   return true;
-                }
-
-                // Only rebuild when state actually changes
-                // This prevents unnecessary rebuilds that cause WelcomeBackScreen to rebuild
-                if (previous == current) {
-                  return false; // Same state, no rebuild needed
                 }
 
                 // CRITICAL: If transitioning from locked to unlocked, this is likely a successful unlock

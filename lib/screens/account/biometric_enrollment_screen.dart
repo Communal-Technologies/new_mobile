@@ -374,6 +374,7 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
               available: _availableTypes,
               primaryMethod: method,
               primaryColor: primary,
+              masterEnabled: _masterEnabled,
             ),
           ],
         ],
@@ -518,7 +519,10 @@ class _SectionTitle extends StatelessWidget {
       style: TextStyle(
         fontSize: 19.sp,
         fontWeight: FontWeight.w700,
-        color: const Color(0xFF1F1F1F),
+        // Theme-aware so the title stays readable in dark mode. The
+        // previous hardcoded near-black colour rendered the labels
+        // invisible against the dark scaffold background.
+        color: Theme.of(context).colorScheme.onSurface,
       ),
     );
   }
@@ -666,24 +670,50 @@ class _GranularToggleCard extends StatelessWidget {
 }
 
 /// Single card with a horizontal divider between Face ID and Fingerprint
-/// rows. Whichever methods the OS reports as available render in their
-/// active palette + green "Active" badge; the unavailable method greys
-/// out + "Inactive" badge.
+/// rows. The row that matches the device's primary biometric is marked
+/// Active when the master switch is on; the other is Inactive.
+///
+/// Active resolution handles the Android `local_auth` quirk where some
+/// devices report `BiometricType.weak` / `.strong` instead of the
+/// specific `face` / `fingerprint` enum values. Without this fallback,
+/// both rows rendered as Inactive even with biometric enrolled.
 class _RegisteredBiometricsCard extends StatelessWidget {
   const _RegisteredBiometricsCard({
     required this.available,
     required this.primaryMethod,
     required this.primaryColor,
+    required this.masterEnabled,
   });
 
   final List<BiometricType> available;
   final String primaryMethod;
   final Color primaryColor;
+  final bool masterEnabled;
+
+  /// Returns one of: `'face'`, `'fingerprint'`, `'unknown'` — the
+  /// best-effort device biometric type. iOS reports `face`/`fingerprint`
+  /// faithfully via local_auth; Android sometimes only returns
+  /// `weak`/`strong` and we have to infer (Face Unlock is uncommon as
+  /// the primary on Android, so default to fingerprint when ambiguous).
+  String _detectPrimaryType() {
+    if (available.contains(BiometricType.face)) return 'face';
+    if (available.contains(BiometricType.fingerprint)) return 'fingerprint';
+    final hasUnlabelled = available.contains(BiometricType.weak) ||
+        available.contains(BiometricType.strong);
+    if (hasUnlabelled) {
+      if (Platform.isIOS) return 'face';
+      return 'fingerprint';
+    }
+    return 'unknown';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final hasFace = available.contains(BiometricType.face);
-    final hasFinger = available.contains(BiometricType.fingerprint);
+    final primaryType = _detectPrimaryType();
+    final isFaceActive = masterEnabled && primaryType == 'face';
+    final isFingerActive = masterEnabled && primaryType == 'fingerprint';
+    final inactiveIcon = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35);
+    final inactiveBg = Theme.of(context).colorScheme.surfaceContainerHighest;
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
@@ -695,29 +725,30 @@ class _RegisteredBiometricsCard extends StatelessWidget {
           _RegisteredBiometricRow(
             iconBuilder: (color, size) =>
                 _FaceIdBrackets(color: color, size: size),
-            iconColor: hasFace
-                ? primaryColor
-                : const Color(0xFF9F9F9F).withValues(alpha: 0.4),
-            iconBgColor: hasFace
+            iconColor: isFaceActive ? primaryColor : inactiveIcon,
+            iconBgColor: isFaceActive
                 ? primaryColor.withValues(alpha: 0.12)
-                : Theme.of(context).colorScheme.surfaceContainerHighest,
+                : inactiveBg,
             title: 'Face ID',
-            subtitle: 'Registered on this device',
-            isActive: hasFace,
+            subtitle: isFaceActive
+                ? 'Registered on this device'
+                : 'Not the primary biometric on this device',
+            isActive: isFaceActive,
           ),
           Divider(height: 1, color: Theme.of(context).dividerColor),
           _RegisteredBiometricRow(
             iconBuilder: (color, size) =>
                 Icon(Icons.fingerprint, color: color, size: size),
-            iconColor: hasFinger
-                ? const Color(0xFF16A34A)
-                : const Color(0xFF9F9F9F).withValues(alpha: 0.4),
-            iconBgColor: hasFinger
+            iconColor:
+                isFingerActive ? const Color(0xFF16A34A) : inactiveIcon,
+            iconBgColor: isFingerActive
                 ? const Color(0xFF16A34A).withValues(alpha: 0.12)
-                : Theme.of(context).colorScheme.surfaceContainerHighest,
+                : inactiveBg,
             title: 'Fingerprint',
-            subtitle: 'Available as alternative method',
-            isActive: hasFinger,
+            subtitle: isFingerActive
+                ? 'Registered on this device'
+                : 'Available as alternative method',
+            isActive: isFingerActive,
           ),
         ],
       ),
@@ -774,7 +805,13 @@ class _RegisteredBiometricRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
-                    color: isActive ? Colors.black : Colors.black54,
+                    // Theme-aware: keep the label legible in dark mode
+                    // and dim it (rather than vanish it) when the row
+                    // is inactive.
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: isActive ? 1.0 : 0.55),
                   ),
                 ),
                 vSpace(4),

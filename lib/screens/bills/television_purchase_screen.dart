@@ -320,7 +320,12 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
               style: TextStyle(
                 fontSize: 19.sp,
                 fontWeight: FontWeight.w600,
-                color: Theme.of(context).cardColor,
+                // Background is the brand purple in both themes, so the
+                // label needs a fixed white. Reading from `cardColor`
+                // worked in light mode (cardColor = Colors.white) but
+                // resolved to near-black in dark mode (cardColor =
+                // 0xFF1E1E1E), painting the text dark on purple.
+                color: Colors.white,
               ),
             ),
           ),

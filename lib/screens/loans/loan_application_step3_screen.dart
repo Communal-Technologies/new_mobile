@@ -70,6 +70,7 @@ class _LoanApplicationStep3ScreenState
         interestType: widget.draft.interestType,
         employmentStatus: widget.draft.employmentStatus,
         reasonForLoan: widget.draft.reasonForLoan,
+        pickedDurationMonths: widget.draft.pickedDurationMonths,
         guarantorLedgers: guarantorLedgers,
         company: widget.draft.company,
         department: widget.draft.department,
@@ -246,7 +247,7 @@ class _LoanApplicationStep3ScreenState
             scheme.title.isNotEmpty ? scheme.title : scheme.loanCode,
           ),
           _row('Loan Amount', Money(_principalMinor, currency).format()),
-          _row('Duration', scheme.durationLabel),
+          _row('Duration', '${widget.draft.effectiveDurationMonths} month${widget.draft.effectiveDurationMonths == 1 ? '' : 's'}'),
           _row('Interest Rate', scheme.interestRateLabel),
           _row(
             'Interest Treatment',

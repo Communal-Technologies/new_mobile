@@ -149,6 +149,15 @@ class ApiEndpoints {
   static String membersFetchLoanBalance(String ledgerNumber) =>
       '/members/loan/fetch-balances/$ledgerNumber';
 
+  /// Per-loan member-scoped reads — installment schedule and the
+  /// regrant chain rooted at this loan. Both 404 on a loan that
+  /// doesn't belong to the calling member's MemberCooperative
+  /// mapping; the controllers do not reveal existence.
+  static String membersFetchLoanInstallments(String loanId) =>
+      '/loans/$loanId/installments';
+  static String membersFetchLoanRegrantChain(String loanId) =>
+      '/loans/$loanId/regrant-chain';
+
   /// Loan-by-id fetch used by the push-tap deep-link. Endpoint lives on
   /// the shared auth group at /v1/fetch-loan-details/{id} (see
   /// backend routes/api.php:180), and returns

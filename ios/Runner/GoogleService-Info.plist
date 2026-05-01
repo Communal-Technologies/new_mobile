@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.communalMobile</string>
+	<string>elite.codec.communal</string>
 	<key>PROJECT_ID</key>
 	<string>communal-cdd13</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:211611281359:ios:1e2a519f4da70280a8d4ba</string>
+	<string>1:211611281359:ios:16ea07611979daa0a8d4ba</string>
 </dict>
 </plist>

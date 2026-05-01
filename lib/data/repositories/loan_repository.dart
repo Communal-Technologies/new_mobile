@@ -8,6 +8,7 @@ import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/models/guarantor_request.dart';
 import 'package:communal_mobile/data/models/loan_application.dart';
 import 'package:communal_mobile/data/models/loan_eligibility.dart';
+import 'package:communal_mobile/data/models/loan_installment.dart';
 import 'package:communal_mobile/data/models/loan_scheme.dart';
 import 'package:communal_mobile/data/models/member_search_result.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
@@ -103,6 +104,62 @@ class LoanRepository {
       return null;
     } on DioException catch (e) {
       throw _wrap(e, 'Unable to fetch loan eligibility');
+    }
+  }
+
+  /// Per-loan installment schedule. Returns the materialised
+  /// `loan_installments` rows for [loanId], or an empty list when the
+  /// loan has no schedule (legacy approval / brought-forward import).
+  Future<List<LoanInstallment>> fetchInstallments(String loanId) async {
+    final id = loanId.trim();
+    if (id.isEmpty) return const [];
+    try {
+      final response = await _dio.get(
+        ApiEndpoints.membersFetchLoanInstallments(id),
+      );
+      final data = response.data;
+      final raw = data is Map ? data['installments'] : null;
+      final fallback = (data is Map ? data['currency']?.toString() : null) ?? 'NGN';
+      if (raw is! List) return const [];
+      return raw
+          .whereType<Map>()
+          .map((e) => LoanInstallment.fromJson(
+                Map<String, dynamic>.from(e),
+                fallbackCurrency: fallback,
+              ))
+          .toList(growable: false);
+    } on DioException catch (e) {
+      throw _wrap(e, 'Unable to fetch installment schedule');
+    }
+  }
+
+  /// Full regrant chain (ancestors + descendants) anchored to the
+  /// loan's `regrant_chain_root_id`. Returned in chronological order.
+  Future<List<LoanApplication>> fetchRegrantChain({
+    required String loanId,
+    String? fallbackCurrency,
+  }) async {
+    final id = loanId.trim();
+    if (id.isEmpty) return const [];
+    try {
+      final response = await _dio.get(
+        ApiEndpoints.membersFetchLoanRegrantChain(id),
+      );
+      final data = response.data;
+      final raw = data is Map ? data['chain'] : null;
+      final cur = (data is Map ? data['currency']?.toString() : null)
+          ?? fallbackCurrency
+          ?? 'NGN';
+      if (raw is! List) return const [];
+      return raw
+          .whereType<Map>()
+          .map((e) => LoanApplication.fromBackend(
+                Map<String, dynamic>.from(e),
+                fallbackCurrency: cur,
+              ))
+          .toList(growable: false);
+    } on DioException catch (e) {
+      throw _wrap(e, 'Unable to fetch regrant chain');
     }
   }
 
@@ -280,6 +337,7 @@ class LoanRepository {
     required String interestType,
     required String employmentStatus,
     required String reasonForLoan,
+    int? pickedDurationMonths,
     List<String> guarantorLedgers = const [],
     String? collateralToken,
     String? company,
@@ -309,7 +367,14 @@ class LoanRepository {
     final payload = <String, dynamic>{
       'ledger_number': ledger,
       'cooperative_id': cooperativeId,
-      'loan_data': jsonEncode(scheme.toBackendJson()),
+      // The backend approve flow reads `loan_data.duration` first
+      // (member-picked), falling back to scheme.max_duration_months.
+      // Passing `pickedDurationMonths` here is what plumbs the
+      // member's slider choice through to the materialised
+      // amortisation schedule.
+      'loan_data': jsonEncode(scheme.toBackendJson(
+        pickedDurationMonths: pickedDurationMonths,
+      )),
       'amount': amountMajor,
       'interest_type': interestType,
       'employment_status': employmentStatus,

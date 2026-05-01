@@ -688,6 +688,16 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
       _ => '',
     };
 
+    Widget iconWidget = Icon(icon, color: color, size: 38.sp);
+    // Spin the inline status icon while we're waiting on the provider.
+    // Stops automatically when polling stops (status resolved or timed out).
+    if (_phase == _Phase.pending) {
+      iconWidget = RotationTransition(
+        turns: _spinController,
+        child: iconWidget,
+      );
+    }
+
     return Center(
       child: Column(
         children: [
@@ -699,7 +709,7 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
               color: color.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: 38.sp),
+            child: iconWidget,
           ),
           vSpace(16),
           Text(
@@ -721,6 +731,19 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
               height: 1.4,
             ),
           ),
+          // After the auto-poll timeout we stop the spinner. Give the
+          // user an inline tap-to-retry so they're not stranded.
+          if (_phase == _Phase.pending && !_isPolling) ...[
+            vSpace(16),
+            TextButton.icon(
+              onPressed: () {
+                _refreshStatus();
+                _startPollingIfPending();
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Tap to check status'),
+            ),
+          ],
         ],
       ),
     );
@@ -747,21 +770,11 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
     }
 
     if (_phase == _Phase.pending) {
-      final polling = _isPolling;
-      return ElevatedButton.icon(
-        onPressed: () {
-          // Manual press always re-checks immediately and resumes
-          // auto-polling if it had timed out.
-          _refreshStatus();
-          _startPollingIfPending();
-        },
-        icon: RotationTransition(
-          turns: _spinController,
-          child: const Icon(Icons.refresh),
-        ),
-        label: Text(polling ? 'Checking status…' : 'Refresh status'),
-        style: _primaryStyle(purple),
-      );
+      // No footer button while pending — the rotating result-block
+      // icon already signals "we're checking", and the auto-poll updates
+      // the screen as soon as the provider acks. Post-timeout the user
+      // gets an inline retry inside the result block.
+      return const SizedBox.shrink();
     }
     if (_phase == _Phase.completed) {
       return ElevatedButton(

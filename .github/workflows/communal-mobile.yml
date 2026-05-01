@@ -148,46 +148,57 @@ jobs:
             echo "aab_path=communal-mobile.aab" >> "$GITHUB_OUTPUT"
           fi
 
-      # Upload the APK to a public GCS bucket so non-repo-members can download
-      # it. Gated on the GCS secrets being configured — if not, this step is
-      # skipped and the download URL section in the release notes is omitted.
-      - name: Check GCS credentials
-        id: gcs_check
+      # Mirror the APK to a separate PUBLIC GitHub repo so non-collaborators
+      # can install via a plain HTTPS link. Gated on the mirror secrets being
+      # configured — if not, the step is skipped and the release-notes section
+      # is omitted.
+      - name: Check public mirror credentials
+        id: mirror_check
         run: |
-          if [[ -n "${{ secrets.GCS_SERVICE_ACCOUNT_JSON }}" && -n "${{ vars.GCS_BUCKET }}" ]]; then
+          if [[ -n "${{ secrets.PUBLIC_RELEASES_PAT }}" && -n "${{ vars.PUBLIC_RELEASES_REPO }}" ]]; then
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::GCS upload skipped — set GCS_SERVICE_ACCOUNT_JSON (secret) and GCS_BUCKET (var) to publish a public download URL."
+            echo "::warning::Public mirror upload skipped — set PUBLIC_RELEASES_PAT (secret) and PUBLIC_RELEASES_REPO (var) to publish a public download URL."
           fi
 
-      - name: Authenticate to GCP
-        if: steps.gcs_check.outputs.available == 'true'
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCS_SERVICE_ACCOUNT_JSON }}
-
-      - name: Set up gcloud
-        if: steps.gcs_check.outputs.available == 'true'
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Upload APK to public GCS bucket
-        if: steps.gcs_check.outputs.available == 'true'
-        id: gcs_upload
+      - name: Push APK to public mirror repo
+        if: steps.mirror_check.outputs.available == 'true'
+        id: mirror_upload
+        env:
+          GH_TOKEN: ${{ secrets.PUBLIC_RELEASES_PAT }}
         run: |
           set -euo pipefail
-          BUCKET="${{ vars.GCS_BUCKET }}"
+          REPO="${{ vars.PUBLIC_RELEASES_REPO }}"
           ENV_TAG="${{ steps.meta.outputs.env_tag }}"
-          VERSIONED="communal-mobile-${ENV_TAG}-${{ steps.meta.outputs.file_tag }}.apk"
-          LATEST="communal-mobile-${ENV_TAG}-latest.apk"
-          # Latest pointer: short cache so testers always get the newest build.
-          gsutil -h "Cache-Control:public, max-age=300" cp \
-            communal-mobile.apk "gs://${BUCKET}/${LATEST}"
-          # Versioned: long cache, immutable filename.
-          gsutil -h "Cache-Control:public, max-age=86400, immutable" cp \
-            communal-mobile.apk "gs://${BUCKET}/${VERSIONED}"
-          LATEST_URL="https://storage.googleapis.com/${BUCKET}/${LATEST}"
-          VERSIONED_URL="https://storage.googleapis.com/${BUCKET}/${VERSIONED}"
+          VERSION="${{ steps.meta.outputs.version_name }}"
+          BUILD="${{ steps.meta.outputs.build_number }}"
+          BUILD_TAG="${ENV_TAG}-build-${BUILD}"
+          LATEST_TAG="${ENV_TAG}-latest"
+          VERSIONED_NAME="communal-mobile-${ENV_TAG}-${{ steps.meta.outputs.file_tag }}.apk"
+          STABLE_NAME="communal-mobile-${ENV_TAG}.apk"
+
+          # Versioned release — immutable audit trail.
+          gh release create "$BUILD_TAG" \
+            --repo "$REPO" \
+            --title "Communal Mobile ${VERSION} (build ${BUILD}) — ${ENV_TAG}" \
+            --notes "Source: \`${{ github.repository }}@${{ github.sha }}\`" \
+            "$VERSIONED_NAME"
+
+          # Latest pointer — overwritten each run. Delete first if exists, then
+          # recreate so the asset list (and therefore the stable URL) refreshes.
+          if gh release view "$LATEST_TAG" --repo "$REPO" >/dev/null 2>&1; then
+            gh release delete "$LATEST_TAG" --repo "$REPO" --yes --cleanup-tag
+          fi
+          # Upload the APK under a stable display filename via `assetfile#displayname` syntax.
+          gh release create "$LATEST_TAG" \
+            --repo "$REPO" \
+            --title "Latest ${ENV_TAG} build" \
+            --notes "Always points at the most recent ${ENV_TAG} build. Direct link: https://github.com/${REPO}/releases/download/${LATEST_TAG}/${STABLE_NAME}" \
+            "${VERSIONED_NAME}#${STABLE_NAME}"
+
+          LATEST_URL="https://github.com/${REPO}/releases/download/${LATEST_TAG}/${STABLE_NAME}"
+          VERSIONED_URL="https://github.com/${REPO}/releases/download/${BUILD_TAG}/${VERSIONED_NAME}"
           echo "latest_url=$LATEST_URL" >> "$GITHUB_OUTPUT"
           echo "versioned_url=$VERSIONED_URL" >> "$GITHUB_OUTPUT"
           {
@@ -235,11 +246,11 @@ jobs:
             echo ""
             echo "**Tag:** \`${{ steps.meta.outputs.release_tag }}\`"
             echo ""
-            if [[ "${{ steps.gcs_check.outputs.available }}" == "true" ]]; then
-              echo "### Public APK download (no GitHub login required)"
+            if [[ "${{ steps.mirror_check.outputs.available }}" == "true" ]]; then
+              echo "### Public APK download (no login required)"
               echo ""
-              echo "- Latest: ${{ steps.gcs_upload.outputs.latest_url }}"
-              echo "- This build: ${{ steps.gcs_upload.outputs.versioned_url }}"
+              echo "- Latest: ${{ steps.mirror_upload.outputs.latest_url }}"
+              echo "- This build: ${{ steps.mirror_upload.outputs.versioned_url }}"
               echo ""
             fi
             echo "**GitHub Release APK (private repo — login required):** \`$APK_URL\`"

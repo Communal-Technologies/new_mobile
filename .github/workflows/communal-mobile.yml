@@ -98,41 +98,57 @@ jobs:
           EOF
 
       - name: Decode keystore & write key.properties
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PW: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          if [[ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]]; then
+          if [[ -z "$KEYSTORE_B64" ]]; then
             echo "ANDROID_KEYSTORE_BASE64 not set — release will fall back to debug signing."
             exit 0
           fi
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload.jks
+          # printf '%s' avoids the trailing newline that `echo` appends, which
+          # combined with the bash-heredoc rendering can corrupt the decoded
+          # binary. Sticking the secret in an env var also bypasses any
+          # ${{ }}-interpolation quirks that hit on multi-line values.
+          printf '%s' "$KEYSTORE_B64" | base64 -d > android/app/upload.jks
           cat > android/key.properties <<EOF
           storeFile=app/upload.jks
-          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
-          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          storePassword=${KEYSTORE_PW}
+          keyAlias=${KEY_ALIAS}
+          keyPassword=${KEY_PW}
           EOF
 
       # TEMPORARY: verify the keystore + alias + passwords seen by CI match what
       # works locally. Remove this step once the build is signing successfully.
       - name: DEBUG — verify keystore contents in CI
+        env:
+          KEYSTORE_PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PW: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
           if [[ ! -f android/app/upload.jks ]]; then
             echo "No keystore decoded — debug step has nothing to inspect."
             exit 0
           fi
-          echo "--- file size of decoded keystore (sanity check) ---"
+          echo "--- file size + sha256 of decoded keystore (sanity check) ---"
           wc -c android/app/upload.jks
+          sha256sum android/app/upload.jks
+          echo "--- first 8 bytes (hex) — should look like a PKCS12 header ---"
+          head -c 8 android/app/upload.jks | xxd
           echo "--- list keystore (uses store password only) ---"
           keytool -list \
             -keystore android/app/upload.jks \
-            -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
+            -storepass "$KEYSTORE_PW"
           echo "--- look up the alias (uses store + key passwords) ---"
           keytool -list \
             -keystore android/app/upload.jks \
-            -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
-            -alias "${{ secrets.ANDROID_KEY_ALIAS }}" \
-            -keypass "${{ secrets.ANDROID_KEY_PASSWORD }}"
+            -storepass "$KEYSTORE_PW" \
+            -alias "$KEY_ALIAS" \
+            -keypass "$KEY_PW"
 
       - name: Install dependencies
         run: flutter pub get

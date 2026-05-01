@@ -110,9 +110,9 @@ jobs:
             exit 0
           fi
           # printf '%s' avoids the trailing newline that `echo` appends, which
-          # combined with the bash-heredoc rendering can corrupt the decoded
-          # binary. Sticking the secret in an env var also bypasses any
-          # ${{ }}-interpolation quirks that hit on multi-line values.
+          # combined with the heredoc rendering can corrupt the decoded binary.
+          # Reading the secret from an env var also avoids workflow-template
+          # interpolation quirks on multi-line values.
           printf '%s' "$KEYSTORE_B64" | base64 -d > android/app/upload.jks
           cat > android/key.properties <<EOF
           storeFile=app/upload.jks

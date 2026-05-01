@@ -10,6 +10,7 @@ import 'package:communal_mobile/data/models/bills/bill_provider.dart';
 import 'package:communal_mobile/data/repositories/bills_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/bills/widgets/bill_brand_chip.dart';
+import 'package:communal_mobile/screens/bills/widgets/bill_inputs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -240,7 +241,7 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
                           setState(() => _validatedCustomer = null);
                         }
                       },
-                      decoration: _inputDecoration('e.g. 7030495169'),
+                      decoration: billInputDecoration(context, 'e.g. 7030495169'),
                     ),
                   ),
                   hSpace(10),
@@ -296,7 +297,7 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
                   FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
                   LengthLimitingTextInputFormatter(15),
                 ],
-                decoration: _inputDecoration('e.g. 08012345678'),
+                decoration: billInputDecoration(context, 'e.g. 08012345678'),
               ),
             ],
           ),
@@ -451,24 +452,6 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
         ),
       );
 
-  InputDecoration _inputDecoration(String hint) => InputDecoration(
-        hintText: hint,
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.h),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14.r),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14.r),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14.r),
-          borderSide: const BorderSide(color: Color(0xFF7434FF), width: 1.5),
-        ),
-      );
 }
 
 class _TvPlanSheet extends StatelessWidget {

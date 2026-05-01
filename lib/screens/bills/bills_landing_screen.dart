@@ -85,6 +85,10 @@ class BillsLandingScreen extends StatelessWidget {
   }
 
   Widget _buildGrid(BuildContext context) {
+    // Airtime + data live as direct shortcuts on the home dashboard's
+    // quick-actions row, so this screen only carries the two bill kinds
+    // that don't have a dashboard shortcut. Push (don't go) so the
+    // system back button returns here from the form screen.
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -94,32 +98,18 @@ class BillsLandingScreen extends StatelessWidget {
       childAspectRatio: 1.0,
       children: [
         _BillTile(
-          icon: Iconsax.call_calling,
-          title: 'Airtime',
-          subtitle: 'MTN, Airtel, Glo, 9mobile, NTEL.',
-          accent: const Color(0xFFFF7B3D),
-          onTap: () => context.goNamed('bills-airtime'),
-        ),
-        _BillTile(
-          icon: Iconsax.global,
-          title: 'Data',
-          subtitle: 'Daily, weekly or monthly bundles.',
-          accent: const Color(0xFF2BA6FF),
-          onTap: () => context.goNamed('bills-data'),
-        ),
-        _BillTile(
           icon: Iconsax.flash_1,
           title: 'Electricity',
           subtitle: 'Recharge prepaid or pay postpaid.',
           accent: const Color(0xFFFFB627),
-          onTap: () => context.goNamed('bills-electricity'),
+          onTap: () => context.pushNamed('bills-electricity'),
         ),
         _BillTile(
           icon: Iconsax.monitor,
           title: 'Cable TV',
           subtitle: 'DSTV, GoTV, StarTimes plans.',
           accent: const Color(0xFF22C55E),
-          onTap: () => context.goNamed('bills-television'),
+          onTap: () => context.pushNamed('bills-television'),
         ),
       ],
     );

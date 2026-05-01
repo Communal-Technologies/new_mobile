@@ -8,6 +8,7 @@ import 'package:communal_mobile/data/models/bills/bill_provider.dart';
 import 'package:communal_mobile/data/repositories/bills_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/bills/widgets/bill_brand_chip.dart';
+import 'package:communal_mobile/screens/bills/widgets/bill_inputs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -224,7 +225,7 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
                           setState(() => _validatedCustomer = null);
                         }
                       },
-                      decoration: _inputDecoration('e.g. 04042404048'),
+                      decoration: billInputDecoration(context, 'e.g. 04042404048'),
                     ),
                   ),
                   hSpace(10),
@@ -276,7 +277,7 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
                   FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
                   LengthLimitingTextInputFormatter(15),
                 ],
-                decoration: _inputDecoration('e.g. 08012345678'),
+                decoration: billInputDecoration(context, 'e.g. 08012345678'),
               ),
               vSpace(20),
               _label('Amount (₦)'),
@@ -287,7 +288,7 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                 ],
-                decoration: _inputDecoration('e.g. 5000'),
+                decoration: billInputDecoration(context, 'e.g. 5000'),
               ),
             ],
           ),
@@ -310,7 +311,12 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
               style: TextStyle(
                 fontSize: 19.sp,
                 fontWeight: FontWeight.w600,
-                color: Theme.of(context).cardColor,
+                // Background is the brand purple in both themes, so the
+                // label needs a fixed white. Reading from `cardColor`
+                // worked in light mode (cardColor = Colors.white) but
+                // resolved to near-black in dark mode (cardColor =
+                // 0xFF1E1E1E), painting the text dark on purple.
+                color: Colors.white,
               ),
             ),
           ),
@@ -449,22 +455,4 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
         ),
       );
 
-  InputDecoration _inputDecoration(String hint) => InputDecoration(
-        hintText: hint,
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.h),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14.r),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14.r),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14.r),
-          borderSide: const BorderSide(color: Color(0xFF7434FF), width: 1.5),
-        ),
-      );
 }

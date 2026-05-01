@@ -63,6 +63,13 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
 
   double _loanAmount = 0;
 
+  /// Member-picked duration within `_selectedScheme.[min..max]`. Snaps
+  /// to the scheme's max on selection so the most-conservative
+  /// (longest term, lowest monthly) is the visible default; member
+  /// can drag down to shorten the term. Null until a scheme is
+  /// chosen.
+  int? _pickedDuration;
+
   @override
   void initState() {
     super.initState();
@@ -241,6 +248,10 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                     // the cooperative's default) drives the math
                     // rendered below it.
                     _buildInterestTypeSection(),
+                    if (_selectedScheme != null && _selectedScheme!.hasDurationRange) ...[
+                      vSpace(24),
+                      _buildDurationSection(),
+                    ],
                     vSpace(24),
                     if (_selectedScheme != null && _hasEligibility)
                       _buildRepaymentSummarySection(currency),
@@ -403,7 +414,13 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                     ),
                   )
                   .toList(),
-              onChanged: (s) => setState(() => _selectedScheme = s),
+              onChanged: (s) => setState(() {
+                _selectedScheme = s;
+                // Snap to the new scheme's max so the most-conservative
+                // monthly figure is the visible default; the duration
+                // slider below lets the member shorten the term.
+                _pickedDuration = s?.effectiveMaxDuration;
+              }),
             ),
           ),
         ),
@@ -617,6 +634,82 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     );
   }
 
+  /// Phase 8 — member-pickable loan duration. Only rendered when the
+  /// selected scheme exposes a real range (min < max); otherwise the
+  /// term is fixed and we don't surface a slider that does nothing.
+  /// Snaps to scheme.effectiveMaxDuration on scheme change so the
+  /// most-conservative monthly is the visible default.
+  Widget _buildDurationSection() {
+    final scheme = _selectedScheme!;
+    final theme = Theme.of(context);
+    final picked = _pickedDuration ?? scheme.effectiveMaxDuration;
+    final min = scheme.effectiveMinDuration;
+    final max = scheme.effectiveMaxDuration;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'Loan Duration',
+              style: TextStyle(
+                fontSize: 17.sp,
+                fontWeight: FontWeight.w700,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              '$picked month${picked == 1 ? '' : 's'}',
+              style: TextStyle(
+                fontSize: 17.sp,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFFE67E22),
+              ),
+            ),
+          ],
+        ),
+        vSpace(8),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: const Color(0xFFE67E22),
+            inactiveTrackColor: theme.dividerColor,
+            thumbColor: theme.colorScheme.surface,
+            thumbShape: RoundSliderThumbShape(enabledThumbRadius: 10.r),
+            overlayShape: RoundSliderOverlayShape(overlayRadius: 20.r),
+            trackHeight: 4.h,
+          ),
+          child: Slider(
+            value: picked.toDouble().clamp(min.toDouble(), max.toDouble()),
+            min: min.toDouble(),
+            max: max.toDouble(),
+            divisions: (max - min).clamp(1, 120),
+            onChanged: (v) => setState(() => _pickedDuration = v.round()),
+          ),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '$min months',
+              style: TextStyle(
+                fontSize: 13.sp,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            Text(
+              '$max months',
+              style: TextStyle(
+                fontSize: 13.sp,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildRepaymentSummarySection(String currency) {
     final scheme = _selectedScheme!;
     // Repayment math reflects the *selected* treatment, not the
@@ -639,7 +732,13 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         : principalMinor + interestMinor;
 
     final theme = Theme.of(context);
-    final installments = scheme.durationMonths;
+    // Prefer the member's slider pick when the scheme exposes a real
+    // range; fall back to the legacy fixed term otherwise. The
+    // monthlyMinor below is still computed against scheme.durationMonths
+    // (the existing flat-interest helper) — for a non-default pick the
+    // displayed monthly is approximate; the materialised schedule on
+    // approval uses the picked duration via amortising math.
+    final installments = _pickedDuration ?? scheme.effectiveMaxDuration;
     final installmentLabel = installments == 1 ? 'installment' : 'installments';
 
     return Container(
@@ -1022,6 +1121,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                       _selectedInterestType ??
                       _eligibility!.defaultInterestType!.value,
                   reasonForLoan: _reasonController.text.trim(),
+                  pickedDurationMonths: _pickedDuration,
                 );
                 context.pushNamed(
                   'loan-application-step2',

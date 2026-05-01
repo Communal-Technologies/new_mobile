@@ -79,11 +79,11 @@ class AddressInformationCard extends StatelessWidget {
                 });
                 onEdited?.call();
               },
-              icon: Icon(Icons.edit, size: 18.sp),
+              icon: Icon(Icons.edit, size: 18.sp, color: Colors.white),
               label: const Text('Edit Address'),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Color(0xFF7434FF)),
-                foregroundColor: const Color(0xFF7434FF),
+                side: const BorderSide(color: Colors.white, width: 1.5),
+                foregroundColor: Colors.white,
                 padding: EdgeInsets.symmetric(vertical: 14.h),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12.r),

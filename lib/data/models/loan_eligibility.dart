@@ -50,6 +50,9 @@ class LoanEligibility {
     required this.holdingsMinor,
     required this.accessMultiplier,
     required this.interestTypes,
+    this.sundryDebtMinor = 0,
+    this.canApply = true,
+    this.cannotApplyReason,
   });
 
   final String cooperativeId;
@@ -75,6 +78,25 @@ class LoanEligibility {
   final double accessMultiplier;
 
   final List<InterestTypeOption> interestTypes;
+
+  /// Outstanding sundry-debtor balance the member has with this
+  /// cooperative, in integer minor units. When non-zero the member is
+  /// blocked from requesting a new loan until the debt is cleared —
+  /// the backend enforces this on both `eligibility` and the apply
+  /// endpoint, but mobile reads [canApply] to render the gate
+  /// proactively rather than wait for the rejection toast.
+  final int sundryDebtMinor;
+
+  /// `false` when the member is blocked from applying for any reason
+  /// the backend recognises; today only `sundry_debt_active` triggers
+  /// this. Defaults true when the field is missing (older backend).
+  final bool canApply;
+
+  /// Machine-readable reason matching [canApply]. Currently only
+  /// `'sundry_debt_active'`. Null when the member can apply.
+  final String? cannotApplyReason;
+
+  String get sundryDebtLabel => Money(sundryDebtMinor, currency).format();
 
   /// All interest treatments the cooperative has enabled, preserving
   /// the dashboard ordering. Empty when none are configured.
@@ -138,7 +160,19 @@ class LoanEligibility {
       holdingsMinor: _asInt(m['holdings_minor']),
       accessMultiplier: _asDouble(m['access_multiplier'], fallback: 1.0),
       interestTypes: list,
+      sundryDebtMinor: _asInt(m['sundry_debt_minor']),
+      // Older backends omit `can_apply` — assume true so we don't lock
+      // every member out of an unrelated screen change.
+      canApply: m.containsKey('can_apply') ? _asBool(m['can_apply']) : true,
+      cannotApplyReason: m['cannot_apply_reason']?.toString(),
     );
+  }
+
+  static bool _asBool(dynamic v) {
+    if (v is bool) return v;
+    if (v is num) return v != 0;
+    final s = v?.toString().toLowerCase().trim();
+    return s == 'true' || s == '1' || s == 'yes';
   }
 
   static int _asInt(dynamic v) {

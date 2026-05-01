@@ -12,6 +12,7 @@ class LoanApplicationDraft {
     required this.currency,
     required this.interestType,
     required this.reasonForLoan,
+    this.pickedDurationMonths,
     this.employmentStatus = 'unemployed',
     this.guarantors = const [],
     this.company,
@@ -20,6 +21,12 @@ class LoanApplicationDraft {
     this.outstandingLoan,
     this.otherMonthlyRepayment,
   });
+
+  /// Member-chosen duration within the scheme's [min..max] window.
+  /// Null when the scheme has a single fixed term (no slider was
+  /// shown). The repository falls back to [LoanScheme.effectiveMaxDuration]
+  /// when null.
+  final int? pickedDurationMonths;
 
   /// Scheme the member is applying under. Drives duration, guarantor
   /// count and interest rate downstream.
@@ -57,6 +64,7 @@ class LoanApplicationDraft {
     String? currency,
     String? interestType,
     String? reasonForLoan,
+    int? pickedDurationMonths,
     String? employmentStatus,
     List<MemberSearchResult>? guarantors,
     String? company,
@@ -71,6 +79,7 @@ class LoanApplicationDraft {
       currency: currency ?? this.currency,
       interestType: interestType ?? this.interestType,
       reasonForLoan: reasonForLoan ?? this.reasonForLoan,
+      pickedDurationMonths: pickedDurationMonths ?? this.pickedDurationMonths,
       employmentStatus: employmentStatus ?? this.employmentStatus,
       guarantors: guarantors ?? this.guarantors,
       company: company ?? this.company,
@@ -81,4 +90,9 @@ class LoanApplicationDraft {
           otherMonthlyRepayment ?? this.otherMonthlyRepayment,
     );
   }
+
+  /// Effective duration the apply call should use — the member's
+  /// pick if a slider was shown, otherwise the scheme's max.
+  int get effectiveDurationMonths =>
+      pickedDurationMonths ?? scheme.effectiveMaxDuration;
 }

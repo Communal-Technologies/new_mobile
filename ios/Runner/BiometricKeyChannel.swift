@@ -24,7 +24,7 @@ import Security
 class BiometricKeyChannel: NSObject {
 
     static let channelName = "communal/biometric_keys"
-    private static let keyTagPrefix = "com.example.communal_mobile.biometric."
+    private static let keyTagPrefix = "elite.codec.communal.biometric."
 
     private let methodChannel: FlutterMethodChannel
 

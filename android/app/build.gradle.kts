@@ -29,8 +29,19 @@ val mapsApiKey: String = run {
     props.getProperty("MAPS_API_KEY") ?: System.getenv("MAPS_API_KEY") ?: ""
 }
 
+// Read release signing config from android/key.properties (gitignored).
+// CI generates this file from the ANDROID_KEYSTORE_* environment secrets; locally
+// you create it by hand alongside upload.jks. When the file is absent we fall back
+// to debug signing so `flutter run --release` keeps working without the upload key.
+val keyPropsFile = rootProject.file("key.properties")
+val keyProps = Properties().apply {
+    if (keyPropsFile.exists()) {
+        keyPropsFile.inputStream().use { load(it) }
+    }
+}
+
 android {
-    namespace = "com.example.communal_mobile"
+    namespace = "elite.codec.communal"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "28.2.13676358"
 
@@ -48,7 +59,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.communal_mobile"
+        applicationId = "elite.codec.communal"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -59,6 +70,17 @@ android {
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
+    signingConfigs {
+        create("release") {
+            if (keyPropsFile.exists()) {
+                storeFile = keyProps.getProperty("storeFile")?.let { rootProject.file(it) }
+                storePassword = keyProps.getProperty("storePassword")
+                keyAlias = keyProps.getProperty("keyAlias")
+                keyPassword = keyProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             // Audit M13: be explicit rather than relying on the build-variant
@@ -67,9 +89,14 @@ android {
             // debugger and inspect runtime state.
             isDebuggable = false
 
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Use the release signing config when key.properties is present
+            // (CI, or a local dev who set it up); otherwise fall back to debug
+            // so `flutter run --release` keeps working without the upload key.
+            signingConfig = if (keyPropsFile.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }

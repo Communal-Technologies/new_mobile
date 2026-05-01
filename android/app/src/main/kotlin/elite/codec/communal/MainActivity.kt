@@ -1,4 +1,4 @@
-package com.example.communal_mobile
+package elite.codec.communal
 
 import android.graphics.Bitmap
 import android.graphics.Color

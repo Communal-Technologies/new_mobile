@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
@@ -55,11 +56,25 @@ class BillConfirmScreen extends StatefulWidget {
 /// Tracks the side-effect lifecycle once the user has authorized.
 enum _Phase { idle, submitting, pending, completed, failed }
 
-class _BillConfirmScreenState extends State<BillConfirmScreen> {
+class _BillConfirmScreenState extends State<BillConfirmScreen>
+    with SingleTickerProviderStateMixin {
   late final BillsRepository _repo = BillsRepository(getIt<DioClient>());
   final BiometricSignerService _biometricSigner =
       getIt<BiometricSignerService>();
   final TapDebouncer _confirmDebouncer = TapDebouncer();
+
+  /// Auto-polling for the pending phase. Most provider acks land within a
+  /// few seconds; the timeout caps the spin so we don't burn battery if a
+  /// webhook never lands. After the timeout the manual button stays
+  /// available as a fallback.
+  Timer? _pollTimer;
+  DateTime? _pollStartedAt;
+  static const _pollInterval = Duration(seconds: 3);
+  static const _pollTimeout = Duration(seconds: 90);
+  late final AnimationController _spinController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  );
 
   /// Audit M23: minted once per screen mount; reused across user-initiated
   /// retries so a transient failure + retry dedupes server-side instead of
@@ -123,6 +138,8 @@ class _BillConfirmScreenState extends State<BillConfirmScreen> {
   @override
   void dispose() {
     _pinController.dispose();
+    _stopPolling();
+    _spinController.dispose();
     super.dispose();
   }
 
@@ -254,6 +271,7 @@ class _BillConfirmScreenState extends State<BillConfirmScreen> {
           _ => _Phase.pending,
         };
       });
+      _startPollingIfPending();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -263,7 +281,10 @@ class _BillConfirmScreenState extends State<BillConfirmScreen> {
     }
   }
 
-  Future<void> _refreshStatus() async {
+  /// Auto-poll uses `silent: true` so transient network errors don't
+  /// spam the user with toasts every 3 seconds. The manual button still
+  /// surfaces errors.
+  Future<void> _refreshStatus({bool silent = false}) async {
     final ref = _txn?.reference;
     if (ref == null || ref.isEmpty) return;
     try {
@@ -277,11 +298,40 @@ class _BillConfirmScreenState extends State<BillConfirmScreen> {
           _ => _Phase.pending,
         };
       });
+      if (_phase != _Phase.pending) _stopPolling();
     } catch (e) {
       if (!mounted) return;
-      AppToast.error(humanizeError(e));
+      if (!silent) AppToast.error(humanizeError(e));
     }
   }
+
+  void _startPollingIfPending() {
+    if (_phase != _Phase.pending) return;
+    if (_pollTimer?.isActive == true) return;
+    _pollStartedAt = DateTime.now();
+    if (!_spinController.isAnimating) _spinController.repeat();
+    _pollTimer = Timer.periodic(_pollInterval, (_) {
+      if (!mounted) return _stopPolling();
+      if (_phase != _Phase.pending) return _stopPolling();
+      final started = _pollStartedAt;
+      if (started != null &&
+          DateTime.now().difference(started) >= _pollTimeout) {
+        _stopPolling();
+        return;
+      }
+      _refreshStatus(silent: true);
+    });
+    setState(() {}); // refresh the button to reflect polling state
+  }
+
+  void _stopPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
+    if (_spinController.isAnimating) _spinController.stop();
+    if (mounted) setState(() {});
+  }
+
+  bool get _isPolling => _pollTimer?.isActive == true;
 
   bool get _isResultPhase =>
       _phase == _Phase.pending ||
@@ -697,10 +747,19 @@ class _BillConfirmScreenState extends State<BillConfirmScreen> {
     }
 
     if (_phase == _Phase.pending) {
+      final polling = _isPolling;
       return ElevatedButton.icon(
-        onPressed: _refreshStatus,
-        icon: const Icon(Icons.refresh),
-        label: const Text('Refresh status'),
+        onPressed: () {
+          // Manual press always re-checks immediately and resumes
+          // auto-polling if it had timed out.
+          _refreshStatus();
+          _startPollingIfPending();
+        },
+        icon: RotationTransition(
+          turns: _spinController,
+          child: const Icon(Icons.refresh),
+        ),
+        label: Text(polling ? 'Checking status…' : 'Refresh status'),
         style: _primaryStyle(purple),
       );
     }

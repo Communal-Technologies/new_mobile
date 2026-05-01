@@ -112,6 +112,25 @@ jobs:
           keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
           EOF
 
+      # TEMPORARY: verify the keystore + alias + passwords seen by CI match what
+      # works locally. Remove this step once the build is signing successfully.
+      - name: DEBUG — verify keystore contents in CI
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        run: |
+          set -euo pipefail
+          echo "--- file size of decoded keystore (sanity check) ---"
+          wc -c android/app/upload.jks
+          echo "--- list keystore (uses store password only) ---"
+          keytool -list \
+            -keystore android/app/upload.jks \
+            -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
+          echo "--- look up the alias (uses store + key passwords) ---"
+          keytool -list \
+            -keystore android/app/upload.jks \
+            -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            -alias "${{ secrets.ANDROID_KEY_ALIAS }}" \
+            -keypass "${{ secrets.ANDROID_KEY_PASSWORD }}"
+
       - name: Install dependencies
         run: flutter pub get
 

@@ -115,9 +115,12 @@ jobs:
       # TEMPORARY: verify the keystore + alias + passwords seen by CI match what
       # works locally. Remove this step once the build is signing successfully.
       - name: DEBUG — verify keystore contents in CI
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
         run: |
           set -euo pipefail
+          if [[ ! -f android/app/upload.jks ]]; then
+            echo "No keystore decoded — debug step has nothing to inspect."
+            exit 0
+          fi
           echo "--- file size of decoded keystore (sanity check) ---"
           wc -c android/app/upload.jks
           echo "--- list keystore (uses store password only) ---"

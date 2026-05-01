@@ -204,8 +204,9 @@ class _DataPurchaseScreenState extends State<DataPurchaseScreen> {
         child: Padding(
           padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
           child: ElevatedButton(
-            onPressed:
-                (_selectedProvider == null || _selectedProduct == null) ? null : _onContinue,
+            onPressed: (_selectedProvider == null || _selectedProduct == null)
+                ? null
+                : _onContinue,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF7434FF),
               minimumSize: Size(double.infinity, 52.h),
@@ -283,15 +284,21 @@ class _DataPurchaseScreenState extends State<DataPurchaseScreen> {
 
   Widget _buildProductTile() {
     final selected = _selectedProduct;
+    final theme = Theme.of(context);
     return InkWell(
       onTap: _openProductSheet,
       borderRadius: BorderRadius.circular(14.r),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.h),
         decoration: BoxDecoration(
-          color: Colors.grey.shade50,
+          // theme.cardColor + theme.dividerColor instead of grey.shade50
+          // / grey.shade300 so the tile follows the active theme. The
+          // hardcoded shades stayed white in dark mode and made the
+          // input read as a stuck-on-light artifact next to the
+          // theme-aware phone-number field above.
+          color: theme.cardColor,
           borderRadius: BorderRadius.circular(14.r),
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(color: theme.dividerColor),
         ),
         child: Row(
           children: [
@@ -300,19 +307,22 @@ class _DataPurchaseScreenState extends State<DataPurchaseScreen> {
                 _loadingProducts
                     ? 'Loading plans…'
                     : _productsError != null
-                        ? 'Could not load plans — tap to retry'
-                        : selected == null
-                            ? 'Tap to pick a data plan'
-                            : '${selected.name} • ${Money(selected.priceMinor, 'NGN').format()}',
+                    ? 'Could not load plans — tap to retry'
+                    : selected == null
+                    ? 'Tap to pick a data plan'
+                    : '${selected.name} • ${Money(selected.priceMinor, 'NGN').format()}',
                 style: TextStyle(
                   fontSize: 17.sp,
                   color: selected == null
-                      ? Colors.grey.shade600
-                      : Theme.of(context).colorScheme.onSurface,
+                      ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
+                      : theme.colorScheme.onSurface,
                 ),
               ),
             ),
-            const Icon(Icons.keyboard_arrow_down_rounded),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
           ],
         ),
       ),
@@ -320,14 +330,13 @@ class _DataPurchaseScreenState extends State<DataPurchaseScreen> {
   }
 
   Widget _label(String text) => Text(
-        text,
-        style: TextStyle(
-          fontSize: 17.sp,
-          fontWeight: FontWeight.w700,
-          color: Theme.of(context).colorScheme.onSurface,
-        ),
-      );
-
+    text,
+    style: TextStyle(
+      fontSize: 17.sp,
+      fontWeight: FontWeight.w700,
+      color: Theme.of(context).colorScheme.onSurface,
+    ),
+  );
 }
 
 class _ProductPickerSheet extends StatelessWidget {
@@ -346,7 +355,8 @@ class _ProductPickerSheet extends StatelessWidget {
           shrinkWrap: true,
           padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
           itemCount: products.length,
-          separatorBuilder: (_, __) => Divider(color: Colors.grey.shade200),
+          separatorBuilder: (_, __) =>
+              Divider(color: Theme.of(context).dividerColor),
           itemBuilder: (ctx, i) {
             final p = products[i];
             return ListTile(

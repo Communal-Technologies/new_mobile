@@ -4,6 +4,7 @@ import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/core/utils/biometric_service.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 import 'package:communal_mobile/core/utils/idempotency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/utils/tap_debouncer.dart';
@@ -85,32 +86,33 @@ class _BillConfirmScreenState extends State<BillConfirmScreen> {
   int get _amountMinor => widget.args['amount_minor'] as int;
   String? get _productSlug => widget.args['product_slug'] as String?;
   String? get _productName => widget.args['product_name'] as String?;
-  String? get _meterAccountNumber => widget.args['meter_account_number'] as String?;
+  String? get _meterAccountNumber =>
+      widget.args['meter_account_number'] as String?;
   String? get _smartCardNumber => widget.args['smart_card_number'] as String?;
   String? get _customerName => widget.args['customer_name'] as String?;
 
   /// Friendly label for screen copy. `airtime` and `data` use the
   /// short forms; the longer pair name themselves explicitly.
   String get _kindLabel => switch (_kind) {
-        'data' => 'Data',
-        'electricity' => 'Electricity',
-        'television' => 'Cable TV',
-        _ => 'Airtime',
-      };
+    'data' => 'Data',
+    'electricity' => 'Electricity',
+    'television' => 'Cable TV',
+    _ => 'Airtime',
+  };
 
   /// What we credit on the receiving end — phone number for airtime/data,
   /// meter for electricity, smartcard for cable TV.
   String get _recipientLabel => switch (_kind) {
-        'electricity' => _meterAccountNumber ?? '—',
-        'television' => _smartCardNumber ?? '—',
-        _ => _phone,
-      };
+    'electricity' => _meterAccountNumber ?? '—',
+    'television' => _smartCardNumber ?? '—',
+    _ => _phone,
+  };
 
   String get _recipientFieldLabel => switch (_kind) {
-        'electricity' => 'Meter number',
-        'television' => 'Smartcard number',
-        _ => 'Phone number',
-      };
+    'electricity' => 'Meter number',
+    'television' => 'Smartcard number',
+    _ => 'Phone number',
+  };
 
   @override
   void initState() {
@@ -187,7 +189,7 @@ class _BillConfirmScreenState extends State<BillConfirmScreen> {
       return result.toHeaders();
     } catch (e) {
       if (!mounted) return null;
-      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
+      AppToast.error(humanizeError(e));
       return null;
     }
   }
@@ -210,38 +212,38 @@ class _BillConfirmScreenState extends State<BillConfirmScreen> {
     try {
       final txn = await switch (_kind) {
         'data' => _repo.purchaseData(
-            provider: _provider,
-            phoneNumber: _phone,
-            productSlug: _productSlug ?? '',
-            amountMinor: _amountMinor,
-            idempotencyKey: _idempotencyKey,
-            authHeaders: authHeaders,
-          ),
+          provider: _provider,
+          phoneNumber: _phone,
+          productSlug: _productSlug ?? '',
+          amountMinor: _amountMinor,
+          idempotencyKey: _idempotencyKey,
+          authHeaders: authHeaders,
+        ),
         'electricity' => _repo.purchaseElectricity(
-            provider: _provider,
-            meterAccountNumber: _meterAccountNumber ?? '',
-            phoneNumber: _phone,
-            productSlug: _productSlug ?? '',
-            amountMinor: _amountMinor,
-            idempotencyKey: _idempotencyKey,
-            authHeaders: authHeaders,
-          ),
+          provider: _provider,
+          meterAccountNumber: _meterAccountNumber ?? '',
+          phoneNumber: _phone,
+          productSlug: _productSlug ?? '',
+          amountMinor: _amountMinor,
+          idempotencyKey: _idempotencyKey,
+          authHeaders: authHeaders,
+        ),
         'television' => _repo.purchaseTelevision(
-            provider: _provider,
-            smartCardNumber: _smartCardNumber ?? '',
-            phoneNumber: _phone,
-            productSlug: _productSlug ?? '',
-            amountMinor: _amountMinor,
-            idempotencyKey: _idempotencyKey,
-            authHeaders: authHeaders,
-          ),
+          provider: _provider,
+          smartCardNumber: _smartCardNumber ?? '',
+          phoneNumber: _phone,
+          productSlug: _productSlug ?? '',
+          amountMinor: _amountMinor,
+          idempotencyKey: _idempotencyKey,
+          authHeaders: authHeaders,
+        ),
         _ => _repo.purchaseAirtime(
-            provider: _provider,
-            phoneNumber: _phone,
-            amountMinor: _amountMinor,
-            idempotencyKey: _idempotencyKey,
-            authHeaders: authHeaders,
-          ),
+          provider: _provider,
+          phoneNumber: _phone,
+          amountMinor: _amountMinor,
+          idempotencyKey: _idempotencyKey,
+          authHeaders: authHeaders,
+        ),
       };
       if (!mounted) return;
       setState(() {
@@ -256,7 +258,7 @@ class _BillConfirmScreenState extends State<BillConfirmScreen> {
       if (!mounted) return;
       setState(() {
         _phase = _Phase.failed;
-        _errorMessage = e.toString().replaceFirst('Exception: ', '');
+        _errorMessage = humanizeError(e);
       });
     }
   }
@@ -277,7 +279,7 @@ class _BillConfirmScreenState extends State<BillConfirmScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
+      AppToast.error(humanizeError(e));
     }
   }
 
@@ -297,9 +299,8 @@ class _BillConfirmScreenState extends State<BillConfirmScreen> {
             elevation: 0,
             leading: IconButton(
               icon: Icon(_isResultPhase ? Icons.close : Icons.arrow_back),
-              onPressed: () => _isResultPhase
-                  ? context.goNamed('home')
-                  : context.pop(),
+              onPressed: () =>
+                  _isResultPhase ? context.goNamed('home') : context.pop(),
             ),
           ),
           body: SafeArea(
@@ -334,11 +335,11 @@ class _BillConfirmScreenState extends State<BillConfirmScreen> {
   /// Brand accent per category — matches the landing tiles so the user
   /// has a continuous sense of "I'm in the airtime flow / TV flow".
   Color get _kindAccent => switch (_kind) {
-        'data' => const Color(0xFF2BA6FF),
-        'electricity' => const Color(0xFFFFB627),
-        'television' => const Color(0xFF22C55E),
-        _ => const Color(0xFFFF7B3D), // airtime
-      };
+    'data' => const Color(0xFF2BA6FF),
+    'electricity' => const Color(0xFFFFB627),
+    'television' => const Color(0xFF22C55E),
+    _ => const Color(0xFFFF7B3D), // airtime
+  };
 
   Widget _buildSummaryCard() {
     final theme = Theme.of(context);
@@ -395,7 +396,9 @@ class _BillConfirmScreenState extends State<BillConfirmScreen> {
                       style: TextStyle(
                         fontSize: 15.sp,
                         fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.75,
+                        ),
                       ),
                     ),
                   ],
@@ -441,11 +444,11 @@ class _BillConfirmScreenState extends State<BillConfirmScreen> {
   }
 
   IconData get _kindIcon => switch (_kind) {
-        'data' => Icons.public_outlined,
-        'electricity' => Icons.flash_on_outlined,
-        'television' => Icons.live_tv_outlined,
-        _ => Icons.call_outlined, // airtime
-      };
+    'data' => Icons.public_outlined,
+    'electricity' => Icons.flash_on_outlined,
+    'television' => Icons.live_tv_outlined,
+    _ => Icons.call_outlined, // airtime
+  };
 
   Widget _summaryRow(String label, String value, {bool monospace = false}) {
     return Padding(
@@ -458,7 +461,9 @@ class _BillConfirmScreenState extends State<BillConfirmScreen> {
               label,
               style: TextStyle(
                 fontSize: 15.sp,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -573,9 +578,7 @@ class _BillConfirmScreenState extends State<BillConfirmScreen> {
           // anti-patterns for transaction PIN. Lock the field down to
           // typed digits only.
           enableInteractiveSelection: false,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-          ],
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           style: TextStyle(
             fontSize: 24.sp,
             letterSpacing: 12,
@@ -588,8 +591,9 @@ class _BillConfirmScreenState extends State<BillConfirmScreen> {
             hintStyle: TextStyle(
               fontSize: 24.sp,
               letterSpacing: 12,
-              color:
-                  Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.4),
             ),
             filled: true,
             fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -628,8 +632,9 @@ class _BillConfirmScreenState extends State<BillConfirmScreen> {
         'The provider has accepted the request and will deliver shortly. We will notify you when it lands.',
       _Phase.completed =>
         'The provider has confirmed delivery to $_recipientLabel.',
-      _Phase.failed => _errorMessage ??
-          'The provider rejected the request. You have not been charged.',
+      _Phase.failed =>
+        _errorMessage ??
+            'The provider rejected the request. You have not been charged.',
       _ => '',
     };
 
@@ -743,11 +748,9 @@ class _BillConfirmScreenState extends State<BillConfirmScreen> {
   }
 
   ButtonStyle _primaryStyle(Color color) => ElevatedButton.styleFrom(
-        backgroundColor: color,
-        foregroundColor: Colors.white,
-        minimumSize: Size(double.infinity, 52.h),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18.r),
-        ),
-      );
+    backgroundColor: color,
+    foregroundColor: Colors.white,
+    minimumSize: Size(double.infinity, 52.h),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18.r)),
+  );
 }

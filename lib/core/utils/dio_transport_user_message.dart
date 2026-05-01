@@ -64,6 +64,38 @@ bool isDioTransportFailure(DioException e) {
   }
 }
 
+/// User-facing one-line message for any error caught at a UI boundary.
+/// Centralised so toasts / snackbars / inline banners stop dumping
+/// `DioException [bad_response]: …` plus a stack into the UI when a
+/// network call fails.
+///
+/// Resolution order:
+///   1. DioException with a Laravel-shaped error body
+///      (`response.data['message']` is a non-empty string) — surface
+///      the server's own copy verbatim.
+///   2. DioException without a message → [dioTransportUserMessage]
+///      maps the transport class to a friendly string.
+///   3. `Exception('foo')` → strip the redundant `Exception: ` prefix.
+///   4. Anything else → fall back to the generic transport message.
+String humanizeError(Object error) {
+  if (error is DioException) {
+    final data = error.response?.data;
+    if (data is Map) {
+      final raw = data['message'];
+      if (raw is String && raw.trim().isNotEmpty) {
+        return raw.trim();
+      }
+    }
+    return dioTransportUserMessage(error);
+  }
+  if (error is Exception) {
+    final s = error.toString();
+    if (s.startsWith('Exception: ')) return s.substring('Exception: '.length);
+    return s;
+  }
+  return DioTransportUserMessages.generic;
+}
+
 /// Auth screens send the user back to splash for the same class of errors splash shows inline.
 bool shouldRedirectToSplashForAuthFailure(String message) {
   if (message == DioTransportUserMessages.timeout ||

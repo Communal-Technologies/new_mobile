@@ -16,6 +16,7 @@ import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
 import 'package:communal_mobile/core/widgets/loader_overlay.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/loan_application.dart';
+import 'package:communal_mobile/data/models/loan_eligibility.dart';
 import 'package:communal_mobile/data/models/loan_scheme.dart';
 import 'package:communal_mobile/data/repositories/loan_repository.dart';
 import 'package:communal_mobile/injection.dart';
@@ -39,6 +40,12 @@ class _LoansScreenState extends State<LoansScreen> {
   List<LoanApplication> _loans = const [];
   List<LoanScheme> _schemes = const [];
   int _balanceMinor = 0;
+
+  /// Eligibility envelope — read for `canApply` / `sundryDebtMinor` so
+  /// we can render the sundry banner and short-circuit the Apply CTA
+  /// before the user fills the form. Null while still loading or when
+  /// the cooperative isn't resolved.
+  LoanEligibility? _eligibility;
 
   @override
   void initState() {
@@ -65,12 +72,14 @@ class _LoansScreenState extends State<LoansScreen> {
         _repo.fetchMyLoans(user),
         _repo.fetchSchemes(coopId),
         _repo.fetchLoanBalanceMinor(ledger),
+        _repo.fetchEligibility(coopId),
       ]);
       if (!mounted) return;
       setState(() {
         _loans = results[0] as List<LoanApplication>;
         _schemes = results[1] as List<LoanScheme>;
         _balanceMinor = results[2] as int;
+        _eligibility = results[3] as LoanEligibility?;
         _loading = false;
       });
     } catch (e) {
@@ -83,11 +92,22 @@ class _LoansScreenState extends State<LoansScreen> {
   }
 
   /// Front-line gate for the Apply Now button and every per-scheme
-  /// Apply card. The backend rejects with 409 when a pending application
-  /// already exists; checking it here stops the user from filling out
-  /// three steps before learning that. Active / declined / cancelled /
-  /// closed loans don't block — only status `pending` does.
+  /// Apply card. The backend rejects with 409 in two cases: a pending
+  /// application already exists, or the member has unsettled sundry
+  /// debt with this cooperative. Checking here stops the user from
+  /// filling out three steps before learning that. Active / declined /
+  /// cancelled / closed loans don't block — only status `pending` does.
   void _onApplyTapped({LoanScheme? scheme}) {
+    final el = _eligibility;
+    if (el != null && !el.canApply) {
+      // The banner above the Quick Actions row already explains the
+      // sundry debt; the toast is a redundant tap-time confirmation
+      // for users who didn't read it.
+      AppToast.error(
+        'Settle your sundry debt of ${el.sundryDebtLabel} before requesting a new loan.',
+      );
+      return;
+    }
     final hasPending = _loans.any((l) => l.status == LoanStatus.pending);
     if (hasPending) {
       AppToast.error(
@@ -135,6 +155,10 @@ class _LoansScreenState extends State<LoansScreen> {
                         vSpace(24),
                         _buildSummaryCard(),
                         vSpace(24),
+                        if (_eligibility?.canApply == false) ...[
+                          _buildSundryBanner(_eligibility!),
+                          vSpace(20),
+                        ],
                         _buildQuickActions(),
                         vSpace(24),
                         if (_error != null)
@@ -288,6 +312,66 @@ class _LoansScreenState extends State<LoansScreen> {
           fontWeight: FontWeight.w600,
           color: Colors.white,
         ),
+      ),
+    );
+  }
+
+  /// Red surface that appears above the quick actions when the
+  /// cooperative has flagged the member as carrying unsettled sundry
+  /// debt. The Apply CTA is also gated in [_onApplyTapped]; this
+  /// banner is the proactive explanation that keeps the gate from
+  /// feeling arbitrary.
+  Widget _buildSundryBanner(LoanEligibility el) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: EdgeInsets.all(8.w),
+            decoration: BoxDecoration(
+              color: Colors.red.shade100,
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            child: Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.red.shade700,
+              size: 20.sp,
+            ),
+          ),
+          hSpace(12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Sundry debt outstanding',
+                  style: TextStyle(
+                    fontSize: 17.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.red.shade900,
+                  ),
+                ),
+                vSpace(4),
+                Text(
+                  'You have ${el.sundryDebtLabel} of unsettled sundry debt with this cooperative. '
+                  'New loan requests are blocked until it is cleared.',
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    color: Colors.red.shade900.withValues(alpha: 0.85),
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

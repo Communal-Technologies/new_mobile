@@ -10,6 +10,7 @@ import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/transactions/models/sample_transactions.dart';
 import 'package:communal_mobile/screens/transactions/widgets/transaction_tile.dart';
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/widgets/back_to_exit_wrapper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -23,8 +24,9 @@ class TransferScreen extends StatefulWidget {
 
 class _TransferScreenState extends State<TransferScreen> {
   final _favoritesPrefs = getIt<TransferFavoritesPrefs>();
-  late final TransactionsRepository _txRepo =
-      TransactionsRepository(getIt<DioClient>());
+  late final TransactionsRepository _txRepo = TransactionsRepository(
+    getIt<DioClient>(),
+  );
   List<TransferFavorite> _favorites = const [];
   List<TransactionListItem> _recentItems = const [];
   bool _recentLoading = true;
@@ -75,6 +77,10 @@ class _TransferScreenState extends State<TransferScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return BackToExitWrapper(child: _buildRootBody(context));
+  }
+
+  Widget _buildRootBody(BuildContext context) {
     final theme = Theme.of(context);
     return BlocListener<AuthBloc, AuthState>(
       listenWhen: (prev, next) {
@@ -87,55 +93,93 @@ class _TransferScreenState extends State<TransferScreen> {
         if (state is AuthAuthenticated) _loadRecent();
       },
       child: Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        titleSpacing: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, size: 22),
-          onPressed: () => context.pop(),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(
+          titleSpacing: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios, size: 22),
+            onPressed: () => context.pop(),
+          ),
+          title: const Text('Transfer Money'),
         ),
-        title: const Text('Transfer Money'),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(16.w),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Choose Transfer Type',
-                style: TextStyle(fontSize: 19.sp, fontWeight: FontWeight.w700),
-              ),
-              vSpace(12),
-              _optionCard(
-                icon: Icons.group,
-                title: 'Internal Transfer',
-                subtitle: 'Send money to Communal members instantly',
-                tag: 'Internal',
-                onTap: () => context.pushNamed('transfer-internal'),
-              ),
-              vSpace(12),
-              _optionCard(
-                icon: Icons.account_balance,
-                title: 'To Other Banks',
-                subtitle: 'Transfer funds to any bank account in Nigeria',
-                tag: 'External',
-                onTap: () => context.pushNamed('transfer-external'),
-              ),
-              if (_favorites.isNotEmpty) ...[
-                vSpace(18),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(16.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Choose Transfer Type',
+                  style: TextStyle(
+                    fontSize: 19.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                vSpace(12),
+                _optionCard(
+                  icon: Icons.group,
+                  title: 'Internal Transfer',
+                  subtitle: 'Send money to Communal members instantly',
+                  tag: 'Internal',
+                  onTap: () => context.pushNamed('transfer-internal'),
+                ),
+                vSpace(12),
+                _optionCard(
+                  icon: Icons.account_balance,
+                  title: 'To Other Banks',
+                  subtitle: 'Transfer funds to any bank account in Nigeria',
+                  tag: 'External',
+                  onTap: () => context.pushNamed('transfer-external'),
+                ),
+                if (_favorites.isNotEmpty) ...[
+                  vSpace(18),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Your Favourites',
+                        style: TextStyle(
+                          fontSize: 19.sp,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _showAllFavorites,
+                        child: Text(
+                          'See all',
+                          style: TextStyle(
+                            color: theme.primaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(
+                    height: 106.h,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _favorites.length > 10
+                          ? 10
+                          : _favorites.length,
+                      separatorBuilder: (_, __) => hSpace(10),
+                      itemBuilder: (_, i) => _favoriteCard(_favorites[i]),
+                    ),
+                  ),
+                ],
+                vSpace(20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Your Favourites',
+                      'Recent Transfers',
                       style: TextStyle(
                         fontSize: 19.sp,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     TextButton(
-                      onPressed: _showAllFavorites,
+                      onPressed: () => context.pushNamed('transactions'),
                       child: Text(
                         'See all',
                         style: TextStyle(
@@ -146,126 +190,96 @@ class _TransferScreenState extends State<TransferScreen> {
                     ),
                   ],
                 ),
-                SizedBox(
-                  height: 106.h,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _favorites.length > 10 ? 10 : _favorites.length,
-                    separatorBuilder: (_, __) => hSpace(10),
-                    itemBuilder: (_, i) => _favoriteCard(_favorites[i]),
-                  ),
-                ),
-              ],
-              vSpace(20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Recent Transfers',
-                    style: TextStyle(
-                      fontSize: 19.sp,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => context.pushNamed('transactions'),
-                    child: Text(
-                      'See all',
-                      style: TextStyle(
-                        color: theme.primaryColor,
-                        fontWeight: FontWeight.w600,
+                if (_recentLoading)
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20.h),
+                    child: Center(
+                      child: Image.asset(
+                        Images.loader,
+                        width: 52.w,
+                        height: 52.w,
+                        fit: BoxFit.contain,
                       ),
                     ),
-                  ),
-                ],
-              ),
-              if (_recentLoading)
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20.h),
-                  child: Center(
-                    child: Image.asset(
-                      Images.loader,
-                      width: 52.w,
-                      height: 52.w,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                )
-              else if (_recentError != null)
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.h),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _recentError!,
-                          style: TextStyle(
-                            fontSize: 17.sp,
-                            color: Colors.red.shade700,
+                  )
+                else if (_recentError != null)
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.h),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _recentError!,
+                            style: TextStyle(
+                              fontSize: 17.sp,
+                              color: Colors.red.shade700,
+                            ),
                           ),
                         ),
+                        TextButton(
+                          onPressed: _loadRecent,
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  )
+                else if (_recentItems.isEmpty)
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    child: Text(
+                      'No recent transfers',
+                      style: TextStyle(
+                        fontSize: 17.sp,
+                        color: Colors.grey.shade600,
                       ),
-                      TextButton(
-                        onPressed: _loadRecent,
-                        child: const Text('Retry'),
-                      ),
-                    ],
+                    ),
+                  )
+                else
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _recentItems.length,
+                    separatorBuilder: (_, __) => vSpace(10),
+                    itemBuilder: (_, index) {
+                      final item = _recentItems[index];
+                      return TransactionTile(
+                        item: item,
+                        onTap: () => context.pushNamed(
+                          'transaction-details',
+                          extra: item.details,
+                        ),
+                      );
+                    },
                   ),
-                )
-              else if (_recentItems.isEmpty)
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12.h),
-                  child: Text(
-                    'No recent transfers',
-                    style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
-                  ),
-                )
-              else
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _recentItems.length,
-                  separatorBuilder: (_, __) => vSpace(10),
-                  itemBuilder: (_, index) {
-                    final item = _recentItems[index];
-                    return TransactionTile(
-                      item: item,
-                      onTap: () => context.pushNamed(
-                        'transaction-details',
-                        extra: item.details,
-                      ),
-                    );
-                  },
-                ),
-              vSpace(90),
-            ],
+                vSpace(90),
+              ],
+            ),
           ),
         ),
+        bottomNavigationBar: BottomNavBar(
+          currentIndex: _currentNavIndex,
+          onTap: (index) {
+            setState(() => _currentNavIndex = index);
+            switch (index) {
+              case 0:
+                context.goNamed('home');
+                break;
+              case 1:
+                context.pushNamed('obligations');
+                break;
+              case 2:
+                context.pushNamed('community');
+                break;
+              case 3:
+                context.goNamed('loans');
+                break;
+              case 4:
+                context.goNamed('account-settings');
+                break;
+            }
+          },
+        ),
       ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: _currentNavIndex,
-        onTap: (index) {
-          setState(() => _currentNavIndex = index);
-          switch (index) {
-            case 0:
-              context.goNamed('home');
-              break;
-            case 1:
-              context.pushNamed('obligations');
-              break;
-            case 2:
-              context.pushNamed('community');
-              break;
-            case 3:
-              context.goNamed('loans');
-              break;
-            case 4:
-              context.goNamed('account-settings');
-              break;
-          }
-        },
-      ),
-    ),
     );
   }
 
@@ -312,7 +326,9 @@ class _TransferScreenState extends State<TransferScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16.sp,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -395,11 +411,11 @@ class _TransferScreenState extends State<TransferScreen> {
     const externalAccent = Color(0xFF1976D2);
     final tagBg = tag == 'Internal'
         ? (isDark
-            ? theme.primaryColor.withValues(alpha: 0.16)
-            : const Color(0xFFEDE4FF))
+              ? theme.primaryColor.withValues(alpha: 0.16)
+              : const Color(0xFFEDE4FF))
         : (isDark
-            ? externalAccent.withValues(alpha: 0.16)
-            : const Color(0xFFE1F5FE));
+              ? externalAccent.withValues(alpha: 0.16)
+              : const Color(0xFFE1F5FE));
     final tagFg = tag == 'Internal'
         ? theme.primaryColor
         : (isDark ? externalAccent : const Color(0xFF1565C0));
@@ -451,10 +467,7 @@ class _TransferScreenState extends State<TransferScreen> {
               ),
               child: Text(
                 tag,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: tagFg,
-                ),
+                style: TextStyle(fontWeight: FontWeight.w600, color: tagFg),
               ),
             ),
           ],

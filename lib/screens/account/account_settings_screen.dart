@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/widgets/back_to_exit_wrapper.dart';
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -29,6 +30,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return BackToExitWrapper(child: _buildRootBody(context));
+  }
+
+  Widget _buildRootBody(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
@@ -47,10 +52,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
           ),
           title: Text(
             'Account Settings',
-            style: TextStyle(
-              fontSize: 21.sp,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(fontSize: 21.sp, fontWeight: FontWeight.w700),
           ),
           centerTitle: true,
         ),

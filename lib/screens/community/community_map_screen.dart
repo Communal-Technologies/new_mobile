@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/widgets/back_to_exit_wrapper.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:go_router/go_router.dart';
@@ -81,9 +82,9 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
       // the actual submit.
       final results = await Future.wait<dynamic>([
         getIt<CommunityRepository>().fetchPublicCooperatives(),
-        getIt<CommunitySettingsRepository>()
-            .fetchMemberships()
-            .catchError((_) => const <CommunityMembership>[]),
+        getIt<CommunitySettingsRepository>().fetchMemberships().catchError(
+          (_) => const <CommunityMembership>[],
+        ),
       ]);
       if (!mounted) return;
       final coops = results[0] as List;
@@ -93,7 +94,8 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
           .toList();
       final memberIds = <String>{
         for (final m in memberships)
-          if (m.cooperativeId is String && (m.cooperativeId as String).isNotEmpty)
+          if (m.cooperativeId is String &&
+              (m.cooperativeId as String).isNotEmpty)
             m.cooperativeId as String,
       };
       setState(() {
@@ -128,10 +130,8 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
     if (list.isEmpty) return null;
     final featured = list.firstWhere(
       (c) => c.isFeatured,
-      orElse: () => list.firstWhere(
-        (c) => c.hasCoordinate,
-        orElse: () => list.first,
-      ),
+      orElse: () =>
+          list.firstWhere((c) => c.hasCoordinate, orElse: () => list.first),
     );
     return featured.id;
   }
@@ -178,6 +178,10 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return BackToExitWrapper(child: _buildRootBody(context));
+  }
+
+  Widget _buildRootBody(BuildContext context) {
     final communities = _filteredCommunities;
     final selectedCommunity = _communities.isEmpty
         ? null
@@ -216,7 +220,8 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
         children: [
           _buildMap(markers),
           _buildTopBar(),
-          if (selectedCommunity != null) _buildFeaturedBanner(selectedCommunity),
+          if (selectedCommunity != null)
+            _buildFeaturedBanner(selectedCommunity),
           _buildBottomSheet(communities),
         ],
       ),
@@ -408,11 +413,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                       ),
                       if (_isVerified(community)) ...[
                         hSpace(6),
-                        Icon(
-                          Icons.verified,
-                          size: 18.sp,
-                          color: Colors.white,
-                        ),
+                        Icon(Icons.verified, size: 18.sp, color: Colors.white),
                       ],
                     ],
                   ),
@@ -527,22 +528,20 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                   decoration: InputDecoration(
                     hintText: 'Search communities near you...',
                     hintStyle: TextStyle(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.5),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
                     prefixIcon: Icon(
                       Icons.search,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                     filled: true,
-                    fillColor: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest,
+                    fillColor: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
                     contentPadding: EdgeInsets.symmetric(
                       horizontal: 16.w,
                       vertical: 0,
@@ -574,9 +573,9 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                         vertical: 4.h,
                       ),
                       decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .primaryColor
-                            .withValues(alpha: 0.12),
+                        color: Theme.of(
+                          context,
+                        ).primaryColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8.r),
                       ),
                       child: Text(
@@ -625,7 +624,9 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 17.sp,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.7),
                               ),
                             ),
                             vSpace(12),
@@ -654,7 +655,9 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 17.sp,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.6),
                               ),
                             ),
                           ],
@@ -731,5 +734,3 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
     return HSVColor.fromAHSV(1, hue, 0.6, 0.9).toColor();
   }
 }
-
-

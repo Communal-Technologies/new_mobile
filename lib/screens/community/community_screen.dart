@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/widgets/back_to_exit_wrapper.dart';
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -46,8 +47,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
   }
 
   Future<List<Community>> _loadMemberships() async {
-    final memberships =
-        await getIt<CommunitySettingsRepository>().fetchMemberships();
+    final memberships = await getIt<CommunitySettingsRepository>()
+        .fetchMemberships();
     return memberships.map((m) => Community.fromMembership(m)).toList();
   }
 
@@ -70,10 +71,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     setState(() {
       _communitiesFuture = _loadMemberships();
     });
-    await Future.wait([
-      _communitiesFuture,
-      _refreshPendingRequests(),
-    ]);
+    await Future.wait([_communitiesFuture, _refreshPendingRequests()]);
   }
 
   /// Resolve a real CommunityLocation for [cooperativeId] (the user's
@@ -82,8 +80,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
   /// push the detail screen.
   Future<void> _openCooperativeDetails(String cooperativeId) async {
     try {
-      final coop = await getIt<CommunityRepository>()
-          .fetchCooperativeProfile(cooperativeId);
+      final coop = await getIt<CommunityRepository>().fetchCooperativeProfile(
+        cooperativeId,
+      );
       if (!mounted) return;
       final location = CommunityLocation.fromPublicCooperative(coop);
       // ignore: unawaited_futures
@@ -91,17 +90,16 @@ class _CommunityScreenState extends State<CommunityScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
-        ),
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
     }
   }
 
   Future<void> _openPendingStatus(CommunityJoinRequest req) async {
     try {
-      final coop = await getIt<CommunityRepository>()
-          .fetchCooperativeProfile(req.cooperativeId);
+      final coop = await getIt<CommunityRepository>().fetchCooperativeProfile(
+        req.cooperativeId,
+      );
       if (!mounted) return;
       final location = CommunityLocation.fromPublicCooperative(coop);
       // ignore: unawaited_futures
@@ -109,16 +107,17 @@ class _CommunityScreenState extends State<CommunityScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
-        ),
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    return BackToExitWrapper(child: _buildRootBody(context));
+  }
 
+  Widget _buildRootBody(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
@@ -245,10 +244,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
           ),
           child: Text(
             snapshot.error.toString().replaceFirst('Exception: ', ''),
-            style: TextStyle(
-              fontSize: 16.sp,
-              color: const Color(0xFFB42318),
-            ),
+            style: TextStyle(fontSize: 16.sp, color: const Color(0xFFB42318)),
           ),
         ),
       ];
@@ -343,10 +339,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
           Text(
             'Tap “Find Nearby” below to discover open cooperatives, '
             'or use the + button to redeem an invite code from an admin.',
-            style: TextStyle(
-              fontSize: 17.sp,
-              color: const Color(0xFF4D3C8A),
-            ),
+            style: TextStyle(fontSize: 17.sp, color: const Color(0xFF4D3C8A)),
           ),
         ],
       ),
@@ -361,59 +354,55 @@ class _CommunityScreenState extends State<CommunityScreen> {
       padding: EdgeInsets.only(bottom: 12.h),
       child: GestureDetector(
         onTap: () => _openPendingStatus(request),
-        child: Builder(builder: (context) {
-          final isDark = Theme.of(context).brightness == Brightness.dark;
-          return Container(
-          padding: EdgeInsets.all(14.w),
-          decoration: BoxDecoration(
-            color: isDark
-                ? const Color(0xFFEE7B00).withValues(alpha: 0.16)
-                : const Color(0xFFFFF4E9),
-            borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(
-              color: isDark
-                  ? const Color(0xFFEE7B00).withValues(alpha: 0.45)
-                  : const Color(0xFFFFD2B0),
-            ),
-          ),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.schedule,
-                color: Color(0xFFEE7B00),
-              ),
-              hSpace(12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Application pending',
-                      style: TextStyle(
-                        fontSize: 17.sp,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF9A4F00),
-                      ),
-                    ),
-                    vSpace(2),
-                    Text(
-                      'Your request to join $coopName is awaiting admin review.',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        color: const Color(0xFF9A4F00),
-                      ),
-                    ),
-                  ],
+        child: Builder(
+          builder: (context) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            return Container(
+              padding: EdgeInsets.all(14.w),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFFEE7B00).withValues(alpha: 0.16)
+                    : const Color(0xFFFFF4E9),
+                borderRadius: BorderRadius.circular(16.r),
+                border: Border.all(
+                  color: isDark
+                      ? const Color(0xFFEE7B00).withValues(alpha: 0.45)
+                      : const Color(0xFFFFD2B0),
                 ),
               ),
-              const Icon(
-                Icons.chevron_right,
-                color: Color(0xFF9A4F00),
+              child: Row(
+                children: [
+                  const Icon(Icons.schedule, color: Color(0xFFEE7B00)),
+                  hSpace(12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Application pending',
+                          style: TextStyle(
+                            fontSize: 17.sp,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF9A4F00),
+                          ),
+                        ),
+                        vSpace(2),
+                        Text(
+                          'Your request to join $coopName is awaiting admin review.',
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            color: const Color(0xFF9A4F00),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: Color(0xFF9A4F00)),
+                ],
               ),
-            ],
-          ),
-          );
-        }),
+            );
+          },
+        ),
       ),
     );
   }

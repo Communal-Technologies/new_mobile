@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/widgets/back_to_exit_wrapper.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -33,6 +34,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return BackToExitWrapper(child: _buildRootBody(context));
+  }
+
+  Widget _buildRootBody(BuildContext context) {
     final theme = Theme.of(context);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -49,22 +54,21 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Header
-                HomeHeader(
-                  scaffoldKey: _scaffoldKey,
-                  theme: theme,
-                ),
+                HomeHeader(scaffoldKey: _scaffoldKey, theme: theme),
 
                 vSpace(16),
 
                 BlocBuilder<AuthBloc, AuthState>(
                   buildWhen: (prev, next) {
                     if (prev.runtimeType != next.runtimeType) return true;
-                    if (prev is! AuthAuthenticated || next is! AuthAuthenticated) {
+                    if (prev is! AuthAuthenticated ||
+                        next is! AuthAuthenticated) {
                       return true;
                     }
                     final a = prev.user;
                     final b = next.user;
-                    String wan(UserModel u) => u.walletAccountNumber?.trim() ?? '';
+                    String wan(UserModel u) =>
+                        u.walletAccountNumber?.trim() ?? '';
                     return wan(a) != wan(b) ||
                         (a.communalTier ?? '') != (b.communalTier ?? '') ||
                         a.kycStep3Submitted != b.kycStep3Submitted;
@@ -86,13 +90,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 BlocBuilder<AuthBloc, AuthState>(
                   buildWhen: (prev, next) {
                     if (prev.runtimeType != next.runtimeType) return true;
-                    if (prev is AuthAuthenticated && next is AuthAuthenticated) {
-                      return prev.user.hasSecurityPin != next.user.hasSecurityPin;
+                    if (prev is AuthAuthenticated &&
+                        next is AuthAuthenticated) {
+                      return prev.user.hasSecurityPin !=
+                          next.user.hasSecurityPin;
                     }
                     return true;
                   },
                   builder: (context, authState) {
-                    final showPin = authState is AuthAuthenticated &&
+                    final showPin =
+                        authState is AuthAuthenticated &&
                         authState.user.hasSecurityPin != true;
                     if (showPin) {
                       return Column(
@@ -111,7 +118,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 BlocBuilder<AuthBloc, AuthState>(
                   buildWhen: (prev, next) {
                     if (prev.runtimeType != next.runtimeType) return true;
-                    if (prev is AuthAuthenticated && next is AuthAuthenticated) {
+                    if (prev is AuthAuthenticated &&
+                        next is AuthAuthenticated) {
                       return prev.user != next.user;
                     }
                     return true;

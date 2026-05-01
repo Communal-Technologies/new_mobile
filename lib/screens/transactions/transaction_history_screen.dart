@@ -18,6 +18,7 @@ import 'package:communal_mobile/screens/transactions/widgets/filter_status_botto
 import 'package:communal_mobile/screens/transactions/widgets/download_statement_bottomsheet.dart';
 import 'package:communal_mobile/screens/transactions/transaction_history_filters.dart';
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/widgets/back_to_exit_wrapper.dart';
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'dart:convert';
 import 'package:share_plus/share_plus.dart';
@@ -35,8 +36,9 @@ class TransactionHistoryScreen extends StatefulWidget {
 }
 
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
-  late final TransactionsRepository _repo =
-      TransactionsRepository(getIt<DioClient>());
+  late final TransactionsRepository _repo = TransactionsRepository(
+    getIt<DioClient>(),
+  );
   int _currentTabIndex = 0;
   int _currentNavIndex = 0;
 
@@ -113,7 +115,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       'Both' => 'both',
       _ => 'download',
     };
-    final format = request.formatLabel.toLowerCase().contains('pdf') ? 'pdf' : 'csv';
+    final format = request.formatLabel.toLowerCase().contains('pdf')
+        ? 'pdf'
+        : 'csv';
     final email = request.email?.trim();
     if ((delivery == 'email' || delivery == 'both') &&
         (email == null || email.isEmpty)) {
@@ -145,9 +149,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
       final status = result['status'] == true;
       if (!status) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('${result['message'] ?? 'Export failed'}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${result['message'] ?? 'Export failed'}')),
+        );
         return;
       }
 
@@ -155,12 +159,18 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         final fileB64 = result['file_base64']?.toString() ?? '';
         if (fileB64.isNotEmpty) {
           final fileBytes = base64Decode(fileB64);
-          final filename = result['filename']?.toString() ?? 'statement.$format';
-          final mime = result['mime']?.toString() ?? (format == 'pdf' ? 'application/pdf' : 'text/csv');
-          await Share.shareXFiles(
-            [XFile.fromData(Uint8List.fromList(fileBytes), mimeType: mime, name: filename)],
-            text: 'Communal transaction statement',
-          );
+          final filename =
+              result['filename']?.toString() ?? 'statement.$format';
+          final mime =
+              result['mime']?.toString() ??
+              (format == 'pdf' ? 'application/pdf' : 'text/csv');
+          await Share.shareXFiles([
+            XFile.fromData(
+              Uint8List.fromList(fileBytes),
+              mimeType: mime,
+              name: filename,
+            ),
+          ], text: 'Communal transaction statement');
         }
       }
 
@@ -179,9 +189,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not export: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not export: $e')));
     } finally {
       if (mounted) {
         setState(() => _exporting = false);
@@ -250,6 +260,10 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return BackToExitWrapper(child: _buildRootBody(context));
+  }
+
+  Widget _buildRootBody(BuildContext context) {
     final theme = Theme.of(context);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -257,252 +271,275 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       child: Stack(
         children: [
           Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        appBar: AppBar(
-          backgroundColor: Theme.of(context).cardColor,
-          elevation: 0,
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface, size: 24.sp),
-            onPressed: () => context.pop(),
-          ),
-          title: Text(
-            'Transaction History',
-            style: TextStyle(
-              fontSize: 23.sp,
-              fontWeight: FontWeight.w700,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          actions: [
-            Padding(
-              padding: EdgeInsets.only(right: 16.w),
-              child: GestureDetector(
-                onTap: _exporting ? null : () async {
-                  final auth = context.read<AuthBloc>().state;
-                  final u = auth is AuthAuthenticated ? auth.user : null;
-                  final email = u?.email?.trim();
-                  final req = await showModalBottomSheet<StatementExportRequest>(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (ctx) => DownloadStatementBottomSheet(
-                      initialEmail: email,
-                    ),
-                  );
-                  if (!context.mounted || req == null || u == null) return;
-                  await _exportStatement(req, u);
-                },
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 14.w,
-                    vertical: 10.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).dividerColor,
-                    borderRadius: BorderRadius.circular(20.r),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.download,
-                        size: 18.sp,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                      hSpace(6),
-                      Text(
-                        _exporting ? 'Exporting...' : 'Statement',
-                        style: TextStyle(
-                          fontSize: 19.sp,
-                          fontWeight: FontWeight.w500,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                        ),
-                      ),
-                    ],
-                  ),
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            appBar: AppBar(
+              backgroundColor: Theme.of(context).cardColor,
+              elevation: 0,
+              leading: IconButton(
+                icon: Icon(
+                  Icons.arrow_back,
+                  color: Theme.of(context).colorScheme.onSurface,
+                  size: 24.sp,
+                ),
+                onPressed: () => context.pop(),
+              ),
+              title: Text(
+                'Transaction History',
+                style: TextStyle(
+                  fontSize: 23.sp,
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
-            ),
-          ],
-        ),
-        body: BlocConsumer<AuthBloc, AuthState>(
-          listenWhen: (prev, next) {
-            if (prev is AuthAuthenticated && next is AuthAuthenticated) {
-              return prev.user.id != next.user.id ||
-                  prev.user.walletBalanceKobo != next.user.walletBalanceKobo ||
-                  prev.user.ledgerNumber != next.user.ledgerNumber ||
-                  prev.user.countryIso != next.user.countryIso ||
-                  prev.user.walletCurrencyCode != next.user.walletCurrencyCode ||
-                  prev.user.hasCooperativeMembership !=
-                      next.user.hasCooperativeMembership;
-            }
-            return prev.runtimeType != next.runtimeType;
-          },
-          listener: (_, __) => _load(),
-          builder: (context, authState) {
-            final user = authState is AuthAuthenticated ? authState.user : null;
-            final showLedger = _showLedgerTab(user);
-
-            if (_loading) {
-              return const LoaderOverlay();
-            }
-            if (_error != null) {
-              return Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24.w),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _error!,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 19.sp),
+              actions: [
+                Padding(
+                  padding: EdgeInsets.only(right: 16.w),
+                  child: GestureDetector(
+                    onTap: _exporting
+                        ? null
+                        : () async {
+                            final auth = context.read<AuthBloc>().state;
+                            final u = auth is AuthAuthenticated
+                                ? auth.user
+                                : null;
+                            final email = u?.email?.trim();
+                            final req =
+                                await showModalBottomSheet<
+                                  StatementExportRequest
+                                >(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (ctx) =>
+                                      DownloadStatementBottomSheet(
+                                        initialEmail: email,
+                                      ),
+                                );
+                            if (!context.mounted || req == null || u == null)
+                              return;
+                            await _exportStatement(req, u);
+                          },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 14.w,
+                        vertical: 10.h,
                       ),
-                      vSpace(16),
-                      FilledButton(
-                        onPressed: _load,
-                        child: const Text('Retry'),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).dividerColor,
+                        borderRadius: BorderRadius.circular(20.r),
                       ),
-                    ],
-                  ),
-                ),
-              );
-            }
-
-            return Column(
-              children: [
-                if (showLedger)
-                  Container(
-                    color: Theme.of(context).cardColor,
-                    padding: EdgeInsets.symmetric(horizontal: 16.w),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _buildTab(
-                            'Communal (Personal)',
-                            0,
-                            theme,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.download,
+                            size: 18.sp,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
-                        ),
-                        Expanded(
-                          child: _buildTab(
-                            'Ledger (Cooperative)',
-                            1,
-                            theme,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  Container(
-                    width: double.infinity,
-                    color: Theme.of(context).cardColor,
-                    padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
-                    child: Text(
-                      'Communal (Personal)',
-                      style: TextStyle(
-                        fontSize: 19.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                Container(
-                  color: Theme.of(context).cardColor,
-                  padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 12.h),
-                  child: Row(
-                    children: [
-                      Flexible(
-                        child: _buildFilterButton(
-                          icon: Icons.filter_list,
-                          label: _categoryFilterButtonLabel,
-                          onTap: _openCategoryFilterSheet,
-                        ),
-                      ),
-                      hSpace(12),
-                      Flexible(
-                        child: _buildFilterButton(
-                          icon: null,
-                          label: _statusFilterButtonLabel,
-                          onTap: _openStatusFilterSheet,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                vSpace(8),
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _load,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white
-                        : Theme.of(context).primaryColor,
-                    child: _activeMonthly.isEmpty
-                        ? ListView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            children: [
-                              SizedBox(height: 120.h),
-                              Icon(
-                                Icons.receipt_long_outlined,
-                                size: 48.sp,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                              ),
-                              vSpace(12),
-                              Center(
-                                child: Text(
-                                  'No transactions yet',
-                                  style: TextStyle(
-                                    fontSize: 19.sp,
-                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                        : ListView.separated(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: EdgeInsets.symmetric(horizontal: 16.w),
-                            itemBuilder: (_, index) => _buildMonthSection(
-                              _activeMonthly[index].key,
-                              _activeMonthly[index].value,
-                              user != null
-                                  ? currencySymbolForUser(user)
-                                  : currencySymbolForCode('NGN'),
+                          hSpace(6),
+                          Text(
+                            _exporting ? 'Exporting...' : 'Statement',
+                            style: TextStyle(
+                              fontSize: 19.sp,
+                              fontWeight: FontWeight.w500,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.7),
                             ),
-                            separatorBuilder: (_, __) => vSpace(16),
-                            itemCount: _activeMonthly.length,
                           ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],
-            );
-          },
-        ),
-        bottomNavigationBar: BottomNavBar(
-          currentIndex: _currentNavIndex,
-          onTap: (index) {
-            setState(() => _currentNavIndex = index);
-            switch (index) {
-              case 0:
-                context.goNamed('home');
-                break;
-              case 1:
-                context.pushNamed('obligations');
-                break;
-              case 2:
-                context.pushNamed('community');
-                break;
-              case 3:
-                context.goNamed('loans');
-                break;
-              case 4:
-                context.goNamed('account-settings');
-                break;
-            }
-          },
-        ),
-      ),
+            ),
+            body: BlocConsumer<AuthBloc, AuthState>(
+              listenWhen: (prev, next) {
+                if (prev is AuthAuthenticated && next is AuthAuthenticated) {
+                  return prev.user.id != next.user.id ||
+                      prev.user.walletBalanceKobo !=
+                          next.user.walletBalanceKobo ||
+                      prev.user.ledgerNumber != next.user.ledgerNumber ||
+                      prev.user.countryIso != next.user.countryIso ||
+                      prev.user.walletCurrencyCode !=
+                          next.user.walletCurrencyCode ||
+                      prev.user.hasCooperativeMembership !=
+                          next.user.hasCooperativeMembership;
+                }
+                return prev.runtimeType != next.runtimeType;
+              },
+              listener: (_, __) => _load(),
+              builder: (context, authState) {
+                final user = authState is AuthAuthenticated
+                    ? authState.user
+                    : null;
+                final showLedger = _showLedgerTab(user);
+
+                if (_loading) {
+                  return const LoaderOverlay();
+                }
+                if (_error != null) {
+                  return Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24.w),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _error!,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 19.sp),
+                          ),
+                          vSpace(16),
+                          FilledButton(
+                            onPressed: _load,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                return Column(
+                  children: [
+                    if (showLedger)
+                      Container(
+                        color: Theme.of(context).cardColor,
+                        padding: EdgeInsets.symmetric(horizontal: 16.w),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _buildTab('Communal (Personal)', 0, theme),
+                            ),
+                            Expanded(
+                              child: _buildTab(
+                                'Ledger (Cooperative)',
+                                1,
+                                theme,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Container(
+                        width: double.infinity,
+                        color: Theme.of(context).cardColor,
+                        padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
+                        child: Text(
+                          'Communal (Personal)',
+                          style: TextStyle(
+                            fontSize: 19.sp,
+                            fontWeight: FontWeight.w700,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                    Container(
+                      color: Theme.of(context).cardColor,
+                      padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 12.h),
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: _buildFilterButton(
+                              icon: Icons.filter_list,
+                              label: _categoryFilterButtonLabel,
+                              onTap: _openCategoryFilterSheet,
+                            ),
+                          ),
+                          hSpace(12),
+                          Flexible(
+                            child: _buildFilterButton(
+                              icon: null,
+                              label: _statusFilterButtonLabel,
+                              onTap: _openStatusFilterSheet,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    vSpace(8),
+                    Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: _load,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Theme.of(context).primaryColor,
+                        child: _activeMonthly.isEmpty
+                            ? ListView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                children: [
+                                  SizedBox(height: 120.h),
+                                  Icon(
+                                    Icons.receipt_long_outlined,
+                                    size: 48.sp,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.4),
+                                  ),
+                                  vSpace(12),
+                                  Center(
+                                    child: Text(
+                                      'No transactions yet',
+                                      style: TextStyle(
+                                        fontSize: 19.sp,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.6),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : ListView.separated(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                                itemBuilder: (_, index) => _buildMonthSection(
+                                  _activeMonthly[index].key,
+                                  _activeMonthly[index].value,
+                                  user != null
+                                      ? currencySymbolForUser(user)
+                                      : currencySymbolForCode('NGN'),
+                                ),
+                                separatorBuilder: (_, __) => vSpace(16),
+                                itemCount: _activeMonthly.length,
+                              ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+            bottomNavigationBar: BottomNavBar(
+              currentIndex: _currentNavIndex,
+              onTap: (index) {
+                setState(() => _currentNavIndex = index);
+                switch (index) {
+                  case 0:
+                    context.goNamed('home');
+                    break;
+                  case 1:
+                    context.pushNamed('obligations');
+                    break;
+                  case 2:
+                    context.pushNamed('community');
+                    break;
+                  case 3:
+                    context.goNamed('loans');
+                    break;
+                  case 4:
+                    context.goNamed('account-settings');
+                    break;
+                }
+              },
+            ),
+          ),
           if (_exporting)
             Positioned.fill(
               child: AbsorbPointer(
@@ -525,7 +562,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                           SizedBox(
                             width: 20.w,
                             height: 20.w,
-                            child: const CircularProgressIndicator(strokeWidth: 2.4),
+                            child: const CircularProgressIndicator(
+                              strokeWidth: 2.4,
+                            ),
                           ),
                           hSpace(10),
                           Text(
@@ -611,9 +650,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => FilterStatusBottomSheet(
-        initialStatus: _filterStatus,
-      ),
+      builder: (ctx) => FilterStatusBottomSheet(initialStatus: _filterStatus),
     );
     if (!mounted || result == null) return;
     setState(() {
@@ -642,8 +679,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
               Icon(
                 icon,
                 size: 18.sp,
-                color:
-                    Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               hSpace(6),
             ],
@@ -654,7 +692,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 style: TextStyle(
                   fontSize: 19.sp,
                   fontWeight: FontWeight.w500,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ),
@@ -662,7 +702,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             Icon(
               Icons.keyboard_arrow_down,
               size: 18.sp,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ],
         ),
@@ -681,14 +723,12 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     // failed — exclude failed rows from In/Out totals (no balance movement).
     final incoming = transactions
         .where(
-          (t) =>
-              t.isCredit && t.details.status != TransactionStatus.failed,
+          (t) => t.isCredit && t.details.status != TransactionStatus.failed,
         )
         .fold<double>(0, (sum, item) => sum + item.details.amount);
     final outgoing = transactions
         .where(
-          (t) =>
-              !t.isCredit && t.details.status != TransactionStatus.failed,
+          (t) => !t.isCredit && t.details.status != TransactionStatus.failed,
         )
         .fold<double>(0, (sum, item) => sum + item.details.amount);
 
@@ -724,7 +764,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       isExpanded
                           ? Icons.keyboard_arrow_down
                           : Icons.keyboard_arrow_right,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                       size: 22.sp,
                     ),
                   ],

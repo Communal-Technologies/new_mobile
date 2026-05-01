@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/widgets/back_to_exit_wrapper.dart';
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -27,10 +28,11 @@ class FinancialObligationsScreen extends StatefulWidget {
       _FinancialObligationsScreenState();
 }
 
-class _FinancialObligationsScreenState
-    extends State<FinancialObligationsScreen> with WidgetsBindingObserver {
-  final MemberObligationsRepository _repository =
-      MemberObligationsRepository(getIt());
+class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
+    with WidgetsBindingObserver {
+  final MemberObligationsRepository _repository = MemberObligationsRepository(
+    getIt(),
+  );
   final _searchController = TextEditingController();
   final List<String> _categories = ['Equity', 'Patronage', 'Custom', 'Fine'];
   List<Obligation> _obligations = const [];
@@ -79,7 +81,8 @@ class _FinancialObligationsScreenState
       final availableCategories = rows.map((e) => e.category).toSet();
       setState(() {
         _obligations = rows;
-        if (rows.isNotEmpty && !availableCategories.contains(_selectedCategory)) {
+        if (rows.isNotEmpty &&
+            !availableCategories.contains(_selectedCategory)) {
           _selectedCategory = rows.first.category;
         }
         _loading = false;
@@ -94,6 +97,10 @@ class _FinancialObligationsScreenState
 
   @override
   Widget build(BuildContext context) {
+    return BackToExitWrapper(child: _buildRootBody(context));
+  }
+
+  Widget _buildRootBody(BuildContext context) {
     final theme = Theme.of(context);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -114,7 +121,10 @@ class _FinancialObligationsScreenState
                       : theme.primaryColor,
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 16.h,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -233,11 +243,7 @@ class _FinancialObligationsScreenState
             ),
           ],
         ),
-        child: Icon(
-          icon,
-          color: theme.colorScheme.onSurface,
-          size: 20.sp,
-        ),
+        child: Icon(icon, color: theme.colorScheme.onSurface, size: 20.sp),
       ),
     );
   }
@@ -248,30 +254,37 @@ class _FinancialObligationsScreenState
     // looking at — otherwise switching tabs leaves the same totals
     // sitting at the top, which makes them feel static and wrong.
     final scoped = _obligations
-        .where((o) =>
-            o.category.toLowerCase() == _selectedCategory.toLowerCase())
+        .where(
+          (o) => o.category.toLowerCase() == _selectedCategory.toLowerCase(),
+        )
         .toList();
     final currency = auth is AuthAuthenticated
         ? resolveCurrencyCode(auth.user)
         : (scoped.isNotEmpty
-            ? scoped.first.currency
-            : (_obligations.isNotEmpty ? _obligations.first.currency : 'NGN'));
-    final totalDueMinor =
-        scoped.fold<int>(0, (sum, row) => sum + row.balanceMinor);
-    final totalPaidMinor =
-        scoped.fold<int>(0, (sum, row) => sum + row.paidAmountMinor);
+              ? scoped.first.currency
+              : (_obligations.isNotEmpty
+                    ? _obligations.first.currency
+                    : 'NGN'));
+    final totalDueMinor = scoped.fold<int>(
+      0,
+      (sum, row) => sum + row.balanceMinor,
+    );
+    final totalPaidMinor = scoped.fold<int>(
+      0,
+      (sum, row) => sum + row.paidAmountMinor,
+    );
     // Equity has no "next due" — it's share-based and never overdue. Show
     // a dash for that category instead of an upcoming date that doesn't
     // mean anything.
     final nextDueLabel = scoped.isEmpty
         ? 'N/A'
         : (_selectedCategory == 'Equity'
-            ? '—'
-            : _formatDate(
-                scoped
-                    .map((e) => e.nextDueDate)
-                    .reduce((a, b) => a.isBefore(b) ? a : b),
-              ));
+              ? '—'
+              : _formatDate(
+                  scoped
+                      .map((e) => e.nextDueDate)
+                      .reduce((a, b) => a.isBefore(b) ? a : b),
+                ));
     final cards = [
       _SummaryCardData(
         label: 'Total Due',
@@ -392,10 +405,11 @@ class _FinancialObligationsScreenState
             width: 36.w,
             height: 36.w,
             decoration: BoxDecoration(
-              color: (theme.brightness == Brightness.dark
-                      ? Colors.white
-                      : theme.primaryColor)
-                  .withValues(alpha: 0.12),
+              color:
+                  (theme.brightness == Brightness.dark
+                          ? Colors.white
+                          : theme.primaryColor)
+                      .withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10.r),
             ),
             child: Icon(
@@ -424,7 +438,10 @@ class _FinancialObligationsScreenState
                 style: TextStyle(fontSize: 17.sp, color: Colors.red.shade400),
               ),
               vSpace(8),
-              TextButton(onPressed: _loadObligations, child: const Text('Retry')),
+              TextButton(
+                onPressed: _loadObligations,
+                child: const Text('Retry'),
+              ),
             ],
           ),
         ),

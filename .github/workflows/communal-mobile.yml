@@ -121,35 +121,6 @@ jobs:
           keyPassword=${KEY_PW}
           EOF
 
-      # TEMPORARY: verify the keystore + alias + passwords seen by CI match what
-      # works locally. Remove this step once the build is signing successfully.
-      - name: DEBUG — verify keystore contents in CI
-        env:
-          KEYSTORE_PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PW: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-          if [[ ! -f android/app/upload.jks ]]; then
-            echo "No keystore decoded — debug step has nothing to inspect."
-            exit 0
-          fi
-          echo "--- file size + sha256 of decoded keystore (sanity check) ---"
-          wc -c android/app/upload.jks
-          sha256sum android/app/upload.jks
-          echo "--- first 8 bytes (hex) — should look like a PKCS12 header ---"
-          head -c 8 android/app/upload.jks | xxd
-          echo "--- list keystore (uses store password only) ---"
-          keytool -list \
-            -keystore android/app/upload.jks \
-            -storepass "$KEYSTORE_PW"
-          echo "--- look up the alias (uses store + key passwords) ---"
-          keytool -list \
-            -keystore android/app/upload.jks \
-            -storepass "$KEYSTORE_PW" \
-            -alias "$KEY_ALIAS" \
-            -keypass "$KEY_PW"
-
       - name: Install dependencies
         run: flutter pub get
 
@@ -176,8 +147,15 @@ jobs:
         id: stage
         run: |
           set -euo pipefail
+          # Versioned APK — immutable audit trail.
           cp build/app/outputs/flutter-apk/app-release.apk \
             "communal-mobile-${{ steps.meta.outputs.env_tag }}-${{ steps.meta.outputs.file_tag }}.apk"
+          # Stable env-aware APK — overwritten each run, used as the public
+          # "latest" download. Copied to its final name on disk so we don't
+          # need gh's `file#display-name` rename syntax (which proved flaky).
+          cp build/app/outputs/flutter-apk/app-release.apk \
+            "communal-mobile-${{ steps.meta.outputs.env_tag }}.apk"
+          # Backwards-compat copy used elsewhere in the workflow.
           cp build/app/outputs/flutter-apk/app-release.apk communal-mobile.apk
           if [[ "${{ env.IS_PROD }}" == "true" ]]; then
             cp build/app/outputs/bundle/release/app-release.aab \
@@ -228,12 +206,13 @@ jobs:
           if gh release view "$LATEST_TAG" --repo "$REPO" >/dev/null 2>&1; then
             gh release delete "$LATEST_TAG" --repo "$REPO" --yes --cleanup-tag
           fi
-          # Upload the APK under a stable display filename via `assetfile#displayname` syntax.
+          # Upload the file under its stable env-aware name so the public URL is
+          # /releases/download/<env>-latest/communal-mobile-<env>.apk
           gh release create "$LATEST_TAG" \
             --repo "$REPO" \
             --title "Latest ${ENV_TAG} build" \
             --notes "Always points at the most recent ${ENV_TAG} build. Direct link: https://github.com/${REPO}/releases/download/${LATEST_TAG}/${STABLE_NAME}" \
-            "${VERSIONED_NAME}#${STABLE_NAME}"
+            "$STABLE_NAME"
 
           LATEST_URL="https://github.com/${REPO}/releases/download/${LATEST_TAG}/${STABLE_NAME}"
           VERSIONED_URL="https://github.com/${REPO}/releases/download/${BUILD_TAG}/${VERSIONED_NAME}"

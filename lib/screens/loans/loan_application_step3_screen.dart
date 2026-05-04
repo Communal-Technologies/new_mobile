@@ -68,15 +68,9 @@ class _LoanApplicationStep3ScreenState
         scheme: widget.draft.scheme,
         amountMajor: widget.draft.amountMajor,
         interestType: widget.draft.interestType,
-        employmentStatus: widget.draft.employmentStatus,
         reasonForLoan: widget.draft.reasonForLoan,
         pickedDurationMonths: widget.draft.pickedDurationMonths,
         guarantorLedgers: guarantorLedgers,
-        company: widget.draft.company,
-        department: widget.draft.department,
-        monthlySalary: widget.draft.monthlySalary,
-        outstandingLoan: widget.draft.outstandingLoan,
-        otherMonthlyRepayment: widget.draft.otherMonthlyRepayment,
       );
       if (!mounted) return;
       // The current store endpoint returns a generic success message

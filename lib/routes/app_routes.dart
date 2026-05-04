@@ -15,7 +15,6 @@ import 'package:communal_mobile/screens/auth/login_screen.dart';
 import 'package:communal_mobile/screens/auth/welcome_back_screen.dart';
 import 'package:communal_mobile/screens/auth/phone_verification_screen.dart';
 import 'package:communal_mobile/screens/auth/set_pin_screen.dart';
-import 'package:communal_mobile/screens/auth/set_password_screen.dart';
 import 'package:communal_mobile/screens/auth/account_success_screen.dart';
 import 'package:communal_mobile/screens/auth/forgot_password_screen.dart';
 import 'package:communal_mobile/screens/auth/verify_reset_screen.dart';
@@ -113,7 +112,6 @@ const Set<String> _publicPaths = <String>{
   '/signup',
   '/verify-phone',
   '/set-pin',
-  '/set-password',
   '/account-success',
   '/forgot-password',
   '/verify-reset',
@@ -333,19 +331,6 @@ final GoRouter appRouter = GoRouter(
             ? state.extra as Map<String, dynamic>
             : const <String, dynamic>{};
         return SetPinScreen(
-          phone: extra['phone']?.toString(),
-          userId: extra['userId']?.toString(),
-        );
-      },
-    ),
-    GoRoute(
-      path: '/set-password',
-      name: 'set-password',
-      builder: (context, state) {
-        final extra = state.extra is Map<String, dynamic>
-            ? state.extra as Map<String, dynamic>
-            : const <String, dynamic>{};
-        return SetPasswordScreen(
           phone: extra['phone']?.toString(),
           userId: extra['userId']?.toString(),
         );

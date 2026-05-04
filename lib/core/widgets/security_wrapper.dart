@@ -177,7 +177,6 @@ class _SecurityWrapperState extends State<SecurityWrapper>
           p.startsWith('/reset-password') ||
           p.startsWith('/verify-reset') ||
           p.startsWith('/phone-verification') ||
-          p.startsWith('/set-password') ||
           p.startsWith('/set-pin') ||
           p.startsWith('/account-success');
     }

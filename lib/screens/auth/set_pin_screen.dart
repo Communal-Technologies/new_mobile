@@ -236,136 +236,40 @@ class _SetPinScreenState extends State<SetPinScreen> {
                 onPressed: _submitting ? null : _validateAndContinue,
               ),
 
-              vSpace(20),
-
-              // Alternative
-              Center(
-                child: Text(
-                  'Or sign in with',
-                  style: TextStyle(
-                    fontSize: 17.sp,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-              ),
-
-              vSpace(16),
-
-              // Password option — same userId / phone flow forwarded so
-              // /set-password can finish the account creation if the
-              // user prefers a password to a PIN.
-              InkWell(
-                onTap: _submitting
-                    ? null
-                    : () {
-                        context.pushReplacement(
-                          '/set-password',
-                          extra: {
-                            'phone': widget.phone,
-                            'userId': widget.userId,
-                          },
-                        );
-                      },
-                borderRadius: BorderRadius.circular(25.r),
-                child: Container(
-                  width: double.infinity,
-                  height: 50.h,
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: Theme.of(context).dividerColor,
-                      width: 1.5,
-                    ),
-                    borderRadius: BorderRadius.circular(25.r),
-                  ),
-                  child: Center(
-                    child: Text(
-                      'Password (Alpha-numeric)',
-                      style: TextStyle(
-                        fontSize: 19.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
               vSpace(40),
                     ],
                   ),
                 ),
               ),
 
-              // Footer - regulatory info (fixed at bottom)
-              vSpace(16),
-              Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Licensed by CBN',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                    hSpace(4),
-                    Container(
-                      width: 20.w,
-                      height: 20.w,
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade100,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          'CBN',
-                          style: TextStyle(
-                            fontSize: 6.sp,
-                            color: Colors.green.shade800,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    hSpace(8),
-                    Text(
-                      '|',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                      ),
-                    ),
-                    hSpace(8),
-                    Text(
-                      'Deposits insured by',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                    hSpace(4),
-                    Container(
-                      width: 40.w,
-                      height: 20.w,
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade100,
-                        borderRadius: BorderRadius.circular(4.r),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'NDIC',
-                          style: TextStyle(
-                            fontSize: 8.sp,
-                            color: Colors.blue.shade800,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              // Footer - regulatory info (CBN / NDIC) — hidden for now per design.
+              // Restore the Row below if/when the licensing copy returns.
+              // vSpace(16),
+              // Center(
+              //   child: Row(
+              //     mainAxisAlignment: MainAxisAlignment.center,
+              //     children: [
+              //       Text('Licensed by CBN', style: TextStyle(fontSize: 16.sp,
+              //         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
+              //       hSpace(4),
+              //       Container(width: 20.w, height: 20.w,
+              //         decoration: BoxDecoration(color: Colors.green.shade100, shape: BoxShape.circle),
+              //         child: Center(child: Text('CBN',
+              //           style: TextStyle(fontSize: 6.sp, color: Colors.green.shade800, fontWeight: FontWeight.bold)))),
+              //       hSpace(8),
+              //       Text('|', style: TextStyle(fontSize: 16.sp,
+              //         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4))),
+              //       hSpace(8),
+              //       Text('Deposits insured by', style: TextStyle(fontSize: 16.sp,
+              //         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
+              //       hSpace(4),
+              //       Container(width: 40.w, height: 20.w,
+              //         decoration: BoxDecoration(color: Colors.blue.shade100, borderRadius: BorderRadius.circular(4.r)),
+              //         child: Center(child: Text('NDIC',
+              //           style: TextStyle(fontSize: 8.sp, color: Colors.blue.shade800, fontWeight: FontWeight.bold)))),
+              //     ],
+              //   ),
+              // ),
               vSpace(24),
             ],
           ),

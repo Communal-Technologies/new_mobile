@@ -15,6 +15,17 @@ class GuarantorRequest {
     required this.currency,
     required this.status,
     required this.createdAt,
+    this.expiresAt,
+    this.lastRemindedAt,
+    this.reasonForLoan,
+    this.interestType,
+    this.monthlyRepayment,
+    this.schemeTitle,
+    this.schemeInterestRate,
+    this.schemeDurationMonths,
+    this.schemeServiceChargeMinor,
+    this.schemeNumberOfGuarantors,
+    this.coGuarantorsRemaining,
   });
 
   final String id;
@@ -27,6 +38,22 @@ class GuarantorRequest {
   /// `'0'` = pending, `'1'` = accepted, anything else = declined.
   final String status;
   final DateTime createdAt;
+  final DateTime? expiresAt;
+  final DateTime? lastRemindedAt;
+
+  /// Loan-detail fields used by the guarantor-detail screen so the
+  /// member sees what they're actually backing before they accept.
+  /// Optional because legacy `index` responses omitted them and we
+  /// don't want to crash on stale rows.
+  final String? reasonForLoan;
+  final String? interestType;
+  final num? monthlyRepayment;
+  final String? schemeTitle;
+  final num? schemeInterestRate;
+  final int? schemeDurationMonths;
+  final int? schemeServiceChargeMinor;
+  final int? schemeNumberOfGuarantors;
+  final int? coGuarantorsRemaining;
 
   bool get isPending => status == '0';
   bool get isAccepted => status == '1';
@@ -47,6 +74,7 @@ class GuarantorRequest {
             ? m['currency'].toString()
             : (fallbackCurrency ?? 'NGN'))
         .toUpperCase();
+    final loan = (m['loan'] is Map) ? Map<String, dynamic>.from(m['loan']) : null;
     return GuarantorRequest(
       id: m['id']?.toString() ?? '',
       applicantName: m['name']?.toString().trim() ?? '',
@@ -56,7 +84,29 @@ class GuarantorRequest {
       currency: currency,
       status: m['status']?.toString().trim() ?? '0',
       createdAt: _parseDate(m['created_at']) ?? DateTime.now(),
+      expiresAt: _parseDate(m['expires_at']),
+      lastRemindedAt: _parseDate(m['last_reminded_at']),
+      reasonForLoan: loan?['reason_for_loan']?.toString(),
+      interestType: loan?['interest_type']?.toString(),
+      monthlyRepayment: loan?['monthly_repayment'] is num
+          ? loan!['monthly_repayment'] as num
+          : num.tryParse(loan?['monthly_repayment']?.toString() ?? ''),
+      schemeTitle: loan?['scheme_title']?.toString(),
+      schemeInterestRate: loan?['scheme_interest_rate'] is num
+          ? loan!['scheme_interest_rate'] as num
+          : num.tryParse(loan?['scheme_interest_rate']?.toString() ?? ''),
+      schemeDurationMonths: _asNullableInt(loan?['scheme_duration_months']),
+      schemeServiceChargeMinor: _asNullableInt(loan?['scheme_service_charge_minor']),
+      schemeNumberOfGuarantors: _asNullableInt(loan?['scheme_number_of_guarantors']),
+      coGuarantorsRemaining: _asNullableInt(loan?['co_guarantors_remaining']),
     );
+  }
+
+  static int? _asNullableInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse(v.toString().trim());
   }
 
   static int _asInt(dynamic v) {

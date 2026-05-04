@@ -170,6 +170,22 @@ class ApiEndpoints {
   static const String membersLoanApplication = '/members/loan/application';
   static const String membersLoanCancelRequest = '/members/loan/cancel-request';
 
+  /// Per-loan guarantor list with name + status + expiry. Used by the
+  /// applicant's loan-detail screen to render the per-guarantor card
+  /// with remind/replace actions.
+  static String membersGuarantorsForLoan(String loanRef) =>
+      '/members/loan/guarantors/for-loan/$loanRef';
+
+  /// Re-fire the guarantor invitation SMS / push for a still-pending
+  /// approval row (rate-limited 24h, pre-expiry only — backend
+  /// enforces both).
+  static String membersGuarantorRemind(String approvalId) =>
+      '/members/loan/guarantors/$approvalId/remind';
+
+  /// Swap a still-unresolved (or expired) guarantor for a new one.
+  static const String membersGuarantorReplace =
+      '/members/loan/guarantors/replace';
+
   /// Member-initiated loan repayment (obligation→loan path).
   /// Biometric-gated server-side. Mirrors the obligation flow.
   static const String membersPayLoan = '/members/loan/pay';

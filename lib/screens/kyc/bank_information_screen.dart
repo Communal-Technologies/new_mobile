@@ -671,8 +671,8 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                         (value != null && value.isNotEmpty) ? value : label,
                         style: TextStyle(
                           color: (value != null && value.isNotEmpty)
-                              ? Colors.black87
-                              : Colors.grey.shade400,
+                              ? Theme.of(context).colorScheme.onSurface
+                              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                           fontSize: 19.sp,
                         ),
                         maxLines: 1,

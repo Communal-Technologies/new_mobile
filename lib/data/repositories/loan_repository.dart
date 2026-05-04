@@ -8,6 +8,7 @@ import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/models/guarantor_request.dart';
 import 'package:communal_mobile/data/models/loan_application.dart';
 import 'package:communal_mobile/data/models/loan_eligibility.dart';
+import 'package:communal_mobile/data/models/loan_guarantor.dart';
 import 'package:communal_mobile/data/models/loan_installment.dart';
 import 'package:communal_mobile/data/models/loan_scheme.dart';
 import 'package:communal_mobile/data/models/member_search_result.dart';
@@ -290,6 +291,74 @@ class LoanRepository {
           .toList(growable: false);
     } on DioException catch (e) {
       throw _wrap(e, 'Unable to fetch guarantor requests');
+    }
+  }
+
+  /// Per-loan guarantor list (name + status + expiry + last-reminded).
+  /// Drives the per-guarantor card on the applicant's loan-detail
+  /// screen so they can see who has approved / declined / is still
+  /// pending and act on rows individually (remind / replace).
+  Future<LoanGuarantorList> fetchGuarantorsForLoan(String loanRef) async {
+    try {
+      final response = await _dio.get(
+        ApiEndpoints.membersGuarantorsForLoan(loanRef),
+      );
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data is Map) {
+          return LoanGuarantorList.fromJson(Map<String, dynamic>.from(data));
+        }
+      }
+      throw Exception('Unable to fetch guarantors');
+    } on DioException catch (e) {
+      throw _wrap(e, 'Unable to fetch guarantors');
+    }
+  }
+
+  /// Re-fire the invitation SMS / push for a still-pending guarantor
+  /// invitation. Backend rate-limits to one reminder per 24h and
+  /// rejects the call if the row has already expired (the only post-
+  /// expiry path is replace).
+  Future<void> remindGuarantor(String approvalId) async {
+    try {
+      final response = await _dio.post(
+        ApiEndpoints.membersGuarantorRemind(approvalId),
+      );
+      if (response.statusCode == 200) return;
+      final data = response.data;
+      if (data is Map && data['message'] != null) {
+        throw Exception(data['message'].toString());
+      }
+      throw Exception('Unable to send reminder');
+    } on DioException catch (e) {
+      throw _wrap(e, 'Unable to send reminder');
+    }
+  }
+
+  /// Swap a still-unresolved (or expired) guarantor for a new one.
+  /// Backend closes the old row (`status='2'`), creates a fresh
+  /// pending row for [newGuarantorLedger] with a 7-day expiry, and
+  /// fires the standard invitation push / SMS to the new guarantor.
+  Future<void> replaceGuarantor({
+    required String oldApprovalId,
+    required String newGuarantorLedger,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiEndpoints.membersGuarantorReplace,
+        data: {
+          'old_approval_id': oldApprovalId,
+          'new_guarantor_ledger': newGuarantorLedger,
+        },
+      );
+      if (response.statusCode == 200) return;
+      final data = response.data;
+      if (data is Map && data['message'] != null) {
+        throw Exception(data['message'].toString());
+      }
+      throw Exception('Unable to replace guarantor');
+    } on DioException catch (e) {
+      throw _wrap(e, 'Unable to replace guarantor');
     }
   }
 

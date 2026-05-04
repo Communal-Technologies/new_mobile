@@ -73,6 +73,8 @@ import 'package:communal_mobile/screens/loans/loan_payment_screen.dart';
 import 'package:communal_mobile/screens/loans/loan_confirm_payment_screen.dart';
 import 'package:communal_mobile/screens/loans/data/loan_nip_settlement.dart';
 import 'package:communal_mobile/screens/loans/guarantor_requests_screen.dart';
+import 'package:communal_mobile/screens/loans/guarantor_request_detail_screen.dart';
+import 'package:communal_mobile/data/models/guarantor_request.dart';
 import 'package:communal_mobile/screens/loans/data/loan_application_draft.dart';
 import 'package:communal_mobile/screens/account/account_settings_screen.dart';
 import 'package:communal_mobile/screens/account/my_profile_screen.dart';
@@ -587,6 +589,20 @@ final GoRouter appRouter = GoRouter(
       path: '/guarantor-requests',
       name: 'guarantor-requests',
       builder: (context, state) => const GuarantorRequestsScreen(),
+    ),
+    GoRoute(
+      path: '/guarantor-request-detail',
+      name: 'guarantor-request-detail',
+      builder: (context, state) {
+        final extra = state.extra;
+        if (extra is! GuarantorRequest) {
+          // Defensive: if someone deep-links here without a payload,
+          // bounce back to the inbox rather than crashing on a null
+          // request.
+          return const GuarantorRequestsScreen();
+        }
+        return GuarantorRequestDetailScreen(request: extra);
+      },
     ),
     GoRoute(
       path: '/loan-application-success',

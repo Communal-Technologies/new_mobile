@@ -926,7 +926,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                       child: AppSecondaryButton(
                         title: 'Skip',
                         isDark: false,
-                        onPressed: _skip,
+                        onPressed: _isSubmitting ? null : _skip,
                       ),
                     ),
                     hSpace(16),
@@ -1003,8 +1003,11 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
               value: value,
               isExpanded: true,
               menuMaxHeight: 280.h,
-              dropdownColor: Colors.white,
-              style: TextStyle(fontSize: 19.sp, color: Colors.black87),
+              dropdownColor: Theme.of(context).colorScheme.surface,
+              style: TextStyle(
+                fontSize: 19.sp,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
               hint: Text(
                 label,
                 style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 19.sp),
@@ -1021,7 +1024,10 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                   value: item,
                   child: Text(
                     item,
-                    style: TextStyle(fontSize: 19.sp, color: Colors.black87),
+                    style: TextStyle(
+                      fontSize: 19.sp,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                 );
               }).toList(),

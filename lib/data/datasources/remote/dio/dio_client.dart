@@ -35,7 +35,14 @@ class DioClient {
     dio
       ..options.baseUrl = baseUrl
       ..options.connectTimeout = const Duration(seconds: 30)
-      ..options.receiveTimeout = const Duration(seconds: 30)
+      // 60s, not 30s. KYC tier-2 (multipart upload + Anchor verification
+      // round-trip) and statement export routinely run 20–40s on weaker
+      // mobile links. With the previous 30s deadline, those completed-
+      // but-slow requests timed out from Dio's perspective, the
+      // interceptor saw `response == null`, and the global "Connection
+      // lost" modal popped on every slow KYC submission. The receive
+      // deadline is the wrong layer to enforce per-request budgets.
+      ..options.receiveTimeout = const Duration(seconds: 60)
       ..options.headers = {
         HttpHeaders.contentTypeHeader: 'application/json; charset=UTF-8',
         HttpHeaders.authorizationHeader: _token != null ? 'Bearer $_token' : '',

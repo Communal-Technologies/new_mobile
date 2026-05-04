@@ -30,10 +30,6 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
   String? _error;
   List<GuarantorRequest> _requests = const [];
 
-  /// Per-row in-flight flag so we disable just the row being acted on,
-  /// not the whole list.
-  final Set<String> _processing = <String>{};
-
   @override
   void initState() {
     super.initState();
@@ -60,38 +56,6 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
         _loading = false;
         _error = e.toString().replaceFirst('Exception: ', '');
       });
-    }
-  }
-
-  Future<void> _respond(GuarantorRequest req, bool accept) async {
-    if (_processing.contains(req.id)) return;
-    setState(() => _processing.add(req.id));
-    try {
-      await _repo.respondToGuarantorRequest(
-        requestId: req.id,
-        guarantorLedger: req.guarantorLedger,
-        accept: accept,
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(accept ? 'Request accepted' : 'Request declined'),
-        ),
-      );
-      // Refresh the inbox so the row picks up the new status.
-      await _load();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
-          backgroundColor: const Color(0xFFE74C3C),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _processing.remove(req.id));
-      }
     }
   }
 
@@ -190,155 +154,136 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
   }
 
   Widget _requestCard(GuarantorRequest req) {
-    final processing = _processing.contains(req.id);
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 20.r,
-                backgroundColor: const Color(0xFFEEE5FF),
-                child: Icon(
-                  Icons.person,
-                  size: 20.sp,
-                  color: const Color(0xFF7434FF),
-                ),
-              ),
-              hSpace(12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      req.applicantName.isNotEmpty
-                          ? req.applicantName
-                          : 'Member',
-                      style: TextStyle(
-                        fontSize: 19.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    vSpace(2),
-                    Text(
-                      'Asked you to guarantor • ${req.createdAtLabel}',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _statusChip(req),
-            ],
-          ),
-          vSpace(12),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(10.r),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.attach_money,
-                  size: 16.sp,
-                  color: const Color(0xFF7434FF),
-                ),
-                hSpace(6),
-                Text(
-                  'Loan amount',
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  req.amountLabel,
-                  style: TextStyle(
-                    fontSize: 17.sp,
-                    fontWeight: FontWeight.w700,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (req.isPending) ...[
-            vSpace(12),
+    // The card is now a navigation entry into the detail screen
+    // (which carries the loan details, risk disclosure, and the
+    // acknowledgement gate before the Accept button enables). Inline
+    // accept/decline removed so a member can't approve without
+    // reading what they're signing up for.
+    return InkWell(
+      borderRadius: BorderRadius.circular(16.r),
+      onTap: () async {
+        final result = await context.pushNamed<bool>(
+          'guarantor-request-detail',
+          extra: req,
+        );
+        if (result == true) {
+          // Detail screen reports back when the request was actioned;
+          // refresh the inbox so the row picks up the new status.
+          await _load();
+        }
+      },
+      child: Container(
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Row(
               children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: processing ? null : () => _respond(req, false),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFFE74C3C)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.r),
-                      ),
-                      padding: EdgeInsets.symmetric(vertical: 12.h),
-                    ),
-                    child: Text(
-                      'Decline',
-                      style: TextStyle(
-                        fontSize: 17.sp,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFFE74C3C),
-                      ),
-                    ),
+                CircleAvatar(
+                  radius: 20.r,
+                  backgroundColor: const Color(0xFFEEE5FF),
+                  child: Icon(
+                    Icons.person,
+                    size: 20.sp,
+                    color: const Color(0xFF7434FF),
                   ),
                 ),
                 hSpace(12),
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: processing ? null : () => _respond(req, true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF7434FF),
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: Colors.grey.shade300,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.r),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        req.applicantName.isNotEmpty
+                            ? req.applicantName
+                            : 'Member',
+                        style: TextStyle(
+                          fontSize: 19.sp,
+                          fontWeight: FontWeight.w700,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                       ),
-                      padding: EdgeInsets.symmetric(vertical: 12.h),
-                    ),
-                    child: processing
-                        ? SizedBox(
-                            width: 16.w,
-                            height: 16.w,
-                            child: const CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Text(
-                            'Accept',
-                            style: TextStyle(
-                              fontSize: 17.sp,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
+                      vSpace(2),
+                      Text(
+                        'Asked you to guarantor • ${req.createdAtLabel}',
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                _statusChip(req),
               ],
             ),
+            vSpace(12),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.attach_money,
+                    size: 16.sp,
+                    color: const Color(0xFF7434FF),
+                  ),
+                  hSpace(6),
+                  Text(
+                    'Loan amount',
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    req.amountLabel,
+                    style: TextStyle(
+                      fontSize: 17.sp,
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (req.isPending) ...[
+              vSpace(12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    'Tap to review',
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF7434FF),
+                    ),
+                  ),
+                  hSpace(4),
+                  Icon(
+                    Icons.arrow_forward,
+                    size: 16.sp,
+                    color: const Color(0xFF7434FF),
+                  ),
+                ],
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

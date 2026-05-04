@@ -43,7 +43,7 @@ class KycAlert extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 19.sp,
                         fontWeight: FontWeight.w700,
-                        color: Theme.of(context).colorScheme.onSurface,
+                        color: const Color(0xFF1A1A1A),
                       ),
                     ),
                     vSpace(8),
@@ -51,7 +51,7 @@ class KycAlert extends StatelessWidget {
                       'We\'ve detected that some of your details may be inaccurate or incomplete, kindly update to continue.',
                       style: TextStyle(
                         fontSize: 17.sp,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        color: const Color(0xFF1A1A1A).withValues(alpha: 0.7),
                         height: 1.4,
                       ),
                     ),

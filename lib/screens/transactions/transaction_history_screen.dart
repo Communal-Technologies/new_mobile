@@ -379,7 +379,10 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 final showLedger = _showLedgerTab(user);
 
                 if (_loading) {
-                  return const LoaderOverlay();
+                  // Body stays empty — the full-screen LoaderOverlay
+                  // sits at the Stack level so it covers the AppBar and
+                  // bottom nav rather than just the body.
+                  return const SizedBox.shrink();
                 }
                 if (_error != null) {
                   return Center(
@@ -540,6 +543,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
               },
             ),
           ),
+          if (_loading) const Positioned.fill(child: LoaderOverlay()),
           if (_exporting)
             Positioned.fill(
               child: AbsorbPointer(

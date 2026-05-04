@@ -170,6 +170,9 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
   Future<void> _onAppLoginToggle(bool value) async {
     await _prefs.setAppLoginEnabled(value);
     setState(() {});
+    if (!value && !_prefs.transactionsEnabled) {
+      await _autoDisableMaster();
+    }
   }
 
   Future<void> _onTransactionsToggle(bool value) async {
@@ -181,6 +184,35 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
     }
     await _prefs.setTransactionsEnabled(value);
     setState(() {});
+    if (!value && !_prefs.appLoginEnabled) {
+      await _autoDisableMaster();
+    }
+  }
+
+  /// Turn the master switch off when both use-case toggles are off.
+  /// Biometric with no use case is dead state — the keypair stays on
+  /// the device but is never invoked, and re-enrolling later still
+  /// triggers a fresh biometric prompt anyway.
+  Future<void> _autoDisableMaster() async {
+    if (_busy || !_masterEnabled) return;
+    setState(() => _busy = true);
+    try {
+      await _signer.unenroll();
+      await _prefs.resetAll();
+      if (!mounted) return;
+      setState(() => _masterEnabled = false);
+      _showSnack(
+        'Biometric authentication disabled — at least one use case is required.',
+      );
+    } on BiometricKeyException catch (e) {
+      if (!mounted) return;
+      _showSnack(_messageForBiometricError(e));
+    } catch (e) {
+      if (!mounted) return;
+      _showSnack(e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<bool?> _showTransactionsDisableWarning() {

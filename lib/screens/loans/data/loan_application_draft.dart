@@ -13,13 +13,7 @@ class LoanApplicationDraft {
     required this.interestType,
     required this.reasonForLoan,
     this.pickedDurationMonths,
-    this.employmentStatus = 'unemployed',
     this.guarantors = const [],
-    this.company,
-    this.department,
-    this.monthlySalary,
-    this.outstandingLoan,
-    this.otherMonthlyRepayment,
   });
 
   /// Member-chosen duration within the scheme's [min..max] window.
@@ -45,18 +39,8 @@ class LoanApplicationDraft {
 
   final String reasonForLoan;
 
-  /// `'employed'` or `'unemployed'` — the controller branches on this
-  /// to require company / salary fields (see StoreLoanApplicationRequest).
-  final String employmentStatus;
-
   /// Guarantors picked in step 2. Empty until then.
   final List<MemberSearchResult> guarantors;
-
-  final String? company;
-  final String? department;
-  final double? monthlySalary;
-  final double? outstandingLoan;
-  final double? otherMonthlyRepayment;
 
   LoanApplicationDraft copyWith({
     LoanScheme? scheme,
@@ -65,13 +49,7 @@ class LoanApplicationDraft {
     String? interestType,
     String? reasonForLoan,
     int? pickedDurationMonths,
-    String? employmentStatus,
     List<MemberSearchResult>? guarantors,
-    String? company,
-    String? department,
-    double? monthlySalary,
-    double? outstandingLoan,
-    double? otherMonthlyRepayment,
   }) {
     return LoanApplicationDraft(
       scheme: scheme ?? this.scheme,
@@ -80,14 +58,7 @@ class LoanApplicationDraft {
       interestType: interestType ?? this.interestType,
       reasonForLoan: reasonForLoan ?? this.reasonForLoan,
       pickedDurationMonths: pickedDurationMonths ?? this.pickedDurationMonths,
-      employmentStatus: employmentStatus ?? this.employmentStatus,
       guarantors: guarantors ?? this.guarantors,
-      company: company ?? this.company,
-      department: department ?? this.department,
-      monthlySalary: monthlySalary ?? this.monthlySalary,
-      outstandingLoan: outstandingLoan ?? this.outstandingLoan,
-      otherMonthlyRepayment:
-          otherMonthlyRepayment ?? this.otherMonthlyRepayment,
     );
   }
 

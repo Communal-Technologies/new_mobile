@@ -335,16 +335,10 @@ class LoanRepository {
     required LoanScheme scheme,
     required num amountMajor,
     required String interestType,
-    required String employmentStatus,
     required String reasonForLoan,
     int? pickedDurationMonths,
     List<String> guarantorLedgers = const [],
     String? collateralToken,
-    String? company,
-    String? department,
-    num? monthlySalary,
-    num? outstandingLoan,
-    num? otherMonthlyRepayment,
   }) async {
     final cooperativeId = user.cooperativeId?.trim() ?? '';
     final ledger = user.ledgerNumber?.trim() ?? '';
@@ -377,7 +371,6 @@ class LoanRepository {
       )),
       'amount': amountMajor,
       'interest_type': interestType,
-      'employment_status': employmentStatus,
       'reason_for_loan': reasonForLoan,
       'loan_security': loanSecurity,
     };
@@ -386,14 +379,6 @@ class LoanRepository {
     }
     if (loanSecurity == 'token' && collateralToken != null) {
       payload['collateral_token'] = collateralToken;
-    }
-    if (employmentStatus == 'employed') {
-      payload['establishment'] = company ?? '';
-      payload['department'] = department ?? '';
-      payload['monthly_salary'] = monthlySalary ?? 0;
-      payload['outstanding_loan'] = outstandingLoan ?? 0;
-      payload['monthly_repayment'] = otherMonthlyRepayment ?? 0;
-      payload['obligation'] = otherMonthlyRepayment ?? 0;
     }
 
     try {

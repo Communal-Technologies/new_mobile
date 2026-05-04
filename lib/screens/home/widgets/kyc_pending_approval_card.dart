@@ -66,7 +66,7 @@ class _KycPendingApprovalCardState extends State<KycPendingApprovalCard> {
                 width: 30.w,
                 height: 30.w,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.onSurface,
+                  color: const Color(0xFF1A1A1A),
                   borderRadius: BorderRadius.circular(6.r),
                 ),
                 alignment: Alignment.center,
@@ -83,7 +83,7 @@ class _KycPendingApprovalCardState extends State<KycPendingApprovalCard> {
                   style: TextStyle(
                     fontSize: 22.sp,
                     fontWeight: FontWeight.w700,
-                    color: Theme.of(context).colorScheme.onSurface,
+                    color: const Color(0xFF1A1A1A),
                     height: 1.25,
                   ),
                 ),
@@ -97,7 +97,7 @@ class _KycPendingApprovalCardState extends State<KycPendingApprovalCard> {
             textAlign: TextAlign.start,
             style: TextStyle(
               fontSize: 19.sp,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              color: const Color(0xFF1A1A1A).withValues(alpha: 0.7),
               height: 1.45,
             ),
           ),

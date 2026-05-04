@@ -91,11 +91,11 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
     try {
       await _repo.remindGuarantor(g.approvalId);
       if (!mounted) return;
-      AppToast.success(context, 'Reminder sent.');
+      AppToast.success('Reminder sent.');
       await _loadGuarantors();
     } catch (e) {
       if (!mounted) return;
-      AppToast.error(context, e.toString().replaceFirst('Exception: ', ''));
+      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) {
         setState(() => _processingGuarantorActions.remove(g.approvalId));
@@ -105,7 +105,9 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
 
   Future<void> _replaceGuarantor(LoanGuarantor g) async {
     if (_processingGuarantorActions.contains(g.approvalId)) return;
-    final cooperativeId = _loan.cooperativeId.trim();
+    final auth = context.read<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) return;
+    final cooperativeId = auth.user.cooperativeId?.trim() ?? '';
     if (cooperativeId.isEmpty) return;
     final newGuarantor = await showModalBottomSheet<MemberSearchResult>(
       context: context,
@@ -130,11 +132,11 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
         newGuarantorLedger: newGuarantor.ledgerNumber,
       );
       if (!mounted) return;
-      AppToast.success(context, '${newGuarantor.name} has been invited.');
+      AppToast.success('${newGuarantor.name} has been invited.');
       await _loadGuarantors();
     } catch (e) {
       if (!mounted) return;
-      AppToast.error(context, e.toString().replaceFirst('Exception: ', ''));
+      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) {
         setState(() => _processingGuarantorActions.remove(g.approvalId));
@@ -272,7 +274,9 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                   _buildHeaderCard(),
                   vSpace(16),
                   _buildMetadataCard(),
-                  if (_loan.guarantors.isNotEmpty) ...[
+                  if (_loadingGuarantors ||
+                      (_guarantorList?.total ?? 0) > 0 ||
+                      _loan.guarantors.isNotEmpty) ...[
                     vSpace(16),
                     _buildGuarantorsCard(),
                   ],
@@ -525,6 +529,8 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
   }
 
   Widget _buildGuarantorsCard() {
+    final list = _guarantorList;
+    final actionable = _loan.status == LoanStatus.pending;
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(16.w),
@@ -536,43 +542,228 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Guarantors (${_loan.guarantors.length})',
-            style: TextStyle(
-              fontSize: 19.sp,
-              fontWeight: FontWeight.w700,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  list != null
+                      ? 'Guarantors (${list.approved} of ${list.total} approved)'
+                      : 'Guarantors',
+                  style: TextStyle(
+                    fontSize: 19.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+              ),
+              if (_loadingGuarantors)
+                SizedBox(
+                  width: 16.w,
+                  height: 16.w,
+                  child: const CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
           ),
           vSpace(12),
-          ..._loan.guarantors.map(
-            (ledger) => Padding(
-              padding: EdgeInsets.only(bottom: 8.h),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.check_circle,
-                    size: 18.sp,
-                    color: const Color(0xFF4CAF50),
-                  ),
-                  hSpace(8),
-                  Expanded(
-                    child: Text(
-                      ledger,
-                      style: TextStyle(
-                        fontSize: 17.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
+          if (list == null && !_loadingGuarantors)
+            // Legacy fallback: pre-rework loans only have the
+            // comma-separated `guarantors` column. Render the bare
+            // ledgers so the screen isn't empty for old data.
+            ..._loan.guarantors.map(
+              (ledger) => Padding(
+                padding: EdgeInsets.only(bottom: 8.h),
+                child: Row(
+                  children: [
+                    Icon(Icons.person_outline, size: 18.sp, color: Colors.grey),
+                    hSpace(8),
+                    Expanded(
+                      child: Text(
+                        ledger,
+                        style: TextStyle(
+                          fontSize: 17.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ),
+            )
+          else if (list != null)
+            ...list.guarantors.map((g) => _guarantorRow(g, actionable: actionable)),
         ],
       ),
     );
+  }
+
+  Widget _guarantorRow(LoanGuarantor g, {required bool actionable}) {
+    final processing = _processingGuarantorActions.contains(g.approvalId);
+    final (Color statusBg, Color statusFg, String label) = switch (g.status) {
+      '1' => (const Color(0xFFE8F5E9), const Color(0xFF2E7D32), 'Approved'),
+      '2' => (const Color(0xFFFDECEA), const Color(0xFFE74C3C), 'Declined'),
+      _ => g.isExpired
+          ? (const Color(0xFFFDECEA), const Color(0xFFE74C3C), 'Expired')
+          : (const Color(0xFFFFF4E9), const Color(0xFFE67E22), 'Pending'),
+    };
+
+    final showRemind = actionable && g.isPending && !g.isExpired && !g.reminderRateLimited;
+    final showReplace = actionable && g.status != '1';
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: 12.h),
+      child: Container(
+        padding: EdgeInsets.all(12.w),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(color: Theme.of(context).dividerColor),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.person, size: 18.sp, color: const Color(0xFF7434FF)),
+                hSpace(8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        g.name.isNotEmpty ? g.name : g.ledgerNumber,
+                        style: TextStyle(
+                          fontSize: 17.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      if (g.expiresAt != null && g.isPending && !g.isExpired)
+                        Text(
+                          'Invitation expires ${_formatRelative(g.expiresAt!)}',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6),
+                          ),
+                        ),
+                      if (g.respondedAt != null)
+                        Text(
+                          'Responded ${DateFormat('MMM dd, yyyy').format(g.respondedAt!)}',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: statusBg,
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w700,
+                      color: statusFg,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (actionable && (showRemind || showReplace || g.reminderRateLimited)) ...[
+              vSpace(10),
+              Row(
+                children: [
+                  if (showRemind)
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: processing ? null : () => _remindGuarantor(g),
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 10.h),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                        ),
+                        child: Text(
+                          'Remind',
+                          style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    )
+                  else if (g.reminderRateLimited && g.isPending && !g.isExpired)
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 10.h),
+                        child: Text(
+                          'Reminder sent recently — try again in 24h',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.55),
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (showRemind && showReplace) hSpace(8),
+                  if (showReplace)
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: processing ? null : () => _replaceGuarantor(g),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF7434FF),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: EdgeInsets.symmetric(vertical: 10.h),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                        ),
+                        child: processing
+                            ? SizedBox(
+                                width: 14.w,
+                                height: 14.w,
+                                child: const CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                'Replace',
+                                style: TextStyle(
+                                  fontSize: 15.sp,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatRelative(DateTime when) {
+    final delta = when.difference(DateTime.now());
+    if (delta.inSeconds <= 0) return 'soon';
+    if (delta.inDays >= 1) return 'in ${delta.inDays} day${delta.inDays == 1 ? '' : 's'}';
+    if (delta.inHours >= 1) return 'in ${delta.inHours} hour${delta.inHours == 1 ? '' : 's'}';
+    return 'in ${delta.inMinutes} min';
   }
 
   /// Declined loans never had repayments and never will, so the
@@ -1048,6 +1239,155 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Modal sheet that lets the applicant search for a replacement
+/// guarantor by name or ledger number. Pops with the selected
+/// `MemberSearchResult` so the parent can call /guarantors/replace.
+/// Mirrors the typeahead pattern from `loan_application_step2_screen`
+/// — debounced search, list of name + ledger pills.
+class _ReplaceGuarantorSheet extends StatefulWidget {
+  const _ReplaceGuarantorSheet({
+    required this.cooperativeId,
+    required this.repo,
+    required this.excludedLedgers,
+  });
+
+  final String cooperativeId;
+  final LoanRepository repo;
+  final Set<String> excludedLedgers;
+
+  @override
+  State<_ReplaceGuarantorSheet> createState() => _ReplaceGuarantorSheetState();
+}
+
+class _ReplaceGuarantorSheetState extends State<_ReplaceGuarantorSheet> {
+  final TextEditingController _controller = TextEditingController();
+  bool _searching = false;
+  String? _error;
+  List<MemberSearchResult> _results = const [];
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _search(String q) async {
+    if (q.trim().isEmpty) {
+      setState(() {
+        _results = const [];
+        _error = null;
+      });
+      return;
+    }
+    setState(() {
+      _searching = true;
+      _error = null;
+    });
+    try {
+      final list = await widget.repo.searchGuarantors(
+        cooperativeId: widget.cooperativeId,
+        query: q.trim(),
+      );
+      if (!mounted) return;
+      setState(() {
+        _results = list
+            .where((m) => !widget.excludedLedgers.contains(m.ledgerNumber))
+            .toList(growable: false);
+        _searching = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _searching = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w,
+            MediaQuery.of(context).viewInsets.bottom + 16.h),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Replace guarantor',
+              style: TextStyle(
+                fontSize: 19.sp,
+                fontWeight: FontWeight.w700,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            vSpace(4),
+            Text(
+              'Search a fellow member by name or ledger number.',
+              style: TextStyle(
+                fontSize: 15.sp,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            vSpace(12),
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              onChanged: _search,
+              decoration: InputDecoration(
+                hintText: 'Search…',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+              ),
+            ),
+            vSpace(12),
+            if (_searching)
+              const Center(child: CircularProgressIndicator())
+            else if (_error != null)
+              Text(
+                _error!,
+                style: TextStyle(color: const Color(0xFFE74C3C), fontSize: 15.sp),
+              )
+            else if (_results.isEmpty && _controller.text.trim().isNotEmpty)
+              Text(
+                'No matches.',
+                style: TextStyle(
+                  fontSize: 15.sp,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              )
+            else
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: 360.h),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: _results.length,
+                  separatorBuilder: (_, __) =>
+                      Divider(height: 1, color: Theme.of(context).dividerColor),
+                  itemBuilder: (_, i) {
+                    final m = _results[i];
+                    return ListTile(
+                      leading: const CircleAvatar(
+                        backgroundColor: Color(0xFFEEE5FF),
+                        child: Icon(Icons.person, color: Color(0xFF7434FF)),
+                      ),
+                      title: Text(m.name),
+                      subtitle: Text(m.ledgerNumber),
+                      onTap: () => Navigator.of(context).pop(m),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

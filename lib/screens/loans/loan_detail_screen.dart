@@ -12,7 +12,9 @@ import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/loan_application.dart';
+import 'package:communal_mobile/data/models/loan_guarantor.dart';
 import 'package:communal_mobile/data/models/loan_installment.dart';
+import 'package:communal_mobile/data/models/member_search_result.dart';
 import 'package:communal_mobile/data/repositories/loan_repository.dart';
 import 'package:communal_mobile/injection.dart';
 
@@ -46,6 +48,14 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
   List<LoanInstallment> _installments = const [];
   List<LoanApplication> _regrantChain = const [];
 
+  // Per-guarantor approval state for the loan-detail card. Replaces
+  // the old static list of ledger numbers with a live view (status,
+  // expires_at, last_reminded_at) so the applicant can remind /
+  // replace individual guarantors.
+  bool _loadingGuarantors = false;
+  LoanGuarantorList? _guarantorList;
+  final Set<String> _processingGuarantorActions = <String>{};
+
   @override
   void initState() {
     super.initState();
@@ -53,7 +63,83 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadHistory();
       _loadExtras();
+      _loadGuarantors();
     });
+  }
+
+  Future<void> _loadGuarantors() async {
+    if (_loan.referenceId.isEmpty) return;
+    setState(() => _loadingGuarantors = true);
+    try {
+      final list = await _repo.fetchGuarantorsForLoan(_loan.referenceId);
+      if (!mounted) return;
+      setState(() {
+        _guarantorList = list;
+        _loadingGuarantors = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingGuarantors = false);
+      // Silent: legacy loans without guarantor rows simply skip the
+      // card. A real error will resurface on the next pull-to-refresh.
+    }
+  }
+
+  Future<void> _remindGuarantor(LoanGuarantor g) async {
+    if (_processingGuarantorActions.contains(g.approvalId)) return;
+    setState(() => _processingGuarantorActions.add(g.approvalId));
+    try {
+      await _repo.remindGuarantor(g.approvalId);
+      if (!mounted) return;
+      AppToast.success(context, 'Reminder sent.');
+      await _loadGuarantors();
+    } catch (e) {
+      if (!mounted) return;
+      AppToast.error(context, e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) {
+        setState(() => _processingGuarantorActions.remove(g.approvalId));
+      }
+    }
+  }
+
+  Future<void> _replaceGuarantor(LoanGuarantor g) async {
+    if (_processingGuarantorActions.contains(g.approvalId)) return;
+    final cooperativeId = _loan.cooperativeId.trim();
+    if (cooperativeId.isEmpty) return;
+    final newGuarantor = await showModalBottomSheet<MemberSearchResult>(
+      context: context,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (_) => _ReplaceGuarantorSheet(
+        cooperativeId: cooperativeId,
+        repo: _repo,
+        excludedLedgers: {
+          for (final existing in _guarantorList?.guarantors ?? const <LoanGuarantor>[])
+            existing.ledgerNumber,
+        },
+      ),
+    );
+    if (newGuarantor == null) return;
+    setState(() => _processingGuarantorActions.add(g.approvalId));
+    try {
+      await _repo.replaceGuarantor(
+        oldApprovalId: g.approvalId,
+        newGuarantorLedger: newGuarantor.ledgerNumber,
+      );
+      if (!mounted) return;
+      AppToast.success(context, '${newGuarantor.name} has been invited.');
+      await _loadGuarantors();
+    } catch (e) {
+      if (!mounted) return;
+      AppToast.error(context, e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) {
+        setState(() => _processingGuarantorActions.remove(g.approvalId));
+      }
+    }
   }
 
   /// Fetch installment schedule + regrant chain in parallel. Both

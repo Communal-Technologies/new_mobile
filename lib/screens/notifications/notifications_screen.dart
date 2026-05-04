@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 
 import 'package:communal_mobile/core/services/unread_notifications_service.dart';
+import 'package:communal_mobile/core/widgets/loader_overlay.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/notification_model.dart';
 import 'package:communal_mobile/data/repositories/notifications_repository.dart';
@@ -20,11 +21,15 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   late Future<NotificationsResult> _future;
   bool _markingAll = false;
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
     _future = _load();
+    _future.whenComplete(() {
+      if (mounted) setState(() => _loading = false);
+    });
   }
 
   Future<NotificationsResult> _load() {
@@ -32,8 +37,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = _load());
-    await _future;
+    setState(() {
+      _future = _load();
+      _loading = true;
+    });
+    try {
+      await _future;
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   Future<void> _markAsRead(NotificationModel n) async {
@@ -71,81 +83,89 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        title: Text(
-          'Notifications',
-          style: TextStyle(
-            fontSize: 19.sp,
-            fontWeight: FontWeight.w700,
-            color: Theme.of(context).colorScheme.onSurface,
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: AppBar(
+            elevation: 0,
+            title: Text(
+              'Notifications',
+              style: TextStyle(
+                fontSize: 19.sp,
+                fontWeight: FontWeight.w700,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            actions: [
+              FutureBuilder<NotificationsResult>(
+                future: _future,
+                builder: (context, snapshot) {
+                  final unread = snapshot.data?.unreadCount ?? 0;
+                  if (unread == 0) return const SizedBox.shrink();
+                  return TextButton(
+                    onPressed: _markingAll ? null : _markAllAsRead,
+                    child: Text(
+                      _markingAll ? 'Marking…' : 'Mark all read',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        color: const Color(0xFF7434FF),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
-        ),
-        actions: [
-          FutureBuilder<NotificationsResult>(
-            future: _future,
-            builder: (context, snapshot) {
-              final unread = snapshot.data?.unreadCount ?? 0;
-              if (unread == 0) return const SizedBox.shrink();
-              return TextButton(
-                onPressed: _markingAll ? null : _markAllAsRead,
-                child: Text(
-                  _markingAll ? 'Marking…' : 'Mark all read',
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    color: const Color(0xFF7434FF),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        child: FutureBuilder<NotificationsResult>(
-          future: _future,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return _ErrorState(
-                message: snapshot.error.toString().replaceFirst(
-                  'Exception: ',
-                  '',
-                ),
-                onRetry: _refresh,
-              );
-            }
-            final items = snapshot.data?.notifications ?? const [];
-            if (items.isEmpty) {
-              return ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: [
-                  SizedBox(height: 120.h),
-                  const _EmptyState(),
-                ],
-              );
-            }
-            return ListView.separated(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-              itemCount: items.length,
-              separatorBuilder: (_, __) => SizedBox(height: 8.h),
-              itemBuilder: (context, index) {
-                final n = items[index];
-                return _NotificationTile(
-                  notification: n,
-                  onTap: () => _markAsRead(n),
+          body: RefreshIndicator(
+            onRefresh: _refresh,
+            child: FutureBuilder<NotificationsResult>(
+              future: _future,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  // Body stays empty — full-screen LoaderOverlay sits at
+                  // the Stack level so it covers the AppBar too, matching
+                  // the transactions-history pattern.
+                  return const SizedBox.shrink();
+                }
+                if (snapshot.hasError) {
+                  return _ErrorState(
+                    message: snapshot.error.toString().replaceFirst(
+                      'Exception: ',
+                      '',
+                    ),
+                    onRetry: _refresh,
+                  );
+                }
+                final items = snapshot.data?.notifications ?? const [];
+                if (items.isEmpty) {
+                  return ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      SizedBox(height: 120.h),
+                      const _EmptyState(),
+                    ],
+                  );
+                }
+                return ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => SizedBox(height: 8.h),
+                  itemBuilder: (context, index) {
+                    final n = items[index];
+                    return _NotificationTile(
+                      notification: n,
+                      onTap: () => _markAsRead(n),
+                    );
+                  },
                 );
               },
-            );
-          },
+            ),
+          ),
         ),
-      ),
+        if (_loading) const Positioned.fill(child: LoaderOverlay()),
+      ],
     );
   }
 }

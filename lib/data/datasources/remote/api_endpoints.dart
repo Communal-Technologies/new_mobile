@@ -130,6 +130,8 @@ class ApiEndpoints {
   /// the authenticated member.
   static String membersObligationById(String id) => '/members/obligations/$id';
   static const String membersPayObligation = '/members/pay-obligation';
+  static const String membersPayFine = '/members/pay-fine';
+  static const String membersRecordNipFinePayment = '/members/record-nip-fine-payment';
 
   /// Record-only path for NIP-funded obligation payments. Backend skips
   /// the biometric-sig middleware here because the upstream

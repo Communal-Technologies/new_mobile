@@ -109,6 +109,8 @@ class ApiEndpoints {
     String ledgerNumber,
     String cooperativeId,
   ) => '/members/financial-obligations/$ledgerNumber/$cooperativeId';
+  static String membersFines(String ledgerNumber, String cooperativeId) =>
+      '/members/fines/$ledgerNumber/$cooperativeId';
   static const String membersCooperativeCashRepositories =
       '/members/cooperative-cash-repositories';
   static String membersFetchMemberTransactions(String ledgerNumber) =>

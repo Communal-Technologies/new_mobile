@@ -487,6 +487,96 @@ class MemberObligationsRepository {
     }
   }
 
+  Future<void> payFineFromObligation({
+    required UserModel user,
+    required String fineId,
+    required String sourceObligationAccountCode,
+    required int amountMinor,
+    required String cooperativeId,
+    String? idempotencyKey,
+    Map<String, String>? biometricHeaders,
+  }) async {
+    final ledgerNumber = user.ledgerNumber?.trim() ?? '';
+    final source = sourceObligationAccountCode.trim();
+    if (ledgerNumber.isEmpty || cooperativeId.isEmpty || fineId.isEmpty || source.isEmpty) {
+      throw Exception('Missing payment details');
+    }
+    if (amountMinor <= 0) throw Exception('Invalid amount');
+
+    try {
+      final response = await _dioClient.post(
+        ApiEndpoints.membersPayFine,
+        data: {
+          'fine_id': fineId,
+          'amount': amountMinor.toString(),
+          'ledger_number': ledgerNumber,
+          'cooperative': cooperativeId,
+          'gateway': 'obligation',
+          'gateway_id': source,
+        },
+        idempotencyKey: idempotencyKey,
+        extraHeaders: biometricHeaders,
+      );
+      if (response.statusCode == 200) return;
+      final data = response.data;
+      if (data is Map && data['message'] != null) {
+        throw Exception(data['message'].toString());
+      }
+      throw Exception('Unable to process fine payment');
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        throw Exception(data['message'].toString());
+      }
+      throw Exception('Unable to process fine payment');
+    }
+  }
+
+  Future<void> recordNipFinePayment({
+    required UserModel user,
+    required String fineId,
+    required String transferId,
+    required String cashRepositoryId,
+    required int amountMinor,
+    required String cooperativeId,
+    String? idempotencyKey,
+  }) async {
+    final ledgerNumber = user.ledgerNumber?.trim() ?? '';
+    if (ledgerNumber.isEmpty || cooperativeId.isEmpty || fineId.isEmpty ||
+        transferId.isEmpty || cashRepositoryId.isEmpty) {
+      throw Exception('Missing payment details');
+    }
+    if (amountMinor <= 0) throw Exception('Invalid amount');
+
+    try {
+      final response = await _dioClient.post(
+        ApiEndpoints.membersRecordNipFinePayment,
+        data: {
+          'fine_id': fineId,
+          'amount': amountMinor.toString(),
+          'ledger_number': ledgerNumber,
+          'cooperative': cooperativeId,
+          'gateway': 'nip_transfer',
+          'gateway_id': transferId,
+          'cash_repository_id': cashRepositoryId,
+        },
+        idempotencyKey: idempotencyKey,
+      );
+      if (response.statusCode == 200) return;
+      final data = response.data;
+      if (data is Map && data['message'] != null) {
+        throw Exception(data['message'].toString());
+      }
+      throw Exception('Unable to record fine payment');
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        throw Exception(data['message'].toString());
+      }
+      throw Exception('Unable to record fine payment');
+    }
+  }
+
   int _parseInt(dynamic value) {
     if (value is int) return value;
     if (value is num) return value.toInt();

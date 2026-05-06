@@ -170,6 +170,28 @@ class MemberObligationsRepository {
     }
   }
 
+  Future<List<FineRecord>> fetchMemberFines(UserModel user) async {
+    final cooperativeId = user.cooperativeId?.trim() ?? '';
+    final ledgerNumber = user.ledgerNumber?.trim() ?? '';
+    if (cooperativeId.isEmpty || ledgerNumber.isEmpty) return const [];
+    try {
+      final response = await _dioClient.get(
+        ApiEndpoints.membersFines(ledgerNumber, cooperativeId),
+      );
+      final data = response.data;
+      final raw = data is Map ? data['fines'] : null;
+      if (raw is! List) return const [];
+      final fallbackCurrency = resolveCurrencyCode(user);
+      return Obligation.parseFines(raw, fallbackCurrency);
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        throw Exception(data['message'].toString());
+      }
+      return const [];
+    }
+  }
+
   Future<List<PaymentRecord>> fetchObligationPaymentHistory({
     required UserModel user,
     required Obligation obligation,

@@ -511,6 +511,10 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
   }
 
   List<Widget> _buildFineTabList(ThemeData theme) {
+    final authState = context.read<AuthBloc>().state;
+    final coopId = authState is AuthAuthenticated
+        ? (authState.user.cooperativeId?.trim() ?? '')
+        : '';
     final loanFineObligations = _obligations
         .where((o) => o.category == 'Fine')
         .toList();
@@ -555,7 +559,7 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
         widgets.add(const Center(child: AnimatedLogoLoader()));
       } else {
         for (int i = 0; i < filteredFines.length; i++) {
-          widgets.add(_FineDetailCard(fine: filteredFines[i]));
+          widgets.add(_FineDetailCard(fine: filteredFines[i], cooperativeId: coopId));
           if (i != filteredFines.length - 1) widgets.add(vSpace(12));
         }
       }
@@ -612,9 +616,10 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
 }
 
 class _FineDetailCard extends StatelessWidget {
-  const _FineDetailCard({required this.fine});
+  const _FineDetailCard({required this.fine, required this.cooperativeId});
 
   final FineRecord fine;
+  final String cooperativeId;
 
   Color _statusColor(String status) {
     switch (status.toLowerCase()) {
@@ -709,6 +714,34 @@ class _FineDetailCard extends StatelessWidget {
             fine.dateLabel,
             style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade500),
           ),
+          if (fine.isPending && fine.id.isNotEmpty) ...[
+            vSpace(10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => context.pushNamed(
+                  'fine-payment',
+                  extra: {'fine': fine, 'cooperativeId': cooperativeId},
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accent,
+                  foregroundColor: Colors.white,
+                  minimumSize: Size(double.infinity, 40.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  padding: EdgeInsets.symmetric(vertical: 8.h),
+                ),
+                child: Text(
+                  'Pay Fine',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

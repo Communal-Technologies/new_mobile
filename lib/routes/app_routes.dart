@@ -34,6 +34,8 @@ import 'package:communal_mobile/screens/obligations/obligation_detail_screen.dar
 import 'package:communal_mobile/screens/obligations/obligation_payment_screen.dart';
 import 'package:communal_mobile/screens/obligations/obligation_confirm_payment_screen.dart';
 import 'package:communal_mobile/screens/obligations/obligation_payment_success_screen.dart';
+import 'package:communal_mobile/screens/obligations/fine_payment_screen.dart';
+import 'package:communal_mobile/screens/obligations/fine_confirm_payment_screen.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
 import 'package:communal_mobile/screens/community/community_screen.dart';
 import 'package:communal_mobile/screens/community/community_map_screen.dart';
@@ -45,6 +47,7 @@ import 'package:communal_mobile/screens/transactions/models/transaction_details_
 import 'package:communal_mobile/screens/transactions/transaction_details_screen.dart';
 import 'package:communal_mobile/screens/transactions/transaction_history_screen.dart';
 import 'package:communal_mobile/screens/obligations/data/obligation_nip_settlement.dart';
+import 'package:communal_mobile/screens/obligations/data/fine_nip_settlement.dart';
 import 'package:communal_mobile/screens/transactions/transaction_receipt_screen.dart';
 import 'package:communal_mobile/screens/transactions/transfer_external_screen.dart';
 import 'package:communal_mobile/screens/transactions/transfer_internal_amount_screen.dart';
@@ -874,6 +877,91 @@ final GoRouter appRouter = GoRouter(
       },
     ),
 
+    GoRoute(
+      path: '/fine-payment',
+      name: 'fine-payment',
+      redirect: (context, state) {
+        final extra = state.extra;
+        if (extra is! Map) return '/obligations';
+        if (extra['fine'] is! FineRecord) return '/obligations';
+        return null;
+      },
+      builder: (context, state) {
+        final extra = Map<String, dynamic>.from(state.extra as Map);
+        final fine = extra['fine'] as FineRecord;
+        final cooperativeId =
+            (extra['cooperativeId']?.toString() ?? '').trim();
+        return FinePaymentScreen(fine: fine, cooperativeId: cooperativeId);
+      },
+    ),
+    GoRoute(
+      path: '/fine-confirm-payment',
+      name: 'fine-confirm-payment',
+      redirect: (context, state) {
+        final extra = state.extra;
+        if (extra is! Map) return '/obligations';
+        if (extra['fine'] is! FineRecord) return '/obligations';
+        return null;
+      },
+      builder: (context, state) {
+        final extra = Map<String, dynamic>.from(state.extra as Map);
+        final fine = extra['fine'] as FineRecord;
+        final cooperativeId =
+            (extra['cooperativeId']?.toString() ?? '').trim();
+
+        final maybeAmount = extra['amountMinor'] ?? extra['amount_minor'];
+        final amountMinor = maybeAmount is num
+            ? maybeAmount.toInt()
+            : int.tryParse(maybeAmount?.toString() ?? '') ??
+                fine.outstandingMinor;
+
+        final maybeMethod = extra['method'];
+        final method = maybeMethod is String && maybeMethod.isNotEmpty
+            ? maybeMethod
+            : 'NIP transfer';
+
+        CooperativeCashBankAccount? cashAccount;
+        final rawCash = extra['cash_account'];
+        if (rawCash is Map) {
+          cashAccount = CooperativeCashBankAccount.fromJson(
+            Map<String, dynamic>.from(rawCash),
+          );
+        }
+
+        String? cashRepositoryId;
+        final rawRid = extra['cash_repository_id'];
+        if (rawRid != null) {
+          final rid = rawRid.toString().trim();
+          cashRepositoryId = rid.isEmpty ? null : rid;
+        }
+
+        String? sourceObligationCode;
+        final rawSrcCode = extra['source_obligation_code'];
+        if (rawSrcCode != null) {
+          final code = rawSrcCode.toString().trim();
+          sourceObligationCode = code.isEmpty ? null : code;
+        }
+
+        String? sourceObligationTitle;
+        final rawSrcTitle = extra['source_obligation_title'];
+        if (rawSrcTitle != null) {
+          final title = rawSrcTitle.toString().trim();
+          sourceObligationTitle = title.isEmpty ? null : title;
+        }
+
+        return FineConfirmPaymentScreen(
+          fine: fine,
+          cooperativeId: cooperativeId,
+          amountMinor: amountMinor,
+          method: method,
+          cashAccount: cashAccount,
+          cashRepositoryId: cashRepositoryId,
+          sourceObligationCode: sourceObligationCode,
+          sourceObligationTitle: sourceObligationTitle,
+        );
+      },
+    ),
+
     // Transaction History
     GoRoute(
       path: '/transactions',
@@ -1109,6 +1197,7 @@ final GoRouter appRouter = GoRouter(
         ReceiptAction? action;
         ObligationNipSettlement? obligationNipSettlement;
         LoanNipSettlement? loanNipSettlement;
+        FineNipSettlement? fineNipSettlement;
 
         if (extra is Map<String, dynamic>) {
           final maybeDetails = extra['details'];
@@ -1128,6 +1217,12 @@ final GoRouter appRouter = GoRouter(
               Map<String, dynamic>.from(lRaw),
             );
           }
+          final fRaw = extra['fineNipSettlement'];
+          if (fRaw is Map) {
+            fineNipSettlement = FineNipSettlement.tryFromJson(
+              Map<String, dynamic>.from(fRaw),
+            );
+          }
           // Cache the live extras so a transient route rebuild (or
           // an app-pause / resume that doesn't kill the process) can
           // recover the actual receipt instead of the kSample
@@ -1136,6 +1231,7 @@ final GoRouter appRouter = GoRouter(
             cache.receiptDetails = details;
             cache.receiptObligationSettlement = obligationNipSettlement;
             cache.receiptLoanSettlement = loanNipSettlement;
+            cache.receiptFineSettlement = fineNipSettlement;
             cache.receiptAction = action;
           }
         } else if (extra is TransactionDetailsData) {
@@ -1143,6 +1239,7 @@ final GoRouter appRouter = GoRouter(
           cache.receiptDetails = extra;
           cache.receiptObligationSettlement = null;
           cache.receiptLoanSettlement = null;
+          cache.receiptFineSettlement = null;
           cache.receiptAction = null;
         }
 
@@ -1153,6 +1250,7 @@ final GoRouter appRouter = GoRouter(
         details ??= cache.receiptDetails ?? kSampleTransactionDetails;
         obligationNipSettlement ??= cache.receiptObligationSettlement;
         loanNipSettlement ??= cache.receiptLoanSettlement;
+        fineNipSettlement ??= cache.receiptFineSettlement;
         action ??= cache.receiptAction;
 
         return TransactionReceiptScreen(
@@ -1160,6 +1258,7 @@ final GoRouter appRouter = GoRouter(
           initialAction: action,
           obligationNipSettlement: obligationNipSettlement,
           loanNipSettlement: loanNipSettlement,
+          fineNipSettlement: fineNipSettlement,
         );
       },
     ),
@@ -1281,6 +1380,7 @@ class _RouteExtrasCache {
   TransactionDetailsData? receiptDetails;
   ObligationNipSettlement? receiptObligationSettlement;
   LoanNipSettlement? receiptLoanSettlement;
+  FineNipSettlement? receiptFineSettlement;
   ReceiptAction? receiptAction;
 
   TransactionDetailsData? transactionDetails;

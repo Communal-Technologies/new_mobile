@@ -14,13 +14,21 @@ class AppToast {
 
   static const Color _successGreen = Color(0xFF22C55E);
   static const Color _errorRed = Color(0xFFE53935);
-  static const Color _onSurface = Color(0xFF1A1A1A);
 
   static void success(String message) {
     toastification.showCustom(
       alignment: _alignment,
       autoCloseDuration: _successDuration,
       builder: (context, holder) {
+        final theme = Theme.of(context);
+        final isDark = theme.brightness == Brightness.dark;
+        final successBackground = isDark
+            ? const Color(0xFF1F2937)
+            : theme.cardColor;
+        final successTextColor = isDark
+            ? Colors.white
+            : const Color(0xFF1A1A1A);
+
         return Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           child: Material(
@@ -29,11 +37,11 @@ class AppToast {
               width: double.infinity,
               constraints: const BoxConstraints(maxWidth: 400),
               decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
+                color: successBackground,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
+                    color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.08),
                     blurRadius: 16,
                     offset: const Offset(0, 8),
                   ),
@@ -60,8 +68,8 @@ class AppToast {
                   Expanded(
                     child: Text(
                       message,
-                      style: const TextStyle(
-                        color: _onSurface,
+                      style: TextStyle(
+                        color: successTextColor,
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
                         height: 1.35,

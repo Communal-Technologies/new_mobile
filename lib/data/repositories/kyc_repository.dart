@@ -170,6 +170,26 @@ class KycRepository {
     }
   }
 
+  /// Records whether the user agreed to share identity data with Anchor for KYC.
+  /// [decision] must be either `'agreed'` or `'declined'`.
+  Future<void> recordConsent({
+    required String anchorCustomerId,
+    required String decision,
+    String consentVersion = 'anchor_kyc_v1',
+  }) async {
+    try {
+      await _dioClient.post(
+        ApiEndpoints.complianceRecordConsent(anchorCustomerId),
+        data: <String, dynamic>{
+          'decision': decision,
+          'consent_version': consentVersion,
+        },
+      );
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
   String _messageFromDio(DioException e) {
     final data = e.response?.data;
     if (data is Map) {

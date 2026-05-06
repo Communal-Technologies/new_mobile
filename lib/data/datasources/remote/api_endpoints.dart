@@ -109,6 +109,8 @@ class ApiEndpoints {
     String ledgerNumber,
     String cooperativeId,
   ) => '/members/financial-obligations/$ledgerNumber/$cooperativeId';
+  static String membersFines(String ledgerNumber, String cooperativeId) =>
+      '/members/fines/$ledgerNumber/$cooperativeId';
   static const String membersCooperativeCashRepositories =
       '/members/cooperative-cash-repositories';
   static String membersFetchMemberTransactions(String ledgerNumber) =>
@@ -128,6 +130,8 @@ class ApiEndpoints {
   /// the authenticated member.
   static String membersObligationById(String id) => '/members/obligations/$id';
   static const String membersPayObligation = '/members/pay-obligation';
+  static const String membersPayFine = '/members/pay-fine';
+  static const String membersRecordNipFinePayment = '/members/record-nip-fine-payment';
 
   /// Record-only path for NIP-funded obligation payments. Backend skips
   /// the biometric-sig middleware here because the upstream
@@ -207,6 +211,8 @@ class ApiEndpoints {
       '/compliance/upgrade-to-tier1/$anchorCustomerId';
   static String complianceUpgradeTier2(String anchorCustomerId) =>
       '/compliance/upgrade-to-tier2/$anchorCustomerId';
+  static String complianceRecordConsent(String anchorCustomerId) =>
+      '/compliance/record-consent/$anchorCustomerId';
 
   // --- Regions / locations ------------------------------------------------
   static const String fetchRegions = '/fetch-regions';

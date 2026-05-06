@@ -25,6 +25,7 @@ class KycProgressStorage {
 
   static String _anchorKey(String userId) => 'kyc_anchor_customer_id_$userId';
   static String _stepKey(String userId) => 'kyc_resume_step_$userId';
+  static String _consentKey(String userId) => 'kyc_anchor_consent_given_$userId';
 
   /// Anchor customer id from `POST /compliance/register/{userId}` (`customer_id`).
   String? getAnchor(String userId) {
@@ -81,6 +82,14 @@ class KycProgressStorage {
     if (id.isEmpty) return;
     await _prefs.setString(_anchorKey(userId), id);
     await _prefs.setInt(_stepKey(userId), 1);
+  }
+
+  /// True when the user has already agreed to the Anchor KYC data-sharing consent on this device.
+  bool hasConsentGiven(String userId) => _prefs.getBool(_consentKey(userId)) ?? false;
+
+  /// Persists local consent flag after the backend has recorded the decision.
+  Future<void> markConsentGiven(String userId) async {
+    await _prefs.setBool(_consentKey(userId), true);
   }
 
   /// After tier-1 BVN upgrade succeeds (Continue), or when the user **skips** bank (same step value).

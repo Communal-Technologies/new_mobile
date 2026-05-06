@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:communal_mobile/core/widgets/back_to_exit_wrapper.dart';
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
@@ -13,6 +15,7 @@ import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
 import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
+import 'package:communal_mobile/core/widgets/animated_logo_loader.dart';
 import 'package:communal_mobile/core/widgets/loader_overlay.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/obligation.dart';
@@ -36,11 +39,13 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
   final _searchController = TextEditingController();
   final List<String> _categories = ['Equity', 'Patronage', 'Custom', 'Fine'];
   List<Obligation> _obligations = const [];
+  List<FineRecord> _memberFines = const [];
 
   String _selectedCategory = 'Equity';
   final int _currentNavIndex = 1;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _loading = false;
+  bool _loadingFines = false;
   String? _error;
 
   @override
@@ -79,6 +84,7 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
     try {
       final rows = await _repository.fetchMemberObligations(authState.user);
       final availableCategories = rows.map((e) => e.category).toSet();
+      if (!mounted) return;
       setState(() {
         _obligations = rows;
         if (rows.isNotEmpty &&
@@ -87,11 +93,28 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
         }
         _loading = false;
       });
+      unawaited(_loadFines(authState.user));
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _loading = false;
         _error = e.toString().replaceFirst('Exception: ', '');
       });
+    }
+  }
+
+  Future<void> _loadFines(dynamic user) async {
+    setState(() => _loadingFines = true);
+    try {
+      final fines = await _repository.fetchMemberFines(user);
+      if (!mounted) return;
+      setState(() {
+        _memberFines = fines;
+        _loadingFines = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingFines = false);
     }
   }
 
@@ -447,6 +470,11 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
         ),
       ];
     }
+
+    if (_selectedCategory == 'Fine') {
+      return _buildFineTabList(theme);
+    }
+
     final query = _searchController.text.toLowerCase();
     final items = _obligations.where((obligation) {
       final matchesCategory =
@@ -482,6 +510,92 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
     ];
   }
 
+  List<Widget> _buildFineTabList(ThemeData theme) {
+    final authState = context.read<AuthBloc>().state;
+    final coopId = authState is AuthAuthenticated
+        ? (authState.user.cooperativeId?.trim() ?? '')
+        : '';
+    final loanFineObligations = _obligations
+        .where((o) => o.category == 'Fine')
+        .toList();
+    final query = _searchController.text.toLowerCase();
+    final filteredFines = _memberFines.where((f) {
+      return query.isEmpty ||
+          f.description.toLowerCase().contains(query) ||
+          f.type.toLowerCase().contains(query) ||
+          f.status.toLowerCase().contains(query);
+    }).toList();
+
+    final hasLoanFines = loanFineObligations.isNotEmpty;
+    final hasObligationFines = filteredFines.isNotEmpty;
+
+    if (!hasLoanFines && !hasObligationFines && !_loadingFines) {
+      return [
+        vSpace(40),
+        Center(
+          child: Text(
+            'No fines on record.',
+            style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
+          ),
+        ),
+      ];
+    }
+
+    final widgets = <Widget>[];
+
+    if (hasObligationFines || _loadingFines) {
+      widgets.add(
+        Text(
+          'Obligation Fines',
+          style: TextStyle(
+            fontSize: 19.sp,
+            fontWeight: FontWeight.w700,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+      );
+      widgets.add(vSpace(12));
+      if (_loadingFines) {
+        widgets.add(const Center(child: AnimatedLogoLoader()));
+      } else {
+        for (int i = 0; i < filteredFines.length; i++) {
+          widgets.add(_FineDetailCard(fine: filteredFines[i], cooperativeId: coopId));
+          if (i != filteredFines.length - 1) widgets.add(vSpace(12));
+        }
+      }
+    }
+
+    if (hasLoanFines) {
+      if (hasObligationFines || _loadingFines) widgets.add(vSpace(20));
+      widgets.add(
+        Text(
+          'Loan Late Fees',
+          style: TextStyle(
+            fontSize: 19.sp,
+            fontWeight: FontWeight.w700,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+      );
+      widgets.add(vSpace(12));
+      for (int i = 0; i < loanFineObligations.length; i++) {
+        widgets.add(
+          ObligationCard(
+            obligation: loanFineObligations[i],
+            onTap: () => context.pushNamed(
+              'obligation-detail',
+              extra: loanFineObligations[i],
+            ),
+          ),
+        );
+        if (i != loanFineObligations.length - 1) widgets.add(vSpace(16));
+      }
+    }
+
+    widgets.add(vSpace(20));
+    return widgets;
+  }
+
   String _formatDate(DateTime date) {
     const months = [
       'Jan',
@@ -498,6 +612,139 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
       'Dec',
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+}
+
+class _FineDetailCard extends StatelessWidget {
+  const _FineDetailCard({required this.fine, required this.cooperativeId});
+
+  final FineRecord fine;
+  final String cooperativeId;
+
+  Color _statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'paid':
+        return const Color(0xFF1AAE70);
+      case 'waived':
+        return const Color(0xFF5B5CE2);
+      case 'cancelled':
+        return Colors.grey;
+      default:
+        return const Color(0xFFD7263D);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    const accent = Color(0xFFD7263D);
+    final statusColor = _statusColor(fine.status);
+
+    return Container(
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: isDark
+              ? accent.withValues(alpha: 0.25)
+              : const Color(0xFFFFCDD3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? accent.withValues(alpha: 0.16)
+                      : const Color(0xFFFFEEF0),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Text(
+                  fine.type,
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    color: accent,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Text(
+                  fine.status,
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    color: statusColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          vSpace(10),
+          Text(
+            fine.amountLabel,
+            style: TextStyle(
+              fontSize: 22.sp,
+              fontWeight: FontWeight.w700,
+              color: accent,
+            ),
+          ),
+          vSpace(6),
+          Text(
+            fine.description,
+            style: TextStyle(
+              fontSize: 17.sp,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+          vSpace(6),
+          Text(
+            fine.dateLabel,
+            style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade500),
+          ),
+          if (fine.isPending && fine.id.isNotEmpty) ...[
+            vSpace(10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => context.pushNamed(
+                  'fine-payment',
+                  extra: {'fine': fine, 'cooperativeId': cooperativeId},
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accent,
+                  foregroundColor: Colors.white,
+                  minimumSize: Size(double.infinity, 40.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  padding: EdgeInsets.symmetric(vertical: 8.h),
+                ),
+                child: Text(
+                  'Pay Fine',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
 

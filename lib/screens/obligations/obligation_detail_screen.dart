@@ -1,3 +1,4 @@
+import 'package:communal_mobile/core/widgets/animated_logo_loader.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -106,7 +107,10 @@ class _ObligationDetailScreenState extends State<ObligationDetailScreen> {
                         ),
                         if (_obligation.fines.isNotEmpty) ...[
                           vSpace(20),
-                          _FinesSection(fine: _obligation.fines.first),
+                          _FinesSection(
+                            fines: _obligation.fines,
+                            cooperativeId: _obligation.cooperativeId,
+                          ),
                         ],
                         vSpace(20),
                         _PaymentHistorySection(
@@ -484,60 +488,154 @@ class _InfoTile extends StatelessWidget {
   }
 }
 
-class _FinesSection extends StatelessWidget {
-  const _FinesSection({required this.fine});
+class _FinesSection extends StatefulWidget {
+  const _FinesSection({required this.fines, required this.cooperativeId});
+
+  final List<FineRecord> fines;
+  final String cooperativeId;
+
+  @override
+  State<_FinesSection> createState() => _FinesSectionState();
+}
+
+class _FinesSectionState extends State<_FinesSection> {
+  static const int _collapsedLimit = 3;
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final fines = widget.fines;
+    final showAll = _expanded || fines.length <= _collapsedLimit;
+    final visible = showAll ? fines : fines.take(_collapsedLimit).toList();
+    final hiddenCount = fines.length - visible.length;
+    final theme = Theme.of(context);
+    const accent = Color(0xFFD7263D);
+
+    return _InfoCard(
+      title: 'Fines & Penalties',
+      child: Column(
+        children: [
+          for (int i = 0; i < visible.length; i++) ...[
+            _FineItemTile(fine: visible[i], cooperativeId: widget.cooperativeId),
+            if (i != visible.length - 1) vSpace(8),
+          ],
+          if (hiddenCount > 0) ...[
+            vSpace(8),
+            Center(
+              child: TextButton(
+                onPressed: () => setState(() => _expanded = true),
+                child: Text(
+                  'Show $hiddenCount more fine${hiddenCount > 1 ? 's' : ''}',
+                  style: TextStyle(
+                    fontSize: 17.sp,
+                    fontWeight: FontWeight.w600,
+                    color: accent,
+                  ),
+                ),
+              ),
+            ),
+          ] else if (_expanded && fines.length > _collapsedLimit) ...[
+            vSpace(8),
+            Center(
+              child: TextButton(
+                onPressed: () => setState(() => _expanded = false),
+                child: Text(
+                  'Show less',
+                  style: TextStyle(
+                    fontSize: 17.sp,
+                    fontWeight: FontWeight.w600,
+                    color: theme.primaryColor,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _FineItemTile extends StatelessWidget {
+  const _FineItemTile({required this.fine, required this.cooperativeId});
 
   final FineRecord fine;
+  final String cooperativeId;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     const accent = Color(0xFFD7263D);
-    return _InfoCard(
-      title: 'Fines & Penalties',
-      child: Container(
-        padding: EdgeInsets.all(12.w),
-        decoration: BoxDecoration(
-          color: isDark
-              ? accent.withValues(alpha: 0.16)
-              : const Color(0xFFFFEEF0),
-          borderRadius: BorderRadius.circular(14.r),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.error_outline, color: accent, size: 18.sp),
-                hSpace(8),
-                Text(
-                  fine.amountLabel,
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: isDark
+            ? accent.withValues(alpha: 0.16)
+            : const Color(0xFFFFEEF0),
+        borderRadius: BorderRadius.circular(14.r),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.error_outline, color: accent, size: 18.sp),
+              hSpace(8),
+              Text(
+                fine.amountLabel,
+                style: TextStyle(
+                  fontSize: 19.sp,
+                  fontWeight: FontWeight.w700,
+                  color: accent,
+                ),
+              ),
+              const Spacer(),
+              _StatusChip(label: fine.status, color: accent),
+            ],
+          ),
+          vSpace(8),
+          Text(
+            fine.description,
+            style: TextStyle(
+              fontSize: 17.sp,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+            ),
+          ),
+          vSpace(8),
+          Text(
+            'Type: ${fine.type}   ${fine.dateLabel}',
+            style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
+          ),
+          if (fine.isPending && fine.id.isNotEmpty) ...[
+            vSpace(10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => context.pushNamed(
+                  'fine-payment',
+                  extra: {'fine': fine, 'cooperativeId': cooperativeId},
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accent,
+                  foregroundColor: Colors.white,
+                  minimumSize: Size(double.infinity, 38.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
+                  padding: EdgeInsets.symmetric(vertical: 8.h),
+                ),
+                child: Text(
+                  'Pay Fine',
                   style: TextStyle(
-                    fontSize: 19.sp,
-                    fontWeight: FontWeight.w700,
-                    color: accent,
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const Spacer(),
-                _StatusChip(label: fine.status, color: accent),
-              ],
-            ),
-            vSpace(8),
-            Text(
-              fine.description,
-              style: TextStyle(
-                fontSize: 17.sp,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
               ),
             ),
-            vSpace(8),
-            Text(
-              'Type: ${fine.type}   ${fine.dateLabel}',
-              style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
-            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -574,7 +672,7 @@ class _PaymentHistorySectionState extends State<_PaymentHistorySection> {
       child: Column(
         children: [
           if (loading)
-            const Center(child: CircularProgressIndicator())
+            const Center(child: AnimatedLogoLoader())
           else if (payments.isEmpty)
             Text(
               'No payment history yet.',

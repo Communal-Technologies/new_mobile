@@ -17,6 +17,7 @@ import 'package:communal_mobile/data/repositories/member_obligations_repository.
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/loans/data/loan_nip_settlement.dart';
+import 'package:communal_mobile/screens/obligations/data/fine_nip_settlement.dart';
 import 'package:communal_mobile/screens/obligations/data/obligation_nip_settlement.dart';
 import 'package:communal_mobile/data/models/obligation.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
@@ -43,6 +44,7 @@ class TransactionReceiptScreen extends StatefulWidget {
     this.initialAction,
     this.obligationNipSettlement,
     this.loanNipSettlement,
+    this.fineNipSettlement,
   });
 
   final TransactionDetailsData details;
@@ -55,6 +57,9 @@ class TransactionReceiptScreen extends StatefulWidget {
   /// loan repayment via the no-biometric record route once the
   /// upstream transfer reports successful.
   final LoanNipSettlement? loanNipSettlement;
+
+  /// Same idea but for fine payments.
+  final FineNipSettlement? fineNipSettlement;
 
   @override
   State<TransactionReceiptScreen> createState() =>
@@ -73,6 +78,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
   static const int _maxPollTicks = 45;
   bool _obligationNipPosted = false;
   bool _loanNipPosted = false;
+  bool _fineNipPosted = false;
 
   @override
   void initState() {
@@ -143,6 +149,12 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
         // ignore: unawaited_futures
         _postLoanNipIfNeeded();
       });
+    } else if (widget.fineNipSettlement != null &&
+        _details.status == TransactionStatus.successful) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // ignore: unawaited_futures
+        _postFineNipIfNeeded();
+      });
     }
   }
 
@@ -192,6 +204,8 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
           _postObligationNipIfNeeded();
           // ignore: unawaited_futures
           _postLoanNipIfNeeded();
+          // ignore: unawaited_futures
+          _postFineNipIfNeeded();
         });
       }
     } catch (_) {
@@ -285,6 +299,38 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
         SnackBar(
           content: Text(
             'Transfer succeeded but the loan could not be updated. '
+            '${e.toString().replaceFirst('Exception: ', '')}',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _postFineNipIfNeeded() async {
+    final settlement = widget.fineNipSettlement;
+    if (settlement == null || _fineNipPosted) return;
+    if (_details.status != TransactionStatus.successful) return;
+
+    final auth = context.read<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) return;
+
+    _fineNipPosted = true;
+    try {
+      await _obligationsRepo.recordNipFinePayment(
+        user: auth.user,
+        fineId: settlement.fineId,
+        transferId: _details.id.trim(),
+        cashRepositoryId: settlement.cashRepositoryId,
+        amountMinor: settlement.amountMinor,
+        cooperativeId: settlement.cooperativeId,
+      );
+    } catch (e) {
+      _fineNipPosted = false;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Transfer succeeded but the fine could not be updated. '
             '${e.toString().replaceFirst('Exception: ', '')}',
           ),
         ),

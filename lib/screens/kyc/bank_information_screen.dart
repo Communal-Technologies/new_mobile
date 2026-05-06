@@ -15,6 +15,7 @@ import 'package:communal_mobile/core/widgets/custom_text_field.dart';
 import 'package:communal_mobile/core/widgets/kyc_idle_suppressor.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/core/widgets/kyc_consent_dialog.dart';
 import 'package:go_router/go_router.dart';
 
 const Map<String, String> _kycMonthToNum = {
@@ -83,6 +84,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
   String? _selectedGender;
 
   bool _isSubmitting = false;
+  bool _consentGiven = false;
 
   /// Audit M23: minted once per screen mount; reused across user retries so
   /// a transient 5xx + retry doesn't trigger duplicate Anchor BVN submissions.
@@ -91,9 +93,64 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _syncAnchorFromStorage(),
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncAnchorFromStorage();
+      _checkAndShowConsentModal();
+    });
+  }
+
+  void _checkAndShowConsentModal() {
+    final auth = context.read<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) return;
+    final alreadyGiven =
+        getIt<KycProgressStorage>().hasConsentGiven(auth.userId);
+    if (alreadyGiven) {
+      if (mounted) setState(() => _consentGiven = true);
+      return;
+    }
+    _showConsentModal();
+  }
+
+  Future<void> _showConsentModal() async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => KycConsentDialog(
+        onAgree: () async {
+          Navigator.of(ctx).pop();
+          await _recordConsent('agreed');
+          if (mounted) setState(() => _consentGiven = true);
+        },
+        onDecline: () async {
+          Navigator.of(ctx).pop();
+          await _recordConsent('declined');
+          if (mounted) context.pop();
+        },
+      ),
     );
+  }
+
+  Future<void> _recordConsent(String decision) async {
+    final id = _effectiveAnchor();
+    if (id == null || id.isEmpty) return;
+    final auth = context.read<AuthBloc>().state;
+    try {
+      await getIt<KycRepository>().recordConsent(
+        anchorCustomerId: id,
+        decision: decision,
+      );
+      if (decision == 'agreed' && auth is AuthAuthenticated) {
+        await getIt<KycProgressStorage>().markConsentGiven(auth.userId);
+      }
+    } catch (_) {
+      // Best-effort: local flag is still saved so the user isn't re-prompted
+      // on retry. The backend call will be retried on the next app launch if
+      // the anchor id becomes available.
+      if (decision == 'agreed' && auth is AuthAuthenticated) {
+        await getIt<KycProgressStorage>().markConsentGiven(auth.userId);
+      }
+    }
   }
 
   void _syncAnchorFromStorage() {

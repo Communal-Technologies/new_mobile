@@ -45,7 +45,9 @@ class PaymentRecord {
 /// without UI changes when it ships.
 class FineRecord {
   FineRecord({
+    this.id = '',
     required this.amountMinor,
+    this.amountPaidMinor = 0,
     required this.currency,
     required this.description,
     required this.status,
@@ -53,14 +55,24 @@ class FineRecord {
     required this.date,
   });
 
+  final String id;
   final int amountMinor;
+  final int amountPaidMinor;
   final String currency;
   final String description;
   final String status;
   final String type;
   final DateTime date;
 
+  int get outstandingMinor {
+    final rem = amountMinor - amountPaidMinor;
+    return rem < 0 ? 0 : rem;
+  }
+
+  bool get isPending => status.toLowerCase() == 'pending';
+
   String get amountLabel => Money(amountMinor, currency).format();
+  String get outstandingLabel => Money(outstandingMinor, currency).format();
   String get dateLabel => DateFormat('MMM dd, yyyy').format(date);
 }
 
@@ -287,11 +299,11 @@ class Obligation {
       nextDueDate: nextCycle,
       frequency: 'Monthly',
       payments: const [],
-      fines: _parseFines(obligation['fines'], currency),
+      fines: parseFines(obligation['fines'], currency),
     );
   }
 
-  static List<FineRecord> _parseFines(dynamic raw, String fallbackCurrency) {
+  static List<FineRecord> parseFines(dynamic raw, String fallbackCurrency) {
     if (raw is! List) return const [];
     final out = <FineRecord>[];
     for (final entry in raw) {
@@ -311,7 +323,9 @@ class Obligation {
           _parseDate(m['due_date']) ??
           DateTime.now();
       out.add(FineRecord(
+        id: m['id']?.toString() ?? '',
         amountMinor: amount,
+        amountPaidMinor: _asInt(m['amount_paid']),
         currency: currency,
         description: description.isEmpty ? 'Late payment fine' : description,
         status: (status == null || status.isEmpty) ? 'pending' : status,

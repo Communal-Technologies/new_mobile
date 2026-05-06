@@ -107,7 +107,10 @@ class _ObligationDetailScreenState extends State<ObligationDetailScreen> {
                         ),
                         if (_obligation.fines.isNotEmpty) ...[
                           vSpace(20),
-                          _FinesSection(fines: _obligation.fines),
+                          _FinesSection(
+                            fines: _obligation.fines,
+                            cooperativeId: _obligation.cooperativeId,
+                          ),
                         ],
                         vSpace(20),
                         _PaymentHistorySection(
@@ -486,9 +489,10 @@ class _InfoTile extends StatelessWidget {
 }
 
 class _FinesSection extends StatefulWidget {
-  const _FinesSection({required this.fines});
+  const _FinesSection({required this.fines, required this.cooperativeId});
 
   final List<FineRecord> fines;
+  final String cooperativeId;
 
   @override
   State<_FinesSection> createState() => _FinesSectionState();
@@ -512,7 +516,7 @@ class _FinesSectionState extends State<_FinesSection> {
       child: Column(
         children: [
           for (int i = 0; i < visible.length; i++) ...[
-            _FineItemTile(fine: visible[i]),
+            _FineItemTile(fine: visible[i], cooperativeId: widget.cooperativeId),
             if (i != visible.length - 1) vSpace(8),
           ],
           if (hiddenCount > 0) ...[
@@ -553,9 +557,10 @@ class _FinesSectionState extends State<_FinesSection> {
 }
 
 class _FineItemTile extends StatelessWidget {
-  const _FineItemTile({required this.fine});
+  const _FineItemTile({required this.fine, required this.cooperativeId});
 
   final FineRecord fine;
+  final String cooperativeId;
 
   @override
   Widget build(BuildContext context) {
@@ -602,6 +607,34 @@ class _FineItemTile extends StatelessWidget {
             'Type: ${fine.type}   ${fine.dateLabel}',
             style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
           ),
+          if (fine.isPending && fine.id.isNotEmpty) ...[
+            vSpace(10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => context.pushNamed(
+                  'fine-payment',
+                  extra: {'fine': fine, 'cooperativeId': cooperativeId},
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accent,
+                  foregroundColor: Colors.white,
+                  minimumSize: Size(double.infinity, 38.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
+                  padding: EdgeInsets.symmetric(vertical: 8.h),
+                ),
+                child: Text(
+                  'Pay Fine',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

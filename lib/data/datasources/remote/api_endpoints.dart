@@ -207,6 +207,8 @@ class ApiEndpoints {
       '/compliance/upgrade-to-tier1/$anchorCustomerId';
   static String complianceUpgradeTier2(String anchorCustomerId) =>
       '/compliance/upgrade-to-tier2/$anchorCustomerId';
+  static String complianceRecordConsent(String anchorCustomerId) =>
+      '/compliance/record-consent/$anchorCustomerId';
 
   // --- Regions / locations ------------------------------------------------
   static const String fetchRegions = '/fetch-regions';

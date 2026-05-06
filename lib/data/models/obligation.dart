@@ -287,11 +287,11 @@ class Obligation {
       nextDueDate: nextCycle,
       frequency: 'Monthly',
       payments: const [],
-      fines: _parseFines(obligation['fines'], currency),
+      fines: parseFines(obligation['fines'], currency),
     );
   }
 
-  static List<FineRecord> _parseFines(dynamic raw, String fallbackCurrency) {
+  static List<FineRecord> parseFines(dynamic raw, String fallbackCurrency) {
     if (raw is! List) return const [];
     final out = <FineRecord>[];
     for (final entry in raw) {

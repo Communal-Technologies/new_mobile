@@ -2,6 +2,7 @@ import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/models/obligation.dart';
+import 'package:communal_mobile/data/models/obligation_withdrawal_request.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
 import 'package:dio/dio.dart';
 
@@ -574,6 +575,102 @@ class MemberObligationsRepository {
         throw Exception(data['message'].toString());
       }
       throw Exception('Unable to record fine payment');
+    }
+  }
+
+  // ── Obligation withdrawal requests ──────────────────────────────────── //
+
+  /// Submit a new withdrawal request for a patronage or custom obligation.
+  /// [amountMinor] is integer minor units (kobo for NGN).
+  Future<void> submitWithdrawalRequest({
+    required UserModel user,
+    required String accountCode,
+    required int amountMinor,
+  }) async {
+    final cooperativeId = user.cooperativeId?.trim() ?? '';
+    final ledgerNumber = user.ledgerNumber?.trim() ?? '';
+    final code = accountCode.trim();
+    if (cooperativeId.isEmpty || ledgerNumber.isEmpty || code.isEmpty) {
+      throw Exception('Missing account details');
+    }
+    if (amountMinor <= 0) throw Exception('Invalid amount');
+
+    try {
+      final response = await _dioClient.post(
+        ApiEndpoints.membersObligationWithdrawal,
+        data: {
+          'cooperative_id': cooperativeId,
+          'ledger_number': ledgerNumber,
+          'account_code': code,
+          'amount': amountMinor,
+        },
+      );
+      final data = response.data;
+      if (response.statusCode == 200 || response.statusCode == 201) return;
+      if (data is Map && data['message'] != null) {
+        throw Exception(data['message'].toString());
+      }
+      throw Exception('Unable to submit withdrawal request');
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        throw Exception(data['message'].toString());
+      }
+      throw Exception('Unable to submit withdrawal request');
+    }
+  }
+
+  /// Fetch all withdrawal requests for the authenticated member.
+  Future<List<ObligationWithdrawalRequest>> fetchWithdrawalRequests(
+    UserModel user,
+  ) async {
+    final ledgerNumber = user.ledgerNumber?.trim() ?? '';
+    if (ledgerNumber.isEmpty) return const [];
+
+    try {
+      final response = await _dioClient.get(
+        ApiEndpoints.membersObligationWithdrawal,
+        queryParameters: {'ledger_number': ledgerNumber},
+      );
+      final data = response.data;
+      final raw = data is Map ? data['requests'] : null;
+      if (raw is! List) return const [];
+      return raw
+          .whereType<Map>()
+          .map((e) => ObligationWithdrawalRequest.fromJson(
+                Map<String, dynamic>.from(e),
+              ))
+          .toList(growable: false);
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        throw Exception(data['message'].toString());
+      }
+      return const [];
+    }
+  }
+
+  /// Cancel a pending withdrawal request (member-initiated revoke).
+  Future<void> revokeWithdrawalRequest(String id) async {
+    final trimmed = id.trim();
+    if (trimmed.isEmpty) throw Exception('Invalid request id');
+
+    try {
+      final response = await _dioClient.delete(
+        ApiEndpoints.membersRevokeObligationWithdrawal(trimmed),
+      );
+      if (response.statusCode == 200) return;
+      final data = response.data;
+      if (data is Map && data['message'] != null) {
+        throw Exception(data['message'].toString());
+      }
+      throw Exception('Unable to cancel request');
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        throw Exception(data['message'].toString());
+      }
+      throw Exception('Unable to cancel request');
     }
   }
 

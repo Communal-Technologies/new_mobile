@@ -36,6 +36,7 @@ import 'package:communal_mobile/screens/obligations/obligation_confirm_payment_s
 import 'package:communal_mobile/screens/obligations/obligation_payment_success_screen.dart';
 import 'package:communal_mobile/screens/obligations/fine_payment_screen.dart';
 import 'package:communal_mobile/screens/obligations/fine_confirm_payment_screen.dart';
+import 'package:communal_mobile/screens/obligations/obligation_withdrawal_screen.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
 import 'package:communal_mobile/screens/community/community_screen.dart';
 import 'package:communal_mobile/screens/community/community_map_screen.dart';
@@ -770,6 +771,14 @@ final GoRouter appRouter = GoRouter(
           state.extra is Obligation ? null : '/obligations',
       builder: (context, state) =>
           ObligationPaymentScreen(obligation: state.extra as Obligation),
+    ),
+    GoRoute(
+      path: '/obligation-withdrawal',
+      name: 'obligation-withdrawal',
+      redirect: (context, state) =>
+          state.extra is Obligation ? null : '/obligations',
+      builder: (context, state) =>
+          ObligationWithdrawalScreen(obligation: state.extra as Obligation),
     ),
     GoRoute(
       path: '/obligation-confirm-payment',

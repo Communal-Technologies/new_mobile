@@ -893,6 +893,10 @@ class _BottomActions extends StatelessWidget {
   final Obligation obligation;
   final ThemeData theme;
 
+  bool get _canWithdraw =>
+      (obligation.category == 'Patronage' || obligation.category == 'Custom') &&
+      obligation.paidAmountMinor > 0;
+
   @override
   Widget build(BuildContext context) {
     final liveTheme = Theme.of(context);
@@ -900,65 +904,102 @@ class _BottomActions extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
         decoration: BoxDecoration(color: liveTheme.cardColor),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () {
-                  AppToast.success('Contacting admin...');
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      AppToast.success('Contacting admin...');
+                    },
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: Size(double.infinity, 52.h),
+                      side: BorderSide(color: liveTheme.dividerColor),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18.r),
+                      ),
+                      padding: EdgeInsets.symmetric(horizontal: 8.w),
+                    ),
+                    child: Text(
+                      'Contact Admin',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 19.sp,
+                        fontWeight: FontWeight.w600,
+                        color: liveTheme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                ),
+                hSpace(12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () =>
+                        context.pushNamed('obligation-payment', extra: obligation),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF7434FF),
+                      elevation: 0,
+                      minimumSize: Size(double.infinity, 52.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18.r),
+                      ),
+                    ),
+                    child: Text(
+                      'Pay Now',
+                      style: TextStyle(
+                        fontSize: 19.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (_canWithdraw) ...[
+              vSpace(8),
+              Builder(
+                builder: (ctx) {
+                  // #7434FF (primary purple) on the dark card (#1E1E1E) only
+                  // achieves ~2.9:1 contrast — below AA. The theme's
+                  // secondaryHeaderColor (#B09FFF) is a lighter purple that
+                  // reaches ~6.9:1 on dark surfaces; use it in dark mode.
+                  final isDark =
+                      Theme.of(ctx).brightness == Brightness.dark;
+                  final accentColor = isDark
+                      ? liveTheme.secondaryHeaderColor
+                      : const Color(0xFF7434FF);
+                  return SizedBox(
+                    width: double.infinity,
+                    height: 48.h,
+                    child: OutlinedButton(
+                      onPressed: () => ctx.pushNamed(
+                        'obligation-withdrawal',
+                        extra: obligation,
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: accentColor),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18.r),
+                        ),
+                      ),
+                      child: Text(
+                        'Request Withdrawal',
+                        style: TextStyle(
+                          fontSize: 17.sp,
+                          fontWeight: FontWeight.w600,
+                          color: accentColor,
+                        ),
+                      ),
+                    ),
+                  );
                 },
-                style: OutlinedButton.styleFrom(
-                  minimumSize: Size(double.infinity, 52.h),
-                  side: BorderSide(color: liveTheme.dividerColor),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18.r),
-                  ),
-                  // Tighter horizontal padding so the label has room
-                  // to breathe at the new (bigger) body type scale.
-                  padding: EdgeInsets.symmetric(horizontal: 8.w),
-                ),
-                // Dropped the leading icon and gave the label
-                // maxLines:1 + ellipsis fallback. Earlier the
-                // OutlinedButton.icon ate ~28px of width to show the
-                // chat bubble + spacing, which pushed "Contact Admin"
-                // past the half-row Expanded slot at the post-bump
-                // 19sp body size and wrapped to two lines.
-                child: Text(
-                  'Contact Admin',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 19.sp,
-                    fontWeight: FontWeight.w600,
-                    color: liveTheme.colorScheme.onSurface,
-                  ),
-                ),
               ),
-            ),
-            hSpace(12),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () =>
-                    context.pushNamed('obligation-payment', extra: obligation),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF7434FF),
-                  elevation: 0,
-                  minimumSize: Size(double.infinity, 52.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18.r),
-                  ),
-                ),
-                child: Text(
-                  'Pay Now',
-                  style: TextStyle(
-                    fontSize: 19.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
+            ],
           ],
         ),
       ),

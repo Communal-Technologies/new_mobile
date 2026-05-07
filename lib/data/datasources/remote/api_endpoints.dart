@@ -129,6 +129,11 @@ class ApiEndpoints {
   /// `Obligation.fromBackend`. 404 when the row doesn't belong to
   /// the authenticated member.
   static String membersObligationById(String id) => '/members/obligations/$id';
+  static const String membersObligationWithdrawal =
+      '/members/obligation-withdrawal';
+  static String membersRevokeObligationWithdrawal(String id) =>
+      '/members/obligation-withdrawal/$id';
+
   static const String membersPayObligation = '/members/pay-obligation';
   static const String membersPayFine = '/members/pay-fine';
   static const String membersRecordNipFinePayment = '/members/record-nip-fine-payment';

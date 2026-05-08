@@ -6,6 +6,8 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
+import 'package:communal_mobile/data/repositories/transfer_repository.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/obligations/data/obligation_nip_settlement.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -52,11 +54,31 @@ class _TransferInternalReviewScreenState
   bool _saveAsBeneficiary = false;
   // Audit M28: swallows rapid double-taps on the Send Money button.
   final TapDebouncer _sendDebouncer = TapDebouncer();
+  final _repo = getIt<TransferRepository>();
+
+  int _nipFeeKobo = 0;
+  bool _feeLoading = false;
 
   @override
   void initState() {
     super.initState();
     _saveAsBeneficiary = widget.saveAsBeneficiary;
+    if (widget.useExternalNipFlow) {
+      _loadNipFee();
+    }
+  }
+
+  Future<void> _loadNipFee() async {
+    if (!mounted) return;
+    setState(() => _feeLoading = true);
+    try {
+      final result = await _repo.fetchNipFee(amountMinor: widget.amountMinor);
+      if (mounted) setState(() => _nipFeeKobo = result.fee);
+    } catch (_) {
+      // Fee display degrades gracefully; transfer can still proceed.
+    } finally {
+      if (mounted) setState(() => _feeLoading = false);
+    }
   }
 
   String _amountText(String currencySymbol) {
@@ -77,7 +99,9 @@ class _TransferInternalReviewScreenState
     int currentBalanceMinor,
     String currencySymbol,
   ) {
-    final after = currentBalanceMinor - widget.amountMinor;
+    final totalDebit = widget.amountMinor +
+        (widget.useExternalNipFlow ? _nipFeeKobo : 0);
+    final after = currentBalanceMinor - totalDebit;
     final safeAfter = after < 0 ? 0 : after;
     return '$currencySymbol${formatMinor(safeAfter, widget.currency)}';
   }
@@ -333,11 +357,24 @@ class _TransferInternalReviewScreenState
               ),
               child: Column(
                 children: [
-                  _kv('Transfer Type', 'Book Transfer'),
                   _kv(
-                    'Transfer fee',
-                    '$currencySymbol${NumberFormat('#,##0.00').format(0)}',
+                    'Transfer Type',
+                    widget.useExternalNipFlow ? 'Bank Transfer' : 'Internal Transfer',
                   ),
+                  if (widget.useExternalNipFlow)
+                    _kv(
+                      'Transfer fee',
+                      _feeLoading
+                          ? '...'
+                          : '$currencySymbol${formatMinor(_nipFeeKobo, widget.currency)}',
+                    ),
+                  if (widget.useExternalNipFlow)
+                    _kv(
+                      'Total Debit',
+                      _feeLoading
+                          ? '...'
+                          : '$currencySymbol${formatMinor(widget.amountMinor + _nipFeeKobo, widget.currency)}',
+                    ),
                   _kv(
                     'Naration',
                     widget.narration.trim().isEmpty ? 'Transfer' : widget.narration,

@@ -232,6 +232,26 @@ class TransferBeneficiary {
   }
 }
 
+class NipFeeResult {
+  const NipFeeResult({
+    required this.fee,
+    required this.totalDebit,
+    required this.currency,
+  });
+
+  final int fee;
+  final int totalDebit;
+  final String currency;
+
+  factory NipFeeResult.fromJson(Map<String, dynamic> json) {
+    return NipFeeResult(
+      fee: (json['fee'] as num?)?.toInt() ?? 0,
+      totalDebit: (json['total_debit'] as num?)?.toInt() ?? 0,
+      currency: json['currency']?.toString() ?? 'NGN',
+    );
+  }
+}
+
 class TransferRepository {
   TransferRepository(this._dioClient);
 
@@ -516,6 +536,26 @@ class TransferRepository {
         throw Exception('Invalid transfer status response.');
       }
       return RemoteTransferStatus.fromDataJson(Map<String, dynamic>.from(raw));
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  Future<NipFeeResult> fetchNipFee({required int amountMinor}) async {
+    try {
+      final response = await _dioClient.get(
+        ApiEndpoints.transferFee,
+        queryParameters: {'amount': amountMinor, 'type': 'NIPTransfer'},
+      );
+      final data = response.data;
+      if (data is! Map || data['status'] != true) {
+        throw Exception('Could not load transfer fee.');
+      }
+      final raw = data['data'];
+      if (raw is! Map) {
+        throw Exception('Invalid fee response.');
+      }
+      return NipFeeResult.fromJson(Map<String, dynamic>.from(raw));
     } on DioException catch (e) {
       throw Exception(_messageFromDio(e));
     }

@@ -80,6 +80,7 @@ class ApiEndpoints {
   static String transferVerifyAccount(String bankCode, String accountNumber) =>
       '/transfer/verify-account/${bankCode.trim()}/${accountNumber.trim()}';
   static const String transferInitiate = '/transfer/initiate';
+  static const String transferFee = '/transfer/fee';
   static const String membersTransferBeneficiaries =
       '/members/transfer/beneficiaries';
   static String membersTransferStatus(String transferId) =>

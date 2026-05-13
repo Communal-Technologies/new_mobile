@@ -710,9 +710,10 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12.r),
             border: Border.all(
-              color: hasError ? Colors.red : Colors.grey.shade300,
+              color: hasError ? Colors.red : Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
               width: 1.5,
             ),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
           ),
           child: Material(
             color: Colors.transparent,

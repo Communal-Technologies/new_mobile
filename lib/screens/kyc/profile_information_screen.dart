@@ -987,10 +987,12 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12.r),
             border: Border.all(
-              color: hasError ? Colors.red : Colors.grey.shade300,
+              color: hasError ? Colors.red : Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
               width: 1.5,
             ),
-            color: enabled && !isLoading ? Colors.white : Colors.grey.shade100,
+            color: enabled && !isLoading
+                ? Theme.of(context).colorScheme.surfaceContainerHighest
+                : Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
           ),
           child: isLoading
               ? Padding(

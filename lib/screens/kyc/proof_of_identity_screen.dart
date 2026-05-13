@@ -361,9 +361,10 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12.r),
                 border: Border.all(
-                  color: hasError ? Colors.red : Colors.grey.shade300,
+                  color: hasError ? Colors.red : Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
                   width: 1.5,
                 ),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
               ),
               child: Row(
                 children: [
@@ -373,8 +374,8 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                       style: TextStyle(
                         fontSize: 19.sp,
                         color: _selectedIdType == null
-                            ? Colors.grey.shade400
-                            : Colors.black87,
+                            ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)
+                            : Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ),

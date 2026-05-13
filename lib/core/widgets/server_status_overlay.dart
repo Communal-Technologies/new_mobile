@@ -77,13 +77,13 @@ class _ServerStatusOverlayState extends State<ServerStatusOverlay> {
 
   void _onStatusChanged(BuildContext context, ServerStatus status) {
     final authState = context.read<AuthBloc>().state;
-    final authResolved = authState is AuthAuthenticated ||
-        authState is AuthUnauthenticated ||
-        authState is AuthFailure;
-    // While the splash is still resolving the session, defer to its
-    // own error UX. The interceptor still records the down state, so
-    // when auth resolves and we're still down, the dialog will open.
-    if (!authResolved) return;
+    // Only block the UI for authenticated users. On login/signup/OTP pages
+    // the state is AuthUnauthenticated — those screens have their own
+    // per-request error toasts and should never be blocked by this modal.
+    // The interceptor still records the down state, so if the user
+    // successfully logs in while the server is down the modal will appear
+    // immediately after auth resolves to AuthAuthenticated.
+    if (authState is! AuthAuthenticated) return;
 
     if (status == ServerStatus.down && !_dialogOpen) {
       _openDialog();

@@ -46,7 +46,12 @@ class DioClient {
       ..options.headers = {
         HttpHeaders.contentTypeHeader: 'application/json; charset=UTF-8',
         HttpHeaders.authorizationHeader: _token != null ? 'Bearer $_token' : '',
-        'X-localization': AppConstants.defaultLanguage, // Replace with runtime language if needed
+        'X-localization': AppConstants.defaultLanguage,
+        // Tell any intermediate proxy (CDN, Nginx cache) not to serve a
+        // cached response for this request. Paired with the backend's
+        // Cache-Control: no-store response header to prevent the "wrong
+        // user on welcome screen after app update" caching bug.
+        HttpHeaders.cacheControlHeader: 'no-cache',
       };
 
     // Audit M8: SPKI cert-pin override for the dio HTTP client. Adds a

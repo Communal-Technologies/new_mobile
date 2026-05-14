@@ -599,6 +599,7 @@ class _ObligationConfirmPaymentScreenState
       currencyCode: currencyCode,
       idempotencyKey: _idempotencyKey,
       biometricHeaders: authHeaders,
+      obligationContext: settlement.toJson(),
     );
 
     if (!mounted) return;

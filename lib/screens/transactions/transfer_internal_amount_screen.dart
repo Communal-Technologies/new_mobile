@@ -1,5 +1,6 @@
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
 import 'package:communal_mobile/core/constants/constants.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
@@ -110,6 +111,7 @@ class _TransferInternalAmountScreenState
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthBloc>().state;
+    final isOnline = context.watch<ConnectivityCubit>().isConnected;
     final currencySymbol = auth is AuthAuthenticated
         ? currencySymbolForUser(auth.user)
         : currencySymbolForCode('NGN');
@@ -347,8 +349,10 @@ class _TransferInternalAmountScreenState
         child: SizedBox(
           width: double.infinity,
           height: 50.h,
-          child: InkWell(
-            onTap: _submit,
+          child: Opacity(
+            opacity: isOnline ? 1.0 : 0.5,
+            child: InkWell(
+            onTap: isOnline ? _submit : null,
             borderRadius: BorderRadius.circular(12.r),
             child: Ink(
               decoration: BoxDecoration(
@@ -370,6 +374,7 @@ class _TransferInternalAmountScreenState
                 ),
               ),
             ),
+          ),
           ),
         ),
       ),

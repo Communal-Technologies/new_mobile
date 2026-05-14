@@ -73,6 +73,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
     setState(() => _isLoading = true);
     var internalMembers = <TransferSuggestion>[];
     var beneficiaries = <TransferBeneficiary>[];
+    final authState = context.read<AuthBloc>().state;
 
     try {
       // Drop the signed-in user's own wallet account from the
@@ -82,7 +83,6 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
       // because the user expects to see other people's accounts here.
       // Match by walletAccountNumber (canonical) and fall back to
       // walletAccountName when the wallet number isn't yet hydrated.
-      final authState = context.read<AuthBloc>().state;
       final selfAcct = authState is AuthAuthenticated
           ? (authState.user.walletAccountNumber ?? '').trim()
           : '';
@@ -127,12 +127,15 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
     }
 
     if (!mounted) return;
-    final coopNames = internalMembers
-        .map((e) => e.cooperativeName.trim())
-        .where((e) => e.isNotEmpty)
-        .toSet()
-        .toList(growable: false);
-    final tabs = <String>['Beneficiaries', ...coopNames.take(10)];
+    final userCoopName = authState is AuthAuthenticated
+        ? (authState.user.cooperativeName?.trim() ?? '')
+        : '';
+    final tabs = <String>[
+      'Beneficiaries',
+      if (userCoopName.isNotEmpty &&
+          internalMembers.any((e) => e.cooperativeName.trim() == userCoopName))
+        userCoopName,
+    ];
     setState(() {
       _internalMembers = internalMembers;
       _beneficiaries = beneficiaries;
@@ -669,7 +672,9 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                                   style: TextStyle(
                                     color: active
                                         ? Colors.white
-                                        : Theme.of(context).primaryColor,
+                                        : Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.white.withValues(alpha: 0.85)
+                                            : Theme.of(context).primaryColor,
                                     fontWeight: active
                                         ? FontWeight.w700
                                         : FontWeight.w500,

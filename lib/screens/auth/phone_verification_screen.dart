@@ -38,7 +38,7 @@ class PhoneVerificationScreen extends StatefulWidget {
 class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   final AuthRepository _authRepository = getIt<AuthRepository>();
   String _code = '';
-  int _resendTimer = 34;
+  int _resendTimer = 300;
   Timer? _timer;
   Timer? _deliveryPollTimer;
   int _deliveryPollAttempts = 0;
@@ -162,7 +162,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
 
   Future<void> _resendCode() async {
     setState(() {
-      _resendTimer = 34;
+      _resendTimer = 300;
       _error = null;
       _deliveryInfo = null;
     });
@@ -415,7 +415,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
               Center(
                 child: _resendTimer > 0
                     ? Text(
-                        'Resend code in ${_resendTimer}s',
+                        'Resend code in ${_resendTimer ~/ 60}:${(_resendTimer % 60).toString().padLeft(2, '0')}',
                         style: TextStyle(
                           fontSize: 17.sp,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),

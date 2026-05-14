@@ -1,3 +1,4 @@
+import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -128,6 +129,7 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isOnline = context.watch<ConnectivityCubit>().isConnected;
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -180,7 +182,7 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
             vSpace(24),
             _buildSecureInfo(),
             vSpace(32),
-            _buildPrimaryAction(),
+            _buildPrimaryAction(isOnline),
           ],
         ),
       ),
@@ -215,7 +217,7 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
     }
   }
 
-  Widget _buildPrimaryAction() {
+  Widget _buildPrimaryAction(bool isOnline) {
     switch (_authMode) {
       case _AuthMode.checking:
         return SizedBox(
@@ -227,9 +229,9 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
         return SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: _submitting
-                ? null
-                : () => _confirmDebouncer.run(_onConfirm),
+            onPressed: (isOnline && !_submitting)
+                ? () => _confirmDebouncer.run(_onConfirm)
+                : null,
             icon: const Icon(Icons.fingerprint),
             label: Text(
               _submitting ? 'Processing…' : 'Authorize Repayment',
@@ -290,9 +292,9 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _submitting
-                    ? null
-                    : () => _confirmDebouncer.run(_onConfirm),
+                onPressed: (isOnline && !_submitting)
+                    ? () => _confirmDebouncer.run(_onConfirm)
+                    : null,
                 icon: const Icon(Icons.lock_outline),
                 label: Text(
                   _submitting ? 'Processing…' : 'Authorize Repayment',

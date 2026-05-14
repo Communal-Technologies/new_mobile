@@ -131,7 +131,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
         ? (authState.user.cooperativeName?.trim() ?? '')
         : '';
     final tabs = <String>[
-      'Beneficiaries',
+      if (beneficiaries.isNotEmpty) 'Beneficiaries',
       if (userCoopName.isNotEmpty &&
           internalMembers.any((e) => e.cooperativeName.trim() == userCoopName))
         userCoopName,
@@ -140,7 +140,9 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
       _internalMembers = internalMembers;
       _beneficiaries = beneficiaries;
       _cooperativeTabs = tabs;
-      if (!_cooperativeTabs.contains(_activeTab)) _activeTab = 'Beneficiaries';
+      if (!_cooperativeTabs.contains(_activeTab)) {
+        _activeTab = _cooperativeTabs.isNotEmpty ? _cooperativeTabs.first : '';
+      }
       _isLoading = false;
     });
   }
@@ -642,6 +644,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                           color: Color(0xFF909090),
                         ),
                       ),
+                      if (_cooperativeTabs.length > 1) ...[
                       vSpace(10),
                       SizedBox(
                         height: 38.h,
@@ -685,6 +688,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                           },
                         ),
                       ),
+                      ], // end tabs conditional
                       vSpace(8),
                       if (rows.isNotEmpty)
                         ...letters.map((letter) {

@@ -1,5 +1,6 @@
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
@@ -161,6 +162,7 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
 
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, auth) {
+        final isOnline = context.watch<ConnectivityCubit>().isConnected;
         final bankSubtitleExtra = _payMethod == _PayMethod.wallet
             ? (_loadingCashRepos
                   ? 'Loading cooperative accounts…'
@@ -300,7 +302,7 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
               child: Padding(
                 padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
                 child: ElevatedButton(
-                  onPressed: _onContinue,
+                  onPressed: isOnline ? _onContinue : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _kLoanOrange,
                     minimumSize: Size(double.infinity, 52.h),

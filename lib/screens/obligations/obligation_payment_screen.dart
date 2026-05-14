@@ -142,10 +142,12 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
     // currency (e.g. "5000.00" for NGN, "5000" for JPY) so the input
     // already parses cleanly via Money.tryParseMajor on submit.
     _amountController = TextEditingController(
-      text: Money(
-        widget.obligation.perInstallmentMinor,
-        widget.obligation.currency,
-      ).toMajorString(),
+      text: widget.obligation.perInstallmentMinor > 0
+          ? Money(
+              widget.obligation.perInstallmentMinor,
+              widget.obligation.currency,
+            ).toMajorString()
+          : '',
     );
     _noteController.addListener(() => setState(() {}));
     _loadCashRepos();
@@ -286,10 +288,11 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
               vSpace(24),
               _buildAmountInput(),
               vSpace(4),
-              Text(
-                'Suggested: ${widget.obligation.perInstallmentLabel}',
-                style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
-              ),
+              if (widget.obligation.perInstallmentMinor > 0)
+                Text(
+                  'Suggested: ${widget.obligation.perInstallmentLabel}',
+                  style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
+                ),
               vSpace(24),
               Text(
                 'Payment Method',
@@ -452,12 +455,13 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
           vSpace(12),
           Row(
             children: [
-              Expanded(
-                child: _MetricBlock(
-                  label: 'Installment Amount',
-                  value: widget.obligation.perInstallmentLabel,
+              if (widget.obligation.perInstallmentMinor > 0)
+                Expanded(
+                  child: _MetricBlock(
+                    label: 'Installment Amount',
+                    value: widget.obligation.perInstallmentLabel,
+                  ),
                 ),
-              ),
               Expanded(
                 child: _MetricBlock(
                   label: 'Outstanding Balance',
@@ -499,10 +503,12 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
           ],
           decoration: InputDecoration(
             prefixText: '${currencySymbolForCode(currency)} ',
-            hintText: Money(
-              widget.obligation.perInstallmentMinor,
-              currency,
-            ).toMajorString(),
+            hintText: widget.obligation.perInstallmentMinor > 0
+                ? Money(
+                    widget.obligation.perInstallmentMinor,
+                    currency,
+                  ).toMajorString()
+                : '0.00',
             filled: true,
             fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
             border: OutlineInputBorder(

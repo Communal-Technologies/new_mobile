@@ -26,7 +26,6 @@ class AppElevatedButton extends StatelessWidget {
 
     return SizedBox(
       width: double.infinity,
-      height: 50.h,
       child: AbsorbPointer(
         absorbing: isLoading,
         child: Opacity(
@@ -47,7 +46,12 @@ class AppElevatedButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25.r),
           ),
-          padding: EdgeInsets.symmetric(vertical: 14.h),
+          // Use minimumSize instead of a fixed-height SizedBox so
+          // the button can grow on short screens rather than clipping
+          // its text. 52.w uses width-based scaling which stays stable
+          // in portrait regardless of device height.
+          minimumSize: Size(double.infinity, 52.w),
+          padding: EdgeInsets.symmetric(vertical: 14.w),
         ),
         child: isLoading
             ? Row(
@@ -174,7 +178,6 @@ class AppSecondaryButton extends StatelessWidget {
 
     return SizedBox(
       width: double.infinity,
-      height: 50.h,
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
@@ -193,7 +196,8 @@ class AppSecondaryButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25.r),
           ),
-          padding: EdgeInsets.symmetric(vertical: 14.h),
+          minimumSize: Size(double.infinity, 52.w),
+          padding: EdgeInsets.symmetric(vertical: 14.w),
         ),
         child:
             child ??

@@ -17,9 +17,8 @@ import 'package:communal_mobile/cubits/settings/settings_cubit.dart';
 import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
 import 'package:communal_mobile/cubits/security/security_cubit.dart';
 import 'package:communal_mobile/cubits/server_status/server_status_cubit.dart';
-import 'package:communal_mobile/core/widgets/connectivity_listener.dart';
-import 'package:communal_mobile/core/widgets/server_status_overlay.dart';
 import 'package:communal_mobile/core/services/push_notification_service.dart';
+import 'package:communal_mobile/core/widgets/connectivity_listener.dart';
 import 'package:communal_mobile/core/widgets/security_wrapper.dart';
 import 'package:communal_mobile/data/local/theme_mode_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -201,15 +200,8 @@ class MyApp extends StatelessWidget {
                       themeMode: mode,
                       routerConfig: appRouter,
                       builder: (context, child) {
-                        // ServerStatusOverlay sits inside the router
-                        // builder so the dialog uses the router's
-                        // root navigator (the same one the rest of
-                        // the app routes through). ConnectivityListener
-                        // wraps the child for offline snackbars.
-                        return ServerStatusOverlay(
-                          child: ConnectivityListener(
-                            child: child ?? const SizedBox.shrink(),
-                          ),
+                        return ConnectivityListener(
+                          child: child ?? const SizedBox.shrink(),
                         );
                       },
                     );

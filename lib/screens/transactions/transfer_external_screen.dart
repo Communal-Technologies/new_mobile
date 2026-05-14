@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/utils/tier_limit_check.dart';
@@ -389,6 +390,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
+    final isOnline = context.watch<ConnectivityCubit>().isConnected;
     final currencyCode =
         authState is AuthAuthenticated ? resolveCurrencyCode(authState.user) : 'NGN';
     final currencySymbol = authState is AuthAuthenticated
@@ -433,7 +435,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                 width: double.infinity,
                 height: 50.h,
                 child: ElevatedButton(
-                  onPressed: _continueEnabled ? _continue : null,
+                  onPressed: (isOnline && _continueEnabled) ? _continue : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.primaryColor,
                     foregroundColor: Colors.white,

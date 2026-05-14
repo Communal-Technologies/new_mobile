@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
-import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/custom_text_field.dart';
 import 'package:communal_mobile/core/widgets/loader_overlay.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
@@ -33,8 +32,6 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
 
   bool _isLoading = true;
   bool _isSearchingAccount = false;
-  bool _continueBusy = false;
-  TransferFavorite? _footerRecipient;
   bool _showTopSuggestionPanel = false;
   List<_InternalRow> _topAccountSuggestions = const [];
 
@@ -50,7 +47,6 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
     final initial = widget.initialRecipient;
     if (initial != null) {
       _accountNumberCtrl.text = initial.accountNumber;
-      _footerRecipient = initial;
     }
     _accountNumberCtrl.addListener(_onAccountNumberFieldChanged);
     _searchCtrl.addListener(() {
@@ -148,106 +144,9 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
   }
 
   void _onAccountNumberFieldChanged() {
-    final fav = _footerRecipient;
-    if (fav != null &&
-        _accountNumberCtrl.text.trim() != fav.accountNumber.trim()) {
-      setState(() => _footerRecipient = null);
-      return;
-    }
     setState(() {});
   }
 
-  _InternalRow? _findInternalRowExact(String accountNumber) {
-    final n = accountNumber.trim();
-    for (final b in _beneficiaries) {
-      if (b.accountNumber.trim() == n) {
-        return _InternalRow(
-          accountId: b.accountId,
-          accountName: b.accountName,
-          accountNumber: b.accountNumber,
-          cooperativeName: b.bankName,
-          bankName: b.bankName,
-          nipCode: b.nipCode,
-        );
-      }
-    }
-    for (final m in _internalMembers) {
-      if (m.accountNumber.trim() == n) {
-        return _InternalRow(
-          accountId: m.accountId,
-          accountName: m.accountName,
-          accountNumber: m.accountNumber,
-          cooperativeName: m.cooperativeName.trim(),
-          bankName: m.bank,
-          nipCode: m.nipCode,
-        );
-      }
-    }
-    return null;
-  }
-
-  Future<_InternalRow?> _fetchResolveInternalRow(String accountNumber) async {
-    final n = accountNumber.trim();
-    try {
-      final list = await _repo.fetchBankSuggestions(query: n);
-      final match = list.where(
-        (e) => e.isInternal && e.accountNumber.trim() == n,
-      );
-      if (match.isEmpty) return null;
-      final e = match.first;
-      return _InternalRow(
-        accountId: e.accountId,
-        accountName: e.accountName,
-        accountNumber: e.accountNumber,
-        cooperativeName: e.cooperativeName.trim(),
-        bankName: e.bank,
-        nipCode: e.nipCode,
-      );
-    } catch (_) {
-      return null;
-    }
-  }
-
-  bool get _footerContinueEnabled {
-    if (_continueBusy) return false;
-    if (_footerRecipient != null) return true;
-    final raw = _accountNumberCtrl.text.trim();
-    return RegExp(r'^\d{10}$').hasMatch(raw);
-  }
-
-  Future<void> _onFooterContinue() async {
-    if (!_footerContinueEnabled) return;
-    final picked = _footerRecipient;
-    if (picked != null) {
-      // ignore: unawaited_futures
-      context.pushNamed(
-        'transfer-internal-amount',
-        extra: {'favorite': picked.toJson()},
-      );
-      return;
-    }
-    final raw = _accountNumberCtrl.text.trim();
-    if (!RegExp(r'^\d{10}$').hasMatch(raw)) return;
-
-    setState(() => _continueBusy = true);
-    try {
-      final row = _findInternalRowExact(raw) ?? await _fetchResolveInternalRow(raw);
-      if (!mounted) return;
-      if (row == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Could not verify this account. Check the number and try again.',
-            ),
-          ),
-        );
-        return;
-      }
-      _openAmount(row);
-    } finally {
-      if (mounted) setState(() => _continueBusy = false);
-    }
-  }
 
   List<_InternalRow> _currentRows() {
     final accountFilter = _accountNumberCtrl.text.trim();
@@ -361,7 +260,6 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
         _isSearchingAccount = false;
         _showTopSuggestionPanel = false;
         _topAccountSuggestions = const [];
-        _footerRecipient = null;
       });
       return;
     }
@@ -420,16 +318,6 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
               onPressed: () => context.pop(),
             ),
             title: const Text('Select Communal Account'),
-          ),
-          bottomNavigationBar: SafeArea(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 12.h),
-              child: AppElevatedButton(
-                title: 'Continue',
-                onPressed: _footerContinueEnabled ? _onFooterContinue : null,
-                isLoading: _continueBusy,
-              ),
-            ),
           ),
           body: Stack(
             children: [
@@ -571,23 +459,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                                                   horizontal: 0,
                                                   vertical: 1.1,
                                                 ),
-                                            onTap: () {
-                                              setState(() {
-                                                _footerRecipient = TransferFavorite(
-                                                  source: 'internal',
-                                                  accountId: r.accountId,
-                                                  bank: r.bankName,
-                                                  accountNumber: r.accountNumber,
-                                                  accountName: r.accountName,
-                                                  nipCode: r.nipCode,
-                                                );
-                                                _accountNumberCtrl.text =
-                                                    r.accountNumber;
-                                              });
-                                              _onTopAccountNumberChanged(
-                                                r.accountNumber,
-                                              );
-                                            },
+                                            onTap: () => _openAmount(r),
                                             leading: CircleAvatar(
                                               radius: 21.r,
                                               backgroundColor: const Color(

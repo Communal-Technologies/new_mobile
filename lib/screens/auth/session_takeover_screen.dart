@@ -33,7 +33,7 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
 
   int _otpFieldKey = 0;
   String _code = '';
-  int _resendTimer = 60;
+  int _resendTimer = 300;
   Timer? _timer;
   bool _isVerifying = false;
   bool _isResending = false;
@@ -115,7 +115,7 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
       await getIt<AuthRepository>().resendSessionTakeoverOtp(challengeId);
       if (!mounted) return;
       setState(() {
-        _resendTimer = 60;
+        _resendTimer = 300;
         _otpFieldKey++;
         _code = '';
       });
@@ -242,7 +242,7 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
                     onPressed: (_resendTimer > 0 || _isResending || verifying) ? null : _resend,
                     child: Text(
                       _resendTimer > 0
-                          ? 'Resend code in ${_resendTimer}s'
+                          ? 'Resend code in ${_resendTimer ~/ 60}:${(_resendTimer % 60).toString().padLeft(2, '0')}'
                           : (_isResending ? 'Sending…' : 'Resend code'),
                       style: TextStyle(
                         fontSize: 19.sp,

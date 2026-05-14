@@ -439,6 +439,7 @@ class TransferRepository {
     String? idempotencyKey,
     Map<String, String>? biometricHeaders,
     String? pin,
+    Map<String, dynamic>? obligationContext,
   }) async {
     try {
       var ccy = (currencyCode ?? 'NGN').trim().toUpperCase();
@@ -453,6 +454,8 @@ class TransferRepository {
           'destinationAccountId': destinationAccountId.trim(),
         if (counterPartyId != null && counterPartyId.trim().isNotEmpty)
           'counterPartyId': counterPartyId.trim(),
+        if (obligationContext != null && obligationContext.isNotEmpty)
+          'obligation_context': obligationContext,
       };
       // Caller must supply EITHER biometricHeaders OR pin. The backend
       // middleware (RequireBiometricSignature) treats them as mutually

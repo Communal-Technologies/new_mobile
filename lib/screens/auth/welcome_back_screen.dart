@@ -1228,7 +1228,9 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
                       'Logout',
                       style: TextStyle(
                         fontSize: 19.sp,
-                        color: theme.primaryColor,
+                        color: theme.brightness == Brightness.dark
+                            ? Colors.white
+                            : theme.primaryColor,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1412,7 +1414,9 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
               'Forgot Password?',
               style: TextStyle(
                 fontSize: 17.sp,
-                color: theme.primaryColor,
+                color: theme.brightness == Brightness.dark
+                    ? Colors.white
+                    : theme.primaryColor,
                 fontWeight: FontWeight.w600,
               ),
             ),

@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:communal_mobile/core/constants/constants.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -69,33 +72,84 @@ class SplashCubit extends Cubit<SplashState> {
     }
   }
 
-  /// Blocks until the OS reports Wi‑Fi, mobile data, or ethernet.
+  /// Blocks until connectivity is confirmed — either by [Connectivity]
+  /// reporting a network interface, or by a successful TCP probe to the
+  /// server.
   ///
-  /// Uses [Connectivity] directly so we are not fooled by [ConnectivityCubit]
-  /// being briefly out of sync, and we do not continue while the device still
-  /// reports [ConnectivityResult.none].
+  /// The TCP probe is the fallback for Android OEM ROMs where
+  /// [Connectivity] misreports [ConnectivityResult.none] despite the
+  /// device having real internet access (common on certain Samsung /
+  /// Xiaomi / Huawei builds). Without the probe those devices were stuck
+  /// forever on the no-internet screen even though the browser worked fine.
   ///
-  /// Stays on [SplashNoInternet] until connectivity returns — no navigation.
+  /// While genuinely offline, the probe retries every 5 seconds so
+  /// recovery is fast once the network comes back — we don't rely
+  /// solely on [onConnectivityChanged] which can be slow or silent on
+  /// the same affected devices.
   Future<void> _waitForNetworkIfNeeded() async {
-    bool hasTransport(List<ConnectivityResult> results) {
-      return results.any(
-        (result) =>
-            result == ConnectivityResult.mobile ||
-            result == ConnectivityResult.wifi ||
-            result == ConnectivityResult.ethernet,
-      );
-    }
+    bool hasTransport(List<ConnectivityResult> results) => results.any(
+          (r) =>
+              r == ConnectivityResult.mobile ||
+              r == ConnectivityResult.wifi ||
+              r == ConnectivityResult.ethernet,
+        );
 
-    var results = await Connectivity().checkConnectivity();
+    // Fast path: OS reports a network interface.
+    final results = await Connectivity().checkConnectivity();
     if (hasTransport(results)) return;
+
+    // Slow path: connectivity_plus says no network — verify with a real
+    // TCP probe before blocking the user on the offline screen.
+    if (await _probeServer()) return;
 
     emit(SplashNoInternet());
 
-    await for (final next in Connectivity().onConnectivityChanged) {
+    final done = Completer<void>();
+    Timer? probeTimer;
+    StreamSubscription<List<ConnectivityResult>>? sub;
+
+    void complete() {
+      if (!done.isCompleted) done.complete();
+    }
+
+    sub = Connectivity().onConnectivityChanged.listen((next) {
+      if (isClosed) { complete(); return; }
       if (hasTransport(next)) {
-        return;
+        complete();
+      } else {
+        emit(SplashNoInternet());
       }
-      emit(SplashNoInternet());
+    });
+
+    probeTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      if (isClosed) { complete(); return; }
+      if (await _probeServer()) { complete(); }
+    });
+
+    await done.future;
+    probeTimer.cancel();
+    await sub.cancel();
+  }
+
+  /// TCP-level reachability check for the API host. Returns true as soon
+  /// as a connection is established (immediately destroyed — we only need
+  /// to know the host is routable, not read any data).
+  Future<bool> _probeServer() async {
+    try {
+      final uri = Uri.tryParse(AppConstants.baseUrl);
+      if (uri == null) return false;
+      final port = uri.hasPort
+          ? uri.port
+          : (uri.scheme == 'https' ? 443 : 80);
+      final socket = await Socket.connect(
+        uri.host,
+        port,
+        timeout: const Duration(seconds: 4),
+      );
+      socket.destroy();
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 

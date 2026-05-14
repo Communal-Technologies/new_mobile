@@ -522,7 +522,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
-                                              fontSize: 16.sp,
+                                              fontSize: 17.sp,
                                               color: Theme.of(context).colorScheme.onSurface,
                                             ),
                                           ),

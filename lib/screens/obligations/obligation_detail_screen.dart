@@ -258,11 +258,13 @@ class _SummaryCard extends StatelessWidget {
           vSpace(12),
           Row(
             children: [
-              _Badge(
-                label:
-                    '${obligation.installmentsPaid} of ${obligation.totalInstallments}',
-              ),
-              const Spacer(),
+              if (obligation.perInstallmentMinor > 0) ...[
+                _Badge(
+                  label:
+                      '${obligation.installmentsPaid} of ${obligation.totalInstallments}',
+                ),
+                const Spacer(),
+              ],
               Text(
                 'Next: ${obligation.nextDueDateLabel}',
                 style: TextStyle(color: Colors.white, fontSize: 17.sp),
@@ -398,12 +400,13 @@ class _AboutSection extends StatelessWidget {
                 ),
               ),
               hSpace(16),
-              Expanded(
-                child: _InfoTile(
-                  label: 'Per Installment',
-                  value: obligation.perInstallmentLabel,
+              if (obligation.perInstallmentMinor > 0)
+                Expanded(
+                  child: _InfoTile(
+                    label: 'Per Installment',
+                    value: obligation.perInstallmentLabel,
+                  ),
                 ),
-              ),
             ],
           ),
         ],

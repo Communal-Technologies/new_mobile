@@ -604,11 +604,20 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                                       r.accountName,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 17.sp,
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context).colorScheme.onSurface,
+                                      ),
                                     ),
                                     subtitle: Text(
                                       '${r.cooperativeName.isEmpty ? 'Communal' : r.cooperativeName} • ${r.accountNumber}',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 15.sp,
+                                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                      ),
                                     ),
                                   ),
                                 ),

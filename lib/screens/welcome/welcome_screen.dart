@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:communal_mobile/core/constants/constants.dart';
 import 'package:communal_mobile/core/constants/images.dart';
+import 'package:communal_mobile/core/utils/app_launcher.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:go_router/go_router.dart';
@@ -161,28 +163,22 @@ class WelcomeScreen extends StatelessWidget {
           const TextSpan(text: 'By continuing, you agree to our '),
           TextSpan(
             text: 'Terms of Service',
-            style: TextStyle(
-              color: const Color(0xFF00D9FF),
+            style: const TextStyle(
+              color: Color(0xFF00D9FF),
               decoration: TextDecoration.none,
             ),
             recognizer: TapGestureRecognizer()
-              ..onTap = () {
-                // Navigate to Terms of Service
-                // TODO: Implement navigation
-              },
+              ..onTap = () => launchAppUrl(AppConstants.termsOfServiceUrl),
           ),
           const TextSpan(text: ' and '),
           TextSpan(
             text: 'Privacy Policy',
-            style: TextStyle(
-              color: const Color(0xFF00D9FF),
+            style: const TextStyle(
+              color: Color(0xFF00D9FF),
               decoration: TextDecoration.none,
             ),
             recognizer: TapGestureRecognizer()
-              ..onTap = () {
-                // Navigate to Privacy Policy
-                // TODO: Implement navigation
-              },
+              ..onTap = () => launchAppUrl(AppConstants.privacyPolicyUrl),
           ),
         ],
       ),

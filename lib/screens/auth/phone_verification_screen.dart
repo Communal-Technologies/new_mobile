@@ -241,21 +241,22 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
       );
     }
 
-    if (widget.method != VerificationMethod.whatsapp) {
-      methods.add(
-        _MethodButton(
-          icon: Icons.chat_bubble_outline,
-          label: 'Whatsapp',
-          iconColor: Colors.green,
-          onTap: () {
-            context.pushReplacement('/verify-phone', extra: {
-              'phone': widget.phoneNumber,
-              'method': 'whatsapp',
-            });
-          },
-        ),
-      );
-    }
+    // WhatsApp OTP channel temporarily disabled.
+    // if (widget.method != VerificationMethod.whatsapp) {
+    //   methods.add(
+    //     _MethodButton(
+    //       icon: Icons.chat_bubble_outline,
+    //       label: 'Whatsapp',
+    //       iconColor: Colors.green,
+    //       onTap: () {
+    //         context.pushReplacement('/verify-phone', extra: {
+    //           'phone': widget.phoneNumber,
+    //           'method': 'whatsapp',
+    //         });
+    //       },
+    //     ),
+    //   );
+    // }
 
     if (widget.method != VerificationMethod.call) {
       methods.add(
@@ -491,7 +492,9 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
               // How to check code box
               CustomPaint(
                 painter: DashedBorderPainter(
-                  color: const Color(0xFF00BCD4),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white.withValues(alpha: 0.4)
+                      : const Color(0xFF00BCD4),
                   strokeWidth: 1.5,
                   dashWidth: 5,
                   dashSpace: 3,
@@ -500,7 +503,9 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                 child: Container(
                   padding: EdgeInsets.all(16.w),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE0F7FA), // Light blue/teal background
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white.withValues(alpha: 0.07)
+                        : const Color(0xFFE0F7FA),
                     borderRadius: BorderRadius.circular(12.r),
                   ),
                   child: Column(

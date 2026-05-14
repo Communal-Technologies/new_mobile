@@ -1,4 +1,5 @@
 import 'package:communal_mobile/core/utils/app_currency.dart';
+import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/utils/money_formatter.dart';
 import 'package:communal_mobile/core/utils/tap_debouncer.dart';
@@ -208,6 +209,7 @@ class _TransferInternalReviewScreenState
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
+    final isOnline = context.watch<ConnectivityCubit>().isConnected;
     final authState = context.watch<AuthBloc>().state;
     final walletBalanceKobo = authState is AuthAuthenticated
         ? authState.user.walletBalanceKobo
@@ -472,25 +474,28 @@ class _TransferInternalReviewScreenState
         child: SizedBox(
           width: double.infinity,
           height: 50.h,
-          child: InkWell(
-            onTap: () => _sendDebouncer.run(_sendMoney),
-            borderRadius: BorderRadius.circular(12.r),
-            child: Ink(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12.r),
-                gradient: const LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [Color(0xFF8C66F5), Color(0xFF6A39F3)],
+          child: Opacity(
+            opacity: isOnline ? 1.0 : 0.5,
+            child: InkWell(
+              onTap: isOnline ? () => _sendDebouncer.run(_sendMoney) : null,
+              borderRadius: BorderRadius.circular(12.r),
+              child: Ink(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12.r),
+                  gradient: const LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [Color(0xFF8C66F5), Color(0xFF6A39F3)],
+                  ),
                 ),
-              ),
-              child: Center(
-                child: Text(
-                  'Send Money',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 19.sp,
-                    fontWeight: FontWeight.w600,
+                child: Center(
+                  child: Text(
+                    'Send Money',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 19.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),

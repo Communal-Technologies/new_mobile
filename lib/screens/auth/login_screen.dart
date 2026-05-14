@@ -268,7 +268,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         : 'Use phone number instead',
                     style: TextStyle(
                       fontSize: 17.sp,
-                      color: Theme.of(context).primaryColor,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Theme.of(context).primaryColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

@@ -233,30 +233,26 @@ class Obligation {
       category: category,
     );
 
+    // Installment count: always derive from the configured monthly payment
+    // amount first (amount_payable_per_month = min_amount_payable). Fall
+    // back to total_shares only when no monthly payment is configured — this
+    // keeps equity obligations aligned with the cooperative dashboard's intent
+    // (the admin fills "Amount Payable per Month", not "cost per share", as
+    // the per-installment unit).
     var totalInstallments = 1;
-    if (totalShares > 0) {
-      totalInstallments = totalShares.clamp(1, 9999);
-    } else if (minPayableMinor > 0 && amountMinor > 0) {
+    if (minPayableMinor > 0 && amountMinor > 0) {
       totalInstallments =
           (amountMinor / minPayableMinor).ceil().clamp(1, 9999);
+    } else if (totalShares > 0) {
+      totalInstallments = totalShares.clamp(1, 9999);
     }
 
-    // Equity rows are share-priced — `cost_per_share` is the unit, not
-    // `min_amount_payable`. Old logic preferred minPayable across all
-    // categories, which made installmentsPaid wrong whenever both
-    // values were sent for an equity row.
-    int perInstallmentMinor;
-    if (category == 'Equity' && costPerShareMinor > 0) {
-      perInstallmentMinor = costPerShareMinor;
-    } else if (minPayableMinor > 0) {
-      perInstallmentMinor = minPayableMinor;
-    } else if (totalShares > 0 && costPerShareMinor > 0) {
-      perInstallmentMinor = costPerShareMinor;
-    } else if (totalInstallments > 0 && amountMinor > 0) {
-      perInstallmentMinor = (amountMinor / totalInstallments).round();
-    } else {
-      perInstallmentMinor = amountMinor > 0 ? amountMinor : 0;
-    }
+    // Per-installment divisor: always the configured amount_payable_per_month
+    // (min_amount_payable). cost_per_share is intentionally excluded —
+    // it is a share-pricing field and gives the wrong figure when used as
+    // a repayment divisor. When no monthly payment is configured the
+    // installment UI is hidden on the mobile screens.
+    final int perInstallmentMinor = minPayableMinor > 0 ? minPayableMinor : 0;
 
     var installmentsPaid = 0;
     if (perInstallmentMinor > 0) {

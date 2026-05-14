@@ -159,7 +159,9 @@ class _OtpInputFieldState extends State<OtpInputField> {
               style: TextStyle(
                 fontSize: 24.sp,
                 fontWeight: FontWeight.w600,
-                color: theme.primaryColor,
+                color: theme.brightness == Brightness.dark
+                    ? Colors.white
+                    : theme.primaryColor,
               ),
               inputFormatters: [
                 FilteringTextInputFormatter.digitsOnly,
@@ -170,23 +172,27 @@ class _OtpInputFieldState extends State<OtpInputField> {
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12.r),
                   borderSide: BorderSide(
-                    color:
-                        hasValue ? theme.primaryColor : Colors.grey.shade300,
+                    color: theme.brightness == Brightness.dark
+                        ? (hasValue ? Colors.white : Colors.white.withValues(alpha: 0.35))
+                        : (hasValue ? theme.primaryColor : Colors.grey.shade300),
                     width: 1.5,
                   ),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12.r),
                   borderSide: BorderSide(
-                    color:
-                        hasValue ? theme.primaryColor : Colors.grey.shade300,
+                    color: theme.brightness == Brightness.dark
+                        ? (hasValue ? Colors.white : Colors.white.withValues(alpha: 0.35))
+                        : (hasValue ? theme.primaryColor : Colors.grey.shade300),
                     width: 1.5,
                   ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12.r),
                   borderSide: BorderSide(
-                    color: theme.primaryColor,
+                    color: theme.brightness == Brightness.dark
+                        ? Colors.white
+                        : theme.primaryColor,
                     width: 2,
                   ),
                 ),

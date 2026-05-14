@@ -32,6 +32,9 @@ class AppConstants {
     1000, 3000, 5000, 10000, 15000, 20000, 30000, 50000, 100000,
   ];
 
+  static const String termsOfServiceUrl = 'https://communalhq.com/terms';
+  static const String privacyPolicyUrl   = 'https://communalhq.com/privacy-policy';
+
   /// Staging API (used when `APP_ENV` is `staging`).
   static const String stagingApiBaseUrl =
       'https://api-staging.communalhq.com/api/v1';

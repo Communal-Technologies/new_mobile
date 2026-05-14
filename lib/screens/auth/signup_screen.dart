@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:communal_mobile/core/constants/constants.dart';
 import 'package:communal_mobile/core/constants/images.dart';
+import 'package:communal_mobile/core/utils/app_launcher.dart';
 import 'package:communal_mobile/core/widgets/phone_input_field.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
@@ -303,9 +305,9 @@ class _SignupScreenState extends State<SignupScreen> {
                                 fontWeight: FontWeight.w600,
                               ),
                               recognizer: TapGestureRecognizer()
-                                ..onTap = () {
-                                  // TODO: Navigate to Terms
-                                },
+                                ..onTap = () => launchAppUrl(
+                                      AppConstants.termsOfServiceUrl,
+                                    ),
                             ),
                             const TextSpan(text: ', and '),
                             TextSpan(
@@ -315,9 +317,9 @@ class _SignupScreenState extends State<SignupScreen> {
                                 fontWeight: FontWeight.w600,
                               ),
                               recognizer: TapGestureRecognizer()
-                                ..onTap = () {
-                                  // TODO: Navigate to Privacy
-                                },
+                                ..onTap = () => launchAppUrl(
+                                      AppConstants.privacyPolicyUrl,
+                                    ),
                             ),
                           ],
                         ),

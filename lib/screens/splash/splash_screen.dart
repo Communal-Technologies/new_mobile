@@ -7,6 +7,7 @@ import 'package:communal_mobile/core/theme/colors.dart';
 import 'package:communal_mobile/cubits/splash/splash_cubit.dart';
 import 'package:communal_mobile/cubits/splash/splash_state.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:communal_mobile/core/widgets/connectivity_listener.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:go_router/go_router.dart';
 
@@ -81,17 +82,21 @@ class _SplashScreenState extends State<SplashScreen>
             ),
             child: Scaffold(
               backgroundColor: primaryColor,
-              body: BlocConsumer<SplashCubit, SplashState>(
-                listenWhen: (prev, next) =>
-                    next is SplashFirstTimeUser ||
-                    next is SplashLoggedOut ||
-                    next is SplashLoggedIn,
-                listener: _onSplashStateForNavigation,
-                builder: (context, state) {
-                  final showBlockingError = state is SplashError;
-                  final waitingOffline = state is SplashNoInternet;
+              body: ConnectivityListener(
+                // Splash has its own full-screen offline UI — suppress
+                // the snackbar so both don't show at the same time.
+                showOfflineSnackbar: false,
+                child: BlocConsumer<SplashCubit, SplashState>(
+                  listenWhen: (prev, next) =>
+                      next is SplashFirstTimeUser ||
+                      next is SplashLoggedOut ||
+                      next is SplashLoggedIn,
+                  listener: _onSplashStateForNavigation,
+                  builder: (context, state) {
+                    final showBlockingError = state is SplashError;
+                    final waitingOffline = state is SplashNoInternet;
 
-                  return Stack(
+                    return Stack(
                     children: [
                       _buildSplashContent(primaryColor),
                       if (waitingOffline)
@@ -189,7 +194,8 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                     ],
                   );
-                },
+                  },
+                ),
               ),
             ),
           );

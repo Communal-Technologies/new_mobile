@@ -20,11 +20,6 @@ abstract class NetworkModule {
   NetworkInterceptor networkInterceptor(ConnectivityCubit connectivityCubit) =>
       NetworkInterceptor(connectivityCubit);
 
-  // [ServerStatusInterceptor] is intentionally NOT provided here. It's
-  // wired manually in `injection.dart` after `getIt.init()` and
-  // attached to the live `DioClient.dio` interceptor list. Doing it
-  // that way avoids forcing a `build_runner` regeneration of
-  // `injection.config.dart` for every checkout.
   @lazySingleton
   DioClient dioClient(
     Dio dio,

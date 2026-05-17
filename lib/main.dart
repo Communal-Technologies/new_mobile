@@ -16,9 +16,7 @@ import 'package:communal_mobile/cubits/splash/splash_cubit.dart';
 import 'package:communal_mobile/cubits/settings/settings_cubit.dart';
 import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
 import 'package:communal_mobile/cubits/security/security_cubit.dart';
-import 'package:communal_mobile/cubits/server_status/server_status_cubit.dart';
 import 'package:communal_mobile/core/services/push_notification_service.dart';
-import 'package:communal_mobile/core/widgets/connectivity_listener.dart';
 import 'package:communal_mobile/core/widgets/security_wrapper.dart';
 import 'package:communal_mobile/data/local/theme_mode_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -83,11 +81,6 @@ void main() async {
           BlocProvider(create: (_) => getIt<SplashCubit>()),
           BlocProvider(create: (_) => getIt<SettingsCubit>()),
           BlocProvider(create: (_) => getIt<ConnectivityCubit>()),
-          // ServerStatusCubit lives at app-shell level so the overlay
-          // (mounted inside MaterialApp.router below) and the Dio
-          // interceptor (which writes to it) share the same instance
-          // across navigation.
-          BlocProvider(create: (_) => getIt<ServerStatusCubit>()),
         ],
         child: const MyApp(),
       ),
@@ -199,11 +192,7 @@ class MyApp extends StatelessWidget {
                       darkTheme: AppTheme.dark,
                       themeMode: mode,
                       routerConfig: appRouter,
-                      builder: (context, child) {
-                        return ConnectivityListener(
-                          child: child ?? const SizedBox.shrink(),
-                        );
-                      },
+                      builder: (context, child) => child ?? const SizedBox.shrink(),
                     );
                       },
                     ),

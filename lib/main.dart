@@ -17,6 +17,7 @@ import 'package:communal_mobile/cubits/settings/settings_cubit.dart';
 import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
 import 'package:communal_mobile/cubits/security/security_cubit.dart';
 import 'package:communal_mobile/core/services/push_notification_service.dart';
+import 'package:communal_mobile/core/widgets/connectivity_listener.dart';
 import 'package:communal_mobile/core/widgets/security_wrapper.dart';
 import 'package:communal_mobile/data/local/theme_mode_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -192,7 +193,11 @@ class MyApp extends StatelessWidget {
                       darkTheme: AppTheme.dark,
                       themeMode: mode,
                       routerConfig: appRouter,
-                      builder: (context, child) => child ?? const SizedBox.shrink(),
+                      builder: (context, child) {
+                        return ConnectivityListener(
+                          child: child ?? const SizedBox.shrink(),
+                        );
+                      },
                     );
                       },
                     ),

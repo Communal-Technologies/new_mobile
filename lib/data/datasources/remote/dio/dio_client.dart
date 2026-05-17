@@ -85,11 +85,6 @@ class DioClient {
     if (refreshTokenInterceptor != null) {
       dio.interceptors.add(refreshTokenInterceptor!);
     }
-    // Note: [ServerStatusInterceptor] is appended at runtime by
-    // `injection.dart` after this client is constructed — see the
-    // server_status_cubit comment there for why we don't @injectable
-    // it through here.
-
     // Only add logger in dev
     if (isDebug) {
       dio.interceptors.add(loggingInterceptor);

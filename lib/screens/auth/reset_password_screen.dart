@@ -263,16 +263,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           });
           context.push('/session-takeover');
         } else if (state is ResetPasswordSuccess) {
-          // Password reset successful, user should be authenticated automatically
           setState(() {
             _isSubmitting = false;
           });
-          // Wait a bit for AuthAuthenticated state to be emitted
-          Future.delayed(const Duration(milliseconds: 100), () {
-            if (mounted) {
-              context.go('/home');
-            }
-          });
+          // Navigation is handled by the subsequent state:
+          // AuthAuthenticated → go('/home'), AuthSessionTakeoverPending →
+          // push('/session-takeover'), AuthUnauthenticated → SecurityWrapper
         } else if (state is AuthAuthenticated) {
           // User is authenticated, navigate to home
           context.go('/home');

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/constants/images.dart';
+import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:communal_mobile/core/widgets/numeric_keypad.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/loader_overlay.dart';
@@ -306,13 +308,16 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         }
       },
       builder: (context, state) {
-        return Stack(
+        final theme = Theme.of(context);
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: systemOverlayForTheme(theme),
+          child: Stack(
           fit: StackFit.expand,
           children: [
             Scaffold(
-              backgroundColor: Theme.of(context).cardColor,
+              backgroundColor: theme.scaffoldBackgroundColor,
               appBar: AppBar(
-                backgroundColor: Theme.of(context).cardColor,
+                backgroundColor: theme.scaffoldBackgroundColor,
                 elevation: 0,
                 leading: IconButton(
                   icon: const Icon(Icons.arrow_back),
@@ -412,13 +417,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                 margin: EdgeInsets.symmetric(horizontal: 3.w),
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: hasValue 
+                                  color: hasValue
                                       ? (hasError ? Colors.red : theme.primaryColor)
-                                      : Colors.grey.shade200,
+                                      : theme.colorScheme.onSurface.withValues(alpha: 0.08),
                                   border: Border.all(
-                                    color: hasError 
-                                        ? Colors.red 
-                                        : (hasValue ? theme.primaryColor : Colors.grey.shade300),
+                                    color: hasError
+                                        ? Colors.red
+                                        : (hasValue ? theme.primaryColor : theme.dividerColor),
                                     width: hasError ? 2 : 1.5,
                                   ),
                                 ),
@@ -484,6 +489,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 child: const LoaderOverlay(),
               ),
           ],
+        ),
         );
       },
     );

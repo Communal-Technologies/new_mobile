@@ -302,15 +302,19 @@ class _SecurityWrapperState extends State<SecurityWrapper>
   }
 
   Widget _buildSessionInvalidationOverlay(Widget child, String message) {
-    // SecurityWrapper sits above MaterialApp, so the Stack here cannot
-    // resolve AlignmentDirectional without an ambient Directionality.
-    final theme = Theme.of(context);
-    final onSurface = theme.colorScheme.onSurface;
-    final isDark = theme.brightness == Brightness.dark;
+    // SecurityWrapper sits above MaterialApp — Theme.of(context) always
+    // returns Flutter's default white theme here. Read the real theme from
+    // ThemeModeController and AppTheme directly instead.
+    final themeMode = getIt<ThemeModeController>().mode;
+    final isDark = themeMode == ThemeMode.dark;
+    final themeData = isDark ? AppTheme.dark : AppTheme.light;
+    final onSurface = themeData.colorScheme.onSurface;
 
     return Directionality(
       textDirection: TextDirection.ltr,
-      child: Stack(
+      child: Theme(
+        data: themeData,
+        child: Stack(
         fit: StackFit.expand,
         children: [
           child,
@@ -324,7 +328,7 @@ class _SecurityWrapperState extends State<SecurityWrapper>
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 24.w),
               child: Material(
-                color: theme.cardColor,
+                color: themeData.cardColor,
                 borderRadius: BorderRadius.circular(24.r),
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(24.w, 32.h, 24.w, 28.h),
@@ -336,7 +340,9 @@ class _SecurityWrapperState extends State<SecurityWrapper>
                         width: 64.w,
                         height: 64.w,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFEEEE),
+                          color: isDark
+                              ? const Color(0xFF3D1515)
+                              : const Color(0xFFFFEEEE),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -377,7 +383,7 @@ class _SecurityWrapperState extends State<SecurityWrapper>
                             appRouter.go('/welcome');
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: theme.primaryColor,
+                            backgroundColor: themeData.primaryColor,
                             foregroundColor: Colors.white,
                             elevation: 0,
                             padding: EdgeInsets.symmetric(vertical: 14.h),
@@ -403,6 +409,7 @@ class _SecurityWrapperState extends State<SecurityWrapper>
             ),
           ),
         ],
+        ),
       ),
     );
   }

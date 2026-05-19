@@ -980,11 +980,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
         }
       },
       child: AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark, // Dark icons for light background
-        statusBarBrightness: Brightness.light, // Light status bar for iOS
-      ),
+      value: systemOverlayForTheme(theme),
       child: BlocListener<SecurityCubit, SecurityState>(
         listenWhen: (previous, current) {
           // Listen when app becomes unlocked to force hide loader

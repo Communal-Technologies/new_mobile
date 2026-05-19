@@ -306,7 +306,11 @@ class _SecurityWrapperState extends State<SecurityWrapper>
     // returns Flutter's default white theme here. Read the real theme from
     // ThemeModeController and AppTheme directly instead.
     final themeMode = getIt<ThemeModeController>().mode;
-    final isDark = themeMode == ThemeMode.dark;
+    final platformBrightness =
+        WidgetsBinding.instance.platformDispatcher.platformBrightness;
+    final isDark = themeMode == ThemeMode.dark ||
+        (themeMode == ThemeMode.system &&
+            platformBrightness == Brightness.dark);
     final themeData = isDark ? AppTheme.dark : AppTheme.light;
     final onSurface = themeData.colorScheme.onSurface;
 
@@ -1168,6 +1172,14 @@ class _SecurityWrapperState extends State<SecurityWrapper>
       valueListenable: sessionInvalidationMessage,
       builder: (context, message, child) {
         if (message == null || message.trim().isEmpty) {
+          return child!;
+        }
+        // Only show the overlay when the user has an active authenticated
+        // session. During login / password-reset flows a 401 with a stale
+        // token is expected — not a real remote session takeover — so
+        // suppress the modal entirely outside of an authenticated session.
+        final authState = context.read<AuthBloc>().state;
+        if (authState is! AuthAuthenticated) {
           return child!;
         }
         return _buildSessionInvalidationOverlay(child!, message.trim());

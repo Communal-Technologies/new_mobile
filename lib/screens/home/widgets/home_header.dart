@@ -147,7 +147,10 @@ class HomeHeader extends StatelessWidget {
                   ),
                 ),
               ),
-              CooperativeHeaderBadge(user: user, theme: theme),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: 110.w),
+                child: CooperativeHeaderBadge(user: user, theme: theme),
+              ),
               hSpace(12),
               Expanded(
                 child: Column(

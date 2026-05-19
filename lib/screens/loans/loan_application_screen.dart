@@ -12,6 +12,7 @@ import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/core/widgets/subscription_expired_banner.dart';
 import 'package:communal_mobile/data/models/loan_eligibility.dart';
 import 'package:communal_mobile/data/models/loan_scheme.dart';
 import 'package:communal_mobile/data/repositories/loan_repository.dart';
@@ -199,6 +200,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthBloc>().state;
     final user = auth is AuthAuthenticated ? auth.user : null;
+    final isSubscriptionActive = user?.isCooperativeSubscriptionActive ?? true;
     // Prefer the cooperative's currency (from eligibility) over the
     // member's wallet currency — money limits are coop-side decisions.
     final currency =
@@ -235,6 +237,8 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (!isSubscriptionActive)
+                      SubscriptionExpiredBanner(endDate: user?.subscriptionEndDate),
                     _buildProgressIndicator(),
                     vSpace(24),
                     if (widget.preselectedScheme == null)
@@ -273,7 +277,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                   ),
                 ],
               ),
-              child: SafeArea(child: _buildContinueButton(currency)),
+              child: SafeArea(child: _buildContinueButton(currency, isSubscriptionActive)),
             ),
           ],
         ),
@@ -1102,11 +1106,11 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     );
   }
 
-  Widget _buildContinueButton(String currency) {
+  Widget _buildContinueButton(String currency, bool isSubscriptionActive) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: _hasEligibility
+        onPressed: _hasEligibility && isSubscriptionActive
             ? () {
                 final err = _validate();
                 if (err != null) {

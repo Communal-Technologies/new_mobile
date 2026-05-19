@@ -63,6 +63,15 @@ class UserModel extends Equatable {
   /// Wallet `currency` / `currency_code` when API sends ISO 4217 (e.g. NGN). Overrides country default.
   final String? walletCurrencyCode;
 
+  /// Whether the member's cooperative subscription is currently active.
+  /// `null` means no subscription record exists yet (treat as active so
+  /// legacy members without a record are not falsely blocked).
+  final bool? subscriptionActive;
+
+  /// The date through which the subscription is valid (inclusive), as returned
+  /// by the API. `null` when there is no subscription record.
+  final String? subscriptionEndDate;
+
   const UserModel({
     required this.id,
     required this.name,
@@ -94,6 +103,8 @@ class UserModel extends Equatable {
     this.walletAccountStatus,
     this.walletFrozenBy,
     this.walletCurrencyCode,
+    this.subscriptionActive,
+    this.subscriptionEndDate,
   });
 
   String get roleLabel {
@@ -130,6 +141,11 @@ class UserModel extends Equatable {
     if (tier != null && tier.isNotEmpty && tier != 'tier_0') return true;
     return kycStep1Submitted;
   }
+
+  /// Whether this member can perform cooperative actions (pay obligations,
+  /// apply for loans, pay fines). False when `subscriptionActive` is
+  /// explicitly `false`; `null` (no record) is treated as active.
+  bool get isCooperativeSubscriptionActive => subscriptionActive != false;
 
   /// Wallet is frozen (`account_status` = 2).
   bool get isWalletFrozen {
@@ -323,6 +339,20 @@ class UserModel extends Equatable {
       }
     }
 
+    bool? subscriptionActiveVal;
+    String? subscriptionEndDateVal;
+    final subRaw = json['subscription'];
+    if (subRaw is Map) {
+      final s = Map<String, dynamic>.from(subRaw);
+      final activeRaw = s['active'];
+      if (activeRaw != null) {
+        subscriptionActiveVal =
+            activeRaw == true || activeRaw == 1 || activeRaw == '1' || activeRaw == 'true';
+      }
+      final edRaw = s['end_date']?.toString().trim();
+      if (edRaw != null && edRaw.isNotEmpty) subscriptionEndDateVal = edRaw;
+    }
+
     return UserModel(
       id: userData['id']?.toString() ?? '',
       name: fullName.isNotEmpty ? fullName : fallbackName,
@@ -362,6 +392,8 @@ class UserModel extends Equatable {
       walletAccountStatus: walletAcctStatus,
       walletFrozenBy: walletFrozenByVal,
       walletCurrencyCode: walletCurrencyCodeVal,
+      subscriptionActive: subscriptionActiveVal,
+      subscriptionEndDate: subscriptionEndDateVal,
     );
   }
 
@@ -396,6 +428,8 @@ class UserModel extends Equatable {
       'wallet_account_status': walletAccountStatus,
       'wallet_frozen_by': walletFrozenBy,
       'wallet_currency_code': walletCurrencyCode,
+      'subscription_active': subscriptionActive,
+      'subscription_end_date': subscriptionEndDate,
     };
   }
 
@@ -431,5 +465,7 @@ class UserModel extends Equatable {
         walletAccountStatus,
         walletFrozenBy,
         walletCurrencyCode,
+        subscriptionActive,
+        subscriptionEndDate,
       ];
 }

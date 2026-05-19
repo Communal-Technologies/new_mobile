@@ -1,5 +1,6 @@
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/security/session_invalidation_notifier.dart';
 import 'package:communal_mobile/core/security/biometric_key_service.dart';
 import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/core/security/token_manager.dart';
@@ -600,6 +601,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       AppLogger.error(_tag, 'createPassword failed',
           error: e, stackTrace: stackTrace);
       emit(AuthFailure(_extractErrorMessage(e)));
+    }
+  }
+
+  @override
+  void onChange(Change<AuthState> change) {
+    super.onChange(change);
+    if (change.nextState is AuthAuthenticated) {
+      clearSessionInvalidation();
     }
   }
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:iconsax/iconsax.dart';
 import 'package:communal_mobile/cubits/security/security_cubit.dart';
 import 'package:communal_mobile/core/widgets/blur_overlay.dart';
 import 'package:communal_mobile/core/widgets/idle_prompt_dialog.dart';
@@ -302,6 +304,10 @@ class _SecurityWrapperState extends State<SecurityWrapper>
   Widget _buildSessionInvalidationOverlay(Widget child, String message) {
     // SecurityWrapper sits above MaterialApp, so the Stack here cannot
     // resolve AlignmentDirectional without an ambient Directionality.
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Stack(
@@ -311,53 +317,56 @@ class _SecurityWrapperState extends State<SecurityWrapper>
           Positioned.fill(
             child: AbsorbPointer(
               absorbing: true,
-              child: Container(color: Colors.black.withValues(alpha: 0.55)),
+              child: Container(color: Colors.black.withValues(alpha: 0.6)),
             ),
           ),
           Center(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: EdgeInsets.symmetric(horizontal: 24.w),
               child: Material(
-                // Was hard-coded Colors.white — rendered as a white card on
-                // the dark scaffold while the title text fell through to the
-                // theme's onSurface (white-on-white → invisible). Use the
-                // theme's cardColor so the surface flips with the active
-                // brightness.
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(16),
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(24.r),
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.fromLTRB(24.w, 32.h, 24.w, 28.h),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
-                        Icons.warning_amber_rounded,
-                        color: Colors.red,
-                        size: 34,
+                      // Icon badge
+                      Container(
+                        width: 64.w,
+                        height: 64.w,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFEEEE),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Iconsax.shield_cross,
+                          color: const Color(0xFFE53935),
+                          size: 32.sp,
+                        ),
                       ),
-                      const SizedBox(height: 10),
+                      SizedBox(height: 20.h),
                       Text(
                         'Session Ended',
                         style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Theme.of(context).colorScheme.onSurface,
+                          fontSize: 22.sp,
+                          fontWeight: FontWeight.w800,
+                          color: onSurface,
+                          letterSpacing: -0.3,
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 10),
+                      SizedBox(height: 10.h),
                       Text(
                         message,
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 14,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.7),
-                          height: 1.35,
+                          fontSize: 15.sp,
+                          color: onSurface.withValues(alpha: isDark ? 0.65 : 0.6),
+                          height: 1.5,
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 28.h),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
@@ -367,7 +376,24 @@ class _SecurityWrapperState extends State<SecurityWrapper>
                             context.read<AuthBloc>().add(LogoutRequested());
                             appRouter.go('/welcome');
                           },
-                          child: const Text('Log out'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: theme.primaryColor,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: EdgeInsets.symmetric(vertical: 14.h),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25.r),
+                            ),
+                            minimumSize: Size(double.infinity, 52.w),
+                          ),
+                          child: Text(
+                            'Log in again',
+                            style: TextStyle(
+                              fontSize: 17.sp,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
                         ),
                       ),
                     ],

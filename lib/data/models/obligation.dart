@@ -1,6 +1,7 @@
 import 'package:intl/intl.dart';
 
 import 'package:communal_mobile/core/utils/money.dart';
+import 'package:communal_mobile/data/models/obligation_category.dart';
 
 /// One row in an obligation's payment history. Amounts are integer minor
 /// units of [currency] (kobo for NGN, cents for USD…) — same convention as
@@ -82,6 +83,7 @@ class Obligation {
   Obligation({
     this.id,
     this.accountCode = '',
+    this.accountType,
     this.cooperativeId = '',
     this.currency = 'NGN',
     this.createdAt,
@@ -106,6 +108,10 @@ class Obligation {
 
   final String? id;
   final String accountCode;
+  /// Raw `account_type` code from the backend (e.g. '1523', '1524').
+  /// Used to resolve cooperative-specific display names from
+  /// [ObligationCategoriesCubit] at the UI layer without re-parsing.
+  final String? accountType;
   final String cooperativeId;
   final String currency;
   final DateTime? createdAt;
@@ -149,6 +155,15 @@ class Obligation {
 
   String get installmentsLabel =>
       'Installments paid: $installmentsPaid of $totalInstallments';
+
+  /// Returns the cooperative-specific display name for this obligation's
+  /// account type, looked up from [categories]. Falls back to the value
+  /// already stored in [category] (resolved from defaults at parse time)
+  /// when the code is absent or not found in the provided list.
+  String resolveCategory(List<ObligationCategory> categories) {
+    if (accountType == null || accountType!.trim().isEmpty) return category;
+    return ObligationCategory.resolveDisplayName(accountType, categories);
+  }
 
   /// Minimal instance for success / receipt flows that only need title +
   /// category. Everything else is zeroed out — callers should not read
@@ -231,6 +246,7 @@ class Obligation {
       totalMinor: amountMinor,
       dueDate: nextCycle,
       category: category,
+      accountType: accountType,
     );
 
     // Installment count: always derive from the configured monthly payment
@@ -274,6 +290,7 @@ class Obligation {
     return Obligation(
       id: obligation['id']?.toString(),
       accountCode: obligation['account_code']?.toString() ?? '',
+      accountType: accountType,
       cooperativeId: obligation['cooperative_id']?.toString() ?? '',
       currency: currency,
       createdAt: createdAt,
@@ -366,12 +383,18 @@ class Obligation {
     required int totalMinor,
     required DateTime dueDate,
     String? category,
+    String? accountType,
   }) {
     if (totalMinor > 0 && paidMinor >= totalMinor) return 'Completed';
-    // Equity contributions are share-based, not time-bound — there's
-    // no "overdue" state, only "fully subscribed" vs. "still active".
-    // Patronage / custom obligations keep the standard date-based check.
-    if (category != 'Equity' && dueDate.isBefore(DateTime.now())) {
+    // Share-based obligations (e.g. Equity / code 1523) are not time-bound —
+    // there's no "overdue" state, only "fully subscribed" vs. "still active".
+    // Use isShareBased from the category defaults (keyed by account type code)
+    // rather than checking the display name string, so cooperatives that rename
+    // 'Equity' to a local term still get the correct status behaviour.
+    final shareBased = accountType != null
+        ? ObligationCategory.isShareBasedCode(accountType, ObligationCategory.defaults)
+        : (category == 'Equity');
+    if (!shareBased && dueDate.isBefore(DateTime.now())) {
       return 'Overdue';
     }
     return 'Active';

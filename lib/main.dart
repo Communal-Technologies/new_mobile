@@ -12,6 +12,7 @@ import 'package:communal_mobile/routes/app_routes.dart';
 import 'package:communal_mobile/routes/auth_status_notifier.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
+import 'package:communal_mobile/cubits/obligation_categories/obligation_categories_cubit.dart';
 import 'package:communal_mobile/cubits/splash/splash_cubit.dart';
 import 'package:communal_mobile/cubits/settings/settings_cubit.dart';
 import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
@@ -82,6 +83,7 @@ void main() async {
           BlocProvider(create: (_) => getIt<SplashCubit>()),
           BlocProvider(create: (_) => getIt<SettingsCubit>()),
           BlocProvider(create: (_) => getIt<ConnectivityCubit>()),
+          BlocProvider(create: (_) => getIt<ObligationCategoriesCubit>()),
         ],
         child: const MyApp(),
       ),

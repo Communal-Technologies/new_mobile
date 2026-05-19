@@ -6,6 +6,7 @@ import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/core/security/token_manager.dart';
 import 'package:communal_mobile/core/utils/app_logger.dart';
 import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
+import 'package:communal_mobile/cubits/obligation_categories/obligation_categories_cubit.dart';
 import 'package:communal_mobile/data/local/biometric_prefs.dart';
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
@@ -609,6 +610,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     super.onChange(change);
     if (change.nextState is AuthAuthenticated) {
       clearSessionInvalidation();
+      // Load per-cooperative category config so the obligations screen can
+      // display the cooperative's custom category names. Non-fatal: the cubit
+      // falls back to defaults on any error, so offline / cold-start users
+      // see the standard Equity/Patronage/Custom/Fine labels.
+      final user = (change.nextState as AuthAuthenticated).user;
+      final cooperativeId = user.cooperativeId?.trim() ?? '';
+      if (cooperativeId.isNotEmpty) {
+        getIt<ObligationCategoriesCubit>().load(cooperativeId);
+      }
     }
   }
 

@@ -18,7 +18,9 @@ import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/animated_logo_loader.dart';
 import 'package:communal_mobile/core/widgets/loader_overlay.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/cubits/obligation_categories/obligation_categories_cubit.dart';
 import 'package:communal_mobile/data/models/obligation.dart';
+import 'package:communal_mobile/data/models/obligation_category.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/obligations/widgets/obligation_card.dart';
@@ -37,11 +39,10 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
     getIt(),
   );
   final _searchController = TextEditingController();
-  final List<String> _categories = ['Equity', 'Patronage', 'Custom', 'Fine'];
   List<Obligation> _obligations = const [];
   List<FineRecord> _memberFines = const [];
 
-  String _selectedCategory = 'Equity';
+  String _selectedCategory = '';
   final int _currentNavIndex = 1;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _loading = false;
@@ -52,7 +53,15 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadObligations());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Seed the selected tab from the cubit's category list (excludes Fine).
+      final cubit = context.read<ObligationCategoriesCubit>();
+      final nonFine = cubit.categories.where((c) => c.code != '1526');
+      if (_selectedCategory.isEmpty && nonFine.isNotEmpty) {
+        setState(() => _selectedCategory = nonFine.first.displayName);
+      }
+      _loadObligations();
+    });
   }
 
   @override
@@ -83,13 +92,20 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
     });
     try {
       final rows = await _repository.fetchMemberObligations(authState.user);
-      final availableCategories = rows.map((e) => e.category).toSet();
       if (!mounted) return;
+      final cats = context.read<ObligationCategoriesCubit>().categories;
+      // Resolve each obligation's display name from the cubit categories so
+      // renamed categories (e.g. 'Equity' → 'Shares') are reflected in the UI.
+      final resolved = rows.map((o) => _withResolvedCategory(o, cats)).toList();
+      final availableCategories = resolved.map((e) => e.category).toSet();
       setState(() {
-        _obligations = rows;
-        if (rows.isNotEmpty &&
-            !availableCategories.contains(_selectedCategory)) {
-          _selectedCategory = rows.first.category;
+        _obligations = resolved;
+        if (_selectedCategory.isEmpty ||
+            (resolved.isNotEmpty && !availableCategories.contains(_selectedCategory))) {
+          final nonFine = cats.where((c) => c.code != '1526');
+          _selectedCategory = nonFine.isNotEmpty
+              ? nonFine.first.displayName
+              : (resolved.isNotEmpty ? resolved.first.category : '');
         }
         _loading = false;
       });
@@ -101,6 +117,38 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
         _error = e.toString().replaceFirst('Exception: ', '');
       });
     }
+  }
+
+  /// Returns a copy of [o] with [Obligation.category] replaced by the
+  /// cooperative-specific display name from [categories].
+  Obligation _withResolvedCategory(Obligation o, List<ObligationCategory> categories) {
+    final resolved = o.resolveCategory(categories);
+    if (resolved == o.category) return o;
+    return Obligation(
+      id: o.id,
+      accountCode: o.accountCode,
+      accountType: o.accountType,
+      cooperativeId: o.cooperativeId,
+      currency: o.currency,
+      createdAt: o.createdAt,
+      updatedAt: o.updatedAt,
+      category: resolved,
+      status: o.status,
+      title: o.title,
+      description: o.description,
+      paidAmountMinor: o.paidAmountMinor,
+      totalAmountMinor: o.totalAmountMinor,
+      perInstallmentMinor: o.perInstallmentMinor,
+      installmentsPaid: o.installmentsPaid,
+      totalInstallments: o.totalInstallments,
+      startDate: o.startDate,
+      endDate: o.endDate,
+      nextDueDate: o.nextDueDate,
+      frequency: o.frequency,
+      payments: o.payments,
+      fines: o.fines,
+      infoNote: o.infoNote,
+    );
   }
 
   Future<void> _loadFines(dynamic user) async {
@@ -296,12 +344,22 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
       0,
       (sum, row) => sum + row.paidAmountMinor,
     );
-    // Equity has no "next due" — it's share-based and never overdue. Show
-    // a dash for that category instead of an upcoming date that doesn't
-    // mean anything.
+    // Share-based obligations (e.g. Equity) have no "next due" date.
+    // Look up the selected category's isShareBased flag from the cubit
+    // so cooperatives that rename 'Equity' still get the '—' treatment.
+    final cats = context.read<ObligationCategoriesCubit>().categories;
+    final selectedCat = cats.firstWhere(
+      (c) => c.displayName == _selectedCategory,
+      orElse: () => ObligationCategory(
+        code: '', displayName: _selectedCategory,
+        isWithdrawable: false, isLoanEligible: false,
+        isMandatory: false, earnsInterest: false,
+        isShareBased: false, displayOrder: 99,
+      ),
+    );
     final nextDueLabel = scoped.isEmpty
         ? 'N/A'
-        : (_selectedCategory == 'Equity'
+        : (selectedCat.isShareBased
               ? '—'
               : _formatDate(
                   scoped
@@ -364,10 +422,12 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
 
   Widget _buildCategorySelector(ThemeData theme) {
     final onSurface = theme.colorScheme.onSurface;
+    final cats = context.watch<ObligationCategoriesCubit>().categories;
+    final categoryNames = cats.map((c) => c.displayName).toList();
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: _categories.map((category) {
+        children: categoryNames.map((category) {
           final isActive = _selectedCategory == category;
           return Padding(
             padding: EdgeInsets.only(right: 10.w),
@@ -471,8 +531,14 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
       ];
     }
 
-    if (_selectedCategory == 'Fine') {
-      return _buildFineTabList(theme);
+    // Identify the Fine tab by code (1526) so renamed cooperatives still work.
+    final catCubit = context.read<ObligationCategoriesCubit>();
+    final fineCat = catCubit.categories.firstWhere(
+      (c) => c.code == '1526',
+      orElse: () => ObligationCategory.defaults.last,
+    );
+    if (_selectedCategory == fineCat.displayName) {
+      return _buildFineTabList(theme, fineCat.displayName);
     }
 
     final query = _searchController.text.toLowerCase();
@@ -510,13 +576,15 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
     ];
   }
 
-  List<Widget> _buildFineTabList(ThemeData theme) {
+  List<Widget> _buildFineTabList(ThemeData theme, String fineDisplayName) {
     final authState = context.read<AuthBloc>().state;
     final coopId = authState is AuthAuthenticated
         ? (authState.user.cooperativeId?.trim() ?? '')
         : '';
+    // Match fine obligations by accountType code (1526) when available,
+    // falling back to the resolved display name for backward compat.
     final loanFineObligations = _obligations
-        .where((o) => o.category == 'Fine')
+        .where((o) => o.accountType == '1526' || o.category == fineDisplayName)
         .toList();
     final query = _searchController.text.toLowerCase();
     final filteredFines = _memberFines.where((f) {

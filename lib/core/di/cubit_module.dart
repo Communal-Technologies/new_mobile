@@ -1,8 +1,10 @@
+import 'package:communal_mobile/cubits/obligation_categories/obligation_categories_cubit.dart';
 import 'package:communal_mobile/cubits/splash/splash_cubit.dart';
 import 'package:communal_mobile/cubits/settings/settings_cubit.dart';
 import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
 import 'package:communal_mobile/cubits/security/security_cubit.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
+import 'package:communal_mobile/data/repositories/obligation_categories_repository.dart';
 import 'package:communal_mobile/data/repositories/regions_repository.dart';
 import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -41,4 +43,10 @@ abstract class CubitModule {
     FlutterSecureStorage secureStorage,
   ) =>
       SecurityCubit(prefs, secureStorage);
+
+  @lazySingleton
+  ObligationCategoriesCubit provideObligationCategoriesCubit(
+    ObligationCategoriesRepository repository,
+  ) =>
+      ObligationCategoriesCubit(repository);
 }

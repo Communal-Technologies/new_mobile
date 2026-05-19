@@ -1,3 +1,4 @@
+import 'package:communal_mobile/cubits/obligation_categories/obligation_categories_cubit.dart';
 import 'package:communal_mobile/data/local/home_wallet_prefs.dart';
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
 import 'package:communal_mobile/data/local/theme_mode_controller.dart';
@@ -7,6 +8,7 @@ import 'package:communal_mobile/data/repositories/community_repository.dart';
 import 'package:communal_mobile/core/services/pending_deep_link_service.dart';
 import 'package:communal_mobile/core/services/unread_notifications_service.dart';
 import 'package:communal_mobile/data/repositories/notifications_repository.dart';
+import 'package:communal_mobile/data/repositories/obligation_categories_repository.dart';
 import 'package:communal_mobile/data/repositories/profile_repository.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:get_it/get_it.dart';
@@ -74,6 +76,16 @@ Future<void> configureDependencies() async {
   if (!getIt.isRegistered<TransferFavoritesPrefs>()) {
     getIt.registerLazySingleton<TransferFavoritesPrefs>(
       () => TransferFavoritesPrefs(getIt<SharedPreferences>()),
+    );
+  }
+  if (!getIt.isRegistered<ObligationCategoriesRepository>()) {
+    getIt.registerLazySingleton<ObligationCategoriesRepository>(
+      () => ObligationCategoriesRepository(getIt()),
+    );
+  }
+  if (!getIt.isRegistered<ObligationCategoriesCubit>()) {
+    getIt.registerLazySingleton<ObligationCategoriesCubit>(
+      () => ObligationCategoriesCubit(getIt()),
     );
   }
 }

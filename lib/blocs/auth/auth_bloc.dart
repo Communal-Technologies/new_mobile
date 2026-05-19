@@ -624,7 +624,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           event.newPassword,
         );
 
-        if (loginResponse != null && loginResponse.token != null) {
+        // Another device may still have an active session — handle the
+        // takeover OTP challenge the same way the regular login flow does.
+        if (loginResponse != null && loginResponse.requiresSessionTakeoverOtp) {
+          final id = loginResponse.takeoverChallengeId;
+          emit(ResetPasswordSuccess());
+          emit(AuthSessionTakeoverPending(
+            takeoverChallengeId: id ?? '',
+            maskedDestination: loginResponse.maskedDestination ?? '',
+            otpChannel: loginResponse.otpChannel ?? 'phone',
+            login: event.login.trim(),
+            message: loginResponse.message,
+          ));
+        } else if (loginResponse != null && loginResponse.token != null) {
           // Audit M6: persist via TokenManager (access + refresh + expiry).
           await tokenManager.updateTokens(
             accessToken: loginResponse.token!,
@@ -649,9 +661,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             emit(AuthUnauthenticated());
           }
         } else {
-          // Password reset succeeded but login failed.
+          // Password reset succeeded but login returned nothing usable.
           emit(ResetPasswordSuccess());
-          emit(const AuthFailure("Password reset successful, but login failed. Please try logging in manually."));
+          emit(AuthUnauthenticated());
         }
       } else {
         emit(const AuthFailure("Failed to reset password. Please try again."));

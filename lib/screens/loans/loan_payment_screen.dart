@@ -5,6 +5,7 @@ import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/core/widgets/subscription_expired_banner.dart';
 import 'package:communal_mobile/data/models/loan_application.dart';
 import 'package:communal_mobile/data/models/obligation.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
@@ -163,6 +164,8 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, auth) {
         final isOnline = context.watch<ConnectivityCubit>().isConnected;
+        final authUser = auth is AuthAuthenticated ? auth.user : null;
+        final isSubscriptionActive = authUser?.isCooperativeSubscriptionActive ?? true;
         final bankSubtitleExtra = _payMethod == _PayMethod.wallet
             ? (_loadingCashRepos
                   ? 'Loading cooperative accounts…'
@@ -195,6 +198,8 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (!isSubscriptionActive)
+                    SubscriptionExpiredBanner(endDate: authUser?.subscriptionEndDate),
                   _buildOverviewCard(outstanding, auth),
                   vSpace(24),
                   _buildAmountInput(),
@@ -302,7 +307,7 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
               child: Padding(
                 padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
                 child: ElevatedButton(
-                  onPressed: isOnline ? _onContinue : null,
+                  onPressed: isOnline && isSubscriptionActive ? _onContinue : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _kLoanOrange,
                     minimumSize: Size(double.infinity, 52.h),

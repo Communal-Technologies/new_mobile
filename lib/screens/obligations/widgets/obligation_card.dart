@@ -86,28 +86,31 @@ class ObligationCard extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
-                    Text(
-                      obligation.progressLabel,
-                      style: TextStyle(
-                        fontSize: 17.sp,
-                        fontWeight: FontWeight.w700,
-                        color: theme.brightness == Brightness.dark
-                            ? Colors.white
-                            : theme.primaryColor,
+                    if (obligation.isShareBased)
+                      Text(
+                        obligation.progressLabel,
+                        style: TextStyle(
+                          fontSize: 17.sp,
+                          fontWeight: FontWeight.w700,
+                          color: theme.brightness == Brightness.dark
+                              ? Colors.white
+                              : theme.primaryColor,
+                        ),
                       ),
-                    ),
                   ],
                 ),
-                vSpace(8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6.r),
-                  child: LinearProgressIndicator(
-                    value: obligation.progress.clamp(0, 1),
-                    minHeight: 10.h,
-                    backgroundColor: theme.dividerColor,
-                    valueColor: AlwaysStoppedAnimation(theme.primaryColor),
+                if (obligation.isShareBased) ...[
+                  vSpace(8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6.r),
+                    child: LinearProgressIndicator(
+                      value: obligation.progress.clamp(0, 1),
+                      minHeight: 10.h,
+                      backgroundColor: theme.dividerColor,
+                      valueColor: AlwaysStoppedAnimation(theme.primaryColor),
+                    ),
                   ),
-                ),
+                ],
                 if (obligation.fines.isNotEmpty) ...[
                   vSpace(10),
                   Container(
@@ -140,28 +143,29 @@ class ObligationCard extends StatelessWidget {
                 vSpace(12),
                 Row(
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.check_circle_outline,
-                          size: 16.sp,
-                          color: mutedOnSurface,
-                        ),
-                        hSpace(6),
-                        Text(
-                          obligation.installmentsLabel,
-                          style: TextStyle(
-                            fontSize: 17.sp,
+                    if (obligation.isShareBased)
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle_outline,
+                            size: 16.sp,
                             color: mutedOnSurface,
                           ),
-                        ),
-                      ],
-                    ),
+                          hSpace(6),
+                          Text(
+                            obligation.installmentsLabel,
+                            style: TextStyle(
+                              fontSize: 17.sp,
+                              color: mutedOnSurface,
+                            ),
+                          ),
+                        ],
+                      ),
                     const Spacer(),
-                    // Equity is share-based, not date-bound — showing a
-                    // "next due" date there is misleading, so we skip
-                    // the calendar pill for that category.
-                    if (obligation.category != 'Equity')
+                    // Open-ended categories (1524/1525/custom) are not
+                    // date-bound — show the next due date for those.
+                    // Share-based (1523) has no deadline, only a cap.
+                    if (!obligation.isShareBased)
                       Row(
                         children: [
                           Icon(

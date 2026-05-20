@@ -133,6 +133,13 @@ class Obligation {
   final List<FineRecord> fines;
   final String? infoNote;
 
+  /// True for share-based obligations (code 1523 / Equity). Drives
+  /// the card UI: progress bar, %, and installments are shown only for
+  /// share-based. Open-ended monthly contributions (1524/1525/custom)
+  /// have no cap so those elements are hidden.
+  bool get isShareBased => ObligationCategory.isShareBasedCode(
+      accountType, ObligationCategory.defaults);
+
   int get balanceMinor {
     final remaining = totalAmountMinor - paidAmountMinor;
     if (remaining < 0) return 0;
@@ -140,10 +147,12 @@ class Obligation {
     return remaining;
   }
 
-  double get progress =>
-      totalAmountMinor == 0 ? 0 : paidAmountMinor / totalAmountMinor;
+  double get progress => isShareBased && totalAmountMinor > 0
+      ? paidAmountMinor / totalAmountMinor
+      : 0;
 
-  String get progressLabel => '${(progress * 100).toStringAsFixed(0)}%';
+  String get progressLabel =>
+      isShareBased ? '${(progress * 100).toStringAsFixed(0)}%' : '';
 
   String get paidAmountLabel => Money(paidAmountMinor, currency).format();
   String get totalAmountLabel => Money(totalAmountMinor, currency).format();
@@ -151,7 +160,9 @@ class Obligation {
   String get perInstallmentLabel =>
       Money(perInstallmentMinor, currency).format();
 
-  String get amountBreakdown => '$paidAmountLabel of $totalAmountLabel';
+  /// For share-based: "₦X of ₦Y". For open-ended: just "₦X paid".
+  String get amountBreakdown =>
+      isShareBased ? '$paidAmountLabel of $totalAmountLabel' : paidAmountLabel;
 
   String get installmentsLabel =>
       'Installments paid: $installmentsPaid of $totalInstallments';
@@ -228,53 +239,49 @@ class Obligation {
             createdAt?.month ?? now.month,
             createdAt?.day ?? 1,
           );
-    // The card's "Next Due" should show the upcoming payment cycle —
-    // i.e. the FIRST OF THE FOLLOWING MONTH, not the start of the
-    // current period. e.g. an April 2026 obligation rolls into a
-    // May 1 due date for the next payment window.
+    // The card's "Next Due" shows the first of the following month.
     final nextCycle = DateTime(periodStart.year, periodStart.month + 1, 1);
     final minPayableMinor = _asInt(account?['min_amount_payable']);
     final totalShares = _asInt(account?['total_shares']);
     final costPerShareMinor = _asInt(account?['cost_per_share']);
     final accountType = account?['account_type']?.toString();
+    final isShareBased = ObligationCategory.isShareBasedCode(
+        accountType ?? '', ObligationCategory.defaults);
+    // Share-based (1523) has a fixed cap = total_shares × cost_per_share.
+    // Open-ended (1524/1525/custom) use the monthly obligation amount as the
+    // period target; they have no cap and never show a progress bar or %.
+    final totalAmountMinor = isShareBased &&
+            totalShares > 0 &&
+            costPerShareMinor > 0
+        ? totalShares * costPerShareMinor
+        : amountMinor;
     final category = _resolveCategory(accountType);
     final title = account?['account_name']?.toString().trim().isNotEmpty == true
         ? account!['account_name'].toString()
         : '$category Obligation';
     final status = _resolveStatus(
       paidMinor: amountPaidMinor,
-      totalMinor: amountMinor,
-      dueDate: nextCycle,
-      category: category,
-      accountType: accountType,
+      totalMinor: totalAmountMinor,
+      isShareBased: isShareBased,
     );
 
-    // Installment count: always derive from the configured monthly payment
-    // amount first (amount_payable_per_month = min_amount_payable). Fall
-    // back to total_shares only when no monthly payment is configured — this
-    // keeps equity obligations aligned with the cooperative dashboard's intent
-    // (the admin fills "Amount Payable per Month", not "cost per share", as
-    // the per-installment unit).
+    // Installment count (share-based only): cap / monthly payment.
     var totalInstallments = 1;
-    if (minPayableMinor > 0 && amountMinor > 0) {
+    if (minPayableMinor > 0 && totalAmountMinor > 0) {
       totalInstallments =
-          (amountMinor / minPayableMinor).ceil().clamp(1, 9999);
+          (totalAmountMinor / minPayableMinor).ceil().clamp(1, 9999);
     } else if (totalShares > 0) {
       totalInstallments = totalShares.clamp(1, 9999);
     }
 
-    // Per-installment divisor: always the configured amount_payable_per_month
-    // (min_amount_payable). cost_per_share is intentionally excluded —
-    // it is a share-pricing field and gives the wrong figure when used as
-    // a repayment divisor. When no monthly payment is configured the
-    // installment UI is hidden on the mobile screens.
+    // Per-installment divisor: always the configured monthly payment amount.
     final int perInstallmentMinor = minPayableMinor > 0 ? minPayableMinor : 0;
 
     var installmentsPaid = 0;
     if (perInstallmentMinor > 0) {
       installmentsPaid = (amountPaidMinor / perInstallmentMinor).floor();
-    } else if (amountMinor > 0) {
-      installmentsPaid = (amountPaidMinor / amountMinor).floor();
+    } else if (totalAmountMinor > 0) {
+      installmentsPaid = (amountPaidMinor / totalAmountMinor).floor();
     }
     installmentsPaid = installmentsPaid.clamp(0, totalInstallments);
 
@@ -301,7 +308,7 @@ class Obligation {
       description:
           account?['account_name']?.toString() ?? 'Member financial obligation',
       paidAmountMinor: amountPaidMinor,
-      totalAmountMinor: amountMinor,
+      totalAmountMinor: totalAmountMinor,
       perInstallmentMinor: perInstallmentMinor,
       installmentsPaid: installmentsPaid,
       totalInstallments: totalInstallments,
@@ -381,21 +388,13 @@ class Obligation {
   static String _resolveStatus({
     required int paidMinor,
     required int totalMinor,
-    required DateTime dueDate,
-    String? category,
-    String? accountType,
+    required bool isShareBased,
   }) {
-    if (totalMinor > 0 && paidMinor >= totalMinor) return 'Completed';
-    // Share-based obligations (e.g. Equity / code 1523) are not time-bound —
-    // there's no "overdue" state, only "fully subscribed" vs. "still active".
-    // Use isShareBased from the category defaults (keyed by account type code)
-    // rather than checking the display name string, so cooperatives that rename
-    // 'Equity' to a local term still get the correct status behaviour.
-    final shareBased = accountType != null
-        ? ObligationCategory.isShareBasedCode(accountType, ObligationCategory.defaults)
-        : (category == 'Equity');
-    if (!shareBased && dueDate.isBefore(DateTime.now())) {
-      return 'Overdue';
+    // Only share-based (1523) obligations have a cap and can reach Completed.
+    // Open-ended monthly contributions (1524/1525/custom) are always Active —
+    // there is no cap to hit and no Overdue state (fines handle late payments).
+    if (isShareBased && totalMinor > 0 && paidMinor >= totalMinor) {
+      return 'Completed';
     }
     return 'Active';
   }

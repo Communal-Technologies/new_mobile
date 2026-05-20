@@ -223,12 +223,14 @@ class _SummaryCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Total Amount',
+                      obligation.isShareBased ? 'Target Amount' : 'Amount Paid',
                       style: TextStyle(color: Colors.white70, fontSize: 17.sp),
                     ),
                     vSpace(4),
                     Text(
-                      obligation.totalAmountLabel,
+                      obligation.isShareBased
+                          ? obligation.totalAmountLabel
+                          : obligation.paidAmountLabel,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 24.sp,
@@ -241,36 +243,38 @@ class _SummaryCard extends StatelessWidget {
               _StatusChip(label: obligation.status, color: statusColor),
             ],
           ),
-          vSpace(16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _AmountColumn(label: 'Paid', value: obligation.paidAmountLabel),
-              _AmountColumn(label: 'Balance', value: obligation.balanceLabel),
-            ],
-          ),
-          vSpace(16),
-          LinearProgressIndicator(
-            value: obligation.progress.clamp(0, 1),
-            backgroundColor: Colors.white24,
-            valueColor: const AlwaysStoppedAnimation(Colors.white),
-          ),
-          vSpace(12),
-          Row(
-            children: [
-              if (obligation.perInstallmentMinor > 0) ...[
-                _Badge(
-                  label:
-                      '${obligation.installmentsPaid} of ${obligation.totalInstallments}',
-                ),
-                const Spacer(),
+          if (obligation.isShareBased) ...[
+            vSpace(16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _AmountColumn(label: 'Paid', value: obligation.paidAmountLabel),
+                _AmountColumn(label: 'Balance', value: obligation.balanceLabel),
               ],
-              Text(
-                'Next: ${obligation.nextDueDateLabel}',
-                style: TextStyle(color: Colors.white, fontSize: 17.sp),
-              ),
-            ],
-          ),
+            ),
+            vSpace(16),
+            LinearProgressIndicator(
+              value: obligation.progress.clamp(0, 1),
+              backgroundColor: Colors.white24,
+              valueColor: const AlwaysStoppedAnimation(Colors.white),
+            ),
+            vSpace(12),
+            Row(
+              children: [
+                if (obligation.perInstallmentMinor > 0) ...[
+                  _Badge(
+                    label:
+                        '${obligation.installmentsPaid} of ${obligation.totalInstallments}',
+                  ),
+                  const Spacer(),
+                ],
+                Text(
+                  'Next: ${obligation.nextDueDateLabel}',
+                  style: TextStyle(color: Colors.white, fontSize: 17.sp),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -897,8 +901,7 @@ class _BottomActions extends StatelessWidget {
   final ThemeData theme;
 
   bool get _canWithdraw =>
-      (obligation.category == 'Patronage' || obligation.category == 'Custom') &&
-      obligation.paidAmountMinor > 0;
+      !obligation.isShareBased && obligation.paidAmountMinor > 0;
 
   @override
   Widget build(BuildContext context) {

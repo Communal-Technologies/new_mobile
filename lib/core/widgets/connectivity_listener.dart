@@ -67,38 +67,46 @@ class _ConnectivityListenerState extends State<ConnectivityListener> {
           if (_currentSnackBarController != null) {
             _currentSnackBarController!.close();
             _currentSnackBarController = null;
+            // Only clear the queue when the offline snackbar was actually
+            // showing — avoids wiping the "restored" snackbar on spurious
+            // ConnectivityConnected(wasOffline: false) events that
+            // connectivity_plus emits after the initial reconnect.
+            scaffoldMessenger.clearSnackBars();
           }
-          scaffoldMessenger.clearSnackBars();
 
           if (state.wasOffline) {
             Future.delayed(const Duration(milliseconds: 200), () {
-              if (mounted && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Row(
-                      children: [
-                        Icon(Icons.wifi, color: Colors.white),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Internet connection restored',
-                            style: TextStyle(color: Colors.white),
-                          ),
+              if (!mounted) return;
+              // Use the pre-captured scaffoldMessenger (not a fresh
+              // ScaffoldMessenger.of(context) call) so we always talk to the
+              // same instance that owns the snackbar queue. Store the
+              // controller so the Dismiss action closes this exact snackbar
+              // rather than calling hideCurrentSnackBar() which could target
+              // a different one if the queue changed.
+              ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? restoredController;
+              restoredController = scaffoldMessenger.showSnackBar(
+                SnackBar(
+                  content: const Row(
+                    children: [
+                      Icon(Icons.wifi, color: Colors.white),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Internet connection restored',
+                          style: TextStyle(color: Colors.white),
                         ),
-                      ],
-                    ),
-                    backgroundColor: Colors.green,
-                    duration: const Duration(seconds: 3),
-                    action: SnackBarAction(
-                      label: 'Dismiss',
-                      textColor: Colors.white,
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                      },
-                    ),
+                      ),
+                    ],
                   ),
-                );
-              }
+                  backgroundColor: Colors.green,
+                  duration: const Duration(seconds: 3),
+                  action: SnackBarAction(
+                    label: 'Dismiss',
+                    textColor: Colors.white,
+                    onPressed: () => restoredController?.close(),
+                  ),
+                ),
+              );
             });
           }
         }

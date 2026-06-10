@@ -9,7 +9,9 @@ class KycRepository {
 
   final DioClient _dioClient;
 
-  /// Step 1: create Anchor customer + persist profile. Returns Anchor `customer_id`.
+  /// Step 1: create Anchor customer + persist profile. Returns Anchor `anchor_customer_id`.
+  /// [userId] is kept for caller compatibility but is not sent in the URL —
+  /// kycsvc reads the user ID from the JWT `sub` claim.
   Future<String> registerProfile({
     required String userId,
     required Map<String, dynamic> body,
@@ -17,13 +19,14 @@ class KycRepository {
   }) async {
     try {
       final response = await _dioClient.post(
-        ApiEndpoints.complianceRegister(userId),
+        ApiEndpoints.kycCreate,
         data: body,
         idempotencyKey: idempotencyKey,
       );
       final data = response.data;
-      if (data is Map && (data['status'] == true || data['status'] == 'true')) {
-        final id = data['customer_id']?.toString();
+      if (data is Map && (data['success'] == true || data['success'] == 'true')) {
+        final inner = data['data'];
+        final id = (inner is Map ? inner['anchor_customer_id'] : null)?.toString();
         if (id != null && id.isNotEmpty) return id;
       }
       throw Exception(
@@ -36,7 +39,8 @@ class KycRepository {
     }
   }
 
-  /// Step 2 (BVN): backend waits for Anchor verification; returns Anchor JSON in `data` on success.
+  /// Step 2 (BVN): submits BVN to Anchor for tier-1 verification.
+  /// Returns the `data` payload on success (contains `message`).
   Future<Map<String, dynamic>?> upgradeToTier1({
     required String anchorCustomerId,
     required String bvn,
@@ -46,7 +50,7 @@ class KycRepository {
   }) async {
     try {
       final response = await _dioClient.post(
-        ApiEndpoints.complianceUpgradeTier1(anchorCustomerId),
+        ApiEndpoints.kycUpgradeTier1(anchorCustomerId),
         data: <String, dynamic>{
           'bvn': bvn,
           'date_of_birth': dateOfBirth,
@@ -55,7 +59,7 @@ class KycRepository {
         idempotencyKey: idempotencyKey,
       );
       final data = response.data;
-      if (data is Map && (data['status'] == true || data['status'] == 'true')) {
+      if (data is Map && (data['success'] == true || data['success'] == 'true')) {
         final inner = data['data'];
         if (inner is Map) {
           return Map<String, dynamic>.from(inner);
@@ -148,12 +152,12 @@ class KycRepository {
 
       final formData = FormData.fromMap(map);
       final response = await _dioClient.postFormData(
-        ApiEndpoints.complianceUpgradeTier2(anchorCustomerId),
+        ApiEndpoints.kycUpgradeTier2(anchorCustomerId),
         data: formData,
         idempotencyKey: idempotencyKey,
       );
       final data = response.data;
-      if (data is Map && (data['status'] == true || data['status'] == 'true')) {
+      if (data is Map && (data['success'] == true || data['success'] == 'true')) {
         final inner = data['data'];
         if (inner is Map) {
           return Map<String, dynamic>.from(inner);
@@ -179,8 +183,9 @@ class KycRepository {
   }) async {
     try {
       await _dioClient.post(
-        ApiEndpoints.complianceRecordConsent(anchorCustomerId),
+        ApiEndpoints.kycRecordConsent,
         data: <String, dynamic>{
+          'anchor_customer_id': anchorCustomerId,
           'decision': decision,
           'consent_version': consentVersion,
         },

@@ -210,15 +210,14 @@ class ApiEndpoints {
   static const String membersLoanSearchGuarantors =
       '/members/loan/search-guarantors';
 
-  // --- KYC / compliance ---------------------------------------------------
-  static String complianceRegister(String userId) =>
-      '/compliance/register/$userId';
-  static String complianceUpgradeTier1(String anchorCustomerId) =>
-      '/compliance/upgrade-to-tier1/$anchorCustomerId';
-  static String complianceUpgradeTier2(String anchorCustomerId) =>
-      '/compliance/upgrade-to-tier2/$anchorCustomerId';
-  static String complianceRecordConsent(String anchorCustomerId) =>
-      '/compliance/record-consent/$anchorCustomerId';
+  // --- KYC / compliance (kycsvc — /api/kyc/v2/...) ------------------------
+  static const String kycCreate = '/api/kyc/v2';
+  static String kycGetByUserId(String userId) => '/api/kyc/v2/user/$userId';
+  static const String kycRecordConsent = '/api/kyc/v2/consent';
+  static String kycUpgradeTier1(String anchorCustomerId) =>
+      '/api/kyc/v2/$anchorCustomerId/tier1';
+  static String kycUpgradeTier2(String anchorCustomerId) =>
+      '/api/kyc/v2/$anchorCustomerId/tier2';
 
   // --- Regions / locations ------------------------------------------------
   static const String fetchRegions = '/fetch-regions';

@@ -45,7 +45,12 @@ class DioClient {
       ..options.receiveTimeout = const Duration(seconds: 60)
       ..options.headers = {
         HttpHeaders.contentTypeHeader: 'application/json; charset=UTF-8',
-        HttpHeaders.authorizationHeader: _token != null ? 'Bearer $_token' : '',
+        // Only include the Authorization header when a token is available.
+        // Sending `Authorization: ` (empty bearer) causes nginx/PHP-FPM to
+        // try to parse the malformed token — which can stall and return 502
+        // on slow upstream connections even when the route is public.
+        if (_token != null && _token!.isNotEmpty)
+          HttpHeaders.authorizationHeader: 'Bearer $_token',
         'X-localization': AppConstants.defaultLanguage,
         // Tell any intermediate proxy (CDN, Nginx cache) not to serve a
         // cached response for this request. Paired with the backend's

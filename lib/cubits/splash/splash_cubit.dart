@@ -72,20 +72,18 @@ class SplashCubit extends Cubit<SplashState> {
     }
   }
 
-  /// Blocks until connectivity is confirmed — either by [Connectivity]
-  /// reporting a network interface, or by a successful TCP probe to the
-  /// server.
+  /// Blocks until the API server is confirmed reachable via a direct TCP probe.
   ///
-  /// The TCP probe is the fallback for Android OEM ROMs where
-  /// [Connectivity] misreports [ConnectivityResult.none] despite the
-  /// device having real internet access (common on certain Samsung /
-  /// Xiaomi / Huawei builds). Without the probe those devices were stuck
-  /// forever on the no-internet screen even though the browser worked fine.
+  /// Testing general internet connectivity (e.g. probing 1.1.1.1) is not
+  /// sufficient — devices can have working internet while the API host is
+  /// unreachable due to carrier DNS failures or routing issues. Probing only
+  /// the API host means [SplashNoInternet] is shown (with auto-retry) rather
+  /// than proceeding to API calls that will fail and landing on the dead-end
+  /// [SplashError] screen.
   ///
-  /// While genuinely offline, the probe retries every 5 seconds so
-  /// recovery is fast once the network comes back — we don't rely
-  /// solely on [onConnectivityChanged] which can be slow or silent on
-  /// the same affected devices.
+  /// The probe also handles Android OEM ROMs that misreport
+  /// [ConnectivityResult.none] despite having real internet: if the API host
+  /// TCP connect succeeds regardless of what the OS reports, we proceed.
   Future<void> _waitForNetworkIfNeeded() async {
     bool hasTransport(List<ConnectivityResult> results) => results.any(
           (r) =>
@@ -132,35 +130,26 @@ class SplashCubit extends Cubit<SplashState> {
     await sub.cancel();
   }
 
-  /// TCP-level reachability probe. Returns true as soon as any connection
-  /// succeeds — we only need to know internet is available, not read data.
+  /// TCP-level probe against the API host specifically. Returns true only when
+  /// the API server is reachable — this is the only check that matters at
+  /// splash, since we need the API to be routable from this device.
   ///
-  /// Tries well-known IPs first (Cloudflare 1.1.1.1, Google 8.8.8.8) to
-  /// avoid DNS resolution failures on slow or broken carrier DNS servers
-  /// (observed on certain African mobile networks). Falls back to the API
-  /// host if those are blocked by carrier policy.
+  /// Previously this probed well-known IPs (1.1.1.1, 8.8.8.8) first, which
+  /// caused false positives: devices where those IPs were reachable (general
+  /// internet worked) but the API host had DNS or routing issues would pass
+  /// the probe, proceed straight to API calls, fail all 5 retries, and land
+  /// on the dead-end "We couldn't reach Communal" error screen. Testing the
+  /// API host directly prevents this — if it fails, the splash stays on the
+  /// auto-retrying SplashNoInternet screen until the API is reachable.
   Future<bool> _probeServer() async {
-    for (final ip in const ['1.1.1.1', '8.8.8.8']) {
-      try {
-        final socket = await Socket.connect(
-          ip,
-          443,
-          timeout: const Duration(seconds: 4),
-        );
-        socket.destroy();
-        return true;
-      } catch (_) {}
-    }
     try {
       final uri = Uri.tryParse(AppConstants.baseUrl);
       if (uri == null) return false;
-      final port = uri.hasPort
-          ? uri.port
-          : (uri.scheme == 'https' ? 443 : 80);
+      final port = uri.hasPort ? uri.port : (uri.scheme == 'https' ? 443 : 80);
       final socket = await Socket.connect(
         uri.host,
         port,
-        timeout: const Duration(seconds: 8),
+        timeout: const Duration(seconds: 10),
       );
       socket.destroy();
       return true;

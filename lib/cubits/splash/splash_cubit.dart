@@ -94,12 +94,11 @@ class SplashCubit extends Cubit<SplashState> {
               r == ConnectivityResult.ethernet,
         );
 
-    // Fast path: OS reports a network interface.
-    final results = await Connectivity().checkConnectivity();
-    if (hasTransport(results)) return;
-
-    // Slow path: connectivity_plus says no network — verify with a real
-    // TCP probe before blocking the user on the offline screen.
+    // Always probe for real internet access — the OS transport flag alone
+    // cannot confirm reachability. Captive-portal WiFi, depleted mobile data,
+    // and OEM ROM bugs (Samsung/Xiaomi/Huawei) all pass the transport check
+    // while having no actual internet, causing every subsequent API call to
+    // fail and landing users on the "We couldn't reach Communal" error screen.
     if (await _probeServer()) return;
 
     emit(SplashNoInternet());
@@ -112,12 +111,14 @@ class SplashCubit extends Cubit<SplashState> {
       if (!done.isCompleted) done.complete();
     }
 
-    sub = Connectivity().onConnectivityChanged.listen((next) {
+    sub = Connectivity().onConnectivityChanged.listen((next) async {
       if (isClosed) { complete(); return; }
       if (hasTransport(next)) {
-        complete();
+        // Probe immediately when OS reports a transport — prevents captive-portal
+        // connections from producing a false "reconnected" signal.
+        if (await _probeServer()) complete();
       } else {
-        emit(SplashNoInternet());
+        if (!done.isCompleted) emit(SplashNoInternet());
       }
     });
 

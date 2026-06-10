@@ -113,7 +113,7 @@ class _SplashScreenState extends State<SplashScreen>
                                         size: 88.sp, color: Colors.white),
                                     vSpace(24),
                                     Text(
-                                      'No internet connection',
+                                      'Can\'t connect to Communal',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         color: Colors.white,
@@ -123,8 +123,8 @@ class _SplashScreenState extends State<SplashScreen>
                                     ),
                                     vSpace(16),
                                     Text(
-                                      'When your connection is restored, the app will '
-                                      'continue automatically.',
+                                      'The app will connect automatically '
+                                      'once a connection is available.',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         color: Colors.white.withValues(alpha: 0.92),

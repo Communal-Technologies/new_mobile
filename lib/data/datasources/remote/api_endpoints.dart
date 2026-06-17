@@ -38,6 +38,8 @@ class ApiEndpoints {
   static const String profileDeviceToken = '/profile/device-token';
 
   // --- Members account / settings -----------------------------------------
+  static const String membersChangePassword = '/members/change-password';
+  static const String memberLoginActivity = '/auth/login-activity';
   static const String membersUpdateSecurityPin = '/members/update-security-pin';
   static const String membersVerifySecurityPin = '/members/verify-security-pin';
   static const String membersRequestUnfreeze =

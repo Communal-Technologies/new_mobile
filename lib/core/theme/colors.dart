@@ -72,9 +72,10 @@ class AppTheme {
       displayColor: const Color(0xFF0F1D40),
     ),
     appBarTheme: const AppBarTheme(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       foregroundColor: Color(0xFF0F1D40),
       elevation: 0,
+      scrolledUnderElevation: 0,
       iconTheme: IconThemeData(color: Color(0xFF0F1D40)),
       titleTextStyle: TextStyle(
         color: Color(0xFF0F1D40),
@@ -111,9 +112,10 @@ class AppTheme {
       displayColor: Colors.white,
     ),
     appBarTheme: const AppBarTheme(
-      backgroundColor: _darkSurface,
+      backgroundColor: Colors.transparent,
       foregroundColor: Colors.white,
       elevation: 0,
+      scrolledUnderElevation: 0,
       iconTheme: IconThemeData(color: Colors.white),
       titleTextStyle: TextStyle(
         color: Colors.white,

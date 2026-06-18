@@ -313,7 +313,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             Scaffold(
               backgroundColor: theme.scaffoldBackgroundColor,
               appBar: AppBar(
-                backgroundColor: theme.scaffoldBackgroundColor,
+                backgroundColor: Colors.transparent,
                 elevation: 0,
                 leading: IconButton(
                   icon: const Icon(Icons.arrow_back),

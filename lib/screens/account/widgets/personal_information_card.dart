@@ -107,11 +107,11 @@ class PersonalInformationCard extends StatelessWidget {
                 });
                 onEdited?.call();
               },
-              icon: Icon(Icons.edit, size: 18.sp, color: Colors.white),
+              icon: Icon(Icons.edit, size: 18.sp),
               label: const Text('Edit Profile'),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.white, width: 1.5),
-                foregroundColor: Colors.white,
+                side: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
+                foregroundColor: Theme.of(context).primaryColor,
                 padding: EdgeInsets.symmetric(vertical: 14.h),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12.r),

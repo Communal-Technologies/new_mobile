@@ -302,6 +302,8 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
 
   Future<void> _continue() async {
     if (_isSubmitting) return;
+    // Close the keyboard if it's still open when the user taps submit.
+    FocusManager.instance.primaryFocus?.unfocus();
     if (!_validateForm()) return;
     final id = _effectiveAnchor();
     if (id == null || id.isEmpty) {
@@ -624,7 +626,7 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
                         title: 'Continue',
                         isLoading: _isSubmitting,
                         loadingLabel: 'Submitting…',
-                        onPressed: _continue,
+                        onPressed: _isSubmitting ? null : _continue,
                       ),
                     ),
                   ],

@@ -1035,7 +1035,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
         appBar: widget.isAppLock
             ? null // No app bar for app lock
             : AppBar(
-        backgroundColor: theme.scaffoldBackgroundColor,
+        backgroundColor: Colors.transparent,
         elevation: 0,
                 systemOverlayStyle: systemOverlayForTheme(Theme.of(context)),
         leading: Row(

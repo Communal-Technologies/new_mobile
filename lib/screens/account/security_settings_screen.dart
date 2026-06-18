@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SecuritySettingsScreen extends StatefulWidget {
   const SecuritySettingsScreen({super.key});
@@ -26,6 +27,9 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
   bool _biometricHardwareAvailable = false;
   bool _loginAlertEnabled = true;
   bool _transactionAlertEnabled = true;
+
+  static const _kLoginAlert = 'security_login_alert';
+  static const _kTxAlert = 'security_transaction_alert';
   bool _allowScreenshotEnabled = false;
 
   List<Map<String, dynamic>> _activityLogs = [];
@@ -38,6 +42,26 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
     _loadBiometricStatus();
     _loadScreenshotPref();
     _loadActivity();
+    _loadAlertPrefs();
+  }
+
+  Future<void> _loadAlertPrefs() async {
+    final prefs = getIt<SharedPreferences>();
+    if (!mounted) return;
+    setState(() {
+      _loginAlertEnabled = prefs.getBool(_kLoginAlert) ?? true;
+      _transactionAlertEnabled = prefs.getBool(_kTxAlert) ?? true;
+    });
+  }
+
+  void _setLoginAlert(bool v) {
+    setState(() => _loginAlertEnabled = v);
+    getIt<SharedPreferences>().setBool(_kLoginAlert, v);
+  }
+
+  void _setTransactionAlert(bool v) {
+    setState(() => _transactionAlertEnabled = v);
+    getIt<SharedPreferences>().setBool(_kTxAlert, v);
   }
 
   Future<void> _loadActivity() async {
@@ -257,7 +281,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                     title: 'Login Alert',
                     subtitle: 'Get notified on new device logins',
                     value: _loginAlertEnabled,
-                    onChanged: (v) => setState(() => _loginAlertEnabled = v),
+                    onChanged: _setLoginAlert,
                   ),
                   _toggleRow(
                     icon: Icons.notification_important_outlined,
@@ -266,8 +290,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                     title: 'Transactions Alert',
                     subtitle: 'Alert for all transactions',
                     value: _transactionAlertEnabled,
-                    onChanged: (v) =>
-                        setState(() => _transactionAlertEnabled = v),
+                    onChanged: _setTransactionAlert,
                   ),
                   _toggleRow(
                     icon: Icons.image_outlined,
@@ -296,12 +319,15 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                   ),
                 ),
                 const Spacer(),
-                Text(
-                  'See all',
-                  style: TextStyle(
-                    fontSize: 17.sp,
-                    color: primary,
-                    fontWeight: FontWeight.w700,
+                GestureDetector(
+                  onTap: _showAllActivity,
+                  child: Text(
+                    'See all',
+                    style: TextStyle(
+                      fontSize: 17.sp,
+                      color: primary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
@@ -502,6 +528,62 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
     );
   }
 
+  void _showAllActivity() {
+    if (_activityLogs.isEmpty) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        maxChildSize: 0.95,
+        minChildSize: 0.4,
+        expand: false,
+        builder: (_, controller) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Padding(
+                padding: EdgeInsets.only(top: 12.h, bottom: 4.h),
+                child: Container(
+                  width: 40.w,
+                  height: 4.h,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).dividerColor,
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+              child: Text(
+                'Recent Activity',
+                style: TextStyle(
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ),
+            Divider(height: 1, color: Theme.of(context).dividerColor),
+            Expanded(
+              child: ListView.separated(
+                controller: controller,
+                itemCount: _activityLogs.length,
+                separatorBuilder: (_, __) =>
+                    Divider(height: 1, color: Theme.of(context).dividerColor),
+                itemBuilder: (_, i) => _ActivityTile(log: _activityLogs[i]),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildActivityContent() {
     if (_activityLoading) {
       return Padding(
@@ -555,7 +637,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       );
     }
     return Column(
-      children: _activityLogs.take(5).map((log) => _ActivityTile(log: log)).toList(),
+      children: _activityLogs.take(3).map((log) => _ActivityTile(log: log)).toList(),
     );
   }
 }
@@ -568,9 +650,18 @@ class _ActivityTile extends StatelessWidget {
   String _formatTime(String? raw) {
     if (raw == null || raw.isEmpty) return '';
     try {
-      final dt = DateTime.parse(raw).toLocal();
+      // Backend stores timestamps in UTC. Laravel serialises them as ISO 8601
+      // but may omit the 'Z' suffix (e.g. "2024-01-15 10:30:00"). Without a
+      // timezone indicator Dart treats the string as local time, making the
+      // displayed time wrong on any device not in UTC. Append 'Z' when there
+      // is no timezone to force UTC interpretation before converting to local.
+      final normalized =
+          raw.contains('Z') || raw.contains('+') ? raw : '${raw}Z';
+      final dt = DateTime.parse(normalized).toLocal();
       final now = DateTime.now();
       final diff = now.difference(dt);
+      if (diff.isNegative) return DateFormat('d MMM • h:mm a').format(dt);
+      if (diff.inMinutes < 1) return 'Just now';
       if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
       if (diff.inHours < 24) return '${diff.inHours}h ago';
       if (diff.inDays == 1) return 'Yesterday';
@@ -584,7 +675,7 @@ class _ActivityTile extends StatelessWidget {
     final a = (action ?? '').toLowerCase();
     final s = (status ?? '').toLowerCase();
     if (a.contains('login') || a.contains('sign_in')) {
-      return s == 'failed' ? 'Failed login attempt' : 'Signed in';
+      return (s == 'failed' || a.contains('failed')) ? 'Failed login attempt' : 'Signed in';
     }
     if (a.contains('logout') || a.contains('sign_out')) return 'Signed out';
     if (a.contains('session_takeover')) return 'Session takeover confirmed';
@@ -595,13 +686,28 @@ class _ActivityTile extends StatelessWidget {
 
   String _deviceLabel(String? ua) {
     if (ua == null || ua.isEmpty) return 'Unknown device';
+    // New format: "CommunalApp/1.0 (Pixel 7 Pro; Android 14)"
+    // Extract the part before the first semicolon inside the parentheses.
+    final parenContent = RegExp(r'\(([^)]+)\)').firstMatch(ua)?.group(1);
+    if (parenContent != null) {
+      final model = parenContent.split(';').first.trim();
+      if (model.isNotEmpty &&
+          model.toLowerCase() != 'android' &&
+          model.toLowerCase() != 'ios' &&
+          model.toLowerCase() != 'linux' &&
+          model.toLowerCase() != 'macos') {
+        return model;
+      }
+    }
+    // Legacy format or unknown — fall back to OS sniffing.
     final u = ua.toLowerCase();
-    if (u.contains('iphone') || u.contains('ios')) return 'iPhone';
+    if (u.contains('iphone')) return 'iPhone';
     if (u.contains('ipad')) return 'iPad';
+    if (u.contains('ios')) return 'iPhone';
     if (u.contains('android')) return 'Android device';
     if (u.contains('windows')) return 'Windows PC';
     if (u.contains('mac')) return 'Mac';
-    return 'Unknown device';
+    return 'Mobile device';
   }
 
   @override

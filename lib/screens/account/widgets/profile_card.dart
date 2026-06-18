@@ -75,7 +75,13 @@ class _ProfileCardState extends State<ProfileCard> {
         }
         final user = authState.user;
         final prefs = getIt<HomeWalletPrefs>();
-        final showUpgradeChip = user.tierLimits?.isFullyVerified != true;
+        // Hide the "Verify / Upgrade" CTA while KYC is pending Anchor
+        // confirmation (step submitted but no tier yet). Showing it
+        // alongside "Verification pending" creates two confusing badges.
+        final tierStr = user.communalTier?.trim().toLowerCase();
+        final kycPending = tierStr == null && user.kycStep1Submitted;
+        final showUpgradeChip =
+            !kycPending && user.tierLimits?.isFullyVerified != true;
         final displayName =
             user.name.trim().isNotEmpty ? user.name.trim() : 'Member';
         // Match the dashboard: render kobo precision (`₦1,234.56`)

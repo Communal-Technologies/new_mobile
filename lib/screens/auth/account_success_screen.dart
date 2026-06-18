@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/navigation/kyc_resume.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
-import 'package:go_router/go_router.dart';
 
 class AccountSuccessScreen extends StatelessWidget {
   const AccountSuccessScreen({super.key});
@@ -32,65 +31,44 @@ class AccountSuccessScreen extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: 24.w),
               child: Column(
                 children: [
-                  // Back button
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: Colors.white,
-                      ),
-                      onPressed: () => context.pop(),
-                    ),
-                  ),
+                  const Spacer(flex: 3),
 
-                  vSpace(40),
+                  // Layered success badge: soft outer halo → translucent
+                  // ring → solid white disc with the brand-coloured check.
+                  _SuccessBadge(theme: theme),
 
-                  // Success icon
-                  Container(
-                    width: 120.w,
-                    height: 120.w,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).cardColor,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Icon(
-                        Icons.check,
-                        size: 70.sp,
-                        color: theme.primaryColor,
-                      ),
-                    ),
-                  ),
-
-                  vSpace(24),
+                  vSpace(36),
 
                   // Success message
                   Text(
                     'Account Created\nSuccessfully',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 28.sp,
+                      fontSize: 30.sp,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
-                      height: 1.3,
+                      height: 1.25,
+                      letterSpacing: 0.2,
                     ),
                   ),
 
-                  vSpace(12),
+                  vSpace(14),
 
                   // Description
-                  Text(
-                    'Your account has been created successfully, verify your account with your NIN or BVN to activate you account.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 19.sp,
-                      color: Colors.white.withValues(alpha: 0.9),
-                      height: 1.5,
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8.w),
+                    child: Text(
+                      'Your account has been created successfully. Verify it with your NIN or BVN to activate your account.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 18.sp,
+                        color: Colors.white.withValues(alpha: 0.85),
+                        height: 1.55,
+                      ),
                     ),
                   ),
 
-                  vSpace(40),
+                  const Spacer(flex: 4),
 
                   // Continue button
                   SizedBox(
@@ -117,7 +95,6 @@ class AccountSuccessScreen extends StatelessWidget {
                     ),
                   ),
 
-                  const Spacer(),
                   vSpace(24),
                 ],
               ),
@@ -175,6 +152,61 @@ class AccountSuccessScreen extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Layered "success" badge — a solid white disc holding the brand check,
+/// wrapped in two translucent rings that give it a soft glowing depth
+/// against the purple background.
+class _SuccessBadge extends StatelessWidget {
+  const _SuccessBadge({required this.theme});
+
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 168.w,
+      height: 168.w,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withValues(alpha: 0.08),
+      ),
+      child: Center(
+        child: Container(
+          width: 132.w,
+          height: 132.w,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withValues(alpha: 0.16),
+          ),
+          child: Center(
+            child: Container(
+              width: 96.w,
+              height: 96.w,
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.check_rounded,
+                  size: 58.sp,
+                  color: theme.primaryColor,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

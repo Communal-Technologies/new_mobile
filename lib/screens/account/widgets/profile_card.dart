@@ -57,9 +57,15 @@ class _ProfileCardState extends State<ProfileCard> {
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
       buildWhen: (prev, next) {
-        final pu = prev is AuthAuthenticated ? prev.user : null;
-        final nu = next is AuthAuthenticated ? next.user : null;
-        return pu != nu;
+        // Only collapse to placeholder when truly unauthenticated — not
+        // during credential verification (AuthVerifyingCredentials), which
+        // is transient and would cause a blank flash between accounts.
+        if (next is! AuthAuthenticated) {
+          return next is AuthUnauthenticated && prev is AuthAuthenticated;
+        }
+        if (prev is! AuthAuthenticated) return true;
+        return prev.user != next.user ||
+            prev.sessionGeneration != next.sessionGeneration;
       },
       builder: (context, authState) {
         if (authState is! AuthAuthenticated) {
@@ -94,6 +100,7 @@ class _ProfileCardState extends State<ProfileCard> {
                 MemberAvatar(
                   url: avatar,
                   radius: 30.r,
+                  name: displayName,
                   backgroundColor: Colors.white.withValues(alpha: 0.2),
                 ),
                 hSpace(16),
@@ -110,7 +117,9 @@ class _ProfileCardState extends State<ProfileCard> {
                         ),
                       ),
                       vSpace(8),
-                      Row(
+                      Wrap(
+                        spacing: 8.w,
+                        runSpacing: 6.h,
                         children: [
                           Container(
                             padding: EdgeInsets.symmetric(
@@ -128,12 +137,9 @@ class _ProfileCardState extends State<ProfileCard> {
                               ),
                             ),
                           ),
-                          if (showUpgradeChip) ...[
-                            hSpace(8),
+                          if (showUpgradeChip)
                             GestureDetector(
-                              onTap: () {
-                                pushKycResumeRoute(context);
-                              },
+                              onTap: () => pushKycResumeRoute(context),
                               child: Container(
                                 padding: EdgeInsets.symmetric(
                                     horizontal: 10.w, vertical: 4.h),
@@ -151,7 +157,6 @@ class _ProfileCardState extends State<ProfileCard> {
                                 ),
                               ),
                             ),
-                          ],
                         ],
                       ),
                       vSpace(12),
@@ -185,7 +190,7 @@ class _ProfileCardState extends State<ProfileCard> {
                                           ? Icons.visibility
                                           : Icons.visibility_off,
                                       color: Colors.white,
-                                      size: 20.sp,
+                                      size: 24.sp,
                                     ),
                                   ),
                                 ],

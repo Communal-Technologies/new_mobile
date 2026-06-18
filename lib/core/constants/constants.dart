@@ -12,7 +12,7 @@ class AppConstants {
   AppConstants._();
 
   static const String defaultLanguage = 'en';
-  static const String configUri = '/fetch-system-settings';
+  static const String configUri = '/api/v1/fetch-system-settings';
 
   /// Audit M25: OTP length used by the verify-reset, session-takeover, and
   /// phone-verification screens. Backend issues 6-digit codes today; bumping
@@ -35,13 +35,17 @@ class AppConstants {
   static const String termsOfServiceUrl = 'https://communalhq.com/terms';
   static const String privacyPolicyUrl   = 'https://communalhq.com/privacy-policy';
 
-  /// Staging API (used when `APP_ENV` is `staging`).
+  /// Staging API origin (used when `APP_ENV` is `staging`).
+  ///
+  /// Origin only — no `/api/v1` suffix. Every endpoint in [ApiEndpoints]
+  /// carries its own full path (`/api/v1/…`, `/api/kyc/v2/…`,
+  /// `/api/bills/v2/…`), so the base URL must not embed a path prefix.
   static const String stagingApiBaseUrl =
-      'https://api-staging.communalhq.com/api/v1';
+      'https://api-staging.communalhq.com';
 
-  /// Production API (used when `APP_ENV` is `production`).
+  /// Production API origin (used when `APP_ENV` is `production`).
   static const String productionApiBaseUrl =
-      'https://api.communalhq.com/api/v1';
+      'https://api.communalhq.com';
 
   static const String _baseUrlDefine =
       String.fromEnvironment('BASE_URL');
@@ -68,7 +72,11 @@ class AppConstants {
     return raw.toLowerCase();
   }
 
-  /// Resolved API base for [appEnvironment].
+  /// Resolved API origin for [appEnvironment].
+  ///
+  /// This is the scheme + host only. Endpoint paths (including their
+  /// `/api/v1`, `/api/kyc/v2`, `/api/bills/v2` prefixes) live in
+  /// [ApiEndpoints] so each service's route is self-describing.
   static String get baseUrl {
     switch (appEnvironment) {
       case 'development':

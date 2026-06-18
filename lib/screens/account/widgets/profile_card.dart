@@ -33,11 +33,13 @@ class _ProfileCardState extends State<ProfileCard> {
       }
       final lab = tl.label.trim();
       if (lab.isNotEmpty) return lab;
-      return 'Not verified';
     }
     final t = u.communalTier?.trim().toLowerCase();
     if (t == 'tier_1') return 'Tier 1';
     if (t == 'tier_2') return 'Tier 2';
+    // KYC submitted but Anchor hasn't confirmed yet — don't say "Not verified"
+    // while the user is actively waiting for approval.
+    if (u.kycStep1Submitted) return 'Verification pending';
     return 'Not verified';
   }
 

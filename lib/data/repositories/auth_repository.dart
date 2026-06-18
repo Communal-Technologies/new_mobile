@@ -737,6 +737,15 @@ class AuthRepository {
     } on DioException catch (e) {
       final data = e.response?.data;
       if (data is Map) {
+        // 422 responses carry an `errors` map with field-level messages.
+        // Prefer that over the generic "The given data was invalid." message.
+        final errors = data['errors'];
+        if (errors is Map && errors.isNotEmpty) {
+          final first = errors.values.first;
+          if (first is List && first.isNotEmpty) {
+            throw Exception(first.first.toString());
+          }
+        }
         final msg = data['message']?.toString();
         if (msg != null && msg.isNotEmpty) throw Exception(msg);
       }

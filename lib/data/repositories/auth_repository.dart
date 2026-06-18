@@ -693,7 +693,57 @@ class AuthRepository {
     }
   }
 
-  /// Submit unfreeze request (only valid when account was self-frozen). Backend:
+  /// `GET /auth/login-activity` — returns the last 50 auth audit log entries.
+  Future<List<Map<String, dynamic>>> fetchLoginActivity() async {
+    try {
+      final response = await dioClient.get(ApiEndpoints.memberLoginActivity);
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data is Map && data['logs'] is List) {
+          return (data['logs'] as List)
+              .whereType<Map<String, dynamic>>()
+              .toList();
+        }
+      }
+      return [];
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map) {
+        final msg = data['message']?.toString();
+        if (msg != null && msg.isNotEmpty) throw Exception(msg);
+      }
+      throw Exception(e.message ?? 'Failed to load activity');
+    }
+  }
+
+  /// `POST /members/change-password` — changes the login PIN/password.
+  /// Throws an [Exception] with a user-facing message on failure.
+  Future<void> changeLoginPin(String oldPin, String newPin) async {
+    try {
+      final response = await dioClient.post(
+        ApiEndpoints.membersChangePassword,
+        data: <String, dynamic>{
+          'old_password': oldPin,
+          'new_password': newPin,
+        },
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) return;
+      final data = response.data;
+      if (data is Map) {
+        final msg = data['message']?.toString();
+        if (msg != null && msg.isNotEmpty) throw Exception(msg);
+      }
+      throw Exception('PIN change failed');
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map) {
+        final msg = data['message']?.toString();
+        if (msg != null && msg.isNotEmpty) throw Exception(msg);
+      }
+      throw Exception(e.message ?? 'PIN change failed');
+    }
+  }
+
   /// `POST /members/account/request-unfreeze` with `{ reason }` (min 10 chars).
   Future<void> requestAccountUnfreeze(String reason) async {
     try {

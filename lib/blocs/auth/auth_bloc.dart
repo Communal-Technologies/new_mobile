@@ -225,6 +225,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           accessToken: loginResponse.token!,
           refreshToken: loginResponse.refreshToken,
           expiresIn: loginResponse.expiresIn,
+          // Fresh login: drop any prior user's refresh token if this
+          // response omits one, so a later refresh can't switch accounts.
+          replaceRefreshToken: true,
         );
 
         // Login succeeded (token is persisted and valid). Fetching the
@@ -304,6 +307,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           accessToken: loginResponse.token!,
           refreshToken: loginResponse.refreshToken,
           expiresIn: loginResponse.expiresIn,
+          // Fresh session via takeover: fully replace prior tokens.
+          replaceRefreshToken: true,
         );
         authRepository.updateToken(loginResponse.token!);
         final user = await authRepository.getUserInfo(loginResponse.token!);
@@ -558,6 +563,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           accessToken: token,
           refreshToken: loginResponse.refreshToken,
           expiresIn: loginResponse.expiresIn,
+          // Fresh session via create-password: fully replace prior tokens.
+          replaceRefreshToken: true,
         );
         authRepository.updateToken(token);
 
@@ -661,6 +668,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             accessToken: loginResponse.token!,
             refreshToken: loginResponse.refreshToken,
             expiresIn: loginResponse.expiresIn,
+            // Fresh session via reset-password auto-login: replace prior tokens.
+            replaceRefreshToken: true,
           );
 
           final user = await authRepository.getUserInfo(loginResponse.token!);

@@ -30,19 +30,20 @@ class VerificationDetailsCard extends StatelessWidget {
       builder: (context, authState) {
         final user = authState is AuthAuthenticated ? authState.user : null;
 
-        // "Verified" = Anchor confirmed via tier elevation.
-        // "Submitted" = form was sent to Anchor but webhook hasn't come back yet.
-        // "Not submitted" = user hasn't started this step at all.
+        // Backend kyc_progress mapping (from /get-loggedin-user):
+        //   step_1_submitted = Anchor customer created (BVN sent to Anchor)
+        //   step_2_submitted = DOB + gender filled (profile step, NOT NIN)
+        //   step_3_submitted = tier_2 reached (equivalent to ninVerified)
         //
-        // We deliberately do NOT count step-submission alone as "Verified" —
-        // the backend only elevates the tier after Anchor validates the data,
-        // so a submitted-but-not-confirmed BVN or NIN must stay in the
-        // pending state rather than showing a green checkmark prematurely.
+        // BVN has three states: Verified (tier confirmed) → Pending (sent but
+        // not yet confirmed) → Not submitted.
+        // NIN has only two states: Verified (tier_2) or Not submitted — there
+        // is no tracked intermediate step for NIN alone.
         final tier = (user?.communalTier ?? '').toLowerCase();
         final bvnVerified  = tier == 'tier_1' || tier == 'tier_2';
         final bvnSubmitted = !bvnVerified && (user?.kycStep1Submitted ?? false);
         final ninVerified  = tier == 'tier_2';
-        final ninSubmitted = !ninVerified && (user?.kycStep2Submitted ?? false);
+        // ninSubmitted is always false — no separate NIN submission state exists.
 
         return Container(
           margin: EdgeInsets.symmetric(horizontal: 16.w),
@@ -82,7 +83,6 @@ class VerificationDetailsCard extends StatelessWidget {
               _StatusRow(
                 label: 'NIN (National Identification Number)',
                 verified: ninVerified,
-                submitted: ninSubmitted,
               ),
               vSpace(16),
               Container(

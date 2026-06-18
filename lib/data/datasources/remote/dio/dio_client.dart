@@ -57,6 +57,8 @@ class DioClient {
         // Cache-Control: no-store response header to prevent the "wrong
         // user on welcome screen after app update" caching bug.
         HttpHeaders.cacheControlHeader: 'no-cache',
+        HttpHeaders.userAgentHeader:
+            'CommunalApp/1.0 (${Platform.isAndroid ? 'Android' : Platform.isIOS ? 'iOS' : Platform.operatingSystem})',
       };
 
     // Audit M8: SPKI cert-pin override for the dio HTTP client. Adds a
@@ -99,6 +101,11 @@ class DioClient {
   void updateToken(String token) {
     _token = token;
     dio.options.headers[HttpHeaders.authorizationHeader] = 'Bearer $token';
+  }
+
+  void updateUserAgent(String deviceLabel) {
+    dio.options.headers[HttpHeaders.userAgentHeader] =
+        'CommunalApp/1.0 ($deviceLabel)';
   }
 
   void _handleUnauthorizedResponse(DioException error, {required bool requireAuth}) {

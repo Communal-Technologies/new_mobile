@@ -30,18 +30,19 @@ class VerificationDetailsCard extends StatelessWidget {
       builder: (context, authState) {
         final user = authState is AuthAuthenticated ? authState.user : null;
 
-        // Tier 1 in this product = BVN-verified; tier 2 = ID-verified
-        // (Communal `tier_2` corresponds to Anchor TIER_3, which adds
-        // government-ID NIN + selfie on top of BVN). Either step
-        // submission OR the corresponding tier is enough to show as
-        // verified — covers the gap where webhook re-confirmation is
-        // pending but the user already submitted.
+        // "Verified" = Anchor confirmed via tier elevation.
+        // "Submitted" = form was sent to Anchor but webhook hasn't come back yet.
+        // "Not submitted" = user hasn't started this step at all.
+        //
+        // We deliberately do NOT count step-submission alone as "Verified" —
+        // the backend only elevates the tier after Anchor validates the data,
+        // so a submitted-but-not-confirmed BVN or NIN must stay in the
+        // pending state rather than showing a green checkmark prematurely.
         final tier = (user?.communalTier ?? '').toLowerCase();
-        final bvnVerified = (user?.kycStep1Submitted ?? false)
-            || tier == 'tier_1'
-            || tier == 'tier_2';
-        final ninVerified = (user?.kycStep2Submitted ?? false)
-            || tier == 'tier_2';
+        final bvnVerified  = tier == 'tier_1' || tier == 'tier_2';
+        final bvnSubmitted = !bvnVerified && (user?.kycStep1Submitted ?? false);
+        final ninVerified  = tier == 'tier_2';
+        final ninSubmitted = !ninVerified && (user?.kycStep2Submitted ?? false);
 
         return Container(
           margin: EdgeInsets.symmetric(horizontal: 16.w),
@@ -75,11 +76,13 @@ class VerificationDetailsCard extends StatelessWidget {
               _StatusRow(
                 label: 'BVN (Bank Verification Number)',
                 verified: bvnVerified,
+                submitted: bvnSubmitted,
               ),
               vSpace(16),
               _StatusRow(
                 label: 'NIN (National Identification Number)',
                 verified: ninVerified,
+                submitted: ninSubmitted,
               ),
               vSpace(16),
               Container(
@@ -119,16 +122,34 @@ class VerificationDetailsCard extends StatelessWidget {
 class _StatusRow extends StatelessWidget {
   final String label;
   final bool verified;
+  final bool submitted;
 
   const _StatusRow({
     required this.label,
     required this.verified,
+    this.submitted = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = verified ? const Color(0xFF27AE60) : const Color(0xFFE67E22);
-    final text = verified ? 'Verified' : 'Not verified';
+    final Color color;
+    final String text;
+    final IconData icon;
+
+    if (verified) {
+      color = const Color(0xFF27AE60);
+      text = 'Verified';
+      icon = Icons.check_circle;
+    } else if (submitted) {
+      color = const Color(0xFFF39C12);
+      text = 'Pending';
+      icon = Icons.hourglass_top;
+    } else {
+      color = const Color(0xFFE67E22);
+      text = 'Not submitted';
+      icon = Icons.error_outline;
+    }
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,11 +172,7 @@ class _StatusRow extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                verified ? Icons.check_circle : Icons.error_outline,
-                size: 14.sp,
-                color: color,
-              ),
+              Icon(icon, size: 14.sp, color: color),
               hSpace(4),
               Text(
                 text,

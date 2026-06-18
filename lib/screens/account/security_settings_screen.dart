@@ -650,22 +650,19 @@ class _ActivityTile extends StatelessWidget {
   String _formatTime(String? raw) {
     if (raw == null || raw.isEmpty) return '';
     try {
-      // Backend stores timestamps in UTC. Laravel serialises them as ISO 8601
-      // but may omit the 'Z' suffix (e.g. "2024-01-15 10:30:00"). Without a
-      // timezone indicator Dart treats the string as local time, making the
-      // displayed time wrong on any device not in UTC. Append 'Z' when there
-      // is no timezone to force UTC interpretation before converting to local.
-      final normalized =
-          raw.contains('Z') || raw.contains('+') ? raw : '${raw}Z';
+      // Backend stores timestamps in UTC. Laravel serialises them as ISO 8601,
+      // usually with a trailing 'Z', but some payloads omit any timezone
+      // designator (e.g. "2024-01-15 10:30:00"). Without one, Dart parses the
+      // string as device-local time, which shows the wrong clock time on any
+      // device not in UTC. Append 'Z' to force UTC interpretation only when no
+      // designator (Z or a ±hh:mm offset) is already present.
+      final trimmed = raw.trim();
+      final hasTz = RegExp(r'(Z|[+-]\d{2}:?\d{2})$').hasMatch(trimmed);
+      final normalized = hasTz ? trimmed : '${trimmed}Z';
       final dt = DateTime.parse(normalized).toLocal();
-      final now = DateTime.now();
-      final diff = now.difference(dt);
-      if (diff.isNegative) return DateFormat('d MMM • h:mm a').format(dt);
-      if (diff.inMinutes < 1) return 'Just now';
-      if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
-      if (diff.inHours < 24) return '${diff.inHours}h ago';
-      if (diff.inDays == 1) return 'Yesterday';
-      return DateFormat('d MMM • h:mm a').format(dt);
+      // Always render the full date and time (including the year) so each
+      // entry is unambiguous — e.g. "15 Jan 2024, 10:30 AM".
+      return DateFormat('d MMM yyyy, h:mm a').format(dt);
     } catch (_) {
       return raw;
     }

@@ -11,6 +11,8 @@ import 'package:communal_mobile/data/repositories/notifications_repository.dart'
 import 'package:communal_mobile/data/repositories/obligation_categories_repository.dart';
 import 'package:communal_mobile/data/repositories/profile_repository.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
+import 'package:communal_mobile/core/utils/device_label_service.dart';
+import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:get_it/get_it.dart';
 import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,6 +23,13 @@ final GetIt getIt = GetIt.instance;
 @InjectableInit()
 Future<void> configureDependencies() async {
   await getIt.init(); // calls the generated config
+
+  // Resolve device label in background; update User-Agent once ready.
+  // Fire-and-forget: the first login request may still use the basic
+  // platform-only UA, but all subsequent requests get the full label.
+  getDeviceLabel().then((label) {
+    getIt<DioClient>().updateUserAgent(label);
+  });
   // Defensive: injectable has occasionally emitted duplicate [KycProgressStorage] module
   // providers, which can leave GetIt without a resolvable registration.
   if (!getIt.isRegistered<KycProgressStorage>()) {

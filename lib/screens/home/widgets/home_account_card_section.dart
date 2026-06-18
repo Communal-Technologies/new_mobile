@@ -347,7 +347,7 @@ class _SavingsTabContent extends StatelessWidget {
                         balanceVisible
                             ? Icons.visibility_outlined
                             : Icons.visibility_off_outlined,
-                        size: 20.sp,
+                        size: 24.sp,
                         color: Colors.white.withValues(alpha: 0.92),
                       ),
                     ),

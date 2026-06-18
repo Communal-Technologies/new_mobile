@@ -94,6 +94,7 @@ import 'package:communal_mobile/screens/account/faq_screen.dart';
 import 'package:communal_mobile/screens/account/notification_settings_screen.dart';
 import 'package:communal_mobile/screens/account/security_settings_screen.dart';
 import 'package:communal_mobile/screens/account/biometric_enrollment_screen.dart';
+import 'package:communal_mobile/screens/account/change_login_pin_screen.dart';
 import 'package:communal_mobile/screens/account/change_transaction_pin_screen.dart';
 import 'package:communal_mobile/screens/account/delete_account_screen.dart';
 import 'package:communal_mobile/screens/account/delete_account_confirmation_screen.dart';
@@ -720,6 +721,11 @@ final GoRouter appRouter = GoRouter(
       path: '/biometric-enrollment',
       name: 'biometric-enrollment',
       builder: (context, state) => const BiometricEnrollmentScreen(),
+    ),
+    GoRoute(
+      path: '/change-login-pin',
+      name: 'change-login-pin',
+      builder: (context, state) => const ChangeLoginPinScreen(),
     ),
     GoRoute(
       path: '/change-transaction-pin',

@@ -75,13 +75,21 @@ class _ProfileCardState extends State<ProfileCard> {
         }
         final user = authState.user;
         final prefs = getIt<HomeWalletPrefs>();
-        // Hide the "Verify / Upgrade" CTA while KYC is pending Anchor
-        // confirmation (step submitted but no tier yet). Showing it
-        // alongside "Verification pending" creates two confusing badges.
         final tierStr = user.communalTier?.trim().toLowerCase();
-        final kycPending = tierStr == null && user.kycStep1Submitted;
+        // Only treat tier_1 and tier_2 as real (confirmed) tiers.
+        // tier_0 or null both mean "not yet verified" for badge purposes.
+        final isRealTier = tierStr == 'tier_1' || tierStr == 'tier_2';
+        // KYC submitted but Anchor hasn't confirmed the tier yet.
+        final kycPending = !isRealTier && user.kycStep1Submitted;
+        // Show the CTA chip only when:
+        //   • not fully verified, AND
+        //   • KYC is not already pending (would create two confusing badges)
         final showUpgradeChip =
             !kycPending && user.tierLimits?.isFullyVerified != true;
+        // When the CTA chip is visible the status chip is redundant — "Verify
+        // account" already implies the user is unverified.  Only show the
+        // status chip when there is no CTA (pending / verified states).
+        final showStatusChip = !showUpgradeChip || isRealTier;
         final displayName =
             user.name.trim().isNotEmpty ? user.name.trim() : 'Member';
         // Match the dashboard: render kobo precision (`₦1,234.56`)
@@ -129,22 +137,23 @@ class _ProfileCardState extends State<ProfileCard> {
                         spacing: 8.w,
                         runSpacing: 6.h,
                         children: [
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 10.w, vertical: 4.h),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                            child: Text(
-                              _tierStatusChipLabel(user),
-                              style: TextStyle(
-                                fontSize: 17.sp,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                          if (showStatusChip)
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 10.w, vertical: 4.h),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              child: Text(
+                                _tierStatusChipLabel(user),
+                                style: TextStyle(
+                                  fontSize: 17.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
-                          ),
                           if (showUpgradeChip)
                             GestureDetector(
                               onTap: () => pushKycResumeRoute(context),

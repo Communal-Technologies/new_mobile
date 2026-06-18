@@ -33,6 +33,24 @@ class _SetPinScreenState extends State<SetPinScreen> {
   String? _pinError;
   bool _submitting = false;
 
+  /// Attached to the first cell of the "Re-enter your PIN" field so we can
+  /// move focus there automatically once the first PIN is fully entered.
+  final FocusNode _confirmFocusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _confirmFocusNode.dispose();
+    super.dispose();
+  }
+
+  /// Clears an existing inline error without rebuilding the whole screen on
+  /// every keystroke — only rebuild when there's actually an error to drop.
+  void _clearErrorIfNeeded() {
+    if (_pinError != null) {
+      setState(() => _pinError = null);
+    }
+  }
+
   void _validateAndContinue() {
     setState(() {
       _pinError = null;
@@ -184,12 +202,15 @@ class _SetPinScreenState extends State<SetPinScreen> {
               OtpInputField(
                 length: 6,
                 onChanged: (code) {
-                  setState(() {
-                    _pin = code;
-                    if (_pinError != null) {
-                      _pinError = null;
-                    }
-                  });
+                  // Store the value directly — no setState — so each digit
+                  // doesn't rebuild the entire scaffold (the source of the
+                  // sluggish typing).
+                  _pin = code;
+                  _clearErrorIfNeeded();
+                },
+                onCompleted: (_) {
+                  // Auto-advance to the re-enter field once 6 digits are in.
+                  _confirmFocusNode.requestFocus();
                 },
               ),
 
@@ -207,13 +228,10 @@ class _SetPinScreenState extends State<SetPinScreen> {
               vSpace(12),
               OtpInputField(
                 length: 6,
+                firstFocusNode: _confirmFocusNode,
                 onChanged: (code) {
-                  setState(() {
-                    _confirmPin = code;
-                    if (_pinError != null) {
-                      _pinError = null;
-                    }
-                  });
+                  _confirmPin = code;
+                  _clearErrorIfNeeded();
                 },
               ),
 
@@ -230,9 +248,11 @@ class _SetPinScreenState extends State<SetPinScreen> {
 
               vSpace(32),
 
-              // Continue button
+              // Continue button — spinner-only while submitting.
               AppElevatedButton(
-                title: _submitting ? 'Creating account...' : 'Continue',
+                title: 'Continue',
+                isLoading: _submitting,
+                loadingLabel: '',
                 onPressed: _submitting ? null : _validateAndContinue,
               ),
 

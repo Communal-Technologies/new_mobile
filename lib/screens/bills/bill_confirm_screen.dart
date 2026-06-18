@@ -106,6 +106,18 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
   String? get _smartCardNumber => widget.args['smart_card_number'] as String?;
   String? get _customerName => widget.args['customer_name'] as String?;
 
+  /// Anchor biller code — passed from the provider list screen as
+  /// `biller_code`. Falls back to the provider slug for resilience.
+  String get _billerCode {
+    final code = (widget.args['biller_code'] as String?)?.trim() ?? '';
+    return code.isNotEmpty ? code : _provider;
+  }
+
+  /// Meter type derived from the provider slug (electricity only).
+  /// Anchor requires 'prepaid' or 'postpaid'; the slug encodes this.
+  String get _meterType =>
+      _provider.toLowerCase().contains('postpaid') ? 'postpaid' : 'prepaid';
+
   /// Friendly label for screen copy. `airtime` and `data` use the
   /// short forms; the longer pair name themselves explicitly.
   String get _kindLabel => switch (_kind) {
@@ -229,33 +241,34 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
     try {
       final txn = await switch (_kind) {
         'data' => _repo.purchaseData(
-          provider: _provider,
+          billerCode: _billerCode,
           phoneNumber: _phone,
-          productSlug: _productSlug ?? '',
+          productCode: _productSlug ?? '',
           amountMinor: _amountMinor,
           idempotencyKey: _idempotencyKey,
           authHeaders: authHeaders,
         ),
         'electricity' => _repo.purchaseElectricity(
-          provider: _provider,
-          meterAccountNumber: _meterAccountNumber ?? '',
+          billerCode: _billerCode,
+          meterNumber: _meterAccountNumber ?? '',
           phoneNumber: _phone,
-          productSlug: _productSlug ?? '',
+          productCode: _productSlug ?? '',
+          meterType: _meterType,
           amountMinor: _amountMinor,
           idempotencyKey: _idempotencyKey,
           authHeaders: authHeaders,
         ),
         'television' => _repo.purchaseTelevision(
-          provider: _provider,
+          billerCode: _billerCode,
           smartCardNumber: _smartCardNumber ?? '',
           phoneNumber: _phone,
-          productSlug: _productSlug ?? '',
+          productCode: _productSlug ?? '',
           amountMinor: _amountMinor,
           idempotencyKey: _idempotencyKey,
           authHeaders: authHeaders,
         ),
         _ => _repo.purchaseAirtime(
-          provider: _provider,
+          billerCode: _billerCode,
           phoneNumber: _phone,
           amountMinor: _amountMinor,
           idempotencyKey: _idempotencyKey,

@@ -532,6 +532,8 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
   }
 
   Future<void> _continue() async {
+    // Close the keyboard if it's still open when the user taps submit.
+    FocusManager.instance.primaryFocus?.unfocus();
     final validationError = _validateFormError();
     if (validationError != null) {
       AppToast.error(validationError);
@@ -968,7 +970,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                 ),
                 child: AppElevatedButton(
                   title: 'Continue',
-                  onPressed: _continue,
+                  onPressed: _submitting ? null : _continue,
                   isLoading: _submitting,
                   loadingLabel: 'Submitting…',
                 ),

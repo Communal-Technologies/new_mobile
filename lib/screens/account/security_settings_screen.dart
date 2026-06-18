@@ -1,10 +1,13 @@
 import 'package:communal_mobile/core/security/biometric_signer_service.dart';
+import 'package:communal_mobile/core/services/screenshot_service.dart';
 import 'package:communal_mobile/core/utils/biometric_service.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 class SecuritySettingsScreen extends StatefulWidget {
   const SecuritySettingsScreen({super.key});
@@ -25,10 +28,39 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
   bool _transactionAlertEnabled = true;
   bool _allowScreenshotEnabled = false;
 
+  List<Map<String, dynamic>> _activityLogs = [];
+  bool _activityLoading = true;
+  String? _activityError;
+
   @override
   void initState() {
     super.initState();
     _loadBiometricStatus();
+    _loadScreenshotPref();
+    _loadActivity();
+  }
+
+  Future<void> _loadActivity() async {
+    try {
+      final logs = await getIt<AuthRepository>().fetchLoginActivity();
+      if (!mounted) return;
+      setState(() {
+        _activityLogs = logs;
+        _activityLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _activityError = e.toString().replaceFirst('Exception: ', '');
+        _activityLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadScreenshotPref() async {
+    final enabled = await ScreenshotService.isEnabled();
+    if (!mounted) return;
+    setState(() => _allowScreenshotEnabled = enabled);
   }
 
   Future<void> _loadBiometricStatus() async {
@@ -108,7 +140,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Secure Acctount',
+                          'Secure Account',
                           style: TextStyle(
                             fontSize: 19.sp,
                             fontWeight: FontWeight.w700,
@@ -161,9 +193,9 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                     icon: Icons.lock_outline,
                     iconColor: const Color(0xFF3A78D1),
                     iconBg: const Color(0xFFE9F2FF),
-                    title: 'Change Login Password',
-                    subtitle: 'Update your account password',
-                    onTap: () {},
+                    title: 'Change Login PIN',
+                    subtitle: 'Update your app login PIN',
+                    onTap: () => context.pushNamed('change-login-pin'),
                   ),
                   _settingRow(
                     icon: Icons.fingerprint,
@@ -223,7 +255,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                     iconColor: const Color(0xFF3A78D1),
                     iconBg: const Color(0xFFE9F2FF),
                     title: 'Login Alert',
-                    subtitle: 'Get notified on new deviceS login',
+                    subtitle: 'Get notified on new device logins',
                     value: _loginAlertEnabled,
                     onChanged: (v) => setState(() => _loginAlertEnabled = v),
                   ),
@@ -244,8 +276,10 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                     title: 'Allow Screenshot',
                     subtitle: 'Enable taking screenshots in the app',
                     value: _allowScreenshotEnabled,
-                    onChanged: (v) =>
-                        setState(() => _allowScreenshotEnabled = v),
+                    onChanged: (v) {
+                      setState(() => _allowScreenshotEnabled = v);
+                      ScreenshotService.setEnabled(v);
+                    },
                   ),
                 ],
               ),
@@ -280,34 +314,16 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                 borderRadius: BorderRadius.circular(12.r),
                 border: Border.all(color: theme.dividerColor),
               ),
-              child: Column(
-                children: const [
-                  _ActivityTile(
-                    title: 'New login from Android device',
-                    location: 'Lagos, Nigeria',
-                    time: '2 mins ago',
-                  ),
-                  _ActivityTile(
-                    title: 'PIN changed successfully',
-                    location: 'Abuja, Nigeria',
-                    time: 'Yesterday • 10:42 AM',
-                  ),
-                  _ActivityTile(
-                    title: 'Biometric authentication enabled',
-                    location: 'Lagos, Nigeria',
-                    time: 'Jul 12 • 08:19 PM',
-                  ),
-                ],
-              ),
+              child: _buildActivityContent(),
             ),
             vSpace(18),
             Container(
               width: double.infinity,
               padding: EdgeInsets.all(14.w),
               decoration: BoxDecoration(
-                color: const Color(0xFFBEDBFF),
+                color: const Color(0xFF3A78D1).withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.15 : 0.10),
                 borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(color: const Color(0xFF8CB9F5)),
+                border: Border.all(color: const Color(0xFF3A78D1).withValues(alpha: 0.4)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -317,7 +333,9 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                     style: TextStyle(
                       fontSize: 19.sp,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF12427A),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF90CAF9)
+                          : const Color(0xFF12427A),
                     ),
                   ),
                   vSpace(8),
@@ -450,7 +468,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: Theme.of(context).primaryColor,
+            activeThumbColor: Theme.of(context).primaryColor,
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
         ],
@@ -459,12 +477,13 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
   }
 
   Widget _tip(String text) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: EdgeInsets.only(bottom: 6.h),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.check, color: const Color(0xFF2F78D8), size: 16.sp),
+          Icon(Icons.check, color: const Color(0xFF3A78D1), size: 16.sp),
           hSpace(7),
           Expanded(
             child: Text(
@@ -472,7 +491,9 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
               style: TextStyle(
                 fontSize: 17.sp,
                 fontWeight: FontWeight.w500,
-                color: const Color(0xFF1B3F6B),
+                color: isDark
+                    ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)
+                    : const Color(0xFF1B3F6B),
               ),
             ),
           ),
@@ -480,41 +501,140 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       ),
     );
   }
+
+  Widget _buildActivityContent() {
+    if (_activityLoading) {
+      return Padding(
+        padding: EdgeInsets.all(20.w),
+        child: Center(
+          child: SizedBox(
+            width: 24.w,
+            height: 24.w,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Theme.of(context).primaryColor,
+            ),
+          ),
+        ),
+      );
+    }
+    if (_activityError != null) {
+      return Padding(
+        padding: EdgeInsets.all(16.w),
+        child: Text(
+          _activityError!,
+          style: TextStyle(
+            fontSize: 16.sp,
+            color: Colors.red,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+    if (_activityLogs.isEmpty) {
+      return Padding(
+        padding: EdgeInsets.all(20.w),
+        child: Column(
+          children: [
+            Icon(
+              Icons.history_outlined,
+              size: 36.sp,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+            ),
+            vSpace(8),
+            Text(
+              'No recent activity',
+              style: TextStyle(
+                fontSize: 17.sp,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return Column(
+      children: _activityLogs.take(5).map((log) => _ActivityTile(log: log)).toList(),
+    );
+  }
 }
 
 class _ActivityTile extends StatelessWidget {
-  const _ActivityTile({
-    required this.title,
-    required this.location,
-    required this.time,
-  });
+  const _ActivityTile({required this.log});
 
-  final String title;
-  final String location;
-  final String time;
+  final Map<String, dynamic> log;
+
+  String _formatTime(String? raw) {
+    if (raw == null || raw.isEmpty) return '';
+    try {
+      final dt = DateTime.parse(raw).toLocal();
+      final now = DateTime.now();
+      final diff = now.difference(dt);
+      if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
+      if (diff.inHours < 24) return '${diff.inHours}h ago';
+      if (diff.inDays == 1) return 'Yesterday';
+      return DateFormat('d MMM • h:mm a').format(dt);
+    } catch (_) {
+      return raw;
+    }
+  }
+
+  String _actionLabel(String? action, String? status) {
+    final a = (action ?? '').toLowerCase();
+    final s = (status ?? '').toLowerCase();
+    if (a.contains('login') || a.contains('sign_in')) {
+      return s == 'failed' ? 'Failed login attempt' : 'Signed in';
+    }
+    if (a.contains('logout') || a.contains('sign_out')) return 'Signed out';
+    if (a.contains('session_takeover')) return 'Session takeover confirmed';
+    if (a.contains('password')) return 'Password changed';
+    if (a.contains('pin')) return 'PIN changed';
+    return action ?? 'Security event';
+  }
+
+  String _deviceLabel(String? ua) {
+    if (ua == null || ua.isEmpty) return 'Unknown device';
+    final u = ua.toLowerCase();
+    if (u.contains('iphone') || u.contains('ios')) return 'iPhone';
+    if (u.contains('ipad')) return 'iPad';
+    if (u.contains('android')) return 'Android device';
+    if (u.contains('windows')) return 'Windows PC';
+    if (u.contains('mac')) return 'Mac';
+    return 'Unknown device';
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final onSurface = theme.colorScheme.onSurface;
-    final muted = onSurface.withValues(alpha: 0.6);
+    final muted = onSurface.withValues(alpha: 0.55);
+    final action = log['action']?.toString();
+    final status = log['status']?.toString();
+    final ip = log['ip_address']?.toString();
+    final ua = log['user_agent']?.toString();
+    final createdAt = log['created_at']?.toString();
+    final isFailed = (status ?? '').toLowerCase() == 'failed';
+
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 40.w,
-            height: 40.w,
-            decoration: const BoxDecoration(
+            width: 38.w,
+            height: 38.w,
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF742CE7), Color(0xFF06FDF5)],
-              ),
+              color: isFailed
+                  ? Colors.red.withValues(alpha: 0.12)
+                  : theme.primaryColor.withValues(alpha: 0.12),
             ),
-            child: Icon(Icons.desktop_windows_outlined, color: Colors.white, size: 20.sp),
+            child: Icon(
+              isFailed ? Icons.warning_amber_rounded : Icons.shield_outlined,
+              color: isFailed ? Colors.red : theme.primaryColor,
+              size: 20.sp,
+            ),
           ),
           hSpace(10),
           Expanded(
@@ -522,41 +642,37 @@ class _ActivityTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  _actionLabel(action, status),
                   style: TextStyle(
-                    fontSize: 19.sp,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 17.sp,
+                    fontWeight: FontWeight.w600,
                     color: onSurface,
                   ),
                 ),
-                vSpace(4),
+                vSpace(3),
                 Row(
                   children: [
-                    Icon(Icons.location_on_outlined, size: 13.sp, color: muted),
-                    hSpace(3),
-                    Text(
-                      location,
-                      style: TextStyle(
-                        fontSize: 17.sp,
-                        color: muted,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    hSpace(4),
-                    Icon(Icons.access_time, size: 13.sp, color: muted),
+                    if (ip != null && ip.isNotEmpty) ...[
+                      Icon(Icons.wifi_outlined, size: 13.sp, color: muted),
+                      hSpace(3),
+                      Text(ip, style: TextStyle(fontSize: 15.sp, color: muted)),
+                      hSpace(6),
+                    ],
+                    Icon(Icons.devices_outlined, size: 13.sp, color: muted),
                     hSpace(3),
                     Expanded(
                       child: Text(
-                        time,
-                        style: TextStyle(
-                          fontSize: 17.sp,
-                          color: muted,
-                          fontWeight: FontWeight.w500,
-                        ),
+                        _deviceLabel(ua),
+                        style: TextStyle(fontSize: 15.sp, color: muted),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
+                ),
+                vSpace(2),
+                Text(
+                  _formatTime(createdAt),
+                  style: TextStyle(fontSize: 14.sp, color: muted),
                 ),
               ],
             ),
@@ -566,3 +682,4 @@ class _ActivityTile extends StatelessWidget {
     );
   }
 }
+

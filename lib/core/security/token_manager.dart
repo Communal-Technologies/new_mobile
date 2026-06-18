@@ -69,14 +69,29 @@ class TokenManager {
   /// Persists a fresh token pair. [expiresIn] is the access-token lifetime
   /// in seconds (from `/login` / `/refresh-token`); when null, the JWT's
   /// own `exp` claim is consulted.
+  ///
+  /// [replaceRefreshToken] distinguishes the two callers:
+  /// - Refresh rotation (default `false`): the backend may return the same
+  ///   refresh token (no rotation), in which case [refreshToken] is null and
+  ///   we keep the one we already hold.
+  /// - Fresh login (`true`): this is a brand-new user session, so a missing
+  ///   refresh token in the response must *clear* any token still held from
+  ///   a previous login. Without this, a fresh login that omits a refresh
+  ///   token leaves the previous user's refresh token in storage — and the
+  ///   next proactive/reactive refresh resurrects that user, which presents
+  ///   as the app silently switching accounts on hot restart.
   Future<void> updateTokens({
     required String accessToken,
     String? refreshToken,
     int? expiresIn,
+    bool replaceRefreshToken = false,
   }) async {
     _accessToken = accessToken;
-    if (refreshToken != null && refreshToken.isNotEmpty) {
+    final hasNewRefresh = refreshToken != null && refreshToken.isNotEmpty;
+    if (hasNewRefresh) {
       _refreshToken = refreshToken;
+    } else if (replaceRefreshToken) {
+      _refreshToken = null;
     }
     final exp = expiresIn != null
         ? DateTime.now()
@@ -87,8 +102,10 @@ class TokenManager {
     _accessExpEpochSeconds = exp;
 
     await _storage.write(key: _kAccessKey, value: accessToken);
-    if (refreshToken != null && refreshToken.isNotEmpty) {
+    if (hasNewRefresh) {
       await _storage.write(key: _kRefreshKey, value: refreshToken);
+    } else if (replaceRefreshToken) {
+      await _storage.delete(key: _kRefreshKey);
     }
     if (exp != null) {
       await _storage.write(key: _kExpKey, value: exp.toString());

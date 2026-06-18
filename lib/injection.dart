@@ -27,6 +27,7 @@ Future<void> configureDependencies() async {
   // Resolve device label in background; update User-Agent once ready.
   // Fire-and-forget: the first login request may still use the basic
   // platform-only UA, but all subsequent requests get the full label.
+  // ignore: unawaited_futures
   getDeviceLabel().then((label) {
     getIt<DioClient>().updateUserAgent(label);
   });

@@ -75,8 +75,14 @@ class _ChangeLoginPinScreenState extends State<ChangeLoginPinScreen> {
     }
 
     if (_phase == 1) {
-      // Basic strength check
       final pin = _newPin;
+      if (pin == _currentPin) {
+        setState(() {
+          _errorMessage = 'New PIN must be different from your current PIN.';
+          _newPin = '';
+        });
+        return;
+      }
       final firstChar = pin[0];
       if (pin.split('').every((c) => c == firstChar)) {
         setState(() {

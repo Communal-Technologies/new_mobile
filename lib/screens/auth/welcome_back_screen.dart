@@ -235,7 +235,14 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
           // an id (null) are also rejected — the user has to re-enrol
           // once after the upgrade, which is the safer default.
           final enrolledUserId = prefs.enrolledUserId;
-          final currentUserId = _user?.id ?? '';
+          // _user may be null on cold-start before AuthBloc restores the
+          // session. Fall back to the stored opaque user_id sentinel so
+          // the per-user enrollment gate still works without an active
+          // AuthBloc state.
+          final storedUserId =
+              await _secureStorage.read(key: 'user_id') ?? '';
+          final uid = _user?.id ?? '';
+          final currentUserId = uid.isNotEmpty ? uid : storedUserId;
           final userMatches = enrolledUserId != null &&
               enrolledUserId.isNotEmpty &&
               enrolledUserId == currentUserId;

@@ -1,5 +1,5 @@
-import 'package:communal_mobile/core/widgets/animated_logo_loader.dart';
-import 'package:communal_mobile/core/widgets/app_toast.dart';
+import 'package:communal_mobile/core/constants/images.dart';
+import 'package:communal_mobile/screens/obligations/widgets/fine_detail_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -107,10 +107,7 @@ class _ObligationDetailScreenState extends State<ObligationDetailScreen> {
                         ),
                         if (_obligation.fines.isNotEmpty) ...[
                           vSpace(20),
-                          _FinesSection(
-                            fines: _obligation.fines,
-                            cooperativeId: _obligation.cooperativeId,
-                          ),
+                          _FinesSection(obligation: _obligation),
                         ],
                         vSpace(20),
                         _PaymentHistorySection(
@@ -171,11 +168,12 @@ class _DetailAppBar extends StatelessWidget implements PreferredSizeWidget {
         icon: const Icon(Icons.arrow_back),
       ),
       actions: [
-        IconButton(
-          onPressed: () {},
-          icon: const Icon(Icons.help_outline),
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-        ),
+        // IconButton(
+        //   onPressed: () {},
+        //   icon: const Icon(Icons.help_outline),
+        //   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+        // ),
+        
         hSpace(8),
       ],
     );
@@ -495,155 +493,46 @@ class _InfoTile extends StatelessWidget {
   }
 }
 
-class _FinesSection extends StatefulWidget {
-  const _FinesSection({required this.fines, required this.cooperativeId});
+class _FinesSection extends StatelessWidget {
+  const _FinesSection({required this.obligation});
 
-  final List<FineRecord> fines;
-  final String cooperativeId;
-
-  @override
-  State<_FinesSection> createState() => _FinesSectionState();
-}
-
-class _FinesSectionState extends State<_FinesSection> {
-  static const int _collapsedLimit = 3;
-  bool _expanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final fines = widget.fines;
-    final showAll = _expanded || fines.length <= _collapsedLimit;
-    final visible = showAll ? fines : fines.take(_collapsedLimit).toList();
-    final hiddenCount = fines.length - visible.length;
-    final theme = Theme.of(context);
-    const accent = Color(0xFFD7263D);
-
-    return _InfoCard(
-      title: 'Fines & Penalties',
-      child: Column(
-        children: [
-          for (int i = 0; i < visible.length; i++) ...[
-            _FineItemTile(fine: visible[i], cooperativeId: widget.cooperativeId),
-            if (i != visible.length - 1) vSpace(8),
-          ],
-          if (hiddenCount > 0) ...[
-            vSpace(8),
-            Center(
-              child: TextButton(
-                onPressed: () => setState(() => _expanded = true),
-                child: Text(
-                  'Show $hiddenCount more fine${hiddenCount > 1 ? 's' : ''}',
-                  style: TextStyle(
-                    fontSize: 17.sp,
-                    fontWeight: FontWeight.w600,
-                    color: accent,
-                  ),
-                ),
-              ),
-            ),
-          ] else if (_expanded && fines.length > _collapsedLimit) ...[
-            vSpace(8),
-            Center(
-              child: TextButton(
-                onPressed: () => setState(() => _expanded = false),
-                child: Text(
-                  'Show less',
-                  style: TextStyle(
-                    fontSize: 17.sp,
-                    fontWeight: FontWeight.w600,
-                    color: theme.primaryColor,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _FineItemTile extends StatelessWidget {
-  const _FineItemTile({required this.fine, required this.cooperativeId});
-
-  final FineRecord fine;
-  final String cooperativeId;
+  final Obligation obligation;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    const accent = Color(0xFFD7263D);
-    return Container(
-      padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: isDark
-            ? accent.withValues(alpha: 0.16)
-            : const Color(0xFFFFEEF0),
-        borderRadius: BorderRadius.circular(14.r),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.error_outline, color: accent, size: 18.sp),
-              hSpace(8),
-              Text(
-                fine.amountLabel,
-                style: TextStyle(
-                  fontSize: 19.sp,
-                  fontWeight: FontWeight.w700,
-                  color: accent,
-                ),
-              ),
-              const Spacer(),
-              _StatusChip(label: fine.status, color: accent),
-            ],
+    // Only show the card while there are outstanding (unpaid) fines; once every
+    // fine is cleared, hide it entirely.
+    final outstanding =
+        obligation.fines.where((f) => f.outstandingMinor > 0).toList();
+    if (outstanding.isEmpty) return const SizedBox.shrink();
+    final outstandingMinor =
+        outstanding.fold<int>(0, (s, f) => s + f.outstandingMinor);
+    final subtitle =
+        '${outstanding.length} unpaid fine${outstanding.length == 1 ? '' : 's'}';
+
+    // Use the shared FineDetailCard as-is (summed amount), with just a label
+    // above it indicating these are fines — not wrapped in another card.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Fines & Penalties',
+          style: TextStyle(
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w700,
+            color: theme.colorScheme.onSurface,
           ),
-          vSpace(8),
-          Text(
-            fine.description,
-            style: TextStyle(
-              fontSize: 17.sp,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
-            ),
-          ),
-          vSpace(8),
-          Text(
-            'Type: ${fine.type}   ${fine.dateLabel}',
-            style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
-          ),
-          if (fine.isPending && fine.id.isNotEmpty) ...[
-            vSpace(10),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => context.pushNamed(
-                  'fine-payment',
-                  extra: {'fine': fine, 'cooperativeId': cooperativeId},
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accent,
-                  foregroundColor: Colors.white,
-                  minimumSize: Size(double.infinity, 38.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                  padding: EdgeInsets.symmetric(vertical: 8.h),
-                ),
-                child: Text(
-                  'Pay Fine',
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
+        ),
+        vSpace(10),
+        FineDetailCard(
+          fine: outstanding.first,
+          cooperativeId: obligation.cooperativeId,
+          amountMinorOverride: outstandingMinor,
+          subtitleOverride: subtitle,
+          onTap: () => context.pushNamed('fine-details', extra: obligation),
+        ),
+      ],
     );
   }
 }
@@ -679,7 +568,19 @@ class _PaymentHistorySectionState extends State<_PaymentHistorySection> {
       child: Column(
         children: [
           if (loading)
-            const Center(child: AnimatedLogoLoader())
+            Center(
+              // Themed branded loader (matches the transactions history screen):
+              // pre-tinted asset per theme, self-animating GIF — no rotation.
+              child: Image.asset(
+                Theme.of(context).brightness == Brightness.dark
+                    ? Images.loaderWhite
+                    : Images.loader,
+                width: 44,
+                height: 44,
+                fit: BoxFit.contain,
+                gaplessPlayback: true,
+              ),
+            )
           else if (payments.isEmpty)
             Text(
               'No payment history yet.',
@@ -688,7 +589,8 @@ class _PaymentHistorySectionState extends State<_PaymentHistorySection> {
           else
             for (int i = 0; i < visible.length; i++) ...[
               _PaymentTile(record: visible[i]),
-              if (i != visible.length - 1) vSpace(12),
+              if (i != visible.length - 1)
+                Divider(height: 1, color: Theme.of(context).dividerColor),
             ],
           if (hiddenCount > 0) ...[
             vSpace(12),
@@ -747,26 +649,34 @@ class _PaymentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final outflow = record.isOutflow;
-    final iconData = outflow ? Icons.arrow_upward_rounded : Icons.check_circle;
-    final iconColor = outflow
-        ? const Color(0xFFD64545)
-        : const Color(0xFF7B61FF);
-    // Inflow rows used hardcoded `Colors.black` for the amount label,
-    // which renders invisibly on the dark scaffold. Resolve from the
-    // active theme's onSurface so the amount stays legible in both
-    // modes; outflow keeps the red accent.
+    // Directional arrows (no check icon) in a soft tinted circle. The amount
+    // stays legible in both themes — outflow keeps the red accent.
+    final accent = outflow ? const Color(0xFFD64545) : const Color(0xFF1AAE70);
     final amountColor = outflow
         ? const Color(0xFFD64545)
         : Theme.of(context).colorScheme.onSurface;
-    return Container(
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: Theme.of(context).dividerColor,
-        borderRadius: BorderRadius.circular(12.r),
-      ),
+    // Flat row (no inner card) so it doesn't read as a card-on-card inside the
+    // Payment History panel. Tappable → detail sheet with the running balance.
+    return InkWell(
+      onTap: () => _showPaymentDetail(context, record),
+      borderRadius: BorderRadius.circular(8.r),
+      child: Padding(
+      padding: EdgeInsets.symmetric(vertical: 6.h),
       child: Row(
         children: [
-          Icon(iconData, color: iconColor, size: 22.sp),
+          Container(
+            width: 36.w,
+            height: 36.w,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              outflow ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+              color: accent,
+              size: 20.sp,
+            ),
+          ),
           hSpace(12),
           Expanded(
             child: Column(
@@ -775,7 +685,7 @@ class _PaymentTile extends StatelessWidget {
                 Text(
                   record.title,
                   style: TextStyle(
-                    fontSize: 19.sp,
+                    fontSize: 18.sp,
                     fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
@@ -784,36 +694,131 @@ class _PaymentTile extends StatelessWidget {
                 Text(
                   '${record.dateLabel}  •  ${record.method}',
                   style: TextStyle(
-                    fontSize: 17.sp,
+                    fontSize: 15.sp,
                     color: Theme.of(
                       context,
                     ).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
-                Text(
-                  record.reference,
-                  style: TextStyle(
-                    fontSize: 17.sp,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.5),
-                  ),
-                ),
               ],
             ),
           ),
+          hSpace(8),
           Text(
             record.amountLabel,
             style: TextStyle(
-              fontSize: 19.sp,
+              fontSize: 18.sp,
               fontWeight: FontWeight.w700,
               color: amountColor,
             ),
           ),
         ],
       ),
+      ),
     );
   }
+}
+
+/// Detail sheet for a single obligation payment-history entry — shows the
+/// running balance (before/after) plus the standard transaction fields.
+void _showPaymentDetail(BuildContext context, PaymentRecord record) {
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (ctx) {
+      final theme = Theme.of(ctx);
+      final onSurface = theme.colorScheme.onSurface;
+      final outflow = record.isOutflow;
+      final amountColor =
+          outflow ? const Color(0xFFD64545) : const Color(0xFF1AAE70);
+
+      Widget row(String label, String value, {Color? valueColor}) => Padding(
+            padding: EdgeInsets.symmetric(vertical: 10.h),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 15.sp,
+                      color: onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ),
+                hSpace(12),
+                Expanded(
+                  child: Text(
+                    value,
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w600,
+                      color: valueColor ?? onSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+
+      return SafeArea(
+        top: false,
+        child: Container(
+          padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 20.h),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40.w,
+                  height: 4.h,
+                  decoration: BoxDecoration(
+                    color: theme.dividerColor,
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+              ),
+              vSpace(16),
+              Text(
+                record.title,
+                style: TextStyle(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.w700,
+                  color: onSurface,
+                ),
+              ),
+              vSpace(4),
+              Text(
+                record.amountLabel,
+                style: TextStyle(
+                  fontSize: 26.sp,
+                  fontWeight: FontWeight.w800,
+                  color: amountColor,
+                ),
+              ),
+              vSpace(12),
+              Divider(height: 1, color: theme.dividerColor),
+              row('Date', record.dateLabel),
+              row('Payment method', record.method),
+              if (record.balanceBeforeLabel != null)
+                row('Balance before', record.balanceBeforeLabel!),
+              if (record.balanceAfterLabel != null)
+                row('Balance after', record.balanceAfterLabel!),
+              if (record.reference.isNotEmpty)
+                row('Reference', record.reference),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }
 
 class _LoanPromoCard extends StatelessWidget {
@@ -918,7 +923,7 @@ class _BottomActions extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () {
-                      AppToast.success('Contacting admin...');
+                      context.pushNamed('help-support');
                     },
                     style: OutlinedButton.styleFrom(
                       minimumSize: Size(double.infinity, 52.h),

@@ -12,6 +12,13 @@ double _amountNairaFromKoboField(dynamic raw) {
   return n / 100.0;
 }
 
+int? _intOrNull(dynamic raw) {
+  if (raw == null) return null;
+  if (raw is int) return raw;
+  if (raw is num) return raw.toInt();
+  return int.tryParse(raw.toString());
+}
+
 TransactionStatus _mapRecordStatus(String? raw) {
   switch ((raw ?? '').toLowerCase().trim()) {
     case 'completed':
@@ -35,39 +42,58 @@ DateTime? _parseDate(dynamic raw) {
   return DateTime.tryParse(raw.toString());
 }
 
+// Shared icon palette so a given kind of transaction looks the same whether it
+// came from the communal wallet feed or the cooperative ledger. (icon, fg, bg).
+const _ipBank = (Icons.swap_horiz_rounded, Colors.white, Color(0xFF742CE7));
+const _ipReceive = (Icons.south_west_rounded, Colors.white, Color(0xFF1AAE70));
+const _ipSend = (Icons.north_east_rounded, Colors.white, Color(0xFF742CE7));
+const _ipDeposit =
+    (Icons.account_balance_wallet_rounded, Colors.white, Color(0xFF1AAE70));
+const _ipWithdraw = (Icons.payments_rounded, Colors.white, Color(0xFFE6A502));
+const _ipLoan = (Icons.handshake_rounded, Colors.white, Color(0xFF00BCD4));
+const _ipFine = (Icons.gavel_rounded, Colors.white, Color(0xFFD7263D));
+const _ipSavings = (Icons.savings_rounded, Colors.white, Color(0xFF742CE7));
+const _ipEquity = (Icons.pie_chart_rounded, Colors.white, Color(0xFF3F51B5));
+const _ipElectric = (Icons.bolt_rounded, Colors.white, Color(0xFFE6A502));
+const _ipAirtime = (Icons.smartphone_rounded, Colors.white, Color(0xFF3F51B5));
+const _ipData = (Icons.wifi_rounded, Colors.white, Color(0xFF0288D1));
+const _ipTv = (Icons.live_tv_rounded, Colors.white, Color(0xFF8E24AA));
+const _ipBill = (Icons.receipt_long_rounded, Colors.white, Color(0xFF607D8B));
+
+// Classify a bill/utility from free text so cable/airtime/data/electricity each
+// get their own glyph instead of a generic receipt.
+(IconData, Color, Color)? _billIconFromText(String t) {
+  if (t.contains('electric') || t.contains('meter') || t.contains('power') ||
+      t.contains('disco') || t.contains('prepaid') || t.contains('postpaid')) {
+    return _ipElectric;
+  }
+  if (t.contains('airtime') || t.contains('recharge')) return _ipAirtime;
+  if (t.contains('data bundle') || t.contains('data plan') ||
+      t.contains(' data') || t.contains('internet')) {
+    return _ipData;
+  }
+  if (t.contains('cable') || t.contains('tv') || t.contains('dstv') ||
+      t.contains('gotv') || t.contains('startimes') || t.contains('showmax')) {
+    return _ipTv;
+  }
+  if (t.contains('bill')) return _ipBill;
+  return null;
+}
+
 (IconData, Color, Color) _iconStyleCommunal(String rawType, bool incoming) {
   final t = rawType.toLowerCase();
-  if (t.contains('nip')) {
-    return (
-      Icons.send_rounded,
-      incoming ? Colors.white : const Color(0xFF742CE7),
-      incoming ? const Color(0xFF742CE7) : const Color(0xFFF0E6FF),
-    );
+  final bill = _billIconFromText(t);
+  if (bill != null) return bill;
+  if (t.contains('nip') || t.contains('book') || t.contains('transfer')) {
+    return incoming ? _ipReceive : _ipSend;
   }
-  if (t.contains('book')) {
-    return (
-      Icons.swap_horiz_rounded,
-      incoming ? Colors.white : const Color(0xFF742CE7),
-      incoming ? const Color(0xFF4CAF50) : const Color(0xFFF0E6FF),
-    );
-  }
-  if (t.contains('deposit') || t.contains('credit')) {
-    return (
-      Icons.account_balance_wallet_rounded,
-      Colors.white,
-      const Color(0xFF742CE7),
-    );
-  }
-  if (t.contains('withdraw')) {
-    return (Icons.north_east_rounded, Colors.white, Colors.orange.shade700);
-  }
-  if (t.contains('loan')) {
-    return (Icons.handshake_rounded, Colors.white, const Color(0xFF00BCD4));
-  }
-  if (t.contains('obligation') || t.contains('cooperative')) {
-    return (Icons.groups_rounded, Colors.white, const Color(0xFF742CE7));
-  }
-  return (Icons.receipt_long_rounded, Colors.white, Colors.blueGrey.shade300);
+  if (t.contains('deposit') || t.contains('fund')) return _ipDeposit;
+  if (t.contains('credit')) return _ipReceive;
+  if (t.contains('withdraw')) return _ipWithdraw;
+  if (t.contains('loan')) return _ipLoan;
+  if (t.contains('fine')) return _ipFine;
+  if (t.contains('obligation') || t.contains('cooperative')) return _ipSavings;
+  return incoming ? _ipReceive : _ipSend;
 }
 
 (IconData, Color, Color) _iconStyleLedger(
@@ -75,20 +101,30 @@ DateTime? _parseDate(dynamic raw) {
   String description,
   bool incoming,
 ) {
-  final d = description.toLowerCase();
-  final o = obligationType.toLowerCase();
-  if (o.contains('loan') || d.contains('loan')) {
-    return (Icons.handshake_rounded, Colors.white, const Color(0xFF00BCD4));
-  }
-  if (d.contains('electric') || d.contains('bill')) {
-    return (Icons.flash_on_rounded, Colors.white, Colors.orange);
-  }
-  return (Icons.groups_rounded, Colors.white, const Color(0xFF742CE7));
+  final text = '${obligationType.toLowerCase()} ${description.toLowerCase()}';
+  if (text.contains('fine') || text.contains('penalt')) return _ipFine;
+  if (text.contains('loan')) return _ipLoan;
+  final bill = _billIconFromText(text);
+  if (bill != null) return bill;
+  if (text.contains('equity') || text.contains('share')) return _ipEquity;
+  if (text.contains('transfer')) return _ipBank;
+  if (text.contains('withdraw') || text.contains('payout')) return _ipWithdraw;
+  // Savings / patronage / general contribution.
+  return _ipSavings;
 }
 
 String _humanizeType(String? raw) {
   final s = (raw ?? '').trim();
   if (s.isEmpty) return 'Transaction';
+  // NIPTransfer/BookTransfer arrive as camelCase with no separator, so the
+  // generic underscore/whitespace splitter below collapses them into
+  // "Niptransfer"/"Booktransfer" instead of recognising two words.
+  switch (s.toLowerCase()) {
+    case 'niptransfer':
+      return 'NIP Transfer';
+    case 'booktransfer':
+      return 'Book Transfer';
+  }
   return s
       .replaceAll('_', ' ')
       .split(RegExp(r'\s+'))
@@ -98,6 +134,172 @@ String _humanizeType(String? raw) {
         return '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}';
       })
       .join(' ');
+}
+
+/// Ledger `trx_ref_id` values are internal idempotency keys that pack several
+/// fields with `|` (e.g. `nip_obl|TXNID|CODE`, `fine|LEDGER|ID|AMT`).
+/// Surface the most reference-like segment (the longest one — usually the
+/// transfer/txn id) so the receipt shows a clean reference, not the raw key.
+String _cleanReference(String raw) {
+  final r = raw.trim();
+  if (!r.contains('|')) return r;
+  final parts = r.split('|').map((e) => e.trim()).where((e) => e.isNotEmpty);
+  String best = '';
+  for (final p in parts) {
+    // Skip obviously non-id segments (pure words / short tokens / amounts).
+    if (p.length > best.length) best = p;
+  }
+  return best.isEmpty ? r : best;
+}
+
+/// Turn a backend `payment_mode`/gateway token into a human payment method.
+String _humanizePaymentMethod(String paymentMode) {
+  final m = paymentMode.toLowerCase();
+  if (m.contains('nip')) return 'Bank transfer (NIP)';
+  if (m.contains('book')) return 'Wallet transfer';
+  if (m.contains('obligation')) return 'From obligation balance';
+  if (m.contains('brought forward')) return 'Brought forward';
+  if (m.contains('wallet')) return 'Wallet';
+  if (m.contains('cash')) return 'Cash';
+  if (paymentMode.trim().isEmpty) return 'Ledger';
+  return _humanizeType(paymentMode);
+}
+
+/// Map a biller/network code to a display name. Falls back to a humanized
+/// version of the raw code when it isn't one we recognise.
+String _humanizeProvider(String raw) {
+  final key = raw.trim().toLowerCase();
+  if (key.isEmpty) return '';
+  const known = {
+    // Mobile networks
+    'mtn': 'MTN', 'glo': 'Glo', 'airtel': 'Airtel',
+    '9mobile': '9mobile', 'etisalat': '9mobile',
+    // Cable / TV
+    'gotv': 'GOtv', 'dstv': 'DStv', 'startimes': 'StarTimes',
+    'showmax': 'Showmax',
+    // Electricity discos
+    'ikedc': 'Ikeja Electric', 'ekedc': 'Eko Electric',
+    'aedc': 'Abuja Electric', 'phedc': 'Port Harcourt Electric',
+    'kedco': 'Kano Electric', 'eedc': 'Enugu Electric',
+    'ibedc': 'Ibadan Electric', 'jedc': 'Jos Electric',
+    'kaedco': 'Kaduna Electric', 'bedc': 'Benin Electric',
+    'abedc': 'Aba Electric', 'yedc': 'Yola Electric',
+  };
+  return known[key] ?? _humanizeType(raw);
+}
+
+/// Turn a data-plan product code (e.g. `mtn_data_1_5gb_30_days_`) into a
+/// readable plan label (e.g. `1.5GB · 30 days`). Best-effort: an unparseable
+/// code is just cleaned of separators.
+String _humanizeDataPlan(String raw, String providerCode) {
+  var s = raw.trim().toLowerCase();
+  if (s.isEmpty) return '';
+  // Drop a leading provider and/or "data" prefix.
+  final p = providerCode.trim().toLowerCase();
+  if (p.isNotEmpty) {
+    s = s.replaceFirst(RegExp('^${RegExp.escape(p)}[_-]?'), '');
+  }
+  s = s.replaceFirst(RegExp(r'^data[_-]?'), '').replaceAll(RegExp(r'[_-]+$'), '');
+  s = s.replaceAll(RegExp(r'[_-]+'), ' ').trim();
+  // 1_5gb -> "1 5gb" -> "1.5GB"; standalone "<n>gb"/"<n>mb" -> upper unit.
+  s = s.replaceAllMapped(RegExp(r'(\d+)\s+(\d+)\s*gb'), (m) => '${m[1]}.${m[2]}GB');
+  s = s.replaceAllMapped(RegExp(r'(\d+)\s*gb'), (m) => '${m[1]}GB');
+  s = s.replaceAllMapped(RegExp(r'(\d+)\s*mb'), (m) => '${m[1]}MB');
+  return s.trim();
+}
+
+/// Consumer-facing receipt details for a bill/utility purchase from the
+/// communal feed. Returns null when the row isn't a recognised bill type so the
+/// caller keeps its default handling.
+typedef _BillView = ({
+  String title,
+  String type,
+  String provider, // display provider/biller, e.g. "MTN", "GOtv", "Ikeja Electric"
+  String recipient, // consumer identifier: phone / smartcard / meter number
+  List<MapEntry<String, String>> extras,
+  (IconData, Color, Color) icon,
+});
+
+_BillView? _billViewFromJson(Map<String, dynamic> json) {
+  final rawType = (json['transaction_type'] ?? '').toString().toLowerCase();
+  final billerCode = (json['bill_provider'] ?? '').toString();
+  final provider = _humanizeProvider(billerCode);
+  final recipient =
+      (json['bill_recipient'] ?? json['counterparty_account'] ?? '')
+          .toString()
+          .trim();
+  final product = (json['bill_product'] ?? '').toString().trim();
+  final meterType = (json['bill_meter_type'] ?? '').toString().trim();
+  final extras = <MapEntry<String, String>>[];
+
+  String join2(String a, String b) =>
+      [if (a.isNotEmpty) a, if (b.isNotEmpty) b].join(' · ');
+
+  if (rawType.contains('airtime')) {
+    if (provider.isNotEmpty) extras.add(MapEntry('Network', provider));
+    if (recipient.isNotEmpty) extras.add(MapEntry('Phone number', recipient));
+    return (
+      title: join2('Airtime', provider),
+      type: 'Airtime purchase',
+      provider: provider,
+      recipient: recipient,
+      extras: extras,
+      icon: _ipAirtime,
+    );
+  }
+  if (rawType.contains('data')) {
+    final plan = _humanizeDataPlan(product, billerCode);
+    if (provider.isNotEmpty) extras.add(MapEntry('Network', provider));
+    if (recipient.isNotEmpty) extras.add(MapEntry('Phone number', recipient));
+    if (plan.isNotEmpty) extras.add(MapEntry('Data plan', plan));
+    return (
+      title: join2('Data', provider),
+      type: 'Data bundle',
+      provider: provider,
+      recipient: recipient,
+      extras: extras,
+      icon: _ipData,
+    );
+  }
+  if (rawType.contains('television') ||
+      rawType.contains('cable') ||
+      rawType.contains('tv')) {
+    if (provider.isNotEmpty) extras.add(MapEntry('Provider', provider));
+    if (recipient.isNotEmpty) extras.add(MapEntry('Smartcard number', recipient));
+    if (product.isNotEmpty) {
+      extras.add(MapEntry('Package', _humanizeType(product)));
+    }
+    return (
+      title: join2(provider.isNotEmpty ? provider : 'TV', recipient),
+      type: 'TV subscription',
+      provider: provider.isNotEmpty ? provider : 'Cable TV',
+      recipient: recipient,
+      extras: extras,
+      icon: _ipTv,
+    );
+  }
+  if (rawType.contains('electric') || rawType.contains('power')) {
+    // Disco codes often pin the meter type onto the biller code
+    // (e.g. `ikeja_electric_prepaid`); strip it since `meter_type` already
+    // carries prepaid/postpaid, then humanize → "Ikeja Electric".
+    final discoCode = billerCode.replaceFirst(
+        RegExp(r'[_-]?(prepaid|postpaid)$', caseSensitive: false), '');
+    final disco = _humanizeProvider(discoCode);
+    if (disco.isNotEmpty) extras.add(MapEntry('Disco', disco));
+    if (meterType.isNotEmpty) {
+      extras.add(MapEntry('Purchase type', _humanizeType(meterType)));
+    }
+    if (recipient.isNotEmpty) extras.add(MapEntry('Meter number', recipient));
+    return (
+      title: join2(disco.isNotEmpty ? disco : 'Electricity', recipient),
+      type: 'Electricity purchase',
+      provider: disco.isNotEmpty ? disco : 'Electricity',
+      recipient: recipient,
+      extras: extras,
+      icon: _ipElectric,
+    );
+  }
+  return null;
 }
 
 bool ledgerRowShouldMirrorOnPersonalTab(Map<String, dynamic> json) {
@@ -124,31 +326,80 @@ TransactionListItem mapCommunalTransactionToListItem(
   final status = _mapRecordStatus(json['status']?.toString());
   final cpName = json['counterparty_name']?.toString().trim();
   final cpAcct = json['counterparty_account']?.toString().trim();
+  final cpBank = json['counterparty_bank']?.toString().trim();
   final titleBase = _humanizeType(typeRaw);
-  final title = (cpName != null && cpName.isNotEmpty)
-      ? '$titleBase · $cpName'
-      : titleBase;
-  final iconPack = _iconStyleCommunal(typeRaw, incoming);
+  // For transfers, show direction + the other party rather than the technical
+  // rail name ("Book Transfer"/"NIP Transfer"). Fall back to the account
+  // number, then to a generic sent/received label when the party is unknown
+  // (e.g. older rows or external recipients without a stored name).
+  final isTransfer = typeRaw.toLowerCase().contains('transfer');
+  final who = (cpName != null && cpName.isNotEmpty)
+      ? cpName
+      : (cpAcct != null && cpAcct.isNotEmpty ? cpAcct : null);
+  // Bills/utilities carry consumer details (provider, phone/smartcard/meter,
+  // plan) so the receipt says exactly what was bought and for whom.
+  final bill = _billViewFromJson(json);
+  final String title;
+  if (bill != null) {
+    title = bill.title;
+  } else if (isTransfer) {
+    if (incoming) {
+      title = who != null ? 'Received from $who' : 'Money Received';
+    } else {
+      title = who != null ? 'Transfer to $who' : 'Money Sent';
+    }
+  } else {
+    title = (cpName != null && cpName.isNotEmpty)
+        ? '$titleBase · $cpName'
+        : titleBase;
+  }
+  final iconPack = bill?.icon ?? _iconStyleCommunal(typeRaw, incoming);
   final sessionFmt = DateFormat('hh:mm a');
 
   final details = TransactionDetailsData(
     id: id.isNotEmpty ? id : trxRef,
-    counterpartyName: (cpName != null && cpName.isNotEmpty)
-        ? cpName
-        : 'Communal',
-    counterpartyBank: 'Communal Wallet',
-    counterpartyAccount: (cpAcct != null && cpAcct.isNotEmpty) ? cpAcct : null,
+    // For bills the "recipient" is the biller/provider and the consumer
+    // identifier (phone/smartcard/meter) — the full breakdown lives in
+    // extraDetails, so the generic recipient row is suppressed downstream.
+    counterpartyName: bill != null
+        ? (bill.provider.isNotEmpty ? bill.provider : bill.type)
+        : ((cpName != null && cpName.isNotEmpty) ? cpName : 'Communal'),
+    // Show the recipient's actual bank for transfers (from the persisted
+    // beneficiary) instead of a misleading "Communal Wallet". Book transfers
+    // and unknown rows fall back to "Communal".
+    counterpartyBank: bill != null
+        ? ''
+        : (isTransfer
+            ? ((cpBank != null && cpBank.isNotEmpty) ? cpBank : 'Communal')
+            : 'Communal Wallet'),
+    counterpartyAccount: bill != null
+        ? (bill.recipient.isNotEmpty ? bill.recipient : null)
+        : ((cpAcct != null && cpAcct.isNotEmpty) ? cpAcct : null),
     amount: amountNaira,
     fees: 0,
     currencySymbol: currencySymbol,
-    transactionType: titleBase,
+    transactionType: bill != null ? bill.type : titleBase,
     dateTime: dt,
     sessionId: sessionFmt.format(dt),
-    description: titleBase,
+    // Leave description empty for bills (own breakdown) and transfers (the type
+    // already says "NIP/Book Transfer") so the receipt doesn't show a row that
+    // just repeats the transaction type.
+    description: (bill != null || isTransfer) ? '' : titleBase,
     reference: trxRef.isNotEmpty ? trxRef : extRef,
-    paymentMethod: 'Wallet',
+    paymentMethod: bill != null
+        ? 'Bill payment'
+        : (isTransfer
+            ? (typeRaw.toLowerCase().contains('nip')
+                ? 'Bank transfer (NIP)'
+                : (typeRaw.toLowerCase().contains('book')
+                    ? 'Wallet transfer'
+                    : 'Wallet'))
+            : 'Wallet'),
     status: status,
     isIncoming: incoming,
+    extraDetails: bill?.extras ?? const [],
+    balanceBeforeMinor: _intOrNull(json['balance_before']),
+    balanceAfterMinor: _intOrNull(json['balance_after']),
   );
 
   return TransactionListItem(
@@ -181,48 +432,69 @@ TransactionListItem mapLedgerRowToListItem(
   // surface as "Loan re-payment" instead of the bare obligation_type
   // ("Loan"). Other rows fall back to the obligation_type → description
   // ladder we used before.
+  // The server-side `description` is the descriptive, at-a-glance line —
+  // it names the obligation/fine involved (e.g. "Payment for Zain Shares via
+  // NIP …", "Late payment fine for Esusu — cycle due Jun 18, 2026"). Prefer it
+  // for the tile title (the tile's only descriptive line; the subtitle is just
+  // the date). Fall back to the humanized type/code only when no description
+  // was stored on the row.
   final modeLower = paymentMode.toLowerCase();
-  final titleBase = modeLower.contains('loan repayment')
-      ? 'Loan re-payment'
-      : obligation.isNotEmpty
-      ? _humanizeType(obligation)
-      : (desc.isNotEmpty ? desc : 'Ledger transaction');
+  final usedDesc = desc.isNotEmpty;
+  final titleBase = usedDesc
+      ? desc
+      : modeLower.contains('loan repayment')
+          ? 'Loan re-payment'
+          : obligation.isNotEmpty
+              ? _humanizeType(obligation)
+              : 'Ledger transaction';
 
-  // Derive a payment method that matches reality instead of hardcoding
-  // "Ledger" (which obscures whether the row was a NIP transfer, an
-  // obligation move, or a manual posting). The strings emitted server-side
-  // are stable — see LoanApplicationController::payLoan and
-  // FinancialObligationController::processPayment.
-  String paymentMethod;
-  if (modeLower.contains('(nip)') || modeLower.contains('nip transfer')) {
-    paymentMethod = 'NIP transfer';
-  } else if (modeLower.contains('from obligation')) {
-    paymentMethod = 'Obligation';
-  } else if (modeLower.contains('brought forward')) {
-    paymentMethod = 'Brought forward';
-  } else if (paymentMode.isNotEmpty) {
-    paymentMethod = paymentMode;
+  // Payment method from the backend gateway/payment_mode token.
+  final paymentMethod = _humanizePaymentMethod(paymentMode);
+
+  // The "Transaction Type" row is the category — kept distinct from the
+  // descriptive title so they don't read as the same line. Detect fine / loan /
+  // contribution from the row's text.
+  final classText = '${obligation.toLowerCase()} ${desc.toLowerCase()}';
+  final String txnTypeLabel;
+  if (classText.contains('fine') || classText.contains('penalt')) {
+    txnTypeLabel = 'Fine payment';
+  } else if (classText.contains('loan')) {
+    txnTypeLabel = 'Loan repayment';
+  } else if (classText.contains('transfer between') ||
+      classText.contains('transfer from')) {
+    txnTypeLabel = 'Obligation transfer';
+  } else if (classText.contains('withdraw') || classText.contains('payout')) {
+    txnTypeLabel = 'Obligation withdrawal';
   } else {
-    paymentMethod = 'Ledger';
+    txnTypeLabel = incoming ? 'Obligation credit' : 'Obligation payment';
   }
 
-  final title = '$titleBase · $cooperativeLabel';
+  // Recipient account: obligation/fine NIP descriptions carry the cooperative
+  // cash account as "via NIP <number>". Surface it so "Recipient Details" shows
+  // the account the payment landed in instead of a bare label.
+  final acctMatch = RegExp(r'via NIP\s+([0-9]{6,})').firstMatch(desc);
+  final coopAccount = acctMatch?.group(1);
+
+  // When the title is the rich description it already carries enough context;
+  // appending the cooperative label only bloats it. Keep the suffix only for
+  // the short type/code fallback so personal-tab mirrored rows stay attributable.
+  final title = usedDesc ? titleBase : '$titleBase · $cooperativeLabel';
   final iconPack = _iconStyleLedger(obligation, desc, incoming);
-  final sessionFmt = DateFormat('hh:mm a');
 
   final details = TransactionDetailsData(
     id: id.isNotEmpty ? id : trxRef,
     counterpartyName: cooperativeLabel,
-    counterpartyBank: 'Cooperative ledger',
-    counterpartyAccount: null,
+    counterpartyBank:
+        coopAccount != null ? 'Cooperative cash account' : 'Cooperative ledger',
+    counterpartyAccount: coopAccount,
     amount: amountNaira,
     fees: 0,
     currencySymbol: currencySymbol,
-    transactionType: titleBase,
+    transactionType: txnTypeLabel,
     dateTime: dt,
-    sessionId: sessionFmt.format(dt),
+    sessionId: '',
     description: desc.isNotEmpty ? desc : titleBase,
-    reference: trxRef,
+    reference: _cleanReference(trxRef),
     paymentMethod: paymentMethod,
     status: TransactionStatus.successful,
     isIncoming: incoming,

@@ -31,7 +31,19 @@ class PaymentRecord {
   /// to render the row in the outflow palette.
   final bool isOutflow;
 
+  /// Obligation contributed balance immediately after / before this entry, in
+  /// minor units. Populated by the repository in a newest→oldest pass from the
+  /// obligation's current paid balance, so the receipt can show a running
+  /// balance. Null when it couldn't be derived.
+  int? balanceAfterMinor;
+  int? balanceBeforeMinor;
+
   String get dateLabel => DateFormat('MMM dd, yyyy').format(date);
+
+  String? get balanceAfterLabel =>
+      balanceAfterMinor == null ? null : Money(balanceAfterMinor!, currency).format();
+  String? get balanceBeforeLabel =>
+      balanceBeforeMinor == null ? null : Money(balanceBeforeMinor!, currency).format();
 
   /// Signed, currency-symbol-prefixed amount label (e.g. `-₦5,000.00`).
   String get amountLabel {
@@ -239,8 +251,21 @@ class Obligation {
             createdAt?.month ?? now.month,
             createdAt?.day ?? 1,
           );
-    // The card's "Next Due" shows the first of the following month.
-    final nextCycle = DateTime(periodStart.year, periodStart.month + 1, 1);
+    // Period end = first of the month after the obligation's period.
+    final periodEnd = DateTime(periodStart.year, periodStart.month + 1, 1);
+    // "Next Due" = the upcoming due date. When the period-derived date has
+    // already passed (a stale period row — e.g. an April row viewed in June),
+    // roll forward to the first of next month from today so it shows a real
+    // future date instead of a fixed past one.
+    final thisMonthStart = DateTime(now.year, now.month, 1);
+    // Prefer the server-computed next-due (obligations-svc: last_updated +
+    // type frequency). Fall back to the period-derived date only when the
+    // backend doesn't provide it.
+    final serverNextDue = _parseDate(obligation['next_due_date']);
+    final nextCycle = serverNextDue ??
+        (periodEnd.isBefore(thisMonthStart)
+            ? DateTime(now.year, now.month + 1, 1)
+            : periodEnd);
     final minPayableMinor = _asInt(account?['min_amount_payable']);
     final totalShares = _asInt(account?['total_shares']);
     final costPerShareMinor = _asInt(account?['cost_per_share']);
@@ -313,7 +338,7 @@ class Obligation {
       installmentsPaid: installmentsPaid,
       totalInstallments: totalInstallments,
       startDate: startDate,
-      endDate: nextCycle,
+      endDate: periodEnd,
       // Next due = first of the month after the obligation period, so
       // an April 2026 row reads "next due May 1, 2026".
       nextDueDate: nextCycle,

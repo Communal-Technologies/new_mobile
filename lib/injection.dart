@@ -5,6 +5,7 @@ import 'package:communal_mobile/data/local/theme_mode_controller.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:communal_mobile/data/repositories/account_actions_repository.dart';
 import 'package:communal_mobile/data/repositories/community_repository.dart';
+import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/core/services/pending_deep_link_service.dart';
 import 'package:communal_mobile/core/services/unread_notifications_service.dart';
 import 'package:communal_mobile/data/repositories/notifications_repository.dart';
@@ -30,6 +31,13 @@ Future<void> configureDependencies() async {
   // ignore: unawaited_futures
   getDeviceLabel().then((label) {
     getIt<DioClient>().updateUserAgent(label);
+  });
+
+  // Send a stable device id on every request so the backend audit log can
+  // record `device` even on non-biometric (PIN) flows. Fire-and-forget.
+  // ignore: unawaited_futures
+  getIt<BiometricSignerService>().deviceId().then((id) {
+    getIt<DioClient>().setDeviceId(id);
   });
   // Defensive: injectable has occasionally emitted duplicate [KycProgressStorage] module
   // providers, which can leave GetIt without a resolvable registration.

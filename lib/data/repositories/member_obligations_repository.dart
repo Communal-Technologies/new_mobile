@@ -53,6 +53,11 @@ class CooperativeCashBankAccount {
   final String accountName;
   final String accountNumber;
 
+  /// The cash repository's bank (the `bank` column is the bank's display name,
+  /// e.g. "GTBank"). Exposed so the UI can disambiguate repositories that share
+  /// the same account name.
+  String get bankName => bankCode;
+
   factory CooperativeCashBankAccount.fromJson(Map<String, dynamic> m) {
     return CooperativeCashBankAccount(
       id: m['id']?.toString() ?? '',
@@ -251,7 +256,7 @@ class MemberObligationsRepository {
             return bd.compareTo(ad);
           });
 
-      return rows
+      final records = rows
           .map((row) {
             final amountMinor = _parseInt(row['amount']);
             final date =
@@ -261,37 +266,82 @@ class MemberObligationsRepository {
             final isBf = row['brought_forward']?.toString().trim() == '1';
             final isOutflow = row['trx_type']?.toString().trim() == '2';
             final modeLower = (mode ?? '').toLowerCase();
+            final desc = (row['description']?.toString() ?? '').trim();
             final String title;
             if (isOutflow) {
-              // Legitimate obligation → obligation outflow (filtered above
-              // to mode == 'obligation'). The backend writes the target's
-              // identifier into the row's `destination` field as either
-              // "obligation-{code}" or "{AccountType}-{code}"; surface it
-              // in the title so the row reads "Used to pay {target}"
-              // instead of an opaque "another obligation".
-              final dest = (row['destination']?.toString() ?? '').trim();
-              final stripped = dest.startsWith('obligation-')
-                  ? dest.substring('obligation-'.length)
-                  : dest;
-              title = stripped.isEmpty
-                  ? 'Used to pay another obligation'
-                  : 'Used to pay $stripped';
+              // This history is already scoped to THIS obligation, so the title
+              // should name what was paid (target obligation / fine), not repeat
+              // the source. The full "from … to …" line is kept for the general
+              // (cooperative) transactions history instead.
+              if (desc.toLowerCase().startsWith('fine payment for')) {
+                // "Fine payment for {subject} from {src} balance" → drop source.
+                title = desc
+                    .replaceFirst(
+                        RegExp(r'\s+from\s+.*$', caseSensitive: false), '')
+                    .trim();
+              } else {
+                final m = RegExp(r'\bto\s+(.+)$', caseSensitive: false)
+                    .firstMatch(desc);
+                final tgt = m?.group(1)?.trim() ?? '';
+                title = tgt.isNotEmpty
+                    ? 'Used to pay $tgt'
+                    : 'Used to pay another obligation';
+              }
             } else if (isBf || modeLower.contains('brought forward')) {
               title = 'Brought forward';
+            } else if (modeLower == 'obligation') {
+              // Inflow funded by another obligation — name the source from the
+              // descriptive ledger narration instead of a bare "Payment
+              // received" (which read as just "obligation").
+              title = desc.isNotEmpty ? desc : 'Received from another obligation';
             } else {
               title = 'Payment received';
+            }
+            // Humanize the payment method so the subtitle doesn't show a raw
+            // gateway token like "obligation".
+            final String method;
+            if (mode == null || mode.isEmpty) {
+              method = 'Wallet';
+            } else if (modeLower == 'obligation') {
+              // Name the source obligation (parsed from "…from {source} to …")
+              // so the method states where the money came from, not just
+              // "obligation".
+              final m = RegExp(r'from (.+?) to ', caseSensitive: false)
+                  .firstMatch(desc);
+              final src = m?.group(1)?.trim() ?? '';
+              method = src.isNotEmpty ? 'From $src' : 'From obligation balance';
+            } else if (modeLower.contains('nip')) {
+              method = 'Bank transfer (NIP)';
+            } else if (modeLower.contains('book')) {
+              method = 'Wallet transfer';
+            } else if (modeLower.contains('brought forward')) {
+              method = 'Brought forward';
+            } else {
+              method = mode;
             }
             return PaymentRecord(
               title: title,
               date: date,
               amountMinor: amountMinor,
               currency: obligation.currency,
-              method: (mode == null || mode.isEmpty) ? 'Wallet' : mode,
+              method: method,
               reference: row['trx_ref_id']?.toString() ?? '',
               isOutflow: isOutflow,
             );
           })
-          .toList(growable: false);
+          .toList();
+
+      // Derive a running balance per entry. The list is newest→oldest, so walk
+      // back from the obligation's current contributed balance: each inflow
+      // raised paid by its amount, each outflow lowered it.
+      var running = obligation.paidAmountMinor;
+      for (final r in records) {
+        r.balanceAfterMinor = running;
+        r.balanceBeforeMinor =
+            r.isOutflow ? running + r.amountMinor : running - r.amountMinor;
+        running = r.balanceBeforeMinor!;
+      }
+      return records;
     } on DioException {
       return const [];
     }
@@ -402,7 +452,7 @@ class MemberObligationsRepository {
       final response = await _dioClient.post(
         ApiEndpoints.membersRecordNipObligationPayment,
         data: {
-          'amount': amountMinor.toString(),
+          'amount': amountMinor,
           'obligation': code,
           'ledger_number': ledgerNumber,
           'gateway': 'nip_transfer',
@@ -463,7 +513,7 @@ class MemberObligationsRepository {
       final response = await _dioClient.post(
         ApiEndpoints.membersPayObligation,
         data: {
-          'amount': amountMinor.toString(),
+          'amount': amountMinor,
           'obligation': target,
           'ledger_number': ledgerNumber,
           'gateway': 'obligation',
@@ -509,7 +559,7 @@ class MemberObligationsRepository {
         ApiEndpoints.membersPayFine,
         data: {
           'fine_id': fineId,
-          'amount': amountMinor.toString(),
+          'amount': amountMinor,
           'ledger_number': ledgerNumber,
           'cooperative': cooperativeId,
           'gateway': 'obligation',
@@ -554,7 +604,7 @@ class MemberObligationsRepository {
         ApiEndpoints.membersRecordNipFinePayment,
         data: {
           'fine_id': fineId,
-          'amount': amountMinor.toString(),
+          'amount': amountMinor,
           'ledger_number': ledgerNumber,
           'cooperative': cooperativeId,
           'gateway': 'nip_transfer',

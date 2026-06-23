@@ -9,6 +9,7 @@ import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -348,6 +349,10 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
                             TextField(
                               controller: _accountNumberCtrl,
                               keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(10),
+                              ],
                               style: TextStyle(
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),

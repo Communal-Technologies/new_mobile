@@ -31,6 +31,11 @@ class AuthRepository {
     dioClient.updateToken(token);
   }
 
+  /// Remove the bearer from DioClient (logout) so it can't linger.
+  void clearToken() {
+    dioClient.clearToken();
+  }
+
   Future<LoginResponse?> login(String login, String password) async {
     try {
       // This endpoint doesn't require authentication (public login endpoint)
@@ -179,11 +184,15 @@ class AuthRepository {
     }
   }
 
-  Future<UserModel?> getUserInfo(String token) async {
+  Future<UserModel?> getUserInfo(String token,
+      {bool skipProactiveRefresh = false}) async {
     // Ensure token is set in DioClient before making the request.
     updateToken(token);
     try {
-      final response = await dioClient.get(ApiEndpoints.getLoggedInUser);
+      final response = await dioClient.get(
+        ApiEndpoints.getLoggedInUser,
+        skipProactiveRefresh: skipProactiveRefresh,
+      );
       if (response.statusCode == 200) {
         return UserModel.fromJson(response.data);
       }

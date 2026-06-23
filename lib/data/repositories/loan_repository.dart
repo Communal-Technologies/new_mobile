@@ -29,7 +29,7 @@ class LoanRepository {
     if (id.isEmpty) return const [];
     try {
       final response = await _dio.get(ApiEndpoints.membersFetchLoanSchemes(id));
-      final data = response.data;
+      final data = _unwrap(response.data);
       final raw = data is Map ? data['schemes'] : null;
       if (raw is! List) return const [];
       return raw
@@ -55,7 +55,7 @@ class LoanRepository {
       final response = await _dio.get(
         ApiEndpoints.fetchLoanDetailsById(trimmed),
       );
-      final data = response.data;
+      final data = _unwrap(response.data);
       final raw = data is Map ? data['loanDetail'] : null;
       if (raw is! Map) return null;
       return LoanApplication.fromBackend(Map<String, dynamic>.from(raw));
@@ -71,7 +71,7 @@ class LoanRepository {
       final response = await _dio.get(
         ApiEndpoints.membersFetchUserLoans(ledger),
       );
-      final data = response.data;
+      final data = _unwrap(response.data);
       final raw = data is Map ? data['loans'] : null;
       if (raw is! List) return const [];
       final fallback = resolveCurrencyCode(user);
@@ -98,7 +98,7 @@ class LoanRepository {
       final response = await _dio.get(
         ApiEndpoints.membersLoanEligibility(coop),
       );
-      final data = response.data;
+      final data = _unwrap(response.data);
       if (data is Map) {
         return LoanEligibility.fromJson(Map<String, dynamic>.from(data));
       }
@@ -118,7 +118,7 @@ class LoanRepository {
       final response = await _dio.get(
         ApiEndpoints.membersFetchLoanInstallments(id),
       );
-      final data = response.data;
+      final data = _unwrap(response.data);
       final raw = data is Map ? data['installments'] : null;
       final fallback = (data is Map ? data['currency']?.toString() : null) ?? 'NGN';
       if (raw is! List) return const [];
@@ -146,7 +146,7 @@ class LoanRepository {
       final response = await _dio.get(
         ApiEndpoints.membersFetchLoanRegrantChain(id),
       );
-      final data = response.data;
+      final data = _unwrap(response.data);
       final raw = data is Map ? data['chain'] : null;
       final cur = (data is Map ? data['currency']?.toString() : null)
           ?? fallbackCurrency
@@ -172,7 +172,7 @@ class LoanRepository {
       final response = await _dio.get(
         ApiEndpoints.membersFetchLoanBalance(ledger),
       );
-      final data = response.data;
+      final data = _unwrap(response.data);
       final raw = data is Map ? data['balance'] : null;
       return _asInt(raw);
     } on DioException catch (e) {
@@ -254,9 +254,9 @@ class LoanRepository {
     try {
       final response = await _dio.get(
         ApiEndpoints.membersLoanSearchGuarantors,
-        queryParameters: {'cooperative_id': coop, 'q': q, 'limit': limit},
+        queryParameters: {'cooperative': coop, 'q': q, 'limit': limit},
       );
-      final data = response.data;
+      final data = _unwrap(response.data);
       final raw = data is Map ? data['members'] : null;
       if (raw is! List) return const [];
       return raw
@@ -276,8 +276,10 @@ class LoanRepository {
       final response = await _dio.get(
         ApiEndpoints.membersFetchGuarantorRequests(ledger),
       );
-      final data = response.data;
-      final raw = data is Map ? data['requests'] : null;
+      final data = _unwrap(response.data);
+      // loans-svc returns guarantor requests under `approvals`; the legacy
+      // monolith used `requests`. Accept either.
+      final raw = data is Map ? (data['approvals'] ?? data['requests']) : null;
       if (raw is! List) return const [];
       final fallback = resolveCurrencyCode(user);
       return raw
@@ -304,7 +306,7 @@ class LoanRepository {
         ApiEndpoints.membersGuarantorsForLoan(loanRef),
       );
       if (response.statusCode == 200) {
-        final data = response.data;
+        final data = _unwrap(response.data);
         if (data is Map) {
           return LoanGuarantorList.fromJson(Map<String, dynamic>.from(data));
         }
@@ -455,11 +457,12 @@ class LoanRepository {
         ApiEndpoints.membersLoanApplication,
         data: payload,
       );
-      final data = response.data;
-      if (response.statusCode == 200) {
-        if (data is Map) return Map<String, dynamic>.from(data);
-        return const {};
+      // loans-svc returns 201 Created for a new application.
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final inner = _unwrap(response.data);
+        return inner is Map ? Map<String, dynamic>.from(inner) : const {};
       }
+      final data = response.data;
       if (data is Map && data['message'] != null) {
         throw Exception(data['message'].toString());
       }
@@ -577,9 +580,9 @@ class LoanRepository {
     final ref = referenceId.trim();
     if (ref.isEmpty) throw Exception('Missing loan reference');
     try {
+      // loans-svc: PUT /api/loans/v2/{id}/cancel (id in path, no body).
       final response = await _dio.put(
-        ApiEndpoints.membersLoanCancelRequest,
-        data: {'reference_id': ref},
+        ApiEndpoints.membersLoanCancelRequest(ref),
       );
       if (response.statusCode == 200) return;
       final data = response.data;
@@ -590,6 +593,17 @@ class LoanRepository {
     } on DioException catch (e) {
       throw _wrap(e, 'Unable to cancel application');
     }
+  }
+
+  /// loans-svc wraps every success response as `{status:"success", data:{…}}`.
+  /// Return the inner payload so the existing key-based parsing works unchanged.
+  static dynamic _unwrap(dynamic body) {
+    if (body is Map &&
+        body['data'] != null &&
+        (body['status'] == 'success' || body['status'] == true)) {
+      return body['data'];
+    }
+    return body;
   }
 
   Exception _wrap(DioException e, String fallback) {

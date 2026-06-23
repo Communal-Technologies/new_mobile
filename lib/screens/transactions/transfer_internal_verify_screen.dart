@@ -76,6 +76,32 @@ class _TransferInternalVerifyScreenState
   String _pin = '';
   bool _submitting = false;
 
+  /// Whether the biometric shortcut key should be shown — true only when
+  /// transactions-biometric is enabled, the device has hardware enrolled, and
+  /// this account has a registered signing key. Resolved once on mount so the
+  /// keypad doesn't show a fingerprint that just errors when tapped.
+  bool _biometricAvailable = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveBiometricAvailability();
+  }
+
+  Future<void> _resolveBiometricAvailability() async {
+    try {
+      final shared = await shared_prefs.SharedPreferences.getInstance();
+      final enabled = BiometricPrefs(shared).transactionsEnabled;
+      final hw = enabled && await BiometricService.isBiometricAvailable();
+      final available = hw && await _biometricSigner.isEnrolled();
+      if (mounted && available != _biometricAvailable) {
+        setState(() => _biometricAvailable = available);
+      }
+    } catch (_) {
+      // Leave the key hidden on any probe failure.
+    }
+  }
+
   /// Audit M23: minted once per screen mount and reused across retries so a
   /// network drop + user retry on the Confirm button dedupes server-side.
   /// A fresh key is only generated when the user navigates away and re-enters.
@@ -162,6 +188,15 @@ class _TransferInternalVerifyScreenState
     HapticFeedback.lightImpact();
     setState(() => _submitting = true);
     try {
+      // transactions-svc's /transfer/initiate no longer validates the PIN
+      // inline (it can't — security_pin lives on tbl_users, which only the
+      // monolith may touch). It instead checks a Redis flag the monolith's
+      // verify-security-pin sets on success, so that call has to happen
+      // here first. The X-Security-Pin header still goes out on
+      // initiateTransfer below too — transactions-svc ignores it, but the
+      // header is harmless to send and this keeps the call shape
+      // unchanged for any other backend still reading it.
+      await _repo.verifySecurityPin(_pin);
       await _runInitiate(pin: _pin, biometricHeaders: null);
     } catch (e) {
       if (!mounted) return;
@@ -220,6 +255,9 @@ class _TransferInternalVerifyScreenState
         idempotencyKey: _idempotencyKey,
         biometricHeaders: biometricHeaders,
         pin: pin,
+        beneficiaryName: widget.recipient.accountName,
+        beneficiaryBank: widget.recipient.bank,
+        beneficiaryAccount: widget.recipient.accountNumber,
       );
     } else {
       result = await _repo.initiateTransfer(
@@ -233,6 +271,9 @@ class _TransferInternalVerifyScreenState
         idempotencyKey: _idempotencyKey,
         biometricHeaders: biometricHeaders,
         pin: pin,
+        beneficiaryName: widget.recipient.accountName,
+        beneficiaryBank: widget.recipient.bank,
+        beneficiaryAccount: widget.recipient.accountNumber,
       );
     }
     if (widget.saveAsBeneficiary) {
@@ -476,17 +517,27 @@ class _TransferInternalVerifyScreenState
       [_digit('1'), _digit('2'), _digit('3')],
       [_digit('4'), _digit('5'), _digit('6')],
       [_digit('7'), _digit('8'), _digit('9')],
-      [_biometricKey(), _digit('0'), _backspaceKey()],
+      // Hide the biometric shortcut when it isn't configured — show an empty
+      // cell so the 0 stays centered instead of a fingerprint that just errors.
+      [
+        _biometricAvailable ? _biometricKey() : const SizedBox.shrink(),
+        _digit('0'),
+        _backspaceKey(),
+      ],
     ];
+    // Fixed-height rows centered in the slot — the previous Expanded rows
+    // stretched the digits across the whole screen ("too big / too spaced").
     return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         for (int i = 0; i < rows.length; i++) ...[
-          if (i > 0) SizedBox(height: 4.h),
-          Expanded(
+          if (i > 0) SizedBox(height: 6.h),
+          SizedBox(
+            height: 56.h,
             child: Row(
               children: [
                 for (int j = 0; j < rows[i].length; j++) ...[
-                  if (j > 0) SizedBox(width: 4.w),
+                  if (j > 0) SizedBox(width: 6.w),
                   Expanded(child: rows[i][j]),
                 ],
               ],
@@ -505,7 +556,7 @@ class _TransferInternalVerifyScreenState
         child: Text(
           d,
           style: TextStyle(
-            fontSize: 26.sp,
+            fontSize: 22.sp,
             fontWeight: FontWeight.w600,
             color: Theme.of(context).colorScheme.onSurface,
           ),

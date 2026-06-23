@@ -26,6 +26,16 @@ class ApiEndpoints {
   /// Bills micro-service prefix. The bills service runs at `/api/bills/v2/…`.
   static const String _billsV2 = '/api/bills/v2';
 
+  /// Transactions micro-service prefix. Handles transfers, beneficiaries,
+  /// and fees at `/api/transactions/v2/…`. Security-PIN verification stays
+  /// on the monolith (`_v1`) — transactions-svc never touches tbl_users.
+  static const String _txnV2 = '/api/transactions/v2';
+
+  /// Loans micro-service prefix. Loans were migrated off the monolith; all
+  /// member loan endpoints live at `/api/loans/v2/…` (gateway-routed to
+  /// loans-svc). Responses use the `{status:"success", data:{…}}` envelope.
+  static const String _loansV2 = '/api/loans/v2';
+
   // --- Auth ---------------------------------------------------------------
   static const String login = '$_v1/login';
   static const String loginChecker = '$_v1/login-checker';
@@ -89,20 +99,26 @@ class ApiEndpoints {
   static const String membersTransactionStatementExport =
       '$_v1/members/transaction-statement/export';
 
-  // --- Transfer -----------------------------------------------------------
-  static const String transferBanks = '$_v1/transfer/banks';
+  // --- Transfer (transactions micro-service at /api/transactions/v2) ------
+  // Security-PIN verification is the one exception — it stays on the
+  // monolith (membersVerifySecurityPin above) because transactions-svc must
+  // never touch tbl_users.
+  static const String transferBanks = '$_txnV2/transfer/banks';
   static const String transferBankSuggestions =
-      '$_v1/transfer/bank-suggestions';
+      '$_txnV2/transfer/bank-suggestions';
   static const String transferCreateCounterParties =
-      '$_v1/transfer/create-counter-parties';
+      '$_txnV2/transfer/create-counter-parties';
   static String transferVerifyAccount(String bankCode, String accountNumber) =>
-      '$_v1/transfer/verify-account/${bankCode.trim()}/${accountNumber.trim()}';
-  static const String transferInitiate = '$_v1/transfer/initiate';
-  static const String transferFee = '$_v1/transfer/fee';
+      '$_txnV2/transfer/verify-account/${bankCode.trim()}/${accountNumber.trim()}';
+  static const String transferInitiate = '$_txnV2/transfer/initiate';
+  static const String transferFee = '$_txnV2/transfer/fee';
   static const String membersTransferBeneficiaries =
-      '$_v1/members/transfer/beneficiaries';
+      '$_txnV2/transfer/beneficiaries';
   static String membersTransferStatus(String transferId) =>
-      '$_v1/members/transfer/transactions/$transferId/status';
+      '$_txnV2/transfer/transactions/$transferId/status';
+
+  /// Transaction issue reports → Communal platform admin (transactions-svc).
+  static const String transactionIssues = '$_txnV2/transaction-issues';
 
   // --- Bill payments (bills micro-service at /api/bills/v2) ---------------
   /// Providers list. Pass `?category=AIRTIME|DATA|ELECTRICITY|TELEVISION`.
@@ -125,18 +141,26 @@ class ApiEndpoints {
       '$_billsV2/transactions/${reference.trim()}';
 
   // --- Members ledger / obligations ---------------------------------------
+  // Obligations are owned by obligations-svc (/api/obligations/v2/...), routed
+  // by the gateway to :8085.
+  static const String _oblV2 = '/api/obligations/v2';
   static String membersFinancialObligations(
     String ledgerNumber,
     String cooperativeId,
-  ) => '$_v1/members/financial-obligations/$ledgerNumber/$cooperativeId';
+  ) => '$_oblV2/$ledgerNumber/$cooperativeId';
   static String membersFines(String ledgerNumber, String cooperativeId) =>
-      '$_v1/members/fines/$ledgerNumber/$cooperativeId';
+      '$_oblV2/fines/$ledgerNumber/$cooperativeId';
+  // Cash repositories are owned by cooperative-svc (/api/cooperative/v2/...);
+  // the monolith copy 500s post-migration.
   static const String membersCooperativeCashRepositories =
-      '$_v1/members/cooperative-cash-repositories';
+      '/api/cooperative/v2/members/cooperative-cash-repositories';
   static String membersFetchMemberTransactions(String ledgerNumber) =>
       '$_v1/members/fetch-member-transactions/$ledgerNumber';
+  // Personal transaction history is now served by transactions-svc (merged
+  // transfers + bills, counterparty/beneficiary resolved there). The user is
+  // derived from the JWT, so the userId arg is no longer part of the path.
   static String membersFetchTransactions(String userId) =>
-      '$_v1/members/fetch-transactions/$userId';
+      '$_txnV2/personal-transactions';
 
   /// Single-transaction fetch by trx_reference OR external_reference,
   /// scoped to the authenticated member. Used for push-tap deep
@@ -149,16 +173,16 @@ class ApiEndpoints {
   /// `Obligation.fromBackend`. 404 when the row doesn't belong to
   /// the authenticated member.
   static String membersObligationById(String id) =>
-      '$_v1/members/obligations/$id';
+      '$_oblV2/$id';
   static const String membersObligationWithdrawal =
-      '$_v1/members/obligation-withdrawal';
+      '$_oblV2/withdrawals';
   static String membersRevokeObligationWithdrawal(String id) =>
-      '$_v1/members/obligation-withdrawal/$id';
+      '$_oblV2/withdrawals/$id';
 
-  static const String membersPayObligation = '$_v1/members/pay-obligation';
-  static const String membersPayFine = '$_v1/members/pay-fine';
+  static const String membersPayObligation = '$_oblV2/payments';
+  static const String membersPayFine = '$_oblV2/fines/payments';
   static const String membersRecordNipFinePayment =
-      '$_v1/members/record-nip-fine-payment';
+      '$_oblV2/fines/payments/nip';
 
   /// Record-only path for NIP-funded obligation payments. Backend skips
   /// the biometric-sig middleware here because the upstream
@@ -168,70 +192,53 @@ class ApiEndpoints {
   /// dismissed it or biometric wasn't enrolled, leaving the wallet
   /// debited but the obligation un-credited.
   static const String membersRecordNipObligationPayment =
-      '$_v1/members/record-nip-obligation-payment';
+      '$_oblV2/payments/nip';
 
-  // --- Loans --------------------------------------------------------------
+  // --- Loans (loans-svc — /api/loans/v2/...) ------------------------------
+  // Migrated off the monolith. All responses use {status:"success", data:{…}}.
   static String membersFetchLoanSchemes(String cooperativeId) =>
-      '$_v1/members/fetch-loan-schemes/$cooperativeId';
+      '$_loansV2/$cooperativeId/schemes';
+  // status (when set) is passed as a `?status=` query param by the caller.
   static String membersFetchUserLoans(String ledgerNumber, [String? status]) =>
-      status == null || status.trim().isEmpty
-      ? '$_v1/members/loan/fetch-requested/$ledgerNumber'
-      : '$_v1/members/loan/fetch-requested/$ledgerNumber/${status.trim()}';
+      '$_loansV2/member/$ledgerNumber';
   static String membersFetchLoanBalance(String ledgerNumber) =>
-      '$_v1/members/loan/fetch-balances/$ledgerNumber';
+      '$_loansV2/member/$ledgerNumber/balance';
 
-  /// Per-loan member-scoped reads — installment schedule and the
-  /// regrant chain rooted at this loan. Both 404 on a loan that
-  /// doesn't belong to the calling member's MemberCooperative
-  /// mapping; the controllers do not reveal existence.
   static String membersFetchLoanInstallments(String loanId) =>
-      '$_v1/loans/$loanId/installments';
+      '$_loansV2/$loanId/installments';
   static String membersFetchLoanRegrantChain(String loanId) =>
-      '$_v1/loans/$loanId/regrant-chain';
+      '$_loansV2/$loanId/regrant-chain';
 
-  /// Loan-by-id fetch used by the push-tap deep-link. Endpoint lives on
-  /// the shared auth group at /v1/fetch-loan-details/{id} (see
-  /// backend routes/api.php:180), and returns
-  /// `{ "loanDetail": { … } }`.
-  static String fetchLoanDetailsById(String id) =>
-      '$_v1/fetch-loan-details/$id';
+  /// Loan-by-id fetch (push-tap deep-link). loans-svc returns
+  /// `{ data: { loanDetail: { … } } }`.
+  static String fetchLoanDetailsById(String id) => '$_loansV2/$id';
   static String membersLoanEligibility(String cooperativeId) =>
-      '$_v1/members/loan/eligibility/$cooperativeId';
+      '$_loansV2/$cooperativeId/eligibility';
   static String membersFetchGuarantorRequests(String ledgerNumber) =>
-      '$_v1/members/loan/fetch-approval-requests/$ledgerNumber';
-  static const String membersLoanApplication = '$_v1/members/loan/application';
-  static const String membersLoanCancelRequest =
-      '$_v1/members/loan/cancel-request';
+      '$_loansV2/guarantors/requests/$ledgerNumber';
+  static const String membersLoanApplication = '$_loansV2/application';
+  /// Cancel a pending loan request (PUT /{id}/cancel).
+  static String membersLoanCancelRequest(String loanId) =>
+      '$_loansV2/$loanId/cancel';
 
-  /// Per-loan guarantor list with name + status + expiry. Used by the
-  /// applicant's loan-detail screen to render the per-guarantor card
-  /// with remind/replace actions.
   static String membersGuarantorsForLoan(String loanRef) =>
-      '$_v1/members/loan/guarantors/for-loan/$loanRef';
+      '$_loansV2/guarantors/$loanRef';
 
-  /// Re-fire the guarantor invitation SMS / push for a still-pending
-  /// approval row (rate-limited 24h, pre-expiry only — backend
-  /// enforces both).
   static String membersGuarantorRemind(String approvalId) =>
-      '$_v1/members/loan/guarantors/$approvalId/remind';
+      '$_loansV2/guarantors/$approvalId/remind';
 
-  /// Swap a still-unresolved (or expired) guarantor for a new one.
   static const String membersGuarantorReplace =
-      '$_v1/members/loan/guarantors/replace';
+      '$_loansV2/guarantors/replace';
 
-  /// Member-initiated loan repayment (obligation→loan path).
-  /// Biometric-gated server-side. Mirrors the obligation flow.
-  static const String membersPayLoan = '$_v1/members/loan/pay';
+  static const String membersPayLoan = '$_loansV2/pay';
 
-  /// NIP-funded loan repayment record-only path. No biometric; the
-  /// upstream /transfer/initiate already signed the value-moving
-  /// step. Same split as record-nip-obligation-payment.
   static const String membersRecordNipLoanPayment =
-      '$_v1/members/loan/record-nip-payment';
+      '$_loansV2/record-nip-payment';
   static const String membersUpdateGuarantorApproval =
-      '$_v1/members/loan/update-guarantor-approval';
+      '$_loansV2/guarantors/update-approval';
+  /// Guarantor search — caller passes `?cooperative=&q=` query params.
   static const String membersLoanSearchGuarantors =
-      '$_v1/members/loan/search-guarantors';
+      '$_loansV2/guarantors/search';
 
   // --- KYC / compliance (kycsvc — /api/kyc/v2/...) ------------------------
   static const String kycCreate = '/api/kyc/v2';
@@ -246,8 +253,9 @@ class ApiEndpoints {
   static const String fetchRegions = '$_v1/fetch-regions';
   static const String fetchStates = '$_v1/fetch-states';
   static String fetchLgas(Object stateId) => '$_v1/fetch-lgas/$stateId';
+  // Internal accounts are owned by cooperative-svc (/api/cooperative/v2/...).
   static String fetchInternalAccounts(String cooperativeId) =>
-      '$_v1/fetch-internal-accounts/$cooperativeId';
+      '/api/cooperative/v2/fetch-internal-accounts/$cooperativeId';
 
   // --- Security / biometric (audit M7, M38) -------------------------------
   static const String securityVerifyPassword =

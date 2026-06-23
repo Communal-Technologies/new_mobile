@@ -161,7 +161,11 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
             style: TextStyle(
               fontSize: 17.sp,
               fontWeight: FontWeight.w600,
-              color: isStatus ? const Color(0xFFE67E22) : Colors.black87,
+              // Was Colors.black87 → invisible on the dark card; resolve from
+              // the theme so the amount stays legible in both modes.
+              color: isStatus
+                  ? const Color(0xFFE67E22)
+                  : Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ),
@@ -198,8 +202,9 @@ class LoanApplicationSuccessScreen extends StatelessWidget {
           child: ElevatedButton(
             onPressed: () => context.goNamed('home'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.grey.shade300,
-              foregroundColor: Colors.black87,
+              backgroundColor:
+                  Theme.of(context).colorScheme.surfaceContainerHighest,
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
               elevation: 0,
               padding: EdgeInsets.symmetric(vertical: 16.h),
               shape: RoundedRectangleBorder(

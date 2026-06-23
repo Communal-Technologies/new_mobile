@@ -591,6 +591,16 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
 
         if (verified) {
           final securityCubit = context.read<SecurityCubit>();
+          // Capture before unlockApp() flips it — needed to decide whether
+          // SecurityWrapper is hosting this screen as the idle-lock overlay
+          // (stay on the current shell route, let SecurityWrapper reveal
+          // the dashboard) or as a standalone route (navigate explicitly).
+          // Mirrors the PIN-entry unlock path below (~line 855), which hit
+          // the same "still on welcome-back after a successful unlock" bug
+          // when it unconditionally called context.go('/home') here too —
+          // that fights SecurityWrapper's own state-driven swap and the
+          // lock screen can stay visible despite the cubit being unlocked.
+          final wasSecurityLocked = securityCubit.state == SecurityState.locked;
           _isAuthenticating = false;
           _waitingForBackendValidation = false;
           _password = '';
@@ -601,10 +611,14 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
           securityCubit.unlockApp();
           securityCubit.recordActivity();
 
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            context.go('/home');
-          });
+          if (!wasSecurityLocked) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              try {
+                context.go('/home');
+              } catch (_) {}
+            });
+          }
         } else {
           setState(() {
             _isAuthenticating = false;

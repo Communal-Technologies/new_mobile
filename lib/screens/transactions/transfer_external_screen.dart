@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
+import 'package:communal_mobile/core/utils/amount_input_formatter.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/utils/tier_limit_check.dart';
@@ -61,7 +62,6 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
   String? _banksError;
   bool _loadingSuggestions = false;
   bool _verifying = false;
-  bool _saveAsFavorite = false;
   bool _suggestionsDismissed = false;
   Timer? _debounce;
 
@@ -168,21 +168,16 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
   }
 
   List<_SuggestRow> get _suggestionRows {
+    // Suggestions are the user's previously-created counterparties that match
+    // the typed account number — NOT arbitrary banks from the bank list. When
+    // none match, the panel simply offers "Show all Banks" below. Dedupe by
+    // account number (already deduped server-side, belt-and-braces here).
     final rows = <_SuggestRow>[];
-    final seenNip = <String>{};
+    final seenAcct = <String>{};
     for (final s in _rawSuggestions) {
-      if (rows.length >= 4) break;
-      final nip = (s.nipCode ?? '').trim();
-      if (nip.isNotEmpty && seenNip.contains(nip)) continue;
-      if (nip.isNotEmpty) seenNip.add(nip);
+      if (rows.length >= 6) break;
+      if (!seenAcct.add(s.accountNumber)) continue;
       rows.add(_SuggestRecipient(s));
-    }
-    var i = 0;
-    while (rows.length < 4 && i < _banks.length) {
-      final b = _banks[i++];
-      if (seenNip.contains(b.nipCode)) continue;
-      seenNip.add(b.nipCode);
-      rows.add(_SuggestBank(b));
     }
     return rows;
   }
@@ -305,11 +300,11 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
   }
 
   int? _amountMinor(String currency) {
-    final digits = _amountCtrl.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digits.isEmpty) return null;
-    final n = int.tryParse(digits);
-    if (n == null || n <= 0) return null;
-    return n * factorFor(currency);
+    // Parse the typed major-unit value (supports decimals e.g. 550.50) into
+    // integer minor units. Money.tryParseMajor strips the thousands commas.
+    final money = Money.tryParseMajor(_amountCtrl.text, currency);
+    if (money == null || money.amountMinor <= 0) return null;
+    return money.amountMinor;
   }
 
   bool get _continueEnabled {
@@ -318,7 +313,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
   }
 
   void _applyQuickAmount(int v) {
-    final fmt = _ThousandsSeparatorInputFormatter.formatInt(v);
+    final fmt = AmountInputFormatter.formatInt(v);
     _amountCtrl.value = TextEditingValue(
       text: fmt,
       selection: TextSelection.collapsed(offset: fmt.length),
@@ -359,7 +354,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
         'amountMinor': amountMinor,
         'currency': currency,
         'narration': _narrationCtrl.text.trim(),
-        'saveAsBeneficiary': _saveAsFavorite,
+        'saveAsBeneficiary': false,
         'useExternalNipFlow': true,
       },
     );
@@ -778,13 +773,14 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                       vSpace(6),
                       TextField(
                         controller: _amountCtrl,
-                        keyboardType: TextInputType.number,
+                        keyboardType:
+                            const TextInputType.numberWithOptions(decimal: true),
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
                         inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[0-9,]')),
-                          _ThousandsSeparatorInputFormatter(),
+                          FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
+                          AmountInputFormatter(decimals: decimalsFor(currencyCode)),
                         ],
                         decoration: InputDecoration(
                           hintText: '0 ($currencyCode)',
@@ -858,14 +854,6 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                         labelText: 'Narration',
                         hintText: 'What is this for?',
                       ),
-                      vSpace(8),
-                      SwitchListTile(
-                        value: _saveAsFavorite,
-                        onChanged: (v) => setState(() => _saveAsFavorite = v),
-                        title: const Text('Save as favourite'),
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
                     ],
                   ),
                 ),
@@ -894,31 +882,3 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
   }
 }
 
-class _ThousandsSeparatorInputFormatter extends TextInputFormatter {
-  static String formatInt(int value) {
-    final digits = value.toString();
-    if (digits.isEmpty) return '';
-    final chars = digits.split('').reversed.toList();
-    final out = <String>[];
-    for (int i = 0; i < chars.length; i++) {
-      out.add(chars[i]);
-      if ((i + 1) % 3 == 0 && i != chars.length - 1) out.add(',');
-    }
-    return out.reversed.join();
-  }
-
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digits.isEmpty) return const TextEditingValue(text: '');
-    final n = int.parse(digits);
-    final formatted = formatInt(n);
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
-  }
-}

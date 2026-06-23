@@ -7,6 +7,7 @@ import 'package:iconsax/iconsax.dart';
 
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
+import 'package:communal_mobile/screens/transactions/transaction_history_filters.dart';
 
 String _counterpartyInitials(String name, String bank) {
   final n = name.trim();
@@ -58,7 +59,7 @@ class TransactionDetailsScreen extends StatelessWidget {
         ),
         body: SafeArea(
           child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 28.h),
+            padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 12.h),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -71,7 +72,6 @@ class TransactionDetailsScreen extends StatelessWidget {
                 ],
                 vSpace(20),
                 _buildActionsSection(context, theme),
-                vSpace(32),
               ],
             ),
           ),
@@ -273,17 +273,26 @@ class TransactionDetailsScreen extends StatelessWidget {
   }
 
   Widget _buildDetailsCard(BuildContext context, ThemeData theme) {
-    final infoRows = [
+    // Bills carry their own consumer breakdown (Provider, Phone/Smartcard/Meter,
+    // Plan, …) in [extraDetails]; for those rows the generic Sender/Recipient
+    // block just repeats the provider, so it's suppressed.
+    final isBill = details.extraDetails.isNotEmpty;
+    final infoRows = <_InfoRowData>[
       _InfoRowData(label: 'Fees', value: details.feesLabel),
-      _InfoRowData(
-        label: details.isIncoming ? 'Sender Details' : 'Recipient Details',
-        value: '${details.counterpartyName}\n${details.counterpartyBankLine}',
-        isMultiline: true,
-      ),
+      if (!isBill)
+        _InfoRowData(
+          label: details.isIncoming ? 'Sender Details' : 'Recipient Details',
+          value: '${details.counterpartyName}\n${details.counterpartyBankLine}',
+          isMultiline: true,
+        ),
       _InfoRowData(label: 'Transaction Type', value: details.transactionType),
+      for (final e in details.extraDetails)
+        if (e.value.trim().isNotEmpty)
+          _InfoRowData(label: e.key, value: e.value),
       _InfoRowData(label: 'Date and Time', value: details.formattedDate),
-      _InfoRowData(label: 'Session ID', value: details.sessionId),
-      _InfoRowData(label: 'Description', value: details.description),
+      // Skip Description when empty (bills) so it doesn't just echo the type.
+      if (details.description.trim().isNotEmpty)
+        _InfoRowData(label: 'Description', value: details.description),
       _InfoRowData(label: 'Transaction Reference', value: details.reference),
       _InfoRowData(label: 'Payment Method', value: details.paymentMethod),
     ];
@@ -361,20 +370,26 @@ class TransactionDetailsScreen extends StatelessWidget {
     final actions = [
       _ActionTileData(
         label: 'Report issue',
-        subtitle: 'Get help with this transaction',
+        subtitle: 'Tell Communal support about this transaction',
         icon: Iconsax.warning_2,
         iconColor: const Color(0xFFD7263D),
         tileColor:
             tileTint(const Color(0xFFD7263D), const Color(0xFFFFF5F6)),
-        onTap: () => context.pushNamed('help-support'),
+        onTap: () => context.pushNamed(
+          'report-transaction-issue',
+          extra: details,
+        ),
       ),
       _ActionTileData(
         label: 'View history',
-        subtitle: 'Open full transaction list',
+        subtitle: 'See past payments like this one',
         icon: Iconsax.document_text5,
         iconColor: theme.primaryColor,
         tileColor: tileTint(theme.primaryColor, const Color(0xFFF6F2FF)),
-        onTap: () => context.goNamed('transactions'),
+        onTap: () => context.pushNamed(
+          'transactions-scoped',
+          extra: scopeFromDetails(details),
+        ),
       ),
       _ActionTileData(
         label: 'Transfer again',

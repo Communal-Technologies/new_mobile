@@ -455,6 +455,12 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
       if (pin.length < 4 || int.tryParse(pin) == null) {
         throw Exception('Enter your 4-digit transaction PIN to continue.');
       }
+      // transactions-svc's /transfer/initiate checks a Redis flag the
+      // monolith's verify-security-pin sets on success rather than
+      // validating the PIN inline (it can't — security_pin lives on
+      // tbl_users, owned exclusively by the monolith), so that call has
+      // to happen before initiateTransfer below.
+      await _transferRepo.verifySecurityPin(pin);
       return {'X-Security-Pin': pin};
     }
     final result = transfer

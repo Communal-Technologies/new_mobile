@@ -52,6 +52,13 @@ class _LoanApplicationStep3ScreenState
       ? _principalMinor
       : _principalMinor + _interestMinor;
 
+  /// Net amount actually disbursed to the member. When interest is deducted on
+  /// disbursal ('1') they receive principal minus interest; otherwise they get
+  /// the full principal and repay principal + interest.
+  int get _netDisbursedMinor => widget.draft.interestType == '1'
+      ? _principalMinor - _interestMinor
+      : _principalMinor;
+
   Future<void> _submit() async {
     if (!_agreedToTerms || _submitting) return;
     final auth = context.read<AuthBloc>().state;
@@ -249,6 +256,7 @@ class _LoanApplicationStep3ScreenState
                 ? 'Deduct on disbursal'
                 : 'Add to balance',
           ),
+          _row("You'll Receive", Money(_netDisbursedMinor, currency).format()),
           _row('Monthly Repayment', Money(_monthlyMinor, currency).format()),
           _row('Total Repayment', Money(_totalMinor, currency).format()),
           _row('Purpose', widget.draft.reasonForLoan),
@@ -426,7 +434,11 @@ class _LoanApplicationStep3ScreenState
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF9E6),
+        // Theme-aware amber tint — the hardcoded light yellow made the theme
+        // onSurface text unreadable in dark mode.
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFFE6A502).withValues(alpha: 0.16)
+            : const Color(0xFFFFF9E6),
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Column(

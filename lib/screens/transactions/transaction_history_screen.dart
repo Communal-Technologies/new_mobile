@@ -28,7 +28,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
-  const TransactionHistoryScreen({super.key});
+  const TransactionHistoryScreen({super.key, this.scope});
+
+  /// When set, the list is narrowed to entries matching this scope (e.g. the
+  /// same biller/phone/beneficiary/obligation) and a banner shows what's being
+  /// filtered. Driven by "View history" on the transaction details screen.
+  final TransactionHistoryScope? scope;
 
   @override
   State<TransactionHistoryScreen> createState() =>
@@ -70,14 +75,23 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       _filterStatus == 'All Status' ? 'All statuses' : _filterStatus;
 
   void _recomputeGrouped() {
+    // When opened scoped (from "View history"), pre-narrow to the same
+    // biller/beneficiary/obligation before the user's category/status filters.
+    final scope = widget.scope;
+    final personalSource = (scope == null || scope.isEmpty)
+        ? _personalFlat
+        : _personalFlat.where(scope.matches).toList(growable: false);
+    final ledgerSource = (scope == null || scope.isEmpty)
+        ? _ledgerFlat
+        : _ledgerFlat.where(scope.matches).toList(growable: false);
     final pFiltered = applyTransactionHistoryFilters(
-      _personalFlat,
+      personalSource,
       direction: _filterDirection,
       paymentType: _filterPaymentType,
       statusLabel: _filterStatus,
     );
     final lFiltered = applyTransactionHistoryFilters(
-      _ledgerFlat,
+      ledgerSource,
       direction: _filterDirection,
       paymentType: _filterPaymentType,
       statusLabel: _filterStatus,
@@ -223,10 +237,31 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       return;
     }
     final user = auth.user;
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    // Cache-first: render the last-cached history instantly and revalidate in
+    // the background, so the screen doesn't show a full-screen loader on every
+    // open. The loader only appears when there is nothing cached yet.
+    final cachedPersonal = _repo.cachedPersonalHistoryMerged(user);
+    final cachedLedger = _showLedgerTab(user)
+        ? _repo.cachedLedgerHistoryOnly(user)
+        : const <TransactionListItem>[];
+    final hasCache = cachedPersonal.isNotEmpty || cachedLedger.isNotEmpty;
+    if (hasCache) {
+      setState(() {
+        _personalFlat = cachedPersonal;
+        _ledgerFlat = cachedLedger;
+        if (!_showLedgerTab(user) && _currentTabIndex != 0) {
+          _currentTabIndex = 0;
+        }
+        _recomputeGrouped();
+        _loading = false;
+        _error = null;
+      });
+    } else {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
     try {
       final personal = await _repo.fetchPersonalHistoryMerged(user);
       final ledger = _showLedgerTab(user)
@@ -242,12 +277,15 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         }
         _recomputeGrouped();
         _loading = false;
+        _error = null;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
+        // Keep showing cached rows on a refresh failure; only surface the
+        // error when there's nothing cached to fall back to.
+        if (!hasCache) _error = e.toString().replaceFirst('Exception: ', '');
       });
     }
   }
@@ -283,13 +321,35 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 ),
                 onPressed: () => context.pop(),
               ),
-              title: Text(
-                'Transaction History',
-                style: TextStyle(
-                  fontSize: 23.sp,
-                  fontWeight: FontWeight.w700,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    widget.scope == null
+                        ? 'Transaction History'
+                        : 'Payment history',
+                    style: TextStyle(
+                      fontSize: 23.sp,
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  if (widget.scope != null && widget.scope!.label.isNotEmpty)
+                    Text(
+                      widget.scope!.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w500,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
+                      ),
+                    ),
+                ],
               ),
               actions: [
                 Padding(
@@ -315,8 +375,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                         initialEmail: email,
                                       ),
                                 );
-                            if (!context.mounted || req == null || u == null)
+                            if (!context.mounted || req == null || u == null) {
                               return;
+                            }
                             await _exportStatement(req, u);
                           },
                     child: Container(
@@ -502,7 +563,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                               )
                             : ListView.separated(
                                 physics: const AlwaysScrollableScrollPhysics(),
-                                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                                padding: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 28.h),
                                 itemBuilder: (_, index) => _buildMonthSection(
                                   _activeMonthly[index].key,
                                   _activeMonthly[index].value,

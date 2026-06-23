@@ -431,10 +431,15 @@ class _LoanApplicationStep2ScreenState
 
   Widget _buildInfoCard() {
     final n = _required;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: const Color(0xFFE3F2FD),
+        // Theme-aware tint — the hardcoded light blue made the theme onSurface
+        // text unreadable in dark mode.
+        color: isDark
+            ? const Color(0xFF1976D2).withValues(alpha: 0.16)
+            : const Color(0xFFE3F2FD),
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Row(
@@ -488,9 +493,9 @@ class _LoanApplicationStep2ScreenState
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Text(
         'This loan product does not require any guarantors. Tap Continue to review.',
@@ -580,10 +585,14 @@ class _LoanApplicationStep2ScreenState
             margin: EdgeInsets.only(bottom: 8.h),
             padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFF4E9),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFFE67E22).withValues(alpha: 0.16)
+                  : const Color(0xFFFFF4E9),
               borderRadius: BorderRadius.circular(12.r),
               border: Border.all(
-                color: const Color(0xFFFFD2B0).withOpacity(0.6),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFFE67E22).withValues(alpha: 0.4)
+                    : const Color(0xFFFFD2B0).withValues(alpha: 0.6),
               ),
             ),
             child: Row(
@@ -645,7 +654,9 @@ class _LoanApplicationStep2ScreenState
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8F5E9),
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF4CAF50).withValues(alpha: 0.16)
+            : const Color(0xFFE8F5E9),
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Row(
@@ -655,7 +666,12 @@ class _LoanApplicationStep2ScreenState
           Expanded(
             child: Text(
               'Your guarantor${_required == 1 ? '' : 's'} will be notified to approve your loan request.',
-              style: TextStyle(fontSize: 17.sp, color: const Color(0xFF2E7D32)),
+              style: TextStyle(
+                fontSize: 17.sp,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF81C784)
+                    : const Color(0xFF2E7D32),
+              ),
             ),
           ),
         ],

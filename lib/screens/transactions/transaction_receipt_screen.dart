@@ -387,6 +387,71 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
     );
   }
 
+  Widget _buildBalanceCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+    Widget line(String label, String? value) {
+      if (value == null) return const SizedBox.shrink();
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: 6.h),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 15.sp,
+                  color: onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            ),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w700,
+                color: onSurface,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: theme.dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.account_balance_wallet_outlined,
+                  size: 16.sp, color: onSurface.withValues(alpha: 0.6)),
+              hSpace(6),
+              Text(
+                'Wallet balance',
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w600,
+                  color: onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
+          ),
+          vSpace(4),
+          line('Before', _details.balanceBeforeLabel),
+          line('After', _details.balanceAfterLabel),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -434,6 +499,13 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                   key: _receiptKey,
                   child: ReceiptCard(details: _details),
                 ),
+                // Wallet balance — shown on-screen only; it sits OUTSIDE the
+                // RepaintBoundary above so it is never captured into the
+                // shared/downloaded receipt image.
+                if (_details.balanceAfterLabel != null) ...[
+                  vSpace(16),
+                  _buildBalanceCard(context),
+                ],
                 vSpace(24),
                 if (_details.status == TransactionStatus.successful) ...[
                   Row(

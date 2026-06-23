@@ -64,6 +64,68 @@ class CategoryFilterResult {
   final String paymentType;
 }
 
+/// Narrows the history list to "the same thing" as a transaction the user
+/// opened — e.g. every airtime top-up to the same phone number, every payment
+/// to the same beneficiary, or every entry of the same obligation. Built from a
+/// [TransactionDetailsData] via [scopeFromDetails] and passed into the history
+/// screen so "View history" shows a focused list instead of everything.
+class TransactionHistoryScope {
+  const TransactionHistoryScope({
+    required this.label,
+    this.account,
+    this.type,
+    this.name,
+  });
+
+  /// Human label for the scope banner, e.g. "MTN · 09035712541".
+  final String label;
+
+  /// Consumer identifier / beneficiary account to match on (phone, smartcard,
+  /// meter, NUBAN). When present this is the precise key.
+  final String? account;
+
+  /// Transaction type to match on when there's no account.
+  final String? type;
+
+  /// Counterparty name to match on when there's no account.
+  final String? name;
+
+  bool get isEmpty =>
+      (account == null || account!.trim().isEmpty) &&
+      (type == null || type!.trim().isEmpty) &&
+      (name == null || name!.trim().isEmpty);
+
+  bool matches(TransactionListItem t) {
+    final d = t.details;
+    final acct = (account ?? '').trim();
+    if (acct.isNotEmpty) {
+      return (d.counterpartyAccount ?? '').trim() == acct;
+    }
+    final ty = (type ?? '').trim().toLowerCase();
+    final nm = (name ?? '').trim().toLowerCase();
+    final matchType = ty.isEmpty || d.transactionType.trim().toLowerCase() == ty;
+    final matchName =
+        nm.isEmpty || d.counterpartyName.trim().toLowerCase() == nm;
+    return matchType && matchName;
+  }
+}
+
+/// Derive a [TransactionHistoryScope] from an opened transaction.
+TransactionHistoryScope scopeFromDetails(TransactionDetailsData d) {
+  final acct = (d.counterpartyAccount ?? '').trim();
+  final name = d.counterpartyName.trim();
+  final type = d.transactionType.trim();
+  final label = acct.isNotEmpty
+      ? (name.isNotEmpty ? '$name · $acct' : acct)
+      : (type.isNotEmpty ? type : name);
+  return TransactionHistoryScope(
+    label: label,
+    account: acct.isEmpty ? null : acct,
+    type: type.isEmpty ? null : type,
+    name: name.isEmpty ? null : name,
+  );
+}
+
 bool _statusMatches(TransactionDetailsData d, String statusLabel) {
   switch (statusLabel) {
     case 'All Status':

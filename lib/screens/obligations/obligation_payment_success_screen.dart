@@ -239,7 +239,11 @@ class _DetailRow extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 17.sp,
                   fontWeight: FontWeight.w600,
-                  color: isLink ? const Color(0xFF7434FF) : Colors.black,
+                  // Was Colors.black → invisible on the dark card. Resolve from
+                  // the theme so values stay legible in both modes.
+                  color: isLink
+                      ? const Color(0xFF7434FF)
+                      : Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ),
@@ -271,7 +275,7 @@ class _ActionButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(color: Theme.of(context).dividerColor),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -300,7 +304,9 @@ class _NextStepsCard extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: const Color(0xFFE9F2FF),
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF2563EB).withValues(alpha: 0.16)
+            : const Color(0xFFE9F2FF),
         borderRadius: BorderRadius.circular(18.r),
       ),
       child: Row(

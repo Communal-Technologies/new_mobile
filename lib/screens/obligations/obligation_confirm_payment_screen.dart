@@ -242,7 +242,16 @@ class _ObligationConfirmPaymentScreenState
             onPressed: (isOnline && !_submitting)
                 ? () => _confirmDebouncer.run(_onConfirm)
                 : null,
-            icon: const Icon(Icons.fingerprint),
+            icon: _submitting
+                ? SizedBox(
+                    width: 18.w,
+                    height: 18.w,
+                    child: const CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Icon(Icons.fingerprint),
             label: Text(
               _submitting ? 'Processing…' : 'Authorize Payment',
               style: TextStyle(
@@ -264,16 +273,17 @@ class _ObligationConfirmPaymentScreenState
         return Column(
           children: [
             SizedBox(
-              width: 220.w,
+              width: 180.w,
               child: TextField(
                 controller: _pinController,
+                enabled: !_submitting,
                 keyboardType: TextInputType.number,
                 obscureText: true,
                 maxLength: 6,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 24.sp,
-                  letterSpacing: 12,
+                  fontSize: 20.sp,
+                  letterSpacing: 6,
                   fontWeight: FontWeight.w700,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -281,8 +291,8 @@ class _ObligationConfirmPaymentScreenState
                   counterText: '',
                   hintText: '••••',
                   hintStyle: TextStyle(
-                    fontSize: 24.sp,
-                    letterSpacing: 12,
+                    fontSize: 20.sp,
+                    letterSpacing: 6,
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
@@ -309,7 +319,17 @@ class _ObligationConfirmPaymentScreenState
                 onPressed: (isOnline && !_submitting)
                     ? () => _confirmDebouncer.run(_onConfirm)
                     : null,
-                icon: const Icon(Icons.lock_outline),
+                icon: _submitting
+                    ? SizedBox(
+                        width: 18.w,
+                        height: 18.w,
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.lock_outline),
                 label: Text(
                   _submitting ? 'Processing…' : 'Authorize Payment',
                   style: TextStyle(
@@ -480,6 +500,12 @@ class _ObligationConfirmPaymentScreenState
       if (pin.length < 4 || int.tryParse(pin) == null) {
         throw Exception('Enter your 4-digit transaction PIN to continue.');
       }
+      // transactions-svc's /transfer/initiate checks a Redis flag the
+      // monolith's verify-security-pin sets on success rather than
+      // validating the PIN inline (it can't — security_pin lives on
+      // tbl_users, owned exclusively by the monolith), so that call has
+      // to happen before initiateTransfer below.
+      await _transferRepo.verifySecurityPin(pin);
       return {'X-Security-Pin': pin};
     }
     final result = transfer

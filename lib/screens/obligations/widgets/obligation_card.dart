@@ -15,6 +15,10 @@ class ObligationCard extends StatelessWidget {
     final theme = Theme.of(context);
     final onSurface = theme.colorScheme.onSurface;
     final mutedOnSurface = onSurface.withValues(alpha: 0.6);
+    // Only surface fines that still have an outstanding balance; once a fine is
+    // cleared it must drop off the card (matches the detail screen).
+    final outstandingFines =
+        obligation.fines.where((f) => f.outstandingMinor > 0).toList();
 
     return InkWell(
       borderRadius: BorderRadius.circular(16.r),
@@ -111,7 +115,7 @@ class ObligationCard extends StatelessWidget {
                     ),
                   ),
                 ],
-                if (obligation.fines.isNotEmpty) ...[
+                if (outstandingFines.isNotEmpty) ...[
                   vSpace(10),
                   Container(
                     padding: EdgeInsets.all(10.w),
@@ -129,7 +133,7 @@ class ObligationCard extends StatelessWidget {
                         hSpace(6),
                         Expanded(
                           child: Text(
-                            '${obligation.fines.first.amountLabel} — ${obligation.fines.first.description}',
+                            '${outstandingFines.first.amountLabel} — ${outstandingFines.first.description}',
                             style: TextStyle(
                               fontSize: 17.sp,
                               color: const Color(0xFFD7263D),

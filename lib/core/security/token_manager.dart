@@ -176,4 +176,34 @@ class TokenManager {
     }
     return null;
   }
+
+  /// Parse a JWT's `sub` claim — the authenticated user id. Returns null on any
+  /// parse failure. Used to detect (and refuse) a refresh that would switch the
+  /// session to a different user.
+  static String? decodeJwtSub(String jwt) {
+    try {
+      final parts = jwt.split('.');
+      if (parts.length < 2) return null;
+      var payload = parts[1];
+      switch (payload.length % 4) {
+        case 2:
+          payload += '==';
+          break;
+        case 3:
+          payload += '=';
+          break;
+        case 1:
+          return null;
+      }
+      final decoded = utf8.decode(base64Url.decode(payload));
+      final claims = json.decode(decoded);
+      if (claims is Map && claims['sub'] != null) {
+        final sub = claims['sub'].toString().trim();
+        return sub.isEmpty ? null : sub;
+      }
+    } catch (e) {
+      AppLogger.warn('TokenManager', 'JWT sub decode failed: $e');
+    }
+    return null;
+  }
 }

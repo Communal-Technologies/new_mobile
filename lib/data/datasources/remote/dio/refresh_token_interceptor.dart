@@ -62,6 +62,12 @@ class RefreshTokenInterceptor extends Interceptor {
   /// retries.
   Future<String?>? _refreshing;
 
+  /// Set by [_doRefresh] when the refresh succeeded (HTTP 200) but returned a
+  /// token for a *different* user (sub mismatch) and was therefore refused.
+  /// The reactive (401) path reads this to break the otherwise-infinite
+  /// refuse→401→refresh loop by forcing a clean re-login.
+  bool _lastRefreshSubMismatch = false;
+
   /// Custom marker we add to retried requests so the on-401 path won't
   /// recurse into a second refresh attempt for the same logical request.
   static const String _retryMarker = 'x-tm-retry';
@@ -74,6 +80,13 @@ class RefreshTokenInterceptor extends Interceptor {
     // Skip the refresh-token endpoint itself — refreshing in `onRequest`
     // for /refresh-token would deadlock.
     if (_isRefreshEndpoint(options)) {
+      return handler.next(options);
+    }
+
+    // Identity-sensitive calls (the app-start get-loggedin-user) opt out of
+    // proactive refresh so the user is resolved from the current access token,
+    // not silently swapped to whoever the refresh token resolves to.
+    if (options.extra['skipProactiveRefresh'] == true) {
       return handler.next(options);
     }
 
@@ -120,6 +133,15 @@ class RefreshTokenInterceptor extends Interceptor {
     try {
       final newAccess = await _ensureRefresh();
       if (newAccess == null) {
+        // We got here because the access token was rejected with 401 (it's
+        // dead). If the refresh was refused for a sub mismatch, the stored
+        // refresh token belongs to another account and we can never recover —
+        // force a clean re-login instead of looping refuse→401→refresh forever.
+        if (_lastRefreshSubMismatch) {
+          await _tokens.clear();
+          markSessionInvalidated(
+              'Your session has expired. Please sign in again.');
+        }
         return handler.next(err);
       }
       // Retry once with the new access token, on the same dio so TLS
@@ -156,8 +178,10 @@ class RefreshTokenInterceptor extends Interceptor {
   }
 
   Future<String?> _doRefresh() async {
+    _lastRefreshSubMismatch = false;
     final refresh = _tokens.refreshToken;
     if (refresh == null || refresh.isEmpty) return null;
+    final oldAccess = _tokens.accessToken;
 
     // Deliberately bare — see class doc-block. Reuses the same baseUrl
     // and content-type as the main dio.
@@ -177,6 +201,25 @@ class RefreshTokenInterceptor extends Interceptor {
     final newRefresh = data['refresh_token']?.toString();
     final expiresIn = (data['expires_in'] as num?)?.toInt();
     if (access == null || access.isEmpty) return null;
+
+    // Identity guard: a refresh must never change which user we're signed in
+    // as. If the new access token's `sub` differs from the old one, the stored
+    // refresh token belonged to a different account — refuse it and force a
+    // clean re-login instead of silently switching users.
+    final oldSub = oldAccess != null ? TokenManager.decodeJwtSub(oldAccess) : null;
+    final newSub = TokenManager.decodeJwtSub(access);
+    if (oldSub != null && newSub != null && oldSub != newSub) {
+      // The stored refresh token resolves to a different account. Refuse the
+      // new token so we never silently switch users — but do NOT clear the
+      // session here: the current access token keeps the user signed in as
+      // themselves. (Clearing on every background/proactive refresh nuked the
+      // session on hot restart.) A genuinely dead session is still handled by
+      // the refresh endpoint returning 401 in onError.
+      AppLogger.warn('RefreshInterceptor',
+          'refresh returned a different user (sub mismatch) — refusing the new token, keeping current session');
+      _lastRefreshSubMismatch = true;
+      return null;
+    }
 
     await _tokens.updateTokens(
       accessToken: access,

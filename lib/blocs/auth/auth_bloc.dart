@@ -151,7 +151,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       if (token != null) {
         try {
-          final user = await authRepository.getUserInfo(token);
+          // Resolve identity from the hydrated access token itself — skip the
+          // proactive refresh so a stale/divergent refresh token can't switch
+          // the logged-in user on cold start / hot restart.
+          final user = await authRepository.getUserInfo(
+            token,
+            skipProactiveRefresh: true,
+          );
           if (user != null) {
             await _hydrateKycResumeFromBackend(user);
             // Audit M5: session identifier is server-vouched on every cold
@@ -417,6 +423,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     // settings like onboarding_completed). The onboarding flag persists
     // through logout but is cleared on app uninstall.
     await tokenManager.clear(); // access + refresh + expiry (audit M6)
+    authRepository.clearToken(); // drop the in-memory dio bearer too
     await secureStorage.delete(key: 'user_id');
     // Back-compat: clear the legacy 'login' key so devices upgrading from
     // pre-audit-M5 builds don't carry forward the cached PII identifier.

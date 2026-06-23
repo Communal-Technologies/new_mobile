@@ -285,7 +285,11 @@ class _FinePaymentScreenState extends State<FinePaymentScreen> {
                                 .map((e) => DropdownMenuItem(
                                       value: e,
                                       child: Text(
-                                        '${e.accountName} • ${e.accountNumber}',
+                                        [
+                                          if (e.bankName.isNotEmpty) e.bankName,
+                                          e.accountName,
+                                          e.accountNumber,
+                                        ].join(' • '),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ))
@@ -297,7 +301,11 @@ class _FinePaymentScreenState extends State<FinePaymentScreen> {
                     ] else if (_cashRepos.length == 1) ...[
                       vSpace(10),
                       Text(
-                        'Paying into: ${_cashRepos.first.accountName} • ${_cashRepos.first.accountNumber}',
+                        'Paying into: ${[
+                          if (_cashRepos.first.bankName.isNotEmpty) _cashRepos.first.bankName,
+                          _cashRepos.first.accountName,
+                          _cashRepos.first.accountNumber,
+                        ].join(' • ')}',
                         style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade700),
                       ),
                     ],
@@ -509,6 +517,7 @@ class _FinePaymentScreenState extends State<FinePaymentScreen> {
   }
 
   Widget _buildNipTransferInfo(AuthState auth) {
+    final theme = Theme.of(context);
     final walletLine = auth is AuthAuthenticated
         ? Money(auth.user.walletBalanceKobo, resolveCurrencyCode(auth.user)).format()
         : '—';
@@ -516,10 +525,10 @@ class _FinePaymentScreenState extends State<FinePaymentScreen> {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: hasRepo ? Theme.of(context).cardColor : Colors.grey.shade100,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(
-          color: hasRepo ? const Color(0xFFD7263D) : Colors.grey.shade300,
+          color: hasRepo ? const Color(0xFFD7263D) : theme.dividerColor,
           width: 2,
         ),
       ),
@@ -598,7 +607,12 @@ class _FinePaymentScreenState extends State<FinePaymentScreen> {
         style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
       );
     }
-    return Column(
+    // Bounded + scrollable so a long list (e.g. 20+ obligations) doesn't push
+    // the rest of the form far down the page.
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: 320.h),
+      child: SingleChildScrollView(
+        child: Column(
       children: _sourceObligations.map((o) {
         final selected = _selectedSourceObligation?.accountCode == o.accountCode;
         return GestureDetector(
@@ -649,6 +663,8 @@ class _FinePaymentScreenState extends State<FinePaymentScreen> {
           ),
         );
       }).toList(),
+        ),
+      ),
     );
   }
 

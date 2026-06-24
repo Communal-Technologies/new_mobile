@@ -3,6 +3,7 @@ import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/constants/images.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
+import 'package:communal_mobile/data/local/home_wallet_prefs.dart';
 import 'package:communal_mobile/data/repositories/transactions_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/transactions/models/sample_transactions.dart';
@@ -23,6 +24,7 @@ class RecentTransactionsSection extends StatefulWidget {
 class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
   late final TransactionsRepository _repo =
       TransactionsRepository(getIt<DioClient>());
+  late final HomeWalletPrefs _walletPrefs = getIt<HomeWalletPrefs>();
   List<TransactionListItem> _items = const [];
   bool _loading = true;
   String? _error;
@@ -30,7 +32,18 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
   @override
   void initState() {
     super.initState();
+    _walletPrefs.addListener(_onPrefsChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  void _onPrefsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _walletPrefs.removeListener(_onPrefsChanged);
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -78,6 +91,11 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
       },
       child: Builder(
         builder: (context) {
+          final auth = context.read<AuthBloc>().state;
+          final uid = auth is AuthAuthenticated ? auth.user.id.trim() : '';
+          if (uid.isNotEmpty && !_walletPrefs.isBalanceVisible(uid)) {
+            return const SizedBox.shrink();
+          }
           final theme = Theme.of(context);
           final onSurface = theme.colorScheme.onSurface;
           return Padding(

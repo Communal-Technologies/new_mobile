@@ -210,7 +210,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
                       ),
                       vSpace(2),
                       Text(
-                        'Asked you to guarantor • ${req.createdAtLabel}',
+                        'Asked to guarantee • ${req.createdAtLabel}',
                         style: TextStyle(
                           fontSize: 16.sp,
                           color: Theme.of(
@@ -228,7 +228,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(10.r),
               ),
               child: Row(

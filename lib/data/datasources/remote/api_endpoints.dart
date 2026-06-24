@@ -75,6 +75,8 @@ class ApiEndpoints {
   static const String fetchCooperatives = '$_v1/fetch-cooperatives';
   static String fetchCooperativeProfile(String id) =>
       '$_v1/fetch-cooperative-profile/$id';
+  static String cooperativeStats(String id) =>
+      '/api/cooperative/v2/cooperative-stats/$id';
   static const String membersJoinRequests = '$_v1/members/join-requests';
   static const String membersJoinRequestsMine =
       '$_v1/members/join-requests/mine';

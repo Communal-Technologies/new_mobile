@@ -193,27 +193,7 @@ class TransactionsRepository {
 
   /// Communal wallet history plus cooperative obligation ledger lines (deduped by reference).
   Future<List<TransactionListItem>> fetchPersonalHistoryMerged(UserModel user) async {
-    final communal = await fetchCommunalListItems(user, perPage: 80);
-    if (!user.hasCooperativeMembership ||
-        (user.ledgerNumber == null || user.ledgerNumber!.trim().isEmpty)) {
-      return communal;
-    }
-    final ledgerRaw = await fetchLedgerTransactionsRaw(user.ledgerNumber!.trim());
-    final obligationRows = ledgerRaw.where(ledgerRowShouldMirrorOnPersonalTab).toList();
-    final sym = currencySymbolForUser(user);
-    final ledgerItems = obligationRows
-        .map(
-          (e) => mapLedgerRowToListItem(
-            e,
-            cooperativeLabel: user.cooperativeDisplayName,
-            currencySymbol: sym,
-          ),
-        )
-        .toList(growable: false);
-    return mergePersonalWithObligationLedgerRows(
-      communal: communal,
-      ledgerCandidates: ledgerItems,
-    );
+    return fetchCommunalListItems(user, perPage: 80);
   }
 
   Future<List<TransactionListItem>> fetchLedgerHistoryOnly(UserModel user) async {
@@ -222,33 +202,12 @@ class TransactionsRepository {
     return fetchLedgerListItems(user, ln, user.cooperativeDisplayName);
   }
 
-  /// Cached counterpart of [fetchPersonalHistoryMerged]: maps + merges the
-  /// last-cached raw rows synchronously for an instant render. Empty when there
-  /// is no cache yet.
   List<TransactionListItem> cachedPersonalHistoryMerged(UserModel user) {
     final communalRaw = _readRawCache(_communalCacheKey(user.id.trim()));
     final sym = currencySymbolForUser(user);
-    final communal = communalRaw
+    return communalRaw
         .map((e) => mapCommunalTransactionToListItem(e, currencySymbol: sym))
         .toList(growable: false);
-    final ln = user.ledgerNumber?.trim() ?? '';
-    if (!user.hasCooperativeMembership || ln.isEmpty) return communal;
-    final ledgerRaw = _readRawCache(_ledgerCacheKey(ln));
-    final obligationRows =
-        ledgerRaw.where(ledgerRowShouldMirrorOnPersonalTab).toList();
-    final ledgerItems = obligationRows
-        .map(
-          (e) => mapLedgerRowToListItem(
-            e,
-            cooperativeLabel: user.cooperativeDisplayName,
-            currencySymbol: sym,
-          ),
-        )
-        .toList(growable: false);
-    return mergePersonalWithObligationLedgerRows(
-      communal: communal,
-      ledgerCandidates: ledgerItems,
-    );
   }
 
   /// Cached counterpart of [fetchLedgerHistoryOnly].

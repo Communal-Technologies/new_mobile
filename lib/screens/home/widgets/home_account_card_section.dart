@@ -3,6 +3,8 @@ import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/currency_formatter.dart';
 import 'package:communal_mobile/data/local/home_wallet_prefs.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
+import 'package:communal_mobile/data/models/loan_application.dart';
+import 'package:communal_mobile/data/repositories/loan_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -165,18 +167,8 @@ class _HomeAccountCardSectionState extends State<HomeAccountCardSection> {
           copyForeground: isDark ? Colors.white : Theme.of(context).primaryColor,
           copyBg: _kCopyButtonBg,
         );
-      case 1:
-        return _PlaceholderTab(
-          icon: Icons.trending_up_rounded,
-          title: 'Investments',
-          primary: Theme.of(context).primaryColor,
-        );
       default:
-        return _PlaceholderTab(
-          icon: Icons.request_quote_rounded,
-          title: 'Loans',
-          primary: Theme.of(context).primaryColor,
-        );
+        return _LoansTabContent(user: user);
     }
   }
 }
@@ -212,7 +204,6 @@ class _FinanceTabsRow extends StatelessWidget {
     final hairline = theme.dividerColor;
     final items = <({IconData icon, String label})>[
       (icon: Icons.account_balance_wallet_outlined, label: 'Savings'),
-      (icon: Icons.trending_up_rounded, label: 'Investments'),
       (icon: Icons.request_quote_rounded, label: 'Loans'),
     ];
 
@@ -220,7 +211,7 @@ class _FinanceTabsRow extends StatelessWidget {
       height: 52.h,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: List.generate(3, (i) {
+        children: List.generate(items.length, (i) {
           final sel = tabIndex == i;
           return Expanded(
             child: DecoratedBox(
@@ -305,6 +296,8 @@ class _SavingsTabContent extends StatelessWidget {
   /// Bank / virtual account from `wallets` — not the cooperative [UserModel.ledgerNumber].
   String get _accountNo => user.walletAccountNumber?.trim() ?? '';
 
+  String get _bankName => user.walletBankName?.trim() ?? '';
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -382,6 +375,19 @@ class _SavingsTabContent extends StatelessWidget {
                     fontWeight: FontWeight.w500,
                   ),
                   children: [
+                    if (_bankName.isNotEmpty) ...[
+                      TextSpan(
+                        text: _bankName,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      TextSpan(
+                        text: '  |  ',
+                        style: TextStyle(
+                          color: theme.dividerColor,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
                     TextSpan(text: _accountLabel),
                     TextSpan(
                       text: '  |  ',
@@ -422,24 +428,9 @@ class _SavingsTabContent extends StatelessWidget {
                       },
                 borderRadius: BorderRadius.circular(10.r),
                 child: Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.copy_rounded,
-                          size: 18.sp, color: copyForeground),
-                      SizedBox(width: 6.w),
-                      Text(
-                        'Copy Acc. No.',
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w700,
-                          color: copyForeground,
-                        ),
-                      ),
-                    ],
-                  ),
+                  padding: EdgeInsets.all(10.w),
+                  child: Icon(Icons.copy_rounded,
+                      size: 18.sp, color: copyForeground),
                 ),
               ),
             ),
@@ -450,39 +441,143 @@ class _SavingsTabContent extends StatelessWidget {
   }
 }
 
-class _PlaceholderTab extends StatelessWidget {
-  const _PlaceholderTab({
-    required this.icon,
-    required this.title,
-    required this.primary,
-  });
+class _LoansTabContent extends StatefulWidget {
+  const _LoansTabContent({required this.user});
 
-  final IconData icon;
-  final String title;
-  final Color primary;
+  final UserModel user;
+
+  @override
+  State<_LoansTabContent> createState() => _LoansTabContentState();
+}
+
+class _LoansTabContentState extends State<_LoansTabContent> {
+  bool _loading = true;
+  List<LoanApplication> _active = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final loans = await LoanRepository(getIt()).fetchMyLoans(widget.user);
+      if (!mounted) return;
+      setState(() {
+        _active =
+            loans.where((l) => l.status == LoanStatus.approved).toList();
+        _loading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 28.h),
-      child: Column(
-        children: [
-          Icon(icon, size: 40.sp, color: primary.withValues(alpha: 0.35)),
-          vSpace(12),
-          Text(
-            '$title — coming soon',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 17.sp,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.6),
-              height: 1.35,
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+
+    if (_loading) {
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: 28.h),
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final totalOutstanding =
+        _active.fold<int>(0, (sum, l) => sum + l.balanceMinor);
+    final balanceText =
+        CurrencyFormatter.formatNairaFromKoboWithDecimals(totalOutstanding);
+    LoanApplication? next;
+    for (final l in _active) {
+      if (l.dueDate == null) continue;
+      if (next == null || l.dueDate!.isBefore(next.dueDate!)) next = l;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: _kBalanceBannerPurple,
+            borderRadius: BorderRadius.circular(12.r),
+          ),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(16.w, 14.h, 16.w, 14.h),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Outstanding loan balance',
+                  style: TextStyle(
+                    fontSize: 17.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withValues(alpha: 0.92),
+                  ),
+                ),
+                vSpace(6),
+                Text(
+                  balanceText,
+                  style: TextStyle(
+                    fontSize: 24.sp,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+        vSpace(12),
+        if (_active.isEmpty)
+          Text(
+            'You have no active loans.',
+            style: TextStyle(
+              fontSize: 16.sp,
+              color: onSurface.withValues(alpha: 0.6),
+            ),
+          )
+        else
+          Row(
+            children: [
+              Expanded(
+                child: _meta(context, 'Active loans', '${_active.length}'),
+              ),
+              if (next?.dueDateLabel != null)
+                Expanded(
+                  child: _meta(context, 'Next due', next!.dueDateLabel!),
+                ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _meta(BuildContext context, String label, String value) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14.sp,
+            color: onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+        vSpace(2),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 17.sp,
+            fontWeight: FontWeight.w700,
+            color: onSurface,
+          ),
+        ),
+      ],
     );
   }
 }

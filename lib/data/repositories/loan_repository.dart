@@ -369,17 +369,23 @@ class LoanRepository {
   /// `guarantors_loan_approvals.status` and, on accept, appends the
   /// guarantor's ledger to the loan's csv `guarantors` column.
   Future<void> respondToGuarantorRequest({
-    required String requestId,
+    required String loanRef,
     required String guarantorLedger,
     required bool accept,
+    String? declineReason,
   }) async {
     try {
+      // loans-svc contract: identifies the approval by loan_ref (+ the
+      // guarantor's ledger resolved server-side from the JWT) and reads the
+      // decision from `status`. The old monolith {id, guarantor, action} shape
+      // left loan_ref empty → 404.
       final response = await _dio.put(
         ApiEndpoints.membersUpdateGuarantorApproval,
         data: {
-          'id': requestId,
-          'guarantor': guarantorLedger,
-          'action': accept ? '1' : '0',
+          'loan_ref': loanRef,
+          'status': accept ? '1' : '2',
+          if (!accept && declineReason != null && declineReason.isNotEmpty)
+            'decline_reason': declineReason,
         },
       );
       if (response.statusCode == 200) return;

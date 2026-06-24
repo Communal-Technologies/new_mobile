@@ -375,10 +375,6 @@ class LoanRepository {
     String? declineReason,
   }) async {
     try {
-      // loans-svc contract: identifies the approval by loan_ref (+ the
-      // guarantor's ledger resolved server-side from the JWT) and reads the
-      // decision from `status`. The old monolith {id, guarantor, action} shape
-      // left loan_ref empty → 404.
       final response = await _dio.put(
         ApiEndpoints.membersUpdateGuarantorApproval,
         data: {

@@ -370,7 +370,9 @@ class _GuarantorRequestDetailScreenState
                   color: const Color(0xFFE74C3C), size: 20.sp),
               hSpace(8),
               Text(
-                r.isPending ? 'What you\'re agreeing to' : 'What you agreed to',
+                r.isPending
+                    ? 'What you\'re agreeing to'
+                    : (r.isDeclined ? 'What you declined' : 'What you agreed to'),
                 style: TextStyle(
                   fontSize: 17.sp,
                   fontWeight: FontWeight.w700,
@@ -381,11 +383,15 @@ class _GuarantorRequestDetailScreenState
           ),
           vSpace(8),
           Text(
-            'If $applicant defaults on this loan, you '
-            '$companions are jointly liable for the outstanding balance. '
-            'Your cooperative may deduct the unpaid amount from your savings, '
-            'restrict your future loans, and pursue recovery against your '
-            'guarantor holdings until the balance is settled.',
+            r.isDeclined
+                ? 'You declined this request, so you are not liable for '
+                    '$applicant\'s loan. No deductions or recovery apply to you '
+                    'for it.'
+                : 'If $applicant defaults on this loan, you '
+                    '$companions are jointly liable for the outstanding balance. '
+                    'Your cooperative may deduct the unpaid amount from your savings, '
+                    'restrict your future loans, and pursue recovery against your '
+                    'guarantor holdings until the balance is settled.',
             style: TextStyle(
               fontSize: 16.sp,
               height: 1.5,

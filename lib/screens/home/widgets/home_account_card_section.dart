@@ -356,6 +356,22 @@ class _SavingsTabContent extends StatelessWidget {
                     letterSpacing: -0.5,
                   ),
                 ),
+                if (balanceVisible && user.walletLedgerKobo > 0) ...[
+                  vSpace(6),
+                  _BalanceSubLine(
+                    icon: Icons.account_balance_wallet_outlined,
+                    label:
+                        '${CurrencyFormatter.formatNairaFromKoboWithDecimals(user.walletLedgerKobo)} ledger',
+                  ),
+                ],
+                if (balanceVisible && user.walletPendingKobo > 0) ...[
+                  vSpace(6),
+                  _BalanceSubLine(
+                    icon: Icons.schedule_rounded,
+                    label:
+                        '${CurrencyFormatter.formatNairaFromKoboWithDecimals(user.walletPendingKobo)} pending',
+                  ),
+                ],
               ],
             ),
           ),
@@ -575,6 +591,32 @@ class _LoansTabContentState extends State<_LoansTabContent> {
             fontSize: 17.sp,
             fontWeight: FontWeight.w700,
             color: onSurface,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BalanceSubLine extends StatelessWidget {
+  const _BalanceSubLine({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 15.sp, color: Colors.white.withValues(alpha: 0.85)),
+        SizedBox(width: 5.w),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13.sp,
+            fontWeight: FontWeight.w600,
+            color: Colors.white.withValues(alpha: 0.9),
           ),
         ),
       ],

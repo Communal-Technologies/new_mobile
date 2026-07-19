@@ -48,6 +48,12 @@ class UserModel extends Equatable {
   /// Wallet `account_balance` from `user.wallet` when eager-loaded (kobo).
   final int walletBalanceKobo;
 
+  /// Wallet `pending_balance` — funds received but not yet settled (kobo).
+  final int walletPendingKobo;
+
+  /// Wallet `ledger_balance` — total incl. uncleared funds (kobo).
+  final int walletLedgerKobo;
+
   /// Wallet `account_number` (bank / virtual pay-in). Distinct from [ledgerNumber] on profile.
   final String? walletAccountNumber;
 
@@ -101,6 +107,8 @@ class UserModel extends Equatable {
     this.kycStep3Submitted = false,
     this.tierLimits,
     this.walletBalanceKobo = 0,
+    this.walletPendingKobo = 0,
+    this.walletLedgerKobo = 0,
     this.walletAccountNumber,
     this.walletAccountName,
     this.walletBankName,
@@ -309,6 +317,8 @@ class UserModel extends Equatable {
     }
 
     int walletKobo = 0;
+    int walletPendingKobo = 0;
+    int walletLedgerKobo = 0;
     String? walletAcctNum;
     String? walletAcctName;
     String? walletBankNameVal;
@@ -323,6 +333,18 @@ class UserModel extends Equatable {
         walletKobo = bal;
       } else if (bal != null) {
         walletKobo = int.tryParse(bal.toString()) ?? 0;
+      }
+      final pend = w['pending_balance'];
+      if (pend is int) {
+        walletPendingKobo = pend;
+      } else if (pend != null) {
+        walletPendingKobo = int.tryParse(pend.toString()) ?? 0;
+      }
+      final ledg = w['ledger_balance'];
+      if (ledg is int) {
+        walletLedgerKobo = ledg;
+      } else if (ledg != null) {
+        walletLedgerKobo = int.tryParse(ledg.toString()) ?? 0;
       }
       String? nz(String? s) {
         final t = s?.trim();
@@ -394,6 +416,8 @@ class UserModel extends Equatable {
       kycStep3Submitted: kycStep3SubmittedVal,
       tierLimits: tierLimitsParsed,
       walletBalanceKobo: walletKobo,
+      walletPendingKobo: walletPendingKobo,
+      walletLedgerKobo: walletLedgerKobo,
       walletAccountNumber: walletAcctNum,
       walletAccountName: walletAcctName,
       walletBankName: walletBankNameVal,
@@ -431,6 +455,8 @@ class UserModel extends Equatable {
       'kyc_step_2_submitted': kycStep2Submitted,
       'kyc_step_3_submitted': kycStep3Submitted,
       'wallet_balance_kobo': walletBalanceKobo,
+      'wallet_pending_kobo': walletPendingKobo,
+      'wallet_ledger_kobo': walletLedgerKobo,
       'wallet_account_number': walletAccountNumber,
       'wallet_account_name': walletAccountName,
       'wallet_bank_name': walletBankName,
@@ -469,6 +495,8 @@ class UserModel extends Equatable {
         kycStep3Submitted,
         tierLimits,
         walletBalanceKobo,
+        walletPendingKobo,
+        walletLedgerKobo,
         walletAccountNumber,
         walletAccountName,
         walletBankName,

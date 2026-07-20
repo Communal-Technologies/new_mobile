@@ -251,21 +251,23 @@ class Obligation {
             createdAt?.month ?? now.month,
             createdAt?.day ?? 1,
           );
-    // Period end = first of the month after the obligation's period.
+    // First of the month after the obligation period — used as the period
+    // end date and as the base for the "Next Due" fallback.
     final periodEnd = DateTime(periodStart.year, periodStart.month + 1, 1);
-    // "Next Due" = the upcoming due date. When the period-derived date has
-    // already passed (a stale period row — e.g. an April row viewed in June),
-    // roll forward to the first of next month from today so it shows a real
-    // future date instead of a fixed past one.
-    final thisMonthStart = DateTime(now.year, now.month, 1);
-    // Prefer the server-computed next-due (obligations-svc: last_updated +
-    // type frequency). Fall back to the period-derived date only when the
-    // backend doesn't provide it.
+    // "Next Due" prefers the server-computed next-due date; when absent it
+    // derives from the period and rolls forward past today so a stale period
+    // row never shows a date in the past.
     final serverNextDue = _parseDate(obligation['next_due_date']);
-    final nextCycle = serverNextDue ??
-        (periodEnd.isBefore(thisMonthStart)
-            ? DateTime(now.year, now.month + 1, 1)
-            : periodEnd);
+    DateTime nextCycle;
+    if (serverNextDue != null) {
+      nextCycle = serverNextDue;
+    } else {
+      nextCycle = periodEnd;
+      final todayStart = DateTime(now.year, now.month, now.day);
+      while (!nextCycle.isAfter(todayStart)) {
+        nextCycle = DateTime(nextCycle.year, nextCycle.month + 1, 1);
+      }
+    }
     final minPayableMinor = _asInt(account?['min_amount_payable']);
     final totalShares = _asInt(account?['total_shares']);
     final costPerShareMinor = _asInt(account?['cost_per_share']);

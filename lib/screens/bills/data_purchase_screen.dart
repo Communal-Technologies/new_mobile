@@ -154,6 +154,7 @@ class _DataPurchaseScreenState extends State<DataPurchaseScreen> {
         'kind': 'data',
         'provider': provider.slug,
         'provider_name': provider.name,
+        'biller_code': provider.billerCode ?? provider.slug,
         'phone_number': phone,
         'amount_minor': product.priceMinor,
         'product_slug': product.slug,

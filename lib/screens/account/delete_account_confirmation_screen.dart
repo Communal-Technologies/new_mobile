@@ -209,7 +209,7 @@ class _DeleteAccountConfirmationScreenState
               if (states.contains(WidgetState.disabled)) {
                 return Colors.grey.shade300;
               }
-              return const Color(0xFFFFB3BA); // Light pink when enabled
+              return Colors.red;
             }),
             foregroundColor: WidgetStateProperty.resolveWith<Color>((
               Set<WidgetState> states,

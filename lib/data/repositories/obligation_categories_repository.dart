@@ -10,7 +10,7 @@ class ObligationCategoriesRepository {
   Future<List<ObligationCategory>> fetchForCooperative(String cooperativeId) async {
     try {
       final response = await _dioClient.get(
-        '/cooperative/obligation-categories/$cooperativeId',
+        '/api/cooperative/v2/obligation-categories/$cooperativeId',
       );
       final data = response.data;
       if (data is! Map) return const [];

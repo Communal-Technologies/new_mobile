@@ -57,6 +57,7 @@ class GuarantorRequest {
 
   bool get isPending => status == '0';
   bool get isAccepted => status == '1';
+  bool get isDeclined => !isPending && !isAccepted;
 
   String get amountLabel => Money(amountMinor, currency).format();
   String get createdAtLabel => DateFormat('MMM dd, yyyy').format(createdAt);

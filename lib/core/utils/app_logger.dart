@@ -1,5 +1,3 @@
-import 'dart:developer' as developer;
-
 import 'package:flutter/foundation.dart';
 
 /// Centralized logger that no-ops in release builds.
@@ -27,24 +25,28 @@ class AppLogger {
   static void debug(String tag, String message,
       {Object? error, StackTrace? stackTrace}) {
     if (kReleaseMode) return;
-    developer.log(message, name: tag, error: error, stackTrace: stackTrace);
+    debugPrint('[$tag] $message'
+        '${error != null ? '\n  error: $error' : ''}'
+        '${stackTrace != null ? '\n$stackTrace' : ''}');
   }
 
   static void info(String tag, String message) {
     if (kReleaseMode) return;
-    developer.log(message, name: tag);
+    debugPrint('[$tag] $message');
   }
 
   static void warn(String tag, String message, {Object? error}) {
     if (kReleaseMode) return;
-    developer.log('[WARN] $message', name: tag, error: error);
+    debugPrint('[$tag] [WARN] $message'
+        '${error != null ? '\n  error: $error' : ''}');
   }
 
   static void error(String tag, String message,
       {Object? error, StackTrace? stackTrace}) {
     if (kReleaseMode) return;
-    developer.log('[ERROR] $message',
-        name: tag, error: error, stackTrace: stackTrace);
+    debugPrint('[$tag] [ERROR] $message'
+        '${error != null ? '\n  error: $error' : ''}'
+        '${stackTrace != null ? '\n$stackTrace' : ''}');
   }
 
   /// Returns a copy of [headers] with sensitive values replaced by `***`.

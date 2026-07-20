@@ -42,16 +42,16 @@ class TransactionTile extends StatelessWidget {
                   Text(
                     item.title,
                     style: TextStyle(
-                      fontSize: 19.sp,
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.w600,
                       color: onSurface,
                     ),
                   ),
-                  vSpace(4),
+                  vSpace(2),
                   Text(
                     item.subtitle,
                     style: TextStyle(
-                      fontSize: 19.sp,
+                      fontSize: 14.sp,
                       color: onSurface.withValues(alpha: 0.6),
                     ),
                   ),
@@ -61,7 +61,7 @@ class TransactionTile extends StatelessWidget {
             Text(
               item.signedAmountLabel,
               style: TextStyle(
-                fontSize: 19.sp,
+                fontSize: 17.sp,
                 fontWeight: FontWeight.w700,
                 color: item.amountColor,
               ),

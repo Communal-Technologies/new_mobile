@@ -61,17 +61,39 @@ import 'package:crypto/crypto.dart';
 class CertPinning {
   CertPinning._();
 
-  /// Base64-encoded SHA-256 SPKI hashes per host. Empty list = pinning OFF
-  /// for that host. Add the primary + backup pins generated via the openssl
-  /// command in the class doc-block before promoting to a release build.
+  /// Base64-encoded SHA-256 SPKI hashes per host.
+  ///
+  /// Each list holds the **leaf** cert's SPKI hash (and optionally a pre-staged
+  /// "next" hash before a key rotation). Only leaf hashes are checked here
+  /// because Dart's `badCertificateCallback` receives only the leaf cert —
+  /// intermediate SPKI verification requires chain-level inspection which is a
+  /// separate future extension.
+  ///
+  /// ## Rotation procedure
+  /// Let's Encrypt auto-renews ~30 days before expiry. If Certbot reuses the
+  /// same key pair (the default with `--keep-until-expiring`), the SPKI hash
+  /// is unchanged and no app update is needed. If the key pair is rotated:
+  ///   1. Generate the new pin from the fresh cert (see class doc-block).
+  ///   2. Add it to the list alongside the current pin (two-pin window).
+  ///   3. Release the app update BEFORE the old cert expires.
+  ///   4. After rollout completes, remove the old pin in a follow-up release.
+  ///
+  /// ## Intermediate CA pins (for reference)
+  /// These are NOT checked by the current `badCertificateCallback` path but are
+  /// documented here for future chain-level pinning:
+  ///   api.communalhq.com         → Let's Encrypt YE2  (exp 2028-09-02):
+  ///                                 s/tdAOmUzd8syaTuqfgGvFcn6DzA5Cmb+Vby1ST+U3Y=
+  ///   api-staging.communalhq.com → Let's Encrypt E7   (exp 2027-03-12):
+  ///                                 y7xVm0TVJNahMr2sZydE2jQH8SquXV9yLF9seROHHHU=
   static const Map<String, List<String>> pinsByHost = <String, List<String>>{
+    // Leaf cert expires 2026-09-04. Pin survives renewal if the same key pair
+    // is reused. Add the next-key pin here before any planned key rotation.
     'api.communalhq.com': <String>[
-      // 'BASE64_SPKI_SHA256_PRIMARY',
-      // 'BASE64_SPKI_SHA256_BACKUP',
+      'T17DqoUPjNUHEUgY8MsmjfU26MwnGWGXrnw+qHMvE9I=',
     ],
+    // Leaf cert pin — update on key rotation using the same procedure above.
     'api-staging.communalhq.com': <String>[
-      // 'BASE64_SPKI_SHA256_PRIMARY',
-      // 'BASE64_SPKI_SHA256_BACKUP',
+      '2ST/8DUQhzzR7uCE3JQ7udQXOqBCdoblHe5uDllL9OU=',
     ],
   };
 

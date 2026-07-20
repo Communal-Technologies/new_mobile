@@ -31,7 +31,19 @@ class PaymentRecord {
   /// to render the row in the outflow palette.
   final bool isOutflow;
 
+  /// Obligation contributed balance immediately after / before this entry, in
+  /// minor units. Populated by the repository in a newest→oldest pass from the
+  /// obligation's current paid balance, so the receipt can show a running
+  /// balance. Null when it couldn't be derived.
+  int? balanceAfterMinor;
+  int? balanceBeforeMinor;
+
   String get dateLabel => DateFormat('MMM dd, yyyy').format(date);
+
+  String? get balanceAfterLabel =>
+      balanceAfterMinor == null ? null : Money(balanceAfterMinor!, currency).format();
+  String? get balanceBeforeLabel =>
+      balanceBeforeMinor == null ? null : Money(balanceBeforeMinor!, currency).format();
 
   /// Signed, currency-symbol-prefixed amount label (e.g. `-₦5,000.00`).
   String get amountLabel {
@@ -239,16 +251,22 @@ class Obligation {
             createdAt?.month ?? now.month,
             createdAt?.day ?? 1,
           );
-    // Next due: the first future month-start strictly after today.
-    // We advance from periodStart+1 rather than hardcoding today so that
-    // obligations whose period is still in the future keep the right date.
-    // The loop handles the common case where the backend sends the original
-    // creation period (not the current billing cycle), which would otherwise
-    // freeze the label in the past.
-    DateTime nextCycle = DateTime(periodStart.year, periodStart.month + 1, 1);
-    final todayStart = DateTime(now.year, now.month, now.day);
-    while (!nextCycle.isAfter(todayStart)) {
-      nextCycle = DateTime(nextCycle.year, nextCycle.month + 1, 1);
+    // First of the month after the obligation period — used as the period
+    // end date and as the base for the "Next Due" fallback.
+    final periodEnd = DateTime(periodStart.year, periodStart.month + 1, 1);
+    // "Next Due" prefers the server-computed next-due date; when absent it
+    // derives from the period and rolls forward past today so a stale period
+    // row never shows a date in the past.
+    final serverNextDue = _parseDate(obligation['next_due_date']);
+    DateTime nextCycle;
+    if (serverNextDue != null) {
+      nextCycle = serverNextDue;
+    } else {
+      nextCycle = periodEnd;
+      final todayStart = DateTime(now.year, now.month, now.day);
+      while (!nextCycle.isAfter(todayStart)) {
+        nextCycle = DateTime(nextCycle.year, nextCycle.month + 1, 1);
+      }
     }
     final minPayableMinor = _asInt(account?['min_amount_payable']);
     final totalShares = _asInt(account?['total_shares']);
@@ -322,7 +340,7 @@ class Obligation {
       installmentsPaid: installmentsPaid,
       totalInstallments: totalInstallments,
       startDate: startDate,
-      endDate: nextCycle,
+      endDate: periodEnd,
       // Next due = first of the month after the obligation period, so
       // an April 2026 row reads "next due May 1, 2026".
       nextDueDate: nextCycle,

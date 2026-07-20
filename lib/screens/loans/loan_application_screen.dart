@@ -731,9 +731,15 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       interestType: interestType,
       currency: currency,
     );
+    // Repayment + disbursement per interest treatment:
+    //  • '1' deduct now  → receive principal − interest; repay the principal.
+    //  • '2' add to bal. → receive the principal; repay principal + interest.
     final totalMinor = interestType == '1'
         ? principalMinor
         : principalMinor + interestMinor;
+    final disbursedMinor = interestType == '1'
+        ? principalMinor - interestMinor
+        : principalMinor;
 
     final theme = Theme.of(context);
     // Prefer the member's slider pick when the scheme exposes a real
@@ -801,8 +807,19 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             value: Money(interestMinor, currency).format(),
           ),
           vSpace(8),
+          // What actually hits the member's wallet — the headline number they
+          // care about, made explicit so "deduct now" isn't mistaken for
+          // receiving the full principal.
           _summaryRow(
-            label: 'Total Repayment',
+            label: interestType == '1'
+                ? "You'll Receive (interest deducted)"
+                : "You'll Receive",
+            value: Money(disbursedMinor, currency).format(),
+            emphasised: true,
+          ),
+          vSpace(8),
+          _summaryRow(
+            label: 'Total Repayment (incl. interest)',
             value: Money(totalMinor, currency).format(),
             emphasised: true,
           ),

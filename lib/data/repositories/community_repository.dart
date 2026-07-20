@@ -222,6 +222,20 @@ class CommunityRepository {
     }
   }
 
+  Future<Map<String, String>?> fetchCooperativeStats(String id) async {
+    try {
+      final response = await _dioClient.get(ApiEndpoints.cooperativeStats(id));
+      final body = response.data;
+      if (body is Map && body['stats'] is Map) {
+        return (body['stats'] as Map)
+            .map((k, v) => MapEntry(k.toString(), v?.toString() ?? ''));
+      }
+      return null;
+    } on DioException {
+      return null;
+    }
+  }
+
   String _messageFromDio(DioException e) {
     final response = e.response;
     if (response == null) {

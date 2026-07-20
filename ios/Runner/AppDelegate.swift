@@ -18,6 +18,11 @@ import UIKit
   /// invocations never reach Swift.
   private var biometricKeyChannel: BiometricKeyChannel?
 
+  /// Screenshot control channel. iOS has no direct FLAG_SECURE equivalent;
+  /// app-switcher privacy is already handled by [snapshotOverlay].
+  /// The channel is kept alive here so Dart calls succeed without error.
+  private var screenshotChannel: FlutterMethodChannel?
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -30,6 +35,16 @@ import UIKit
       self.biometricKeyChannel = BiometricKeyChannel(
         messenger: controller.binaryMessenger
       )
+      self.screenshotChannel = FlutterMethodChannel(
+        name: "elite.codec.communal/screenshot",
+        binaryMessenger: controller.binaryMessenger
+      )
+      self.screenshotChannel?.setMethodCallHandler { call, result in
+        // iOS has no FLAG_SECURE equivalent; app-switcher privacy is
+        // handled by the snapshot overlay. Acknowledge the call so Dart
+        // doesn't see a MissingPluginException.
+        result(nil)
+      }
     }
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)

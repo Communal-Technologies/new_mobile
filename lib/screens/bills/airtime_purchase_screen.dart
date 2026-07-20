@@ -99,6 +99,7 @@ class _AirtimePurchaseScreenState extends State<AirtimePurchaseScreen> {
         'kind': 'airtime',
         'provider': provider.slug,
         'provider_name': provider.name,
+        'biller_code': provider.billerCode ?? provider.slug,
         'phone_number': phone,
         'amount_minor': money.amountMinor,
       },

@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/custom_text_field.dart';
+import 'package:communal_mobile/core/widgets/kyc_consent_dialog.dart';
 import 'package:communal_mobile/core/widgets/kyc_idle_suppressor.dart';
 import 'package:communal_mobile/core/widgets/phone_input_field.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
@@ -138,10 +141,77 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
     );
   }
 
+  bool _consentGiven = false;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _bootstrap();
+      _checkAndShowConsentModal();
+    });
+  }
+
+  // kycsvc's CreateKYC (called below by registerProfile) rejects the
+  // submission with 403 unless data-sharing consent has already been
+  // recorded for this user — bank_information_screen/proof_of_identity_screen
+  // have this same check because by the time the user reaches those screens
+  // the Anchor customer already exists, but THIS screen is the one that
+  // creates it, so it's the first point consent must be collected.
+  void _checkAndShowConsentModal() {
+    final auth = context.read<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) return;
+    final alreadyGiven =
+        getIt<KycProgressStorage>().hasConsentGiven(auth.userId);
+    if (alreadyGiven) {
+      if (mounted) setState(() => _consentGiven = true);
+      return;
+    }
+    _showConsentModal();
+  }
+
+  Future<void> _showConsentModal() async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => KycConsentDialog(
+        onAgree: () async {
+          Navigator.of(ctx).pop();
+          await _recordConsent('agreed');
+          if (mounted) setState(() => _consentGiven = true);
+        },
+        onDecline: () async {
+          Navigator.of(ctx).pop();
+          await _recordConsent('declined');
+          // Consent is mandatory to use the app at all — re-prompt instead
+          // of navigating anywhere. The user's only way past this screen
+          // is to agree; their only way out is to quit the app.
+          unawaited(_showConsentModal());
+        },
+      ),
+    );
+  }
+
+  // No anchor_customer_id exists yet at this point — kycsvc's consent
+  // endpoint accepts an empty one for exactly this case (the customer
+  // record this consent will eventually be linked to doesn't exist until
+  // registerProfile() below succeeds).
+  Future<void> _recordConsent(String decision) async {
+    final auth = context.read<AuthBloc>().state;
+    try {
+      await getIt<KycRepository>().recordConsent(
+        anchorCustomerId: '',
+        decision: decision,
+      );
+      if (decision == 'agreed' && auth is AuthAuthenticated) {
+        await getIt<KycProgressStorage>().markConsentGiven(auth.userId);
+      }
+    } catch (_) {
+      if (decision == 'agreed' && auth is AuthAuthenticated) {
+        await getIt<KycProgressStorage>().markConsentGiven(auth.userId);
+      }
+    }
   }
 
   Future<void> _bootstrap() async {
@@ -462,6 +532,8 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
   }
 
   Future<void> _continue() async {
+    // Close the keyboard if it's still open when the user taps submit.
+    FocusManager.instance.primaryFocus?.unfocus();
     final validationError = _validateFormError();
     if (validationError != null) {
       AppToast.error(validationError);
@@ -898,7 +970,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                 ),
                 child: AppElevatedButton(
                   title: 'Continue',
-                  onPressed: _continue,
+                  onPressed: _submitting ? null : _continue,
                   isLoading: _submitting,
                   loadingLabel: 'Submitting…',
                 ),

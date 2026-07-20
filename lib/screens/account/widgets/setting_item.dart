@@ -10,6 +10,7 @@ class SettingItem extends StatelessWidget {
     required this.description,
     required this.onTap,
     this.trailing,
+    this.iconColor,
   });
 
   final IconData icon;
@@ -18,10 +19,15 @@ class SettingItem extends StatelessWidget {
   final VoidCallback onTap;
   final Widget? trailing;
 
+  /// Accent for the leading icon + its tint. Defaults to the theme primary;
+  /// pass e.g. red for destructive actions like Log Out.
+  final Color? iconColor;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final onSurface = theme.colorScheme.onSurface;
+    final accent = iconColor ?? theme.primaryColor;
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -34,12 +40,12 @@ class SettingItem extends StatelessWidget {
               width: 40.w,
               height: 40.w,
               decoration: BoxDecoration(
-                color: theme.primaryColor.withValues(alpha: 0.10),
+                color: accent.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(10.r),
               ),
               child: Icon(
                 icon,
-                color: theme.primaryColor,
+                color: accent,
                 size: 22.sp,
               ),
             ),

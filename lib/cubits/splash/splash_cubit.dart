@@ -144,7 +144,10 @@ class SplashCubit extends Cubit<SplashState> {
   Future<bool> _probeServer() async {
     try {
       final uri = Uri.tryParse(AppConstants.baseUrl);
-      if (uri == null) return false;
+      if (uri == null) {
+        AppLogger.warn('SplashCubit', 'Cannot parse baseUrl: ${AppConstants.baseUrl}');
+        return false;
+      }
       final port = uri.hasPort ? uri.port : (uri.scheme == 'https' ? 443 : 80);
       final socket = await Socket.connect(
         uri.host,
@@ -152,8 +155,10 @@ class SplashCubit extends Cubit<SplashState> {
         timeout: const Duration(seconds: 10),
       );
       socket.destroy();
+      AppLogger.debug('SplashCubit', 'TCP probe OK → ${uri.host}:$port');
       return true;
-    } catch (_) {
+    } catch (e) {
+      AppLogger.warn('SplashCubit', 'TCP probe failed → ${AppConstants.baseUrl}', error: e);
       return false;
     }
   }
@@ -192,6 +197,7 @@ class SplashCubit extends Cubit<SplashState> {
         final response = await dioClient.get(AppConstants.configUri);
         final raw = response.data;
         if (raw is! Map) {
+          AppLogger.warn('SplashCubit', 'Settings: unexpected response type ${raw.runtimeType}');
           emit(SplashError('Invalid response from server. Please try again.'));
           return null;
         }
@@ -202,16 +208,24 @@ class SplashCubit extends Cubit<SplashState> {
         return settingsMap;
       } on DioException catch (e) {
         lastDioError = e;
+        AppLogger.warn(
+          'SplashCubit',
+          'Settings attempt ${attempt + 1}/$maxAttempts failed '
+          '(type=${e.type.name}, status=${e.response?.statusCode}, '
+          'error=${e.error.runtimeType}): ${e.message}',
+        );
         if (_isRetryable(e) && attempt < maxAttempts - 1) continue;
         emit(SplashError(dioTransportUserMessage(e)));
         return null;
-      } catch (_) {
+      } catch (e, st) {
+        AppLogger.error('SplashCubit', 'Settings: unexpected error', error: e, stackTrace: st);
         emit(SplashError('Could not load app settings. Please try again.'));
         return null;
       }
     }
 
     // All retries exhausted.
+    AppLogger.warn('SplashCubit', 'Settings: all $maxAttempts attempts failed');
     emit(SplashError(lastDioError != null
         ? dioTransportUserMessage(lastDioError)
         : 'Could not load app settings. Please try again.'));
@@ -231,15 +245,23 @@ class SplashCubit extends Cubit<SplashState> {
         return true;
       } on DioException catch (e) {
         lastDioError = e;
+        AppLogger.warn(
+          'SplashCubit',
+          'Regions attempt ${attempt + 1}/$maxAttempts failed '
+          '(type=${e.type.name}, status=${e.response?.statusCode}, '
+          'error=${e.error.runtimeType}): ${e.message}',
+        );
         if (_isRetryable(e) && attempt < maxAttempts - 1) continue;
         emit(SplashError(dioTransportUserMessage(e)));
         return false;
-      } catch (_) {
+      } catch (e, st) {
+        AppLogger.error('SplashCubit', 'Regions: unexpected error', error: e, stackTrace: st);
         emit(SplashError('Could not load regions. Please try again.'));
         return false;
       }
     }
 
+    AppLogger.warn('SplashCubit', 'Regions: all $maxAttempts attempts failed');
     emit(SplashError(lastDioError != null
         ? dioTransportUserMessage(lastDioError)
         : 'Could not load regions. Please try again.'));

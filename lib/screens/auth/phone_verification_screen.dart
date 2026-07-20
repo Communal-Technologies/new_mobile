@@ -206,13 +206,13 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
       case VerificationMethod.sms:
         return [
           'Open your messaging app on your phone',
-          'Check for a message from PalmPayInfo',
+          'Check for a message from Communal',
           'Enter the 6-digit code in the box above',
         ];
       case VerificationMethod.whatsapp:
         return [
           'Open your whatsapp app on your phone',
-          'Check for a message from PalmPayInfo',
+          'Check for a message from Communal',
           'Enter the 6-digit code in the box above',
         ];
       case VerificationMethod.call:
@@ -330,7 +330,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).cardColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).cardColor,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),

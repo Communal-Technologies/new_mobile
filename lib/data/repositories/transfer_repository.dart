@@ -440,6 +440,9 @@ class TransferRepository {
     Map<String, String>? biometricHeaders,
     String? pin,
     Map<String, dynamic>? obligationContext,
+    String? beneficiaryName,
+    String? beneficiaryBank,
+    String? beneficiaryAccount,
   }) async {
     try {
       var ccy = (currencyCode ?? 'NGN').trim().toUpperCase();
@@ -456,6 +459,14 @@ class TransferRepository {
           'counterPartyId': counterPartyId.trim(),
         if (obligationContext != null && obligationContext.isNotEmpty)
           'obligation_context': obligationContext,
+        // Beneficiary display info so the recipient shows in history (NIP has no
+        // local receiver record server-side).
+        if (beneficiaryName != null && beneficiaryName.trim().isNotEmpty)
+          'beneficiaryName': beneficiaryName.trim(),
+        if (beneficiaryBank != null && beneficiaryBank.trim().isNotEmpty)
+          'beneficiaryBank': beneficiaryBank.trim(),
+        if (beneficiaryAccount != null && beneficiaryAccount.trim().isNotEmpty)
+          'beneficiaryAccount': beneficiaryAccount.trim(),
       };
       // Caller must supply EITHER biometricHeaders OR pin. The backend
       // middleware (RequireBiometricSignature) treats them as mutually

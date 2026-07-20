@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
+import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/guarantor_request.dart';
 import 'package:communal_mobile/data/repositories/loan_repository.dart';
@@ -42,25 +43,18 @@ class _GuarantorRequestDetailScreenState
     setState(() => _processing = true);
     try {
       await _repo.respondToGuarantorRequest(
-        requestId: widget.request.id,
+        loanRef: widget.request.loanRef,
         guarantorLedger: widget.request.guarantorLedger,
         accept: accept,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(accept ? 'Request accepted' : 'Request declined')),
-      );
+      AppToast.success(accept ? 'Request accepted' : 'Request declined');
       // Pop back to the inbox; that screen refreshes its own list on
       // resume so the row picks up the new status.
       context.pop(true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
-          backgroundColor: const Color(0xFFE74C3C),
-        ),
-      );
+      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _processing = false);
     }
@@ -143,34 +137,36 @@ class _GuarantorRequestDetailScreenState
                       ],
                       vSpace(16),
                       _riskDisclosure(r),
-                      vSpace(16),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Checkbox(
-                            value: _acknowledged,
-                            onChanged: r.isPending && !_processing
-                                ? (v) => setState(() => _acknowledged = v ?? false)
-                                : null,
-                            activeColor: const Color(0xFF7434FF),
-                          ),
-                          Expanded(
-                            child: Padding(
-                              padding: EdgeInsets.only(top: 12.h),
-                              child: Text(
-                                'I understand the obligations of standing as a guarantor and agree to the joint liability above.',
-                                style: TextStyle(
-                                  fontSize: 16.sp,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.85),
+                      if (r.isPending) ...[
+                        vSpace(16),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Checkbox(
+                              value: _acknowledged,
+                              onChanged: !_processing
+                                  ? (v) => setState(() => _acknowledged = v ?? false)
+                                  : null,
+                              activeColor: const Color(0xFF7434FF),
+                            ),
+                            Expanded(
+                              child: Padding(
+                                padding: EdgeInsets.only(top: 12.h),
+                                child: Text(
+                                  'I understand the obligations of standing as a guarantor and agree to the joint liability above.',
+                                  style: TextStyle(
+                                    fontSize: 16.sp,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.85),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -209,7 +205,12 @@ class _GuarantorRequestDetailScreenState
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF7434FF),
                             foregroundColor: Colors.white,
-                            disabledBackgroundColor: Colors.grey.shade300,
+                            // Keep the label legible while disabled: a faded
+                            // brand fill with white text instead of grey-on-grey.
+                            disabledBackgroundColor:
+                                const Color(0xFF7434FF).withValues(alpha: 0.4),
+                            disabledForegroundColor:
+                                Colors.white.withValues(alpha: 0.9),
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10.r),
@@ -273,7 +274,7 @@ class _GuarantorRequestDetailScreenState
                 ),
                 vSpace(2),
                 Text(
-                  'Asked you to guarantor • ${DateFormat('MMM dd, yyyy').format(r.createdAt)}',
+                  'Asked to guarantee • ${DateFormat('MMM dd, yyyy').format(r.createdAt)}',
                   style: TextStyle(
                     fontSize: 16.sp,
                     color: const Color(0xFF1A1A1A).withValues(alpha: 0.65),
@@ -369,7 +370,9 @@ class _GuarantorRequestDetailScreenState
                   color: const Color(0xFFE74C3C), size: 20.sp),
               hSpace(8),
               Text(
-                'What you\'re agreeing to',
+                r.isPending
+                    ? 'What you\'re agreeing to'
+                    : (r.isDeclined ? 'What you declined' : 'What you agreed to'),
                 style: TextStyle(
                   fontSize: 17.sp,
                   fontWeight: FontWeight.w700,
@@ -380,11 +383,15 @@ class _GuarantorRequestDetailScreenState
           ),
           vSpace(8),
           Text(
-            'If $applicant defaults on this loan, you '
-            '$companions are jointly liable for the outstanding balance. '
-            'Your cooperative may deduct the unpaid amount from your savings, '
-            'restrict your future loans, and pursue recovery against your '
-            'guarantor holdings until the balance is settled.',
+            r.isDeclined
+                ? 'You declined this request, so you are not liable for '
+                    '$applicant\'s loan. No deductions or recovery apply to you '
+                    'for it.'
+                : 'If $applicant defaults on this loan, you '
+                    '$companions are jointly liable for the outstanding balance. '
+                    'Your cooperative may deduct the unpaid amount from your savings, '
+                    'restrict your future loans, and pursue recovery against your '
+                    'guarantor holdings until the balance is settled.',
             style: TextStyle(
               fontSize: 16.sp,
               height: 1.5,

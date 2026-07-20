@@ -6,20 +6,23 @@ import 'package:communal_mobile/data/models/bills/bill_provider.dart';
 import 'package:communal_mobile/data/models/bills/bill_transaction.dart';
 import 'package:dio/dio.dart';
 
-/// Talks to the backend's `/v1/bills/*` endpoints — Anchor-backed
-/// airtime + data purchases. The backend handles the JSON:API envelope,
-/// webhook reconciliation, and idempotency caching; mobile only deals
-/// with our own friendly response shape.
+/// Talks to the bills micro-service at `/api/bills/v2/…`. Endpoints are
+/// absolute URLs (see [ApiEndpoints]) because the service runs at a different
+/// path prefix from the monolith.
 ///
-/// Backend contract: `docs/bill-payments.md` in the backend repo.
+/// Amount convention: callers pass amounts in **kobo** (minor units).
+/// The bills service expects **naira**, so this repository divides by 100
+/// before sending. Responses come back in naira and [BillTransaction.fromJson]
+/// multiplies back to kobo.
+///
+/// Security PIN: the service reads `security_pin` from the JSON body.
+/// Callers pass `authHeaders` containing `X-Security-Pin`; this repository
+/// extracts the value and includes it in the request body.
 class BillsRepository {
   BillsRepository(this._dio);
 
   final DioClient _dio;
 
-  /// Backend wraps every response in `{status, message, data}`. This
-  /// helper returns `data` (or throws with the server-supplied message)
-  /// so callers don't have to repeat the unpacking.
   T _unwrap<T>(Response res, T Function(dynamic data) parse) {
     final body = res.data;
     if (body is Map && body['status'] == false) {
@@ -30,9 +33,6 @@ class BillsRepository {
     return parse(data);
   }
 
-  /// Surfaces the backend's error envelope through DioException so the
-  /// caller sees the same `Exception(message)` shape regardless of
-  /// network vs. validation vs. provider failure.
   Never _throwForDioError(DioException e) {
     final data = e.response?.data;
     if (data is Map && data['message'] != null) {
@@ -41,9 +41,14 @@ class BillsRepository {
     throw Exception(e.message ?? 'Network error');
   }
 
+  // ── Provider catalogue ────────────────────────────────────────────────────
+
   Future<List<BillProvider>> fetchAirtimeProviders() async {
     try {
-      final res = await _dio.get(ApiEndpoints.billsAirtimeProviders);
+      final res = await _dio.get(
+        ApiEndpoints.billsBillers,
+        queryParameters: {'category': 'AIRTIME'},
+      );
       return _unwrap(res, (data) => _parseProviders(data));
     } on DioException catch (e) {
       _throwForDioError(e);
@@ -52,7 +57,10 @@ class BillsRepository {
 
   Future<List<BillProvider>> fetchDataProviders() async {
     try {
-      final res = await _dio.get(ApiEndpoints.billsDataProviders);
+      final res = await _dio.get(
+        ApiEndpoints.billsBillers,
+        queryParameters: {'category': 'DATA'},
+      );
       return _unwrap(res, (data) => _parseProviders(data));
     } on DioException catch (e) {
       _throwForDioError(e);
@@ -61,7 +69,10 @@ class BillsRepository {
 
   Future<List<BillProvider>> fetchElectricityProviders() async {
     try {
-      final res = await _dio.get(ApiEndpoints.billsElectricityProviders);
+      final res = await _dio.get(
+        ApiEndpoints.billsBillers,
+        queryParameters: {'category': 'ELECTRICITY'},
+      );
       return _unwrap(res, (data) => _parseProviders(data));
     } on DioException catch (e) {
       _throwForDioError(e);
@@ -70,23 +81,27 @@ class BillsRepository {
 
   Future<List<BillProvider>> fetchTelevisionProviders() async {
     try {
-      final res = await _dio.get(ApiEndpoints.billsTelevisionProviders);
+      final res = await _dio.get(
+        ApiEndpoints.billsBillers,
+        queryParameters: {'category': 'TELEVISION'},
+      );
       return _unwrap(res, (data) => _parseProviders(data));
     } on DioException catch (e) {
       _throwForDioError(e);
     }
   }
 
-  /// Pre-purchase meter / smartcard lookup. `billerSlug` is the
-  /// provider's `slug` (e.g. `ikeja_electric_prepaid`, `dstv`).
-  /// Returns the customer name + number registered to that account.
+  /// [productSlug] must be a *product* slug (from [BillProduct.slug]), not the
+  /// biller slug — Anchor's customer-validation endpoint is product-scoped.
+  /// Any product belonging to the biller works; the chosen plan is picked
+  /// separately afterward.
   Future<BillCustomer> validateCustomer({
-    required String billerSlug,
+    required String productSlug,
     required String accountNumber,
   }) async {
     try {
       final res = await _dio.get(
-        ApiEndpoints.billsCustomerValidation(billerSlug, accountNumber),
+        ApiEndpoints.billsCustomerValidation(productSlug, accountNumber),
       );
       return _unwrap(res, (data) => BillCustomer.fromJson(_asMap(data)));
     } on DioException catch (e) {
@@ -103,18 +118,12 @@ class BillsRepository {
     }
   }
 
-  /// Initiate an airtime purchase. `amountMinor` is in kobo. The
-  /// `idempotencyKey` MUST be generated client-side via
-  /// `core/utils/idempotency.dart#newIdempotencyKey()` and reused on
-  /// retry — see backend contract doc.
-  ///
-  /// `authHeaders` carries either the biometric triple
-  /// (`X-Biometric-{Device-Id, Nonce-Id, Signature}`) or the PIN
-  /// fallback (`X-Security-Pin`). The backend middleware
-  /// `biometric-sig:bill-purchase` rejects the call without one of
-  /// those.
+  // ── Purchase endpoints ────────────────────────────────────────────────────
+
+  /// Airtime purchase. [billerCode] is the network slug (mtn, glo, airtel,
+  /// 9mobile, ntel) — Anchor requires it as `provider`.
   Future<BillTransaction> purchaseAirtime({
-    required String provider,
+    required String billerCode,
     required String phoneNumber,
     required int amountMinor,
     required String idempotencyKey,
@@ -124,9 +133,10 @@ class BillsRepository {
       final res = await _dio.post(
         ApiEndpoints.billsAirtimePurchase,
         data: {
-          'provider': provider,
           'phone_number': phoneNumber,
-          'amount': amountMinor,
+          'amount': _koboToNaira(amountMinor),
+          'biller_code': billerCode,
+          'security_pin': _extractPin(authHeaders),
         },
         idempotencyKey: idempotencyKey,
         extraHeaders: authHeaders,
@@ -137,14 +147,13 @@ class BillsRepository {
     }
   }
 
-  /// Initiate a data purchase. `amountMinor` must equal the product's
-  /// `priceMinor` (Anchor rejects mismatches). `productSlug` comes from
-  /// `fetchProductsForBiller`. `authHeaders` carries the biometric or
-  /// PIN-fallback headers — see [purchaseAirtime] for details.
+  /// Data bundle purchase. [billerCode] comes from [BillProvider.billerCode];
+  /// [productCode] comes from [BillProduct.slug] (which is actually the `code`
+  /// field from the billsvc products response).
   Future<BillTransaction> purchaseData({
-    required String provider,
+    required String billerCode,
     required String phoneNumber,
-    required String productSlug,
+    required String productCode,
     required int amountMinor,
     required String idempotencyKey,
     required Map<String, String> authHeaders,
@@ -153,10 +162,11 @@ class BillsRepository {
       final res = await _dio.post(
         ApiEndpoints.billsDataPurchase,
         data: {
-          'provider': provider,
           'phone_number': phoneNumber,
-          'product_slug': productSlug,
-          'amount': amountMinor,
+          'amount': _koboToNaira(amountMinor),
+          'biller_code': billerCode,
+          'product_code': productCode,
+          'security_pin': _extractPin(authHeaders),
         },
         idempotencyKey: idempotencyKey,
         extraHeaders: authHeaders,
@@ -167,15 +177,16 @@ class BillsRepository {
     }
   }
 
-  /// Initiate an electricity purchase. The meter must be validated via
-  /// [validateCustomer] first. `provider` is the biller slug (e.g.
-  /// `ikeja_electric_prepaid`); `productSlug` distinguishes prepaid vs
-  /// postpaid product lines.
+  /// Electricity purchase. [meterType] must be `'prepaid'` or `'postpaid'`;
+  /// derive from the provider slug if not shown to the user (e.g.
+  /// `ikeja_electric_postpaid` → `'postpaid'`). [productCode] comes from
+  /// [BillProduct.slug] — required by Anchor as `productSlug`.
   Future<BillTransaction> purchaseElectricity({
-    required String provider,
-    required String meterAccountNumber,
+    required String billerCode,
+    required String meterNumber,
     required String phoneNumber,
-    required String productSlug,
+    required String productCode,
+    required String meterType,
     required int amountMinor,
     required String idempotencyKey,
     required Map<String, String> authHeaders,
@@ -184,11 +195,13 @@ class BillsRepository {
       final res = await _dio.post(
         ApiEndpoints.billsElectricityPurchase,
         data: {
-          'provider': provider,
-          'meter_account_number': meterAccountNumber,
+          'meter_number': meterNumber,
           'phone_number': phoneNumber,
-          'product_slug': productSlug,
-          'amount': amountMinor,
+          'amount': _koboToNaira(amountMinor),
+          'biller_code': billerCode,
+          'product_code': productCode,
+          'meter_type': meterType,
+          'security_pin': _extractPin(authHeaders),
         },
         idempotencyKey: idempotencyKey,
         extraHeaders: authHeaders,
@@ -199,14 +212,12 @@ class BillsRepository {
     }
   }
 
-  /// Initiate a cable TV (Television) purchase. Smartcard must be
-  /// validated via [validateCustomer] first. `productSlug` is the plan
-  /// the user picked from `fetchProductsForBiller`.
+  /// Cable TV purchase. [productCode] comes from [BillProduct.slug].
   Future<BillTransaction> purchaseTelevision({
-    required String provider,
+    required String billerCode,
     required String smartCardNumber,
     required String phoneNumber,
-    required String productSlug,
+    required String productCode,
     required int amountMinor,
     required String idempotencyKey,
     required Map<String, String> authHeaders,
@@ -215,11 +226,12 @@ class BillsRepository {
       final res = await _dio.post(
         ApiEndpoints.billsTelevisionPurchase,
         data: {
-          'provider': provider,
           'smart_card_number': smartCardNumber,
           'phone_number': phoneNumber,
-          'product_slug': productSlug,
-          'amount': amountMinor,
+          'amount': _koboToNaira(amountMinor),
+          'biller_code': billerCode,
+          'product_code': productCode,
+          'security_pin': _extractPin(authHeaders),
         },
         idempotencyKey: idempotencyKey,
         extraHeaders: authHeaders,
@@ -230,10 +242,6 @@ class BillsRepository {
     }
   }
 
-  /// Poll for a bill transaction's current status. Use after a `pending`
-  /// purchase response — the webhook will eventually push the user a
-  /// terminal-state notification, but polling is fine for in-app
-  /// foreground updates.
   Future<BillTransaction> fetchTransaction(String reference) async {
     try {
       final res =
@@ -244,7 +252,17 @@ class BillsRepository {
     }
   }
 
-  // ---- Internals --------------------------------------------------------
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  /// Converts kobo minor units to naira (the amount unit the billsvc expects).
+  static int _koboToNaira(int amountMinor) => amountMinor ~/ 100;
+
+  /// Extracts the transaction PIN from [authHeaders] (`X-Security-Pin`).
+  /// Returns an empty string when biometric headers are used instead of PIN;
+  /// the service will reject the request with ErrPinRequired if a PIN is
+  /// configured for the user (biometric bill auth is not yet supported).
+  static String _extractPin(Map<String, String> headers) =>
+      headers['X-Security-Pin'] ?? '';
 
   static List<BillProvider> _parseProviders(dynamic data) {
     if (data is! List) return const [];

@@ -8,11 +8,18 @@ class OtpInputField extends StatefulWidget {
     required this.length,
     required this.onChanged,
     this.onCompleted,
+    this.firstFocusNode,
   });
 
   final int length;
   final Function(String) onChanged;
   final Function(String)? onCompleted;
+
+  /// Optional external focus node attached to the *first* cell. Lets a
+  /// parent move focus into this field (e.g. chaining "Create PIN" →
+  /// "Re-enter PIN" once the first group completes). The widget does not
+  /// dispose an externally-supplied node.
+  final FocusNode? firstFocusNode;
 
   @override
   State<OtpInputField> createState() => _OtpInputFieldState();
@@ -32,9 +39,13 @@ class _OtpInputFieldState extends State<OtpInputField> {
     );
     _focusNodes = List.generate(
       widget.length,
-      (index) => FocusNode(
-        onKeyEvent: (node, event) => _handleOtpKey(index, event),
-      ),
+      (index) {
+        final node = (index == 0 && widget.firstFocusNode != null)
+            ? widget.firstFocusNode!
+            : FocusNode();
+        node.onKeyEvent = (n, event) => _handleOtpKey(index, event);
+        return node;
+      },
     );
     _previousValues = List.generate(
       widget.length,
@@ -47,8 +58,10 @@ class _OtpInputFieldState extends State<OtpInputField> {
     for (var controller in _controllers) {
       controller.dispose();
     }
-    for (var node in _focusNodes) {
-      node.dispose();
+    for (var i = 0; i < _focusNodes.length; i++) {
+      // Don't dispose an externally-owned node (the parent owns its lifecycle).
+      if (i == 0 && widget.firstFocusNode != null) continue;
+      _focusNodes[i].dispose();
     }
     super.dispose();
   }

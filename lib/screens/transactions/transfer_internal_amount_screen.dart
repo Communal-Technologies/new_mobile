@@ -2,6 +2,7 @@ import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
 import 'package:communal_mobile/core/constants/constants.dart';
+import 'package:communal_mobile/core/utils/amount_input_formatter.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/utils/tier_limit_check.dart';
@@ -27,7 +28,6 @@ class _TransferInternalAmountScreenState
     extends State<TransferInternalAmountScreen> {
   final _amountCtrl = TextEditingController();
   final _narrationCtrl = TextEditingController();
-  bool _saveAsFavorite = false;
   // Audit M26: pulled from `AppConstants.defaultQuickAmounts` so a
   // future server-driven swap is a single-line change.
   static const List<int> _quickAmounts = AppConstants.defaultQuickAmounts;
@@ -103,7 +103,7 @@ class _TransferInternalAmountScreenState
         'amountMinor': amountMinor,
         'currency': currency,
         'narration': _narrationCtrl.text.trim(),
-        'saveAsBeneficiary': _saveAsFavorite,
+        'saveAsBeneficiary': false,
       },
     );
   }
@@ -115,6 +115,8 @@ class _TransferInternalAmountScreenState
     final currencySymbol = auth is AuthAuthenticated
         ? currencySymbolForUser(auth.user)
         : currencySymbolForCode('NGN');
+    final currencyCode =
+        auth is AuthAuthenticated ? resolveCurrencyCode(auth.user) : 'NGN';
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -219,10 +221,11 @@ class _TransferInternalAmountScreenState
                   vSpace(6),
                   TextField(
                     controller: _amountCtrl,
-                    keyboardType: TextInputType.number,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[0-9,]')),
-                      _ThousandsSeparatorInputFormatter(),
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
+                      AmountInputFormatter(decimals: decimalsFor(currencyCode)),
                     ],
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface,
@@ -328,18 +331,6 @@ class _TransferInternalAmountScreenState
                 ],
               ),
             ),
-            vSpace(8),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Save as favourite'),
-              trailing: Transform.scale(
-                scale: 0.82,
-                child: Switch(
-                  value: _saveAsFavorite,
-                  onChanged: (v) => setState(() => _saveAsFavorite = v),
-                ),
-              ),
-            ),
             vSpace(12),
           ],
         ),
@@ -382,24 +373,3 @@ class _TransferInternalAmountScreenState
   }
 }
 
-class _ThousandsSeparatorInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digits.isEmpty) return const TextEditingValue(text: '');
-    final chars = digits.split('').reversed.toList();
-    final out = <String>[];
-    for (int i = 0; i < chars.length; i++) {
-      out.add(chars[i]);
-      if ((i + 1) % 3 == 0 && i != chars.length - 1) out.add(',');
-    }
-    final formatted = out.reversed.join();
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
-  }
-}

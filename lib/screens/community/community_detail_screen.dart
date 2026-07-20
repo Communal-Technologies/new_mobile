@@ -27,12 +27,37 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   // in just produces a 409 from the backend.
   bool _isMember = false;
 
+  CommunityDetailStats? _liveStats;
+
   CommunityDetail get detail => widget.detail;
 
   @override
   void initState() {
     super.initState();
     _resolveMembership();
+    _loadLiveStats();
+  }
+
+  Future<void> _loadLiveStats() async {
+    try {
+      debugPrint('[stats] load for "${detail.location.id}"');
+      final m = await getIt<CommunityRepository>()
+          .fetchCooperativeStats(detail.location.id);
+      debugPrint('[stats] result: $m');
+      if (!mounted || m == null) return;
+      setState(() {
+        _liveStats = CommunityDetailStats(
+          totalLoans: m['total_loans'] ?? '',
+          totalSavings: m['total_savings'] ?? '',
+          monthlyContribution: m['monthly_contribution'] ?? '',
+          activeLoans: m['active_loans'] ?? '',
+          defaultRate: m['default_rate'] ?? '',
+          loanInterestRate: m['loan_interest_rate'] ?? '',
+        );
+      });
+    } catch (e) {
+      debugPrint('[stats] error: $e');
+    }
   }
 
   Future<void> _resolveMembership() async {
@@ -50,7 +75,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   }
 
   bool get _hasStats {
-    final s = detail.stats;
+    final s = _liveStats ?? detail.stats;
     return [
       s.totalLoans,
       s.totalSavings,
@@ -301,11 +326,11 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     return Expanded(
       child: Row(
         children: [
-          Icon(icon, size: 16.sp, color: Colors.grey.shade600),
+          Icon(icon, size: 16.sp, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55)),
           hSpace(6),
           Text(
             label,
-            style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 16.sp, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
           ),
         ],
       ),
@@ -313,7 +338,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   }
 
   Widget _buildStatsCard() {
-    final stats = detail.stats;
+    final stats = _liveStats ?? detail.stats;
     final items = [
       ((stats.totalLoans), 'Total Loans Given'),
       ((stats.totalSavings), 'Total Savings'),
@@ -364,7 +389,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
               valueColor = const Color(0xFFE67E22); // orange
               break;
             default:
-              valueColor = const Color(0xFF0F1D40);
+              valueColor = Theme.of(context).colorScheme.onSurface;
           }
           return Container(
             padding: EdgeInsets.all(12.w),
@@ -407,7 +432,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
         children: [
           Text(
             detail.about,
-            style: TextStyle(fontSize: 13.5.sp, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 13.5.sp, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
           ),
           vSpace(16),
           Wrap(
@@ -446,7 +471,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
           hSpace(6),
           Text(
             label,
-            style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 16.sp, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
           ),
         ],
       ),

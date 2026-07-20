@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 /// Circle avatar that renders a network image when [url] is a valid
-/// HTTP(S) URL and falls back to [fallbackAsset] when:
+/// HTTP(S) URL and falls back to showing the user's initials (derived from
+/// [name]) when:
 ///
 /// - the URL is null/empty/non-HTTP, or
 /// - the network image fails to decode (expired secure-upload
@@ -16,13 +17,14 @@ class MemberAvatar extends StatefulWidget {
     super.key,
     required this.url,
     required this.radius,
-    this.fallbackAsset = 'assets/images/demo_user.png',
+    this.name,
     this.backgroundColor,
   });
 
   final String? url;
   final double radius;
-  final String fallbackAsset;
+  /// Display name used to derive initials when there is no avatar image.
+  final String? name;
   final Color? backgroundColor;
 
   @override
@@ -46,43 +48,57 @@ class _MemberAvatarState extends State<MemberAvatar> {
     }
   }
 
+  String _initials() {
+    final raw = (widget.name ?? '').trim();
+    if (raw.isEmpty) return '?';
+    final parts = raw.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.length == 1) {
+      return parts[0][0].toUpperCase();
+    }
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final fallback = AssetImage(widget.fallbackAsset);
     final useNetwork = _isUsableUrl && !_networkFailed;
+    final bg = widget.backgroundColor ?? Theme.of(context).primaryColor.withValues(alpha: 0.15);
+
+    if (useNetwork) {
+      return CircleAvatar(
+        radius: widget.radius,
+        backgroundColor: bg,
+        backgroundImage: NetworkImage(widget.url!.trim()),
+        onBackgroundImageError: (error, stackTrace) {
+          assert(() {
+            final url = widget.url ?? '';
+            final masked = url.length > 120 ? '${url.substring(0, 120)}…' : url;
+            final errStr = error.toString();
+            final clipped = errStr.length > 80 ? '${errStr.substring(0, 80)}…' : errStr;
+            debugPrint('MemberAvatar: decode failed url=$masked err=$clipped');
+            return true;
+          }());
+          if (!mounted) return;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted || _networkFailed) return;
+            setState(() => _networkFailed = true);
+          });
+        },
+      );
+    }
+
     return CircleAvatar(
       radius: widget.radius,
-      backgroundColor:
-          widget.backgroundColor ?? Theme.of(context).dividerColor,
-      backgroundImage:
-          useNetwork ? NetworkImage(widget.url!.trim()) : fallback,
-      onBackgroundImageError: useNetwork
-          ? (error, stackTrace) {
-              // Debug-only diagnostic: surfaces the URL + first 80
-              // chars of the error so format failures (HEIC/AVIF the
-              // Android decoder rejects with "unimplemented"), 4xx
-              // responses, and HTML-error-bodies-from-presigned-URLs
-              // can be told apart on logcat without instrumenting
-              // each call site. Stripped in release via assert().
-              assert(() {
-                final url = widget.url ?? '';
-                final masked =
-                    url.length > 120 ? '${url.substring(0, 120)}…' : url;
-                final errStr = error.toString();
-                final clipped = errStr.length > 80
-                    ? '${errStr.substring(0, 80)}…'
-                    : errStr;
-                debugPrint(
-                    'MemberAvatar: decode failed url=$masked err=$clipped');
-                return true;
-              }());
-              if (!mounted) return;
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted || _networkFailed) return;
-                setState(() => _networkFailed = true);
-              });
-            }
-          : null,
+      backgroundColor: bg,
+      child: Text(
+        _initials(),
+        style: TextStyle(
+          fontSize: widget.radius * 0.72,
+          fontWeight: FontWeight.w700,
+          color: widget.backgroundColor != null
+              ? Colors.white
+              : Theme.of(context).primaryColor,
+        ),
+      ),
     );
   }
 }

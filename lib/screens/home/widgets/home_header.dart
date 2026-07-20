@@ -214,6 +214,7 @@ class HomeHeader extends StatelessWidget {
                 child: MemberAvatar(
                   url: avatar,
                   radius: 22.w,
+                  name: displayName,
                   backgroundColor: theme.dividerColor,
                 ),
               ),

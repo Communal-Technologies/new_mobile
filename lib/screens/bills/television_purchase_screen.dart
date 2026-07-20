@@ -150,14 +150,21 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
       AppToast.error('Enter the smartcard / decoder number.');
       return;
     }
+    if (_products.isEmpty) {
+      AppToast.error('Still loading plans — try again in a moment.');
+      return;
+    }
     setState(() {
       _validating = true;
       _validationError = null;
       _validatedCustomer = null;
     });
     try {
+      // Anchor's customer-validation endpoint is product-scoped, not
+      // biller-scoped — any product belonging to this provider works for
+      // validating the smartcard; the actual plan is picked separately below.
       final customer = await _repo.validateCustomer(
-        billerSlug: provider.slug,
+        productSlug: _products.first.slug,
         accountNumber: card,
       );
       if (!mounted) return;
@@ -198,6 +205,7 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
         'kind': 'television',
         'provider': provider.slug,
         'provider_name': provider.name,
+        'biller_code': provider.billerCode ?? provider.slug,
         'product_slug': product.slug,
         'product_name': product.name,
         'smart_card_number': _smartCardController.text.trim(),

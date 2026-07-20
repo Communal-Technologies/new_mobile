@@ -54,6 +54,9 @@ class UserModel extends Equatable {
   /// Wallet `account_name` or `deposit_account_name` when present.
   final String? walletAccountName;
 
+  /// Wallet `bank_name` or `deposit_bank_name` when present.
+  final String? walletBankName;
+
   /// Wallet `account_status`: `1` = active, `2` = frozen (see backend `Wallet`).
   final String? walletAccountStatus;
 
@@ -100,6 +103,7 @@ class UserModel extends Equatable {
     this.walletBalanceKobo = 0,
     this.walletAccountNumber,
     this.walletAccountName,
+    this.walletBankName,
     this.walletAccountStatus,
     this.walletFrozenBy,
     this.walletCurrencyCode,
@@ -307,6 +311,7 @@ class UserModel extends Equatable {
     int walletKobo = 0;
     String? walletAcctNum;
     String? walletAcctName;
+    String? walletBankNameVal;
     String? walletAcctStatus;
     String? walletFrozenByVal;
     String? walletCurrencyCodeVal;
@@ -329,6 +334,8 @@ class UserModel extends Equatable {
           nz(w['deposit_account_number']?.toString());
       walletAcctName = nz(w['account_name']?.toString()) ??
           nz(w['deposit_account_name']?.toString());
+      walletBankNameVal = nz(w['bank_name']?.toString()) ??
+          nz(w['deposit_bank_name']?.toString());
       walletAcctStatus = w['account_status']?.toString().trim();
       walletFrozenByVal = w['frozen_by']?.toString().trim();
       final curRaw =
@@ -389,6 +396,7 @@ class UserModel extends Equatable {
       walletBalanceKobo: walletKobo,
       walletAccountNumber: walletAcctNum,
       walletAccountName: walletAcctName,
+      walletBankName: walletBankNameVal,
       walletAccountStatus: walletAcctStatus,
       walletFrozenBy: walletFrozenByVal,
       walletCurrencyCode: walletCurrencyCodeVal,
@@ -425,6 +433,7 @@ class UserModel extends Equatable {
       'wallet_balance_kobo': walletBalanceKobo,
       'wallet_account_number': walletAccountNumber,
       'wallet_account_name': walletAccountName,
+      'wallet_bank_name': walletBankName,
       'wallet_account_status': walletAccountStatus,
       'wallet_frozen_by': walletFrozenBy,
       'wallet_currency_code': walletCurrencyCode,
@@ -462,6 +471,7 @@ class UserModel extends Equatable {
         walletBalanceKobo,
         walletAccountNumber,
         walletAccountName,
+        walletBankName,
         walletAccountStatus,
         walletFrozenBy,
         walletCurrencyCode,

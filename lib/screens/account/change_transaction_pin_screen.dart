@@ -6,7 +6,6 @@ import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
@@ -94,7 +93,6 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _requestPinFocus());
   }
 
   @override
@@ -106,11 +104,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
 
   void _requestPinFocus() {
     if (!mounted || _isSuccess) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _isSuccess) return;
-      FocusScope.of(context).requestFocus(_pinFocus);
-      SystemChannels.textInput.invokeMethod('TextInput.show');
-    });
+    FocusScope.of(context).requestFocus(_pinFocus);
   }
 
   bool _canContinue() => !_submitting && _pinCtrl.text.trim().length == 4;
@@ -215,6 +209,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         titleSpacing: 0,
         centerTitle: true,
@@ -224,7 +219,9 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
         ),
         title: const Text('Change your PIN'),
       ),
-      body: SingleChildScrollView(
+      body: Column(
+        children: [
+          Expanded(child: SingleChildScrollView(
         padding: EdgeInsets.all(16.w),
         child: Column(
           children: [
@@ -372,7 +369,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                         focusNode: _pinFocus,
                         keyboardType: TextInputType.number,
                         maxLength: 4,
-                        autofocus: false,
+                        autofocus: true,
                         onChanged: (_) => setState(() {}),
                       ),
                     ),
@@ -513,51 +510,53 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
               ),
           ],
         ),
-      ),
-      bottomNavigationBar: SafeArea(
-        minimum: EdgeInsets.fromLTRB(16.w, 0, 16.w, 14.h),
-        child: SizedBox(
-          width: double.infinity,
-          height: 50.h,
-          child: InkWell(
-            onTap: (_canContinue() || _isSuccess) && !_submitting ? _onContinue : null,
-            borderRadius: BorderRadius.circular(12.r),
-            child: Ink(
-              decoration: BoxDecoration(
+      )),
+          SafeArea(
+            minimum: EdgeInsets.fromLTRB(16.w, 0, 16.w, 14.h),
+            child: SizedBox(
+              width: double.infinity,
+              height: 50.h,
+              child: InkWell(
+                onTap: (_canContinue() || _isSuccess) && !_submitting ? _onContinue : null,
                 borderRadius: BorderRadius.circular(12.r),
-                color: (_canContinue() || _isSuccess)
-                    ? null
-                    : const Color(0xFFE0E0E0),
-                gradient: (_canContinue() || _isSuccess)
-                    ? const LinearGradient(
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                        colors: [Color(0xFF8C66F5), Color(0xFF6A39F3)],
-                      )
-                    : null,
-              ),
-              child: Center(
-                child: _submitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : Text(
-                        _isSuccess ? 'Done' : 'Continue',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 19.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                child: Ink(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12.r),
+                    color: (_canContinue() || _isSuccess)
+                        ? null
+                        : const Color(0xFFE0E0E0),
+                    gradient: (_canContinue() || _isSuccess)
+                        ? const LinearGradient(
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                            colors: [Color(0xFF8C66F5), Color(0xFF6A39F3)],
+                          )
+                        : null,
+                  ),
+                  child: Center(
+                    child: _submitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : Text(
+                            _isSuccess ? 'Done' : 'Continue',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 19.sp,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                  ),
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

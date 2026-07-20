@@ -14,6 +14,7 @@ import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.view.WindowManager
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -102,6 +103,18 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Apply FLAG_SECURE from the stored preference BEFORE Flutter
+        // initialises. The flutter shared_preferences plugin stores keys with
+        // a "flutter." prefix in the "FlutterSharedPreferences" file.
+        // Default is false (screenshots not allowed) → secure by default.
+        val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+        val allowScreenshot = prefs.getBoolean("flutter.allow_screenshot", false)
+        if (!allowScreenshot) {
+            window.setFlags(
+                WindowManager.LayoutParams.FLAG_SECURE,
+                WindowManager.LayoutParams.FLAG_SECURE,
+            )
+        }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -114,6 +127,28 @@ class MainActivity : FlutterFragmentActivity() {
             BiometricKeyChannel.CHANNEL,
         )
         BiometricKeyChannel(this).register(channel)
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "elite.codec.communal/screenshot",
+        ).setMethodCallHandler { call, result ->
+            if (call.method == "setScreenshotEnabled") {
+                val enabled = call.argument<Boolean>("enabled") ?: false
+                runOnUiThread {
+                    if (enabled) {
+                        window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                    } else {
+                        window.setFlags(
+                            WindowManager.LayoutParams.FLAG_SECURE,
+                            WindowManager.LayoutParams.FLAG_SECURE,
+                        )
+                    }
+                    result.success(null)
+                }
+            } else {
+                result.notImplemented()
+            }
+        }
 
         installPrivacyOverlay()
     }

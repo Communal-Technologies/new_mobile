@@ -66,20 +66,23 @@ class AppElevatedButton extends StatelessWidget {
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   ),
-                  SizedBox(width: 12.w),
-                  Flexible(
-                    child: Text(
-                      loadingLabel ?? 'Please wait…',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 19.sp,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.2,
+                  // Pass loadingLabel: '' for a spinner-only button.
+                  if (loadingLabel != '') ...[
+                    SizedBox(width: 12.w),
+                    Flexible(
+                      child: Text(
+                        loadingLabel ?? 'Please wait…',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 19.sp,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               )
             : (child ??

@@ -147,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 // New Feature Banner
                 NewFeatureBanner(theme: theme),
 
-                vSpace(100),
+                vSpace(24),
               ],
             ),
           ),

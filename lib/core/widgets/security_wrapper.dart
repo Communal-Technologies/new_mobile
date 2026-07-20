@@ -829,80 +829,26 @@ class _SecurityWrapperState extends State<SecurityWrapper>
             },
             child: BlocBuilder<SecurityCubit, SecurityState>(
               buildWhen: (previous, current) {
-                // Only rebuild on actual transitions. The previous
-                // shape — `if (current == unlocked) return true` —
-                // forced a rebuild on every duplicate `unlocked`
-                // emission (the cubit re-emits on activity resets,
-                // post-frame unlock callbacks, etc). Each duplicate
-                // rebuild returned `widget.child`, which contains
-                // `MaterialApp.router(routerConfig: appRouter)` with
-                // the module-level `rootNavigatorKey` GlobalKey. When
-                // a duplicate fired during the lock → unlock
-                // transition (while the previous build's lock subtree
-                // was still in deactivation), the framework saw the
-                // same GlobalKey trying to attach in two places —
-                // hence the intermittent "_lifecycleState == inactive"
-                // assertion + "Duplicate GlobalKey detected" pair the
-                // user hit on unlock.
-                if (previous == current) {
-                  return false; // No transition, nothing to do.
-                }
+                if (previous == current) return false;
+                // The builder produces three distinct widget subtrees:
+                //   locked   → WelcomeBackScreen inside its own MaterialApp
+                //   blurred  → widget.child wrapped in a Stack + BlurOverlay
+                //   all else → widget.child wrapped in GestureDetector (idle tracking)
+                //
+                // Only rebuild when crossing those two boundaries.
+                // Crucially, idlePrompt ↔ unlocked transitions show the same
+                // GestureDetector subtree — allowing them to trigger rebuilds was
+                // the root cause of the intermittent "Duplicate GlobalKey /
+                // _lifecycleState == inactive" errors: each redundant rebuild
+                // re-placed widget.child (containing rootNavigatorKey) while the
+                // previous frame's element was still deactivating.
+                final prevIsLocked = previous == SecurityState.locked;
+                final currIsLocked = current == SecurityState.locked;
+                if (prevIsLocked != currIsLocked) return true;
 
-                if (previous == SecurityState.locked &&
-                    current == SecurityState.unlocked) {
-                  debugPrint(
-                    '📊   🔓 SECURITY WRAPPER buildWhen - locked → unlocked, rebuilding',
-                  );
-                  return true;
-                }
-
-                // CRITICAL: If transitioning from locked to unlocked, this is likely a successful unlock
-                // Set fresh login flags immediately to prevent showing lock screen again
-                if (previous == SecurityState.locked &&
-                    current == SecurityState.unlocked) {
-                  final authState = context.read<AuthBloc>().state;
-                  if (authState is AuthAuthenticated && !_hasSeenAuthBefore) {
-                    _isFreshLogin = true;
-                    _isFromWelcomeBackScreen = true;
-                    _freshLoginTimestamp = DateTime.now();
-                  }
-                  // Always rebuild when unlocking (important state change)
-                  // This is critical for showing dashboard after correct PIN
-                  debugPrint(
-                    '📊   🔓 SECURITY WRAPPER buildWhen - locked → unlocked, rebuilding',
-                  );
-                  return true;
-                }
-
-                // CRITICAL: If already locked and staying locked, don't rebuild
-                // This prevents flickering when wrong PIN is entered (lockApp() called but already locked)
-                if (previous == SecurityState.locked &&
-                    current == SecurityState.locked) {
-                  return false; // Still locked - no rebuild needed, prevents flicker
-                }
-
-                // Only rebuild for meaningful state changes (locked, unlocked, blurred)
-                // Don't rebuild for intermediate states that don't affect UI
-                final meaningfulStates = [
-                  SecurityState.locked,
-                  SecurityState.unlocked,
-                  SecurityState.blurred,
-                  SecurityState.idlePrompt,
-                ];
-
-                final previousIsMeaningful = meaningfulStates.contains(
-                  previous,
-                );
-                final currentIsMeaningful = meaningfulStates.contains(current);
-
-                // Only rebuild if transitioning between meaningful states
-                if (previousIsMeaningful || currentIsMeaningful) {
-                  _logState('BUILDER buildWhen');
-                  return true;
-                }
-
-                // Not a meaningful state change - don't rebuild
-                return false;
+                final prevIsBlurred = previous == SecurityState.blurred;
+                final currIsBlurred = current == SecurityState.blurred;
+                return prevIsBlurred != currIsBlurred;
               },
               builder: (context, state) {
                 _logState('BUILDER building');

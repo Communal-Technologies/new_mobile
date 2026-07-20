@@ -31,6 +31,11 @@ class AuthRepository {
     dioClient.updateToken(token);
   }
 
+  /// Remove the bearer from DioClient (logout) so it can't linger.
+  void clearToken() {
+    dioClient.clearToken();
+  }
+
   Future<LoginResponse?> login(String login, String password) async {
     try {
       // This endpoint doesn't require authentication (public login endpoint)
@@ -179,11 +184,15 @@ class AuthRepository {
     }
   }
 
-  Future<UserModel?> getUserInfo(String token) async {
+  Future<UserModel?> getUserInfo(String token,
+      {bool skipProactiveRefresh = false}) async {
     // Ensure token is set in DioClient before making the request.
     updateToken(token);
     try {
-      final response = await dioClient.get(ApiEndpoints.getLoggedInUser);
+      final response = await dioClient.get(
+        ApiEndpoints.getLoggedInUser,
+        skipProactiveRefresh: skipProactiveRefresh,
+      );
       if (response.statusCode == 200) {
         return UserModel.fromJson(response.data);
       }
@@ -693,7 +702,66 @@ class AuthRepository {
     }
   }
 
-  /// Submit unfreeze request (only valid when account was self-frozen). Backend:
+  /// `GET /auth/login-activity` — returns the last 50 auth audit log entries.
+  Future<List<Map<String, dynamic>>> fetchLoginActivity() async {
+    try {
+      final response = await dioClient.get(ApiEndpoints.memberLoginActivity);
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data is Map && data['logs'] is List) {
+          return (data['logs'] as List)
+              .whereType<Map<String, dynamic>>()
+              .toList();
+        }
+      }
+      return [];
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map) {
+        final msg = data['message']?.toString();
+        if (msg != null && msg.isNotEmpty) throw Exception(msg);
+      }
+      throw Exception(e.message ?? 'Failed to load activity');
+    }
+  }
+
+  /// `POST /members/change-password` — changes the login PIN/password.
+  /// Throws an [Exception] with a user-facing message on failure.
+  Future<void> changeLoginPin(String oldPin, String newPin) async {
+    try {
+      final response = await dioClient.post(
+        ApiEndpoints.membersChangePassword,
+        data: <String, dynamic>{
+          'old_password': oldPin,
+          'new_password': newPin,
+        },
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) return;
+      final data = response.data;
+      if (data is Map) {
+        final msg = data['message']?.toString();
+        if (msg != null && msg.isNotEmpty) throw Exception(msg);
+      }
+      throw Exception('PIN change failed');
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map) {
+        // 422 responses carry an `errors` map with field-level messages.
+        // Prefer that over the generic "The given data was invalid." message.
+        final errors = data['errors'];
+        if (errors is Map && errors.isNotEmpty) {
+          final first = errors.values.first;
+          if (first is List && first.isNotEmpty) {
+            throw Exception(first.first.toString());
+          }
+        }
+        final msg = data['message']?.toString();
+        if (msg != null && msg.isNotEmpty) throw Exception(msg);
+      }
+      throw Exception(e.message ?? 'PIN change failed');
+    }
+  }
+
   /// `POST /members/account/request-unfreeze` with `{ reason }` (min 10 chars).
   Future<void> requestAccountUnfreeze(String reason) async {
     try {

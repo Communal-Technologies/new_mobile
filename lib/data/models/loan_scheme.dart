@@ -151,8 +151,11 @@ int estimatedMonthlyRepaymentMinor({
 }) {
   if (scheme.durationMonths <= 0 || principalMinor <= 0) return 0;
   final interest = (principalMinor * scheme.interestRate / 100).round();
+  // Deduct-now ('1'): interest is taken upfront, member repays the FULL
+  // principal. Add-to-balance ('2'): repay principal + interest. (Previously
+  // '1' wrongly repaid principal − interest, so interest was never collected.)
   final total = interestType == '1'
-      ? (principalMinor - interest)
+      ? principalMinor
       : (principalMinor + interest);
   return (total / scheme.durationMonths).round();
 }

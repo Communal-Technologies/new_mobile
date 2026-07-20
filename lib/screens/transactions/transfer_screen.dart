@@ -251,7 +251,7 @@ class _TransferScreenState extends State<TransferScreen> {
                       );
                     },
                   ),
-                vSpace(90),
+                vSpace(24),
               ],
             ),
           ),

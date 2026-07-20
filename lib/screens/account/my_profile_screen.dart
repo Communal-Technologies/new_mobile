@@ -42,7 +42,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = _load());
+    // Use a block body so the closure returns void — an arrow body returns the
+    // assigned Future, which setState rejects ("callback returned a Future").
+    setState(() {
+      _future = _load();
+    });
     await _future;
   }
 

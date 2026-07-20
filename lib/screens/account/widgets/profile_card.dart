@@ -33,11 +33,13 @@ class _ProfileCardState extends State<ProfileCard> {
       }
       final lab = tl.label.trim();
       if (lab.isNotEmpty) return lab;
-      return 'Not verified';
     }
     final t = u.communalTier?.trim().toLowerCase();
     if (t == 'tier_1') return 'Tier 1';
     if (t == 'tier_2') return 'Tier 2';
+    // KYC submitted but Anchor hasn't confirmed yet — don't say "Not verified"
+    // while the user is actively waiting for approval.
+    if (u.kycStep1Submitted) return 'Verification pending';
     return 'Not verified';
   }
 
@@ -57,9 +59,15 @@ class _ProfileCardState extends State<ProfileCard> {
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
       buildWhen: (prev, next) {
-        final pu = prev is AuthAuthenticated ? prev.user : null;
-        final nu = next is AuthAuthenticated ? next.user : null;
-        return pu != nu;
+        // Only collapse to placeholder when truly unauthenticated — not
+        // during credential verification (AuthVerifyingCredentials), which
+        // is transient and would cause a blank flash between accounts.
+        if (next is! AuthAuthenticated) {
+          return next is AuthUnauthenticated && prev is AuthAuthenticated;
+        }
+        if (prev is! AuthAuthenticated) return true;
+        return prev.user != next.user ||
+            prev.sessionGeneration != next.sessionGeneration;
       },
       builder: (context, authState) {
         if (authState is! AuthAuthenticated) {
@@ -67,7 +75,21 @@ class _ProfileCardState extends State<ProfileCard> {
         }
         final user = authState.user;
         final prefs = getIt<HomeWalletPrefs>();
-        final showUpgradeChip = user.tierLimits?.isFullyVerified != true;
+        final tierStr = user.communalTier?.trim().toLowerCase();
+        // Only treat tier_1 and tier_2 as real (confirmed) tiers.
+        // tier_0 or null both mean "not yet verified" for badge purposes.
+        final isRealTier = tierStr == 'tier_1' || tierStr == 'tier_2';
+        // KYC submitted but Anchor hasn't confirmed the tier yet.
+        final kycPending = !isRealTier && user.kycStep1Submitted;
+        // Show the CTA chip only when:
+        //   • not fully verified, AND
+        //   • KYC is not already pending (would create two confusing badges)
+        final showUpgradeChip =
+            !kycPending && user.tierLimits?.isFullyVerified != true;
+        // When the CTA chip is visible the status chip is redundant — "Verify
+        // account" already implies the user is unverified.  Only show the
+        // status chip when there is no CTA (pending / verified states).
+        final showStatusChip = !showUpgradeChip || isRealTier;
         final displayName =
             user.name.trim().isNotEmpty ? user.name.trim() : 'Member';
         // Match the dashboard: render kobo precision (`₦1,234.56`)
@@ -94,6 +116,7 @@ class _ProfileCardState extends State<ProfileCard> {
                 MemberAvatar(
                   url: avatar,
                   radius: 30.r,
+                  name: displayName,
                   backgroundColor: Colors.white.withValues(alpha: 0.2),
                 ),
                 hSpace(16),
@@ -110,30 +133,30 @@ class _ProfileCardState extends State<ProfileCard> {
                         ),
                       ),
                       vSpace(8),
-                      Row(
+                      Wrap(
+                        spacing: 8.w,
+                        runSpacing: 6.h,
                         children: [
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 10.w, vertical: 4.h),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                            child: Text(
-                              _tierStatusChipLabel(user),
-                              style: TextStyle(
-                                fontSize: 17.sp,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                          if (showStatusChip)
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 10.w, vertical: 4.h),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              child: Text(
+                                _tierStatusChipLabel(user),
+                                style: TextStyle(
+                                  fontSize: 17.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
-                          ),
-                          if (showUpgradeChip) ...[
-                            hSpace(8),
+                          if (showUpgradeChip)
                             GestureDetector(
-                              onTap: () {
-                                pushKycResumeRoute(context);
-                              },
+                              onTap: () => pushKycResumeRoute(context),
                               child: Container(
                                 padding: EdgeInsets.symmetric(
                                     horizontal: 10.w, vertical: 4.h),
@@ -151,7 +174,6 @@ class _ProfileCardState extends State<ProfileCard> {
                                 ),
                               ),
                             ),
-                          ],
                         ],
                       ),
                       vSpace(12),
@@ -185,7 +207,7 @@ class _ProfileCardState extends State<ProfileCard> {
                                           ? Icons.visibility
                                           : Icons.visibility_off,
                                       color: Colors.white,
-                                      size: 20.sp,
+                                      size: 24.sp,
                                     ),
                                   ),
                                 ],

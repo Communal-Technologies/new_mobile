@@ -11,10 +11,10 @@ class FreezeSuggestionBox extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: const Color(0xFFE3F2FD), // Light blue
+        color: const Color(0xFF2196F3).withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.15 : 0.08),
         borderRadius: BorderRadius.circular(12.r),
         border: Border.all(
-          color: const Color(0xFF2196F3), // Blue border
+          color: const Color(0xFF2196F3),
           width: 1.5,
         ),
       ),
@@ -26,7 +26,9 @@ class FreezeSuggestionBox extends StatelessWidget {
             style: TextStyle(
               fontSize: 19.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF2196F3),
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF64B5F6)
+                  : const Color(0xFF1565C0),
             ),
           ),
           vSpace(8),

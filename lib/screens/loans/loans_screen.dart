@@ -165,7 +165,6 @@ class _LoansScreenState extends State<LoansScreen> {
                           _buildErrorBanner(_error!)
                         else
                           _buildBody(),
-                        vSpace(32),
                       ],
                     ),
                   ),

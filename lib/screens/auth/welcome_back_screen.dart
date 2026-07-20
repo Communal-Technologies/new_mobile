@@ -235,7 +235,14 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
           // an id (null) are also rejected — the user has to re-enrol
           // once after the upgrade, which is the safer default.
           final enrolledUserId = prefs.enrolledUserId;
-          final currentUserId = _user?.id ?? '';
+          // _user may be null on cold-start before AuthBloc restores the
+          // session. Fall back to the stored opaque user_id sentinel so
+          // the per-user enrollment gate still works without an active
+          // AuthBloc state.
+          final storedUserId =
+              await _secureStorage.read(key: 'user_id') ?? '';
+          final uid = _user?.id ?? '';
+          final currentUserId = uid.isNotEmpty ? uid : storedUserId;
           final userMatches = enrolledUserId != null &&
               enrolledUserId.isNotEmpty &&
               enrolledUserId == currentUserId;
@@ -584,6 +591,16 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
 
         if (verified) {
           final securityCubit = context.read<SecurityCubit>();
+          // Capture before unlockApp() flips it — needed to decide whether
+          // SecurityWrapper is hosting this screen as the idle-lock overlay
+          // (stay on the current shell route, let SecurityWrapper reveal
+          // the dashboard) or as a standalone route (navigate explicitly).
+          // Mirrors the PIN-entry unlock path below (~line 855), which hit
+          // the same "still on welcome-back after a successful unlock" bug
+          // when it unconditionally called context.go('/home') here too —
+          // that fights SecurityWrapper's own state-driven swap and the
+          // lock screen can stay visible despite the cubit being unlocked.
+          final wasSecurityLocked = securityCubit.state == SecurityState.locked;
           _isAuthenticating = false;
           _waitingForBackendValidation = false;
           _password = '';
@@ -594,10 +611,14 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
           securityCubit.unlockApp();
           securityCubit.recordActivity();
 
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            context.go('/home');
-          });
+          if (!wasSecurityLocked) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              try {
+                context.go('/home');
+              } catch (_) {}
+            });
+          }
         } else {
           setState(() {
             _isAuthenticating = false;
@@ -1035,7 +1056,7 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
         appBar: widget.isAppLock
             ? null // No app bar for app lock
             : AppBar(
-        backgroundColor: theme.scaffoldBackgroundColor,
+        backgroundColor: Colors.transparent,
         elevation: 0,
                 systemOverlayStyle: systemOverlayForTheme(Theme.of(context)),
         leading: Row(

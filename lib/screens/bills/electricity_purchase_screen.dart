@@ -129,14 +129,21 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
       AppToast.error('Enter the meter / account number.');
       return;
     }
+    if (_products.isEmpty) {
+      AppToast.error('Still loading meter types — try again in a moment.');
+      return;
+    }
     setState(() {
       _validating = true;
       _validationError = null;
       _validatedCustomer = null;
     });
     try {
+      // Anchor's customer-validation endpoint is product-scoped, not
+      // biller-scoped — any product belonging to this provider works for
+      // validating the meter; the actual plan is picked separately below.
       final customer = await _repo.validateCustomer(
-        billerSlug: provider.slug,
+        productSlug: _products.first.slug,
         accountNumber: meter,
       );
       if (!mounted) return;
@@ -178,6 +185,7 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
         'kind': 'electricity',
         'provider': provider.slug,
         'provider_name': provider.name,
+        'biller_code': provider.billerCode ?? provider.slug,
         'product_slug': product.slug,
         'product_name': product.name,
         'meter_account_number': _meterController.text.trim(),

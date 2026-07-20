@@ -1,6 +1,6 @@
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
-import 'package:communal_mobile/core/widgets/animated_logo_loader.dart';
+import 'package:communal_mobile/core/constants/images.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/obligation.dart';
@@ -8,7 +8,7 @@ import 'package:communal_mobile/data/models/obligation_withdrawal_request.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:communal_mobile/core/utils/amount_input_formatter.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
@@ -161,7 +161,10 @@ class _ObligationWithdrawalScreenState
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Confirm Request'),
+        title: Text(
+          'Confirm Request',
+          style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w700),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -169,12 +172,13 @@ class _ObligationWithdrawalScreenState
             Text(
               'Request a withdrawal of $label from your '
               '${widget.obligation.title} account?',
+              style: TextStyle(fontSize: 17.sp, height: 1.4),
             ),
             vSpace(12),
             Text(
               'An admin will review and process the payout.',
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 16.sp,
                 color: Colors.grey.shade600,
               ),
             ),
@@ -183,7 +187,7 @@ class _ObligationWithdrawalScreenState
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text('Cancel', style: TextStyle(fontSize: 17.sp)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -191,7 +195,7 @@ class _ObligationWithdrawalScreenState
               backgroundColor: const Color(0xFF7434FF),
               foregroundColor: Colors.white,
             ),
-            child: const Text('Submit'),
+            child: Text('Submit', style: TextStyle(fontSize: 17.sp)),
           ),
         ],
       ),
@@ -375,7 +379,8 @@ class _AmountForm extends StatelessWidget {
             controller: amountController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[\d,.]')),
+              // Group thousands as the user types; the parse step strips commas.
+              AmountInputFormatter(decimals: 2),
             ],
             style: TextStyle(
               fontSize: 22.sp,
@@ -494,7 +499,18 @@ class _RequestHistorySection extends StatelessWidget {
           ),
           vSpace(12),
           if (loading)
-            const Center(child: AnimatedLogoLoader())
+            Center(
+              // Branded loader matching the obligation Payment History panel.
+              child: Image.asset(
+                theme.brightness == Brightness.dark
+                    ? Images.loaderWhite
+                    : Images.loader,
+                width: 44,
+                height: 44,
+                fit: BoxFit.contain,
+                gaplessPlayback: true,
+              ),
+            )
           else if (requests.isEmpty)
             Text(
               'No withdrawal requests yet.',
@@ -513,7 +529,8 @@ class _RequestHistorySection extends StatelessWidget {
                 revoking: revoking,
                 onRevoke: onRevoke,
               ),
-              if (i != requests.length - 1) ...[vSpace(10)],
+              if (i != requests.length - 1)
+                Divider(height: 1, color: theme.dividerColor),
             ],
         ],
       ),
@@ -546,21 +563,10 @@ class _RequestTile extends StatelessWidget {
     final theme = Theme.of(context);
     final statusColor = _statusColor(request.status, context);
 
-    return Container(
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        // surfaceContainerHighest gives clear tile differentiation in both
-        // modes: #F3F3F9 on white (light) and #2A2A33 on #1E1E1E (dark).
-        // dividerColor (#2C2C2C dark / #ECECEB light) is too faint to
-        // separate tiles from the card background in dark mode.
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(14.r),
-        border: request.isPending
-            ? Border.all(
-                color: const Color(0xFFF59E0B).withValues(alpha: 0.5),
-              )
-            : null,
-      ),
+    // Flat row (no inner card) so it doesn't read as a card-on-card inside the
+    // My Requests panel; the status pill conveys state.
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 10.h),
       child: Row(
         children: [
           Expanded(

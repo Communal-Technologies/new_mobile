@@ -35,6 +35,7 @@ import 'package:communal_mobile/screens/obligations/obligation_payment_screen.da
 import 'package:communal_mobile/screens/obligations/obligation_confirm_payment_screen.dart';
 import 'package:communal_mobile/screens/obligations/obligation_payment_success_screen.dart';
 import 'package:communal_mobile/screens/obligations/fine_payment_screen.dart';
+import 'package:communal_mobile/screens/obligations/fine_details_screen.dart';
 import 'package:communal_mobile/screens/obligations/fine_confirm_payment_screen.dart';
 import 'package:communal_mobile/screens/obligations/obligation_withdrawal_screen.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
@@ -46,6 +47,8 @@ import 'package:communal_mobile/screens/community/data/sample_community_details.
 import 'package:communal_mobile/screens/community/data/sample_community_locations.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 import 'package:communal_mobile/screens/transactions/transaction_details_screen.dart';
+import 'package:communal_mobile/screens/transactions/report_transaction_issue_screen.dart';
+import 'package:communal_mobile/screens/transactions/transaction_history_filters.dart';
 import 'package:communal_mobile/screens/transactions/transaction_history_screen.dart';
 import 'package:communal_mobile/screens/obligations/data/obligation_nip_settlement.dart';
 import 'package:communal_mobile/screens/obligations/data/fine_nip_settlement.dart';
@@ -94,6 +97,7 @@ import 'package:communal_mobile/screens/account/faq_screen.dart';
 import 'package:communal_mobile/screens/account/notification_settings_screen.dart';
 import 'package:communal_mobile/screens/account/security_settings_screen.dart';
 import 'package:communal_mobile/screens/account/biometric_enrollment_screen.dart';
+import 'package:communal_mobile/screens/account/change_login_pin_screen.dart';
 import 'package:communal_mobile/screens/account/change_transaction_pin_screen.dart';
 import 'package:communal_mobile/screens/account/delete_account_screen.dart';
 import 'package:communal_mobile/screens/account/delete_account_confirmation_screen.dart';
@@ -722,6 +726,11 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const BiometricEnrollmentScreen(),
     ),
     GoRoute(
+      path: '/change-login-pin',
+      name: 'change-login-pin',
+      builder: (context, state) => const ChangeLoginPinScreen(),
+    ),
+    GoRoute(
       path: '/change-transaction-pin',
       name: 'change-transaction-pin',
       builder: (context, state) => const ChangeTransactionPinScreen(),
@@ -763,6 +772,14 @@ final GoRouter appRouter = GoRouter(
           state.extra is Obligation ? null : '/obligations',
       builder: (context, state) =>
           ObligationDetailScreen(obligation: state.extra as Obligation),
+    ),
+    GoRoute(
+      path: '/fine-details',
+      name: 'fine-details',
+      redirect: (context, state) =>
+          state.extra is Obligation ? null : '/obligations',
+      builder: (context, state) =>
+          FineDetailsScreen(obligation: state.extra as Obligation),
     ),
     GoRoute(
       path: '/obligation-payment',
@@ -976,6 +993,32 @@ final GoRouter appRouter = GoRouter(
       path: '/transactions',
       name: 'transactions',
       builder: (context, state) => const TransactionHistoryScreen(),
+    ),
+
+    // Scoped history — "View history" on a transaction opens the same list
+    // narrowed to that biller/beneficiary/obligation. Pushed (not a tab) so it
+    // stacks with a back button. Scope arrives via `extra`.
+    GoRoute(
+      path: '/transactions-scoped',
+      name: 'transactions-scoped',
+      builder: (context, state) => TransactionHistoryScreen(
+        scope: state.extra is TransactionHistoryScope
+            ? state.extra as TransactionHistoryScope
+            : null,
+      ),
+    ),
+
+    // Report a problem with a transaction → Communal platform admin.
+    GoRoute(
+      path: '/report-transaction-issue',
+      name: 'report-transaction-issue',
+      builder: (context, state) {
+        final details = state.extra is TransactionDetailsData
+            ? state.extra as TransactionDetailsData
+            : null;
+        if (details == null) return const TransactionHistoryScreen();
+        return ReportTransactionIssueScreen(details: details);
+      },
     ),
 
     // Bill payments (airtime + data via Anchor). Result screen handles

@@ -404,6 +404,19 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
     context.go('/home');
   }
 
+  /// Server-vouched check: has this user already submitted the tier-2
+  /// (step 3) documents and is the upgrade pending/in review? Once true the
+  /// Submit button is disabled so the user can't re-submit the same data
+  /// by navigating back here from the "verifying" screen.
+  bool _tier2SubmissionPending() {
+    final auth = context.read<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) return false;
+    final u = auth.user;
+    if (u.kycStep3Submitted) return true;
+    final wf = u.kycWorkflowStatus?.trim().toLowerCase();
+    return wf == 'tier2_submitted';
+  }
+
   /// Back from step 3: only step 2 (bank), never step 1 — use [GoRouter.go] so the stack is replaced.
   void _goBackFromProof() {
     final auth = context.read<AuthBloc>().state;
@@ -423,6 +436,23 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
   }
 
   Future<void> _completeSetup() async {
+    // Close the keyboard if it's still open so the snackbars / submit
+    // progress aren't hidden behind it.
+    FocusManager.instance.primaryFocus?.unfocus();
+
+    // Guard against re-submitting an already-pending tier-2 upgrade (e.g.
+    // navigating back here from the verifying screen).
+    if (_tier2SubmissionPending()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Your identity documents are already submitted and under review.',
+          ),
+        ),
+      );
+      return;
+    }
+
     if (!_validateForm()) return;
     final id = _effectiveAnchor();
     if (id == null || id.isEmpty) {
@@ -686,6 +716,9 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
     final auth = context.read<AuthBloc>().state;
     // Show back to step 2 only while step 2 is not submitted on the server (includes skip-to-proof).
     final hideBack = auth is AuthAuthenticated && auth.user.kycStep2Submitted;
+    // Tier-2 already submitted → lock the form so the user can't re-submit
+    // the same documents while review is pending.
+    final pendingReview = _tier2SubmissionPending();
 
     return KycIdleSuppressor(
       child: Scaffold(
@@ -975,27 +1008,59 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
                     ),
                   ],
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: AppSecondaryButton(
-                        title: 'Skip',
-                        isDark: false,
-                        onPressed: _isSubmitting ? null : _skip,
+                child: pendingReview
+                    ? Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.hourglass_top_rounded,
+                                  size: 20.sp, color: theme.primaryColor),
+                              hSpace(8),
+                              Expanded(
+                                child: Text(
+                                  'Your documents are submitted and under review.',
+                                  style: TextStyle(
+                                    fontSize: 17.sp,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.7),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          vSpace(12),
+                          AppElevatedButton(
+                            title: 'Go to Home',
+                            onPressed: () => context.go('/home'),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: AppSecondaryButton(
+                              title: 'Skip',
+                              isDark: false,
+                              onPressed: _isSubmitting ? null : _skip,
+                            ),
+                          ),
+                          hSpace(16),
+                          Expanded(
+                            flex: 2,
+                            child: AppElevatedButton(
+                              title: 'Submit',
+                              isLoading: _isSubmitting,
+                              loadingLabel: 'Submitting…',
+                              // Disable while submitting so a double-tap can't
+                              // fire two upgrade requests.
+                              onPressed: _isSubmitting ? null : _completeSetup,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    hSpace(16),
-                    Expanded(
-                      flex: 2,
-                      child: AppElevatedButton(
-                        title: 'Submit',
-                        isLoading: _isSubmitting,
-                        loadingLabel: 'Submitting…',
-                        onPressed: _completeSetup,
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ],
           ),

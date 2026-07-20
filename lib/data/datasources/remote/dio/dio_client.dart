@@ -57,6 +57,8 @@ class DioClient {
         // Cache-Control: no-store response header to prevent the "wrong
         // user on welcome screen after app update" caching bug.
         HttpHeaders.cacheControlHeader: 'no-cache',
+        HttpHeaders.userAgentHeader:
+            'CommunalApp/1.0 (${Platform.isAndroid ? 'Android' : Platform.isIOS ? 'iOS' : Platform.operatingSystem})',
       };
 
     // Audit M8: SPKI cert-pin override for the dio HTTP client. Adds a
@@ -101,6 +103,26 @@ class DioClient {
     dio.options.headers[HttpHeaders.authorizationHeader] = 'Bearer $token';
   }
 
+  /// Removes the default Authorization header so a logged-out (or switched-out)
+  /// user's bearer can't linger on the in-memory dio instance across a hot
+  /// reload. Pairs with [TokenManager.clear].
+  void clearToken() {
+    _token = null;
+    dio.options.headers.remove(HttpHeaders.authorizationHeader);
+  }
+
+  void updateUserAgent(String deviceLabel) {
+    dio.options.headers[HttpHeaders.userAgentHeader] =
+        'CommunalApp/1.0 ($deviceLabel)';
+  }
+
+  /// Sends the install's stable device id on every request as `X-Device-Id`,
+  /// so the backend audit log can record `device` on all flows (not only
+  /// biometric-signed ones, which carry X-Biometric-Device-Id).
+  void setDeviceId(String deviceId) {
+    dio.options.headers['X-Device-Id'] = deviceId;
+  }
+
   void _handleUnauthorizedResponse(DioException error, {required bool requireAuth}) {
     if (!requireAuth) return;
     final code = error.response?.statusCode;
@@ -123,7 +145,13 @@ class DioClient {
     CancelToken? cancelToken,
     ProgressCallback? onReceiveProgress,
     bool requireAuth = true,
+    // When true the refresh interceptor will NOT proactively refresh before
+    // this request. Used by the app-start identity check so the logged-in user
+    // is resolved from the current access token, not swapped by a refresh.
+    bool skipProactiveRefresh = false,
   }) async {
+    final extra =
+        skipProactiveRefresh ? <String, dynamic>{'skipProactiveRefresh': true} : null;
     try {
       return await dio.get(
         uri,
@@ -131,8 +159,9 @@ class DioClient {
         cancelToken: cancelToken,
         onReceiveProgress: onReceiveProgress,
         options: requireAuth
-            ? null
+            ? (extra == null ? null : Options(extra: extra))
             : Options(
+                extra: extra,
                 headers: {
                   HttpHeaders.contentTypeHeader:
                       'application/json; charset=UTF-8',

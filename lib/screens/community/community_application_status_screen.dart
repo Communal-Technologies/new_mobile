@@ -20,11 +20,31 @@ class CommunityApplicationStatusScreen extends StatefulWidget {
 class _CommunityApplicationStatusScreenState
     extends State<CommunityApplicationStatusScreen> {
   late Future<CommunityJoinRequest?> _request;
+  CommunityDetailStats? _liveStats;
 
   @override
   void initState() {
     super.initState();
     _request = _loadLatest();
+    _loadLiveStats();
+  }
+
+  Future<void> _loadLiveStats() async {
+    try {
+      final m = await getIt<CommunityRepository>()
+          .fetchCooperativeStats(widget.detail.location.id);
+      if (!mounted || m == null) return;
+      setState(() {
+        _liveStats = CommunityDetailStats(
+          totalLoans: m['total_loans'] ?? '',
+          totalSavings: m['total_savings'] ?? '',
+          monthlyContribution: m['monthly_contribution'] ?? '',
+          activeLoans: m['active_loans'] ?? '',
+          defaultRate: m['default_rate'] ?? '',
+          loanInterestRate: m['loan_interest_rate'] ?? '',
+        );
+      });
+    } catch (_) {}
   }
 
   Future<CommunityJoinRequest?> _loadLatest() async {
@@ -82,9 +102,6 @@ class _CommunityApplicationStatusScreenState
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
-        actions: [
-          IconButton(icon: const Icon(Icons.share_outlined), onPressed: () {}),
-        ],
       ),
       body: FutureBuilder<CommunityJoinRequest?>(
         future: _request,
@@ -283,7 +300,7 @@ class _CommunityApplicationStatusScreenState
   }
 
   Widget _buildStatsCard() {
-    final stats = widget.detail.stats;
+    final stats = _liveStats ?? widget.detail.stats;
     final items = [
       (stats.totalLoans, 'Total Loans Given'),
       (stats.totalSavings, 'Total Savings'),
@@ -305,7 +322,7 @@ class _CommunityApplicationStatusScreenState
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 2.8,
+          childAspectRatio: 2.3,
           mainAxisSpacing: 12.h,
           crossAxisSpacing: 12.w,
         ),
@@ -329,7 +346,7 @@ class _CommunityApplicationStatusScreenState
               valueColor = const Color(0xFFE67E22);
               break;
             default:
-              valueColor = const Color(0xFF0F1D40);
+              valueColor = Theme.of(context).colorScheme.onSurface;
           }
           return Container(
             padding: EdgeInsets.all(12.w),
@@ -386,7 +403,7 @@ class _CommunityApplicationStatusScreenState
           vSpace(12),
           Text(
             widget.detail.about,
-            style: TextStyle(fontSize: 13.5.sp, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 13.5.sp, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
           ),
           vSpace(16),
           Wrap(
@@ -410,11 +427,11 @@ class _CommunityApplicationStatusScreenState
   Widget _buildMeta(IconData icon, String label) {
     return Row(
       children: [
-        Icon(icon, size: 16.sp, color: Colors.grey.shade600),
+        Icon(icon, size: 16.sp, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55)),
         hSpace(4),
         Text(
           label,
-          style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 16.sp, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55)),
         ),
       ],
     );
@@ -434,7 +451,7 @@ class _CommunityApplicationStatusScreenState
           hSpace(6),
           Text(
             label,
-            style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 16.sp, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
           ),
         ],
       ),

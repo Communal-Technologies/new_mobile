@@ -69,6 +69,7 @@ class SupportSection extends StatelessWidget {
         ),
         SettingItem(
           icon: Icons.logout,
+          iconColor: Colors.red,
           title: 'Log Out',
           description: 'Sign out of your account',
           onTap: () {

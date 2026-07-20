@@ -114,35 +114,37 @@ class _PinInputFieldState extends State<PinInputField> {
               LengthLimitingTextInputFormatter(1),
             ],
             obscureText: widget.obscureText,
+            textAlignVertical: TextAlignVertical.center,
             style: TextStyle(
-              fontSize: 24.sp,
-              fontWeight: FontWeight.w700,
+              fontSize: 28.sp,
+              fontWeight: FontWeight.w900,
               color: const Color(0xFF7434FF),
             ),
             decoration: InputDecoration(
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide(
-                  color: const Color(0xFF7434FF),
+                borderSide: const BorderSide(
+                  color: Color(0xFF7434FF),
                   width: 1.5,
                 ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide(
-                  color: const Color(0xFF7434FF),
+                borderSide: const BorderSide(
+                  color: Color(0xFF7434FF),
                   width: 1.5,
                 ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide(
-                  color: const Color(0xFF7434FF),
+                borderSide: const BorderSide(
+                  color: Color(0xFF7434FF),
                   width: 2,
                 ),
               ),
               filled: true,
-              fillColor: Colors.white,
+              fillColor: Theme.of(context).cardColor,
+              contentPadding: EdgeInsets.zero,
             ),
             onChanged: (value) => _onChanged(index, value),
             onTap: () {

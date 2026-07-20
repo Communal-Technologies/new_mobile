@@ -1,6 +1,7 @@
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
+import 'package:communal_mobile/core/utils/amount_input_formatter.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
@@ -62,18 +63,22 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
           ).format()
         : '—';
     final hasRepo = _cashRepos.isNotEmpty;
+    final theme = Theme.of(context);
+    final accent = theme.primaryColor;
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: hasRepo ? Colors.white : Colors.grey.shade100,
+        color: hasRepo
+            ? theme.cardColor
+            : theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(
-          color: hasRepo ? const Color(0xFF7434FF) : Colors.grey.shade300,
+          color: hasRepo ? accent : theme.dividerColor,
           width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -86,12 +91,12 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
             width: 40.w,
             height: 40.w,
             decoration: BoxDecoration(
-              color: const Color(0xFF5B8DFF).withOpacity(0.15),
+              color: accent.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12.r),
             ),
             child: Icon(
               Iconsax.building,
-              color: const Color(0xFF5B8DFF),
+              color: accent,
               size: 22.sp,
             ),
           ),
@@ -144,10 +149,22 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
     // already parses cleanly via Money.tryParseMajor on submit.
     _amountController = TextEditingController(
       text: widget.obligation.perInstallmentMinor > 0
-          ? Money(
-              widget.obligation.perInstallmentMinor,
-              widget.obligation.currency,
-            ).toMajorString()
+          // Run the pre-filled value through the same formatter so it shows
+          // grouped (e.g. 30,000,000.00) instead of a raw number — the
+          // formatter otherwise only kicks in once the user edits.
+          ? AmountInputFormatter(
+              decimals: decimalsFor(widget.obligation.currency),
+            )
+              .formatEditUpdate(
+                const TextEditingValue(),
+                TextEditingValue(
+                  text: Money(
+                    widget.obligation.perInstallmentMinor,
+                    widget.obligation.currency,
+                  ).toMajorString(),
+                ),
+              )
+              .text
           : '',
     );
     _noteController.addListener(() => setState(() {}));
@@ -347,7 +364,11 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                               (e) => DropdownMenuItem(
                                 value: e,
                                 child: Text(
-                                  '${e.accountName} • ${e.accountNumber}',
+                                  [
+                                    if (e.bankName.isNotEmpty) e.bankName,
+                                    e.accountName,
+                                    e.accountNumber,
+                                  ].join(' • '),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -360,7 +381,11 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                 ] else if (_cashRepos.length == 1) ...[
                   vSpace(10),
                   Text(
-                    'Paying into: ${_cashRepos.first.accountName} • ${_cashRepos.first.accountNumber}',
+                    'Paying into: ${[
+                      if (_cashRepos.first.bankName.isNotEmpty) _cashRepos.first.bankName,
+                      _cashRepos.first.accountName,
+                      _cashRepos.first.accountNumber,
+                    ].join(' • ')}',
                     style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade700),
                   ),
                 ],
@@ -398,7 +423,9 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                 style: TextStyle(
                   fontSize: 19.sp,
                   fontWeight: FontWeight.w600,
-                  color: Theme.of(context).cardColor,
+                  // Button fill is always purple, so the label must be white in
+                  // both themes. cardColor went dark in dark mode → black text.
+                  color: Colors.white,
                 ),
               ),
             ),
@@ -467,10 +494,18 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                     value: widget.obligation.perInstallmentLabel,
                   ),
                 ),
+              // "Outstanding" only makes sense for capped (share-based / equity)
+              // obligations where total - paid is a real remaining balance.
+              // Non-capped types (patronage, custom, savings) have no cap, so
+              // show what's been contributed instead of a meaningless balance.
               Expanded(
                 child: _MetricBlock(
-                  label: 'Outstanding Balance',
-                  value: outstanding,
+                  label: widget.obligation.isShareBased
+                      ? 'Outstanding Balance'
+                      : 'Total Contributed',
+                  value: widget.obligation.isShareBased
+                      ? outstanding
+                      : widget.obligation.paidAmountLabel,
                   alignRight: true,
                 ),
               ),
@@ -485,7 +520,6 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
     final currency = widget.obligation.currency;
     final decimals = decimalsFor(currency);
     final allowDecimal = decimals > 0;
-    final decimalSeparators = allowDecimal ? r'\.,' : '';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -502,9 +536,9 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
           controller: _amountController,
           keyboardType: TextInputType.numberWithOptions(decimal: allowDecimal),
           inputFormatters: [
-            FilteringTextInputFormatter.allow(
-              RegExp('[0-9$decimalSeparators]'),
-            ),
+            // Group thousands as the user types (e.g. 1,000,000) for legibility;
+            // Money.tryParseMajor strips the commas back out on submit.
+            AmountInputFormatter(decimals: decimals),
           ],
           decoration: InputDecoration(
             prefixText: '${currencySymbolForCode(currency)} ',

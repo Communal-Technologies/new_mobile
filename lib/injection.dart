@@ -5,12 +5,15 @@ import 'package:communal_mobile/data/local/theme_mode_controller.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:communal_mobile/data/repositories/account_actions_repository.dart';
 import 'package:communal_mobile/data/repositories/community_repository.dart';
+import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/core/services/pending_deep_link_service.dart';
 import 'package:communal_mobile/core/services/unread_notifications_service.dart';
 import 'package:communal_mobile/data/repositories/notifications_repository.dart';
 import 'package:communal_mobile/data/repositories/obligation_categories_repository.dart';
 import 'package:communal_mobile/data/repositories/profile_repository.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
+import 'package:communal_mobile/core/utils/device_label_service.dart';
+import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:get_it/get_it.dart';
 import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,6 +24,21 @@ final GetIt getIt = GetIt.instance;
 @InjectableInit()
 Future<void> configureDependencies() async {
   await getIt.init(); // calls the generated config
+
+  // Resolve device label in background; update User-Agent once ready.
+  // Fire-and-forget: the first login request may still use the basic
+  // platform-only UA, but all subsequent requests get the full label.
+  // ignore: unawaited_futures
+  getDeviceLabel().then((label) {
+    getIt<DioClient>().updateUserAgent(label);
+  });
+
+  // Send a stable device id on every request so the backend audit log can
+  // record `device` even on non-biometric (PIN) flows. Fire-and-forget.
+  // ignore: unawaited_futures
+  getIt<BiometricSignerService>().deviceId().then((id) {
+    getIt<DioClient>().setDeviceId(id);
+  });
   // Defensive: injectable has occasionally emitted duplicate [KycProgressStorage] module
   // providers, which can leave GetIt without a resolvable registration.
   if (!getIt.isRegistered<KycProgressStorage>()) {

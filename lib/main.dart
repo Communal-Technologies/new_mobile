@@ -18,6 +18,7 @@ import 'package:communal_mobile/cubits/settings/settings_cubit.dart';
 import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
 import 'package:communal_mobile/cubits/security/security_cubit.dart';
 import 'package:communal_mobile/core/services/push_notification_service.dart';
+import 'package:communal_mobile/core/services/screenshot_service.dart';
 import 'package:communal_mobile/core/widgets/connectivity_listener.dart';
 import 'package:communal_mobile/core/widgets/security_wrapper.dart';
 import 'package:communal_mobile/data/local/theme_mode_controller.dart';
@@ -32,6 +33,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   _assertBuildTimeConfig();
   await configureDependencies();
+  // Re-apply screenshot preference from last session.
+  unawaited(ScreenshotService.applyFromPrefs());
 
   // Push notifications used to live here behind an `await`, blocking
   // runApp on Firebase.initializeApp + local-notif channel creation +

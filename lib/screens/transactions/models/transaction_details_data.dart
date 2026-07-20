@@ -45,6 +45,9 @@ class TransactionDetailsData {
     this.isIncoming = true,
     this.bankLogoAsset,
     this.currencyCode,
+    this.extraDetails = const [],
+    this.balanceBeforeMinor,
+    this.balanceAfterMinor,
   });
 
   final String id;
@@ -71,6 +74,26 @@ class TransactionDetailsData {
   /// New code should always pass it so non-NGN amounts format with the
   /// right decimal count.
   final String? currencyCode;
+
+  /// Extra label/value rows rendered in the details card after the standard
+  /// rows — e.g. bill consumer details (Provider, Phone/Smartcard/Meter,
+  /// Plan, Purchase type). Empty for ordinary transactions.
+  final List<MapEntry<String, String>> extraDetails;
+
+  /// Wallet balance (minor units) before/after this transaction, for the
+  /// receipt's on-screen balance line. Null when not captured. Deliberately
+  /// NOT rendered into the shared/downloaded receipt image.
+  final int? balanceBeforeMinor;
+  final int? balanceAfterMinor;
+
+  String? _balanceLabel(int? minor) {
+    if (minor == null) return null;
+    final code = (currencyCode ?? 'NGN').toUpperCase();
+    return '$currencySymbol${Money(minor, code).format(symbol: false)}';
+  }
+
+  String? get balanceBeforeLabel => _balanceLabel(balanceBeforeMinor);
+  String? get balanceAfterLabel => _balanceLabel(balanceAfterMinor);
 
   // Always show the canonical decimals for the active currency
   // (kobo for NGN, cents for USD, etc.) so the receipt matches the
@@ -127,6 +150,9 @@ class TransactionDetailsData {
     String? failureReason,
     bool clearFailureReason = false,
     String? currencyCode,
+    List<MapEntry<String, String>>? extraDetails,
+    int? balanceBeforeMinor,
+    int? balanceAfterMinor,
   }) {
     return TransactionDetailsData(
       id: id ?? this.id,
@@ -150,6 +176,9 @@ class TransactionDetailsData {
           ? null
           : (failureReason ?? this.failureReason),
       currencyCode: currencyCode ?? this.currencyCode,
+      extraDetails: extraDetails ?? this.extraDetails,
+      balanceBeforeMinor: balanceBeforeMinor ?? this.balanceBeforeMinor,
+      balanceAfterMinor: balanceAfterMinor ?? this.balanceAfterMinor,
     );
   }
 }

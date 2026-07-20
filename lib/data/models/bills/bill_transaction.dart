@@ -70,20 +70,34 @@ class BillTransaction {
       status == BillStatus.reversed;
 
   factory BillTransaction.fromJson(Map<String, dynamic> json) {
+    // billsvc returns `amount` in naira (float); convert to kobo for storage.
+    // Legacy path may have returned kobo directly; the naira branch handles both.
     final amountRaw = json['amount'];
-    final amount = amountRaw is num
-        ? amountRaw.toInt()
-        : int.tryParse('${amountRaw ?? ''}') ?? 0;
+    final int amountMinorValue;
+    if (amountRaw is double) {
+      amountMinorValue = (amountRaw * 100).round();
+    } else if (amountRaw is num) {
+      // Could be an integer naira value from billsvc — treat as naira.
+      amountMinorValue = (amountRaw.toDouble() * 100).round();
+    } else {
+      amountMinorValue =
+          int.tryParse('${amountRaw ?? ''}') ?? 0;
+    }
+
+    // billsvc sends `transaction_type`; legacy/docs used `type`.
+    final typeRaw =
+        json['transaction_type']?.toString() ?? json['type']?.toString();
     return BillTransaction(
       id: json['id']?.toString(),
       reference: (json['reference'] ?? '').toString(),
       externalReference: json['external_reference']?.toString(),
-      type: _parseType(json['type']?.toString()),
-      amountMinor: amount,
+      type: _parseType(typeRaw),
+      amountMinor: amountMinorValue,
       currency: (json['currency'] ?? 'NGN').toString(),
       status: _parseStatus(json['status']?.toString()),
       senderAccount: json['sender_account']?.toString(),
-      receiverAccount: json['receiver_account']?.toString(),
+      receiverAccount:
+          (json['receiver_account'] ?? json['recipient'])?.toString(),
       createdAt: DateTime.tryParse('${json['created_at'] ?? ''}'),
       updatedAt: DateTime.tryParse('${json['updated_at'] ?? ''}'),
     );

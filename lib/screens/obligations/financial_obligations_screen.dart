@@ -23,6 +23,7 @@ import 'package:communal_mobile/data/models/obligation.dart';
 import 'package:communal_mobile/data/models/obligation_category.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/screens/obligations/widgets/fine_detail_card.dart';
 import 'package:communal_mobile/screens/obligations/widgets/obligation_card.dart';
 
 class FinancialObligationsScreen extends StatefulWidget {
@@ -612,22 +613,12 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
     final widgets = <Widget>[];
 
     if (hasObligationFines || _loadingFines) {
-      widgets.add(
-        Text(
-          'Obligation Fines',
-          style: TextStyle(
-            fontSize: 19.sp,
-            fontWeight: FontWeight.w700,
-            color: theme.colorScheme.onSurface,
-          ),
-        ),
-      );
-      widgets.add(vSpace(12));
+      // (Header removed — the tab is already "Fines"; the sub-title was redundant.)
       if (_loadingFines) {
         widgets.add(const Center(child: AnimatedLogoLoader()));
       } else {
         for (int i = 0; i < filteredFines.length; i++) {
-          widgets.add(_FineDetailCard(fine: filteredFines[i], cooperativeId: coopId));
+          widgets.add(FineDetailCard(fine: filteredFines[i], cooperativeId: coopId));
           if (i != filteredFines.length - 1) widgets.add(vSpace(12));
         }
       }
@@ -680,139 +671,6 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
       'Dec',
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
-  }
-}
-
-class _FineDetailCard extends StatelessWidget {
-  const _FineDetailCard({required this.fine, required this.cooperativeId});
-
-  final FineRecord fine;
-  final String cooperativeId;
-
-  Color _statusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'paid':
-        return const Color(0xFF1AAE70);
-      case 'waived':
-        return const Color(0xFF5B5CE2);
-      case 'cancelled':
-        return Colors.grey;
-      default:
-        return const Color(0xFFD7263D);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    const accent = Color(0xFFD7263D);
-    final statusColor = _statusColor(fine.status);
-
-    return Container(
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(
-          color: isDark
-              ? accent.withValues(alpha: 0.25)
-              : const Color(0xFFFFCDD3),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? accent.withValues(alpha: 0.16)
-                      : const Color(0xFFFFEEF0),
-                  borderRadius: BorderRadius.circular(8.r),
-                ),
-                child: Text(
-                  fine.type,
-                  style: TextStyle(
-                    fontSize: 15.sp,
-                    color: accent,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8.r),
-                ),
-                child: Text(
-                  fine.status,
-                  style: TextStyle(
-                    fontSize: 15.sp,
-                    color: statusColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          vSpace(10),
-          Text(
-            fine.amountLabel,
-            style: TextStyle(
-              fontSize: 22.sp,
-              fontWeight: FontWeight.w700,
-              color: accent,
-            ),
-          ),
-          vSpace(6),
-          Text(
-            fine.description,
-            style: TextStyle(
-              fontSize: 17.sp,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
-          ),
-          vSpace(6),
-          Text(
-            fine.dateLabel,
-            style: TextStyle(fontSize: 15.sp, color: Colors.grey.shade500),
-          ),
-          if (fine.isPending && fine.id.isNotEmpty) ...[
-            vSpace(10),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => context.pushNamed(
-                  'fine-payment',
-                  extra: {'fine': fine, 'cooperativeId': cooperativeId},
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accent,
-                  foregroundColor: Colors.white,
-                  minimumSize: Size(double.infinity, 40.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  padding: EdgeInsets.symmetric(vertical: 8.h),
-                ),
-                child: Text(
-                  'Pay Fine',
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
   }
 }
 

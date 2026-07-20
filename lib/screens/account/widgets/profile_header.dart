@@ -84,7 +84,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
         // Tier label off auth state — KYC tier comes from /me, not the
         // profile row, so we read it here rather than putting it in the
         // profile model. Falls through to "Not verified" when missing.
-        final tierLabel = _tierLabel(user?.communalTier);
+        final tierLabel = _tierLabel(user?.communalTier, user?.kycStep1Submitted ?? false);
         final accountNumber =
             user?.walletAccountNumber?.trim().isNotEmpty == true
                 ? user!.walletAccountNumber!
@@ -181,9 +181,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
               spacing: 8.w,
               runSpacing: 8.h,
               children: [
-                _buildBadge(tierLabel, const Color(0xFF7434FF)),
-                if (user?.kycStep1Submitted == true)
-                  _buildBadge('KYC submitted', const Color(0xFF4CAF50)),
+                _buildBadge(tierLabel, _tierColor(user?.communalTier, user?.kycStep1Submitted ?? false)),
               ],
             ),
             vSpace(20),
@@ -212,12 +210,22 @@ class _ProfileHeaderState extends State<ProfileHeader> {
     );
   }
 
-  String _tierLabel(String? tier) {
+  String _tierLabel(String? tier, bool kycSubmitted) {
     final t = tier?.trim().toLowerCase();
     if (t == 'tier_1') return 'Tier 1';
     if (t == 'tier_2') return 'Tier 2';
     if (t == 'tier_3') return 'Tier 3';
+    if (kycSubmitted) return 'Verification pending';
     return 'Not verified';
+  }
+
+  Color _tierColor(String? tier, bool kycSubmitted) {
+    final t = tier?.trim().toLowerCase();
+    if (t == 'tier_1' || t == 'tier_2' || t == 'tier_3') {
+      return const Color(0xFF7434FF);
+    }
+    if (kycSubmitted) return const Color(0xFF4CAF50);
+    return const Color(0xFF7434FF);
   }
 
   String _initialsFor(String name) {

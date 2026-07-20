@@ -107,7 +107,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                     ),
                     vSpace(24),
                     const SupportHoursCard(),
-                    vSpace(100), // Space for bottom action bar
+                    vSpace(24),
                   ],
                 ),
               ),

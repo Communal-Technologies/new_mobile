@@ -84,7 +84,7 @@ class BalanceCard extends StatelessWidget {
                   child: OutlinedButton(
                     onPressed: onWithdraw,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF7434FF),
+                      foregroundColor: Colors.white,
                       side: const BorderSide(color: Colors.white, width: 1.5),
                       padding: EdgeInsets.symmetric(vertical: 12.h),
                       shape: RoundedRectangleBorder(

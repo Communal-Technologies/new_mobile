@@ -26,10 +26,12 @@ class _AnimatedLogoLoaderState extends State<AnimatedLogoLoader>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final asset = isDark ? Images.loaderWhite : Images.loader;
     return RotationTransition(
       turns: _controller,
       child: Image.asset(
-        Images.loader,
+        asset,
         width: widget.size.w,
         height: widget.size.w,
         fit: BoxFit.contain,

@@ -239,8 +239,17 @@ class Obligation {
             createdAt?.month ?? now.month,
             createdAt?.day ?? 1,
           );
-    // The card's "Next Due" shows the first of the following month.
-    final nextCycle = DateTime(periodStart.year, periodStart.month + 1, 1);
+    // Next due: the first future month-start strictly after today.
+    // We advance from periodStart+1 rather than hardcoding today so that
+    // obligations whose period is still in the future keep the right date.
+    // The loop handles the common case where the backend sends the original
+    // creation period (not the current billing cycle), which would otherwise
+    // freeze the label in the past.
+    DateTime nextCycle = DateTime(periodStart.year, periodStart.month + 1, 1);
+    final todayStart = DateTime(now.year, now.month, now.day);
+    while (!nextCycle.isAfter(todayStart)) {
+      nextCycle = DateTime(nextCycle.year, nextCycle.month + 1, 1);
+    }
     final minPayableMinor = _asInt(account?['min_amount_payable']);
     final totalShares = _asInt(account?['total_shares']);
     final costPerShareMinor = _asInt(account?['cost_per_share']);

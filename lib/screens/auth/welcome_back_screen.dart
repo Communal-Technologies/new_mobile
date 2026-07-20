@@ -467,14 +467,13 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
       }
     }
 
-    // Phone: keep the first 5 and last 2 digits visible, mask the middle.
-    if (input.length <= 7) {
+    // Phone: reveal only the last 4 digits, mask everything else.
+    if (input.length <= 4) {
       return '*' * input.length;
     }
-    final start = input.substring(0, 5);
-    final end = input.substring(input.length - 2);
-    final middle = '*' * (input.length - 7);
-    return '$start$middle$end';
+    final end = input.substring(input.length - 4);
+    final masked = '*' * (input.length - 4);
+    return '$masked$end';
   }
 
   /// Show logout confirmation dialog

@@ -434,11 +434,8 @@ class LoanRepository {
     final payload = <String, dynamic>{
       'ledger_number': ledger,
       'cooperative_id': cooperativeId,
-      // The backend approve flow reads `loan_data.duration` first
-      // (member-picked), falling back to scheme.max_duration_months.
-      // Passing `pickedDurationMonths` here is what plumbs the
-      // member's slider choice through to the materialised
-      // amortisation schedule.
+      'loan_code': scheme.loanCode,
+      'duration': pickedDurationMonths ?? scheme.effectiveMaxDuration,
       'loan_data': jsonEncode(scheme.toBackendJson(
         pickedDurationMonths: pickedDurationMonths,
       )),

@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:communal_mobile/core/services/push_notification_service.dart';
 import 'package:communal_mobile/core/services/unread_notifications_service.dart';
 import 'package:communal_mobile/core/widgets/loader_overlay.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
@@ -59,6 +61,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       if (mounted) await _refresh();
     } catch (_) {
       // Silent: tap-to-read is a soft action; refresh on next pull.
+    }
+  }
+
+  /// Marks the notification read, then — for actionable notifications
+  /// carrying a deep-link payload — navigates to the relevant detail
+  /// screen using the same resolver the push handler uses. Marking
+  /// always runs first, even if navigation resolves to nothing.
+  Future<void> _onTapNotification(NotificationModel n) async {
+    await _markAsRead(n);
+    final data = n.data;
+    if (data == null || data.isEmpty) return;
+    try {
+      final intent = await PushNotificationService.resolveIntent(data);
+      // 'notifications' is the resolver's fallback for non-actionable
+      // payloads — no point navigating to the screen we're on.
+      if (intent == null || intent.routeName == 'notifications') return;
+      if (!mounted) return;
+      context.goNamed(intent.routeName, extra: intent.extra);
+    } catch (_) {
+      // Navigation is best-effort; the row is already marked read.
     }
   }
 
@@ -156,7 +178,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     final n = items[index];
                     return _NotificationTile(
                       notification: n,
-                      onTap: () => _markAsRead(n),
+                      onTap: () => _onTapNotification(n),
                     );
                   },
                 );
@@ -240,6 +262,17 @@ class _NotificationTile extends StatelessWidget {
                   decoration: const BoxDecoration(
                     color: Color(0xFF7434FF),
                     shape: BoxShape.circle,
+                  ),
+                ),
+              if (notification.isActionable)
+                Padding(
+                  padding: EdgeInsets.only(left: 4.w, top: 2.h),
+                  child: Icon(
+                    Icons.chevron_right,
+                    size: 20.w,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.4),
                   ),
                 ),
             ],

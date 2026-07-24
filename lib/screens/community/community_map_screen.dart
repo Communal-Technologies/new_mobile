@@ -606,12 +606,14 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                 child: _loading
                     ? const Center(child: CircularProgressIndicator())
                     : _loadError != null
-                    ? Padding(
+                    ? SingleChildScrollView(
+                        controller: scrollController,
                         padding: EdgeInsets.symmetric(
                           horizontal: 24.w,
                           vertical: 24.h,
                         ),
                         child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(
                               Icons.error_outline,
@@ -638,9 +640,11 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                         ),
                       )
                     : communities.isEmpty
-                    ? Padding(
+                    ? SingleChildScrollView(
+                        controller: scrollController,
                         padding: EdgeInsets.only(top: 32.h),
                         child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(
                               Icons.location_off_outlined,

@@ -9,6 +9,7 @@ import 'package:communal_mobile/core/widgets/animated_logo_loader.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/subscription_expired_banner.dart';
+import 'package:communal_mobile/core/widgets/wallet_funding_required_banner.dart';
 import 'package:communal_mobile/data/models/obligation.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
 import 'package:communal_mobile/injection.dart';
@@ -194,6 +195,11 @@ class _FinePaymentScreenState extends State<FinePaymentScreen> {
         final isOnline = context.watch<ConnectivityCubit>().isConnected;
         final authUser = auth is AuthAuthenticated ? auth.user : null;
         final isSubscriptionActive = authUser?.isCooperativeSubscriptionActive ?? true;
+        // Wallet-funded (NIP) requires a funded wallet; obligation-funded only
+        // requires a configured transaction PIN.
+        final canFundSelectedMethod = _payMethod == _PayMethod.wallet
+            ? (authUser?.hasWalletBalance ?? false)
+            : (authUser?.hasSecurityPin ?? false);
         final bankSubtitleExtra = _payMethod == _PayMethod.wallet
             ? (_loadingCashRepos ? 'Loading cooperative accounts…' : (_cashRepoError ?? ''))
             : '';
@@ -229,6 +235,17 @@ class _FinePaymentScreenState extends State<FinePaymentScreen> {
                 children: [
                   if (!isSubscriptionActive)
                     SubscriptionExpiredBanner(endDate: authUser?.subscriptionEndDate),
+                  if (_payMethod == _PayMethod.wallet &&
+                      !(authUser?.hasWalletBalance ?? false))
+                    const WalletFundingRequiredBanner(),
+                  if (_payMethod == _PayMethod.obligation &&
+                      !(authUser?.hasSecurityPin ?? false))
+                    const WalletFundingRequiredBanner(
+                      title: 'Transaction PIN required',
+                      message:
+                          'Set up your transaction PIN to pay from an '
+                          'obligation. Configure it in settings to continue.',
+                    ),
                   _buildOverviewCard(auth),
                   vSpace(24),
                   _buildAmountInput(),
@@ -330,7 +347,10 @@ class _FinePaymentScreenState extends State<FinePaymentScreen> {
               child: Padding(
                 padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
                 child: ElevatedButton(
-                  onPressed: isOnline && isSubscriptionActive ? _onContinue : null,
+                  onPressed:
+                      isOnline && isSubscriptionActive && canFundSelectedMethod
+                      ? _onContinue
+                      : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFD7263D),
                     minimumSize: Size(double.infinity, 52.h),
@@ -607,12 +627,10 @@ class _FinePaymentScreenState extends State<FinePaymentScreen> {
         style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
       );
     }
-    // Bounded + scrollable so a long list (e.g. 20+ obligations) doesn't push
-    // the rest of the form far down the page.
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: 320.h),
-      child: SingleChildScrollView(
-        child: Column(
+    // Grows to its natural height inside the page's single outer scroll view, so
+    // the narration field below it stays reachable (a nested scroll view here
+    // intercepts the outer scroll and hides the narration).
+    return Column(
       children: _sourceObligations.map((o) {
         final selected = _selectedSourceObligation?.accountCode == o.accountCode;
         return GestureDetector(
@@ -663,8 +681,6 @@ class _FinePaymentScreenState extends State<FinePaymentScreen> {
           ),
         );
       }).toList(),
-        ),
-      ),
     );
   }
 

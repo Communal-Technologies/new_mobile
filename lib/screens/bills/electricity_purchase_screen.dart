@@ -1,6 +1,9 @@
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/core/widgets/wallet_funding_required_banner.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/models/bills/bill_customer.dart';
 import 'package:communal_mobile/data/models/bills/bill_product.dart';
@@ -11,6 +14,7 @@ import 'package:communal_mobile/screens/bills/widgets/bill_brand_chip.dart';
 import 'package:communal_mobile/screens/bills/widgets/bill_inputs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
@@ -198,9 +202,14 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    final hasWalletBalance = authState is AuthAuthenticated
+        ? authState.user.hasWalletBalance
+        : false;
     final canContinue = _selectedProvider != null &&
         _selectedProduct != null &&
-        _validatedCustomer != null;
+        _validatedCustomer != null &&
+        hasWalletBalance;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Electricity'), elevation: 0),
@@ -210,6 +219,13 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (!hasWalletBalance) ...[
+                const WalletFundingRequiredBanner(
+                  message:
+                      'You need a funded Communal wallet to pay for '
+                      'electricity. Fund your wallet to continue.',
+                ),
+              ],
               _buildProviderPicker(),
               vSpace(20),
               _label('Meter type'),

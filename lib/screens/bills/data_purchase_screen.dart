@@ -1,8 +1,11 @@
 import 'dart:async';
 
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/core/widgets/wallet_funding_required_banner.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/models/bills/bill_product.dart';
 import 'package:communal_mobile/data/models/bills/bill_provider.dart';
@@ -14,6 +17,7 @@ import 'package:communal_mobile/screens/bills/widgets/bill_screen_hero.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
@@ -165,6 +169,10 @@ class _DataPurchaseScreenState extends State<DataPurchaseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    final hasWalletBalance = authState is AuthAuthenticated
+        ? authState.user.hasWalletBalance
+        : false;
     return Scaffold(
       appBar: AppBar(title: const Text('Buy data'), elevation: 0),
       body: SafeArea(
@@ -180,6 +188,13 @@ class _DataPurchaseScreenState extends State<DataPurchaseScreen> {
                 accent: Color(0xFF2BA6FF),
               ),
               vSpace(20),
+              if (!hasWalletBalance) ...[
+                const WalletFundingRequiredBanner(
+                  message:
+                      'You need a funded Communal wallet to buy data. '
+                      'Fund your wallet to continue.',
+                ),
+              ],
               _buildProviderPicker(),
               vSpace(20),
               _label('Phone number'),
@@ -205,7 +220,10 @@ class _DataPurchaseScreenState extends State<DataPurchaseScreen> {
         child: Padding(
           padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
           child: ElevatedButton(
-            onPressed: (_selectedProvider == null || _selectedProduct == null)
+            onPressed:
+                (_selectedProvider == null ||
+                    _selectedProduct == null ||
+                    !hasWalletBalance)
                 ? null
                 : _onContinue,
             style: ElevatedButton.styleFrom(

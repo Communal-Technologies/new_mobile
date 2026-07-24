@@ -53,6 +53,25 @@ class NetworkInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
+    // When an upstream is down, Nginx / PHP-FPM / a WAF returns an HTML
+    // error page (text/html) instead of our JSON envelope. Dio hands that
+    // body to callers as a raw String, and repositories that do
+    // `errorMessage = responseData` (or `e.toString()`) then paint the raw
+    // HTML on screen. Detect a non-JSON body here — the single chokepoint
+    // every request's error passes through — and rewrite it into the
+    // `{message: …}` shape the repositories already expect, so the friendly
+    // copy surfaces instead of markup.
+    final data = err.response?.data;
+    final contentType =
+        err.response?.headers.value('content-type')?.toLowerCase() ?? '';
+    final looksHtml = data is String &&
+        (data.trimLeft().startsWith('<') || contentType.contains('text/html'));
+    if (looksHtml) {
+      err.response!.data = {
+        'message': 'The server is currently unavailable. Please try again.',
+      };
+    }
+
     // Handle network errors
     if (err.type == DioExceptionType.connectionTimeout ||
         err.type == DioExceptionType.receiveTimeout ||

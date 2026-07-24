@@ -72,9 +72,12 @@ class ApiEndpoints {
       '$_v1/members/community-settings/$cooperativeId';
   static const String membersRedeemInviteCode =
       '$_v1/members/redeem-invite-code';
-  static const String fetchCooperatives = '$_v1/fetch-cooperatives';
+  // Cooperative discovery is owned by cooperative-svc (/api/cooperative/v2/...);
+  // the monolith copy 500s post-migration (InternalAccount prefix trap).
+  static const String fetchCooperatives =
+      '/api/cooperative/v2/fetch-cooperatives';
   static String fetchCooperativeProfile(String id) =>
-      '$_v1/fetch-cooperative-profile/$id';
+      '/api/cooperative/v2/fetch-cooperative-profile/$id';
   static String cooperativeStats(String id) =>
       '/api/cooperative/v2/cooperative-stats/$id';
   static const String membersJoinRequests = '$_v1/members/join-requests';

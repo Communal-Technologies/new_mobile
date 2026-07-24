@@ -181,12 +181,23 @@ class UserModel extends Equatable {
     return n != null && n.isNotEmpty;
   }
 
-  /// Home banner: Communal tier is already Tier 1+ (e.g. BVN submitted) but the
-  /// virtual account number is not on the user yet — provisioning / webhooks pending.
+  /// True when the user has a provisioned wallet AND a spendable balance.
+  /// Wallet-funded actions (transfers, bill payments, and the wallet/NIP option
+  /// on loan/obligation/fine payments) gate on this.
+  bool get hasWalletBalance =>
+      hasProvisionedWalletAccountNumber && walletBalanceKobo > 0;
+
+  /// Home banner: KYC step 2 (bank/BVN) is in — either the backend has already
+  /// promoted the tier (tier_1/tier_2) or the tier is still tier_0 but step 2 was
+  /// submitted / the workflow reports tier2_submitted — while the virtual account
+  /// number is not on the user yet (provisioning / review pending).
   bool get shouldShowHomeKycPendingWalletProvisioning {
     if (hasProvisionedWalletAccountNumber) return false;
     final t = communalTier?.trim().toLowerCase() ?? '';
-    return t == 'tier_1' || t == 'tier_2';
+    if (t == 'tier_1' || t == 'tier_2') return true;
+    if (kycStep2Submitted) return true;
+    final w = kycWorkflowStatus?.trim().toLowerCase() ?? '';
+    return w == 'tier2_submitted';
   }
 
   factory UserModel.fromJson(Map<String, dynamic> json) {

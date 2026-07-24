@@ -71,6 +71,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         u.walletAccountNumber?.trim() ?? '';
                     return wan(a) != wan(b) ||
                         (a.communalTier ?? '') != (b.communalTier ?? '') ||
+                        (a.kycWorkflowStatus ?? '') !=
+                            (b.kycWorkflowStatus ?? '') ||
+                        a.kycStep2Submitted != b.kycStep2Submitted ||
                         a.kycStep3Submitted != b.kycStep3Submitted;
                   },
                   builder: (context, authState) {

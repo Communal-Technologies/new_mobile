@@ -660,6 +660,9 @@ class _ActivityTile extends StatelessWidget {
       final hasTz = RegExp(r'(Z|[+-]\d{2}:?\d{2})$').hasMatch(trimmed);
       final normalized = hasTz ? trimmed : '${trimmed}Z';
       final dt = DateTime.parse(normalized).toLocal();
+      // Guard against zero/epoch dates from legacy rows that were written
+      // without a created_at (rendered as year 1, e.g. "30 Nov 0001").
+      if (dt.year < 2000) return '';
       // Always render the full date and time (including the year) so each
       // entry is unambiguous — e.g. "15 Jan 2024, 10:30 AM".
       return DateFormat('d MMM yyyy, h:mm a').format(dt);

@@ -259,6 +259,14 @@ class PushNotificationService {
     }
   }
 
+  /// Resolve a deep-link intent from a stored in-app notification's
+  /// `data` payload. Shares the exact routing + hydration logic used
+  /// for push taps so the Notifications screen navigates identically.
+  /// Returns null when the payload carries no actionable type.
+  static Future<DeepLinkIntent?> resolveIntent(
+    Map<String, dynamic> data,
+  ) => _intentForData(data);
+
   /// Async because some types need to hydrate a model from the
   /// backend (loan-detail expects a fully built [LoanApplication] in
   /// `extra`, not just an id). The unlock replay path stashes a
@@ -285,6 +293,10 @@ class PushNotificationService {
     if (type == 'loan' ||
         type == 'loan_status' ||
         type == 'loan_guarantor_rejected' ||
+        type == 'loan_guarantor_approved' ||
+        type == 'loan_guarantor_declined' ||
+        type == 'loan_guarantor_expired' ||
+        type == 'loan_guarantor_event' ||
         type == 'loan_repayment') {
       final loanId = (data['loan_id']?.toString() ?? '').trim();
       if (loanId.isNotEmpty) {

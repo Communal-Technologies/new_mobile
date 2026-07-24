@@ -80,11 +80,10 @@ class _LoanApplicationStep3ScreenState
         guarantorLedgers: guarantorLedgers,
       );
       if (!mounted) return;
-      // The current store endpoint returns a generic success message
-      // but no reference id; the latest pending application is the
-      // one we just created, so the success screen pulls it via the
-      // member's loan list rather than relying on the response body.
-      final referenceId = response['reference_id']?.toString();
+      final loan = response['loan'];
+      final referenceId = loan is Map
+          ? loan['reference_id']?.toString()
+          : response['reference_id']?.toString();
       context.pushReplacementNamed(
         'loan-application-success',
         extra: {

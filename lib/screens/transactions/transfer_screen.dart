@@ -3,6 +3,7 @@ import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/constants/images.dart';
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/core/widgets/wallet_funding_required_banner.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:communal_mobile/data/repositories/transactions_repository.dart';
@@ -82,6 +83,10 @@ class _TransferScreenState extends State<TransferScreen> {
 
   Widget _buildRootBody(BuildContext context) {
     final theme = Theme.of(context);
+    final authState = context.watch<AuthBloc>().state;
+    final hasWalletBalance = authState is AuthAuthenticated
+        ? authState.user.hasWalletBalance
+        : false;
     return BlocListener<AuthBloc, AuthState>(
       listenWhen: (prev, next) {
         if (prev is AuthAuthenticated && next is AuthAuthenticated) {
@@ -116,11 +121,19 @@ class _TransferScreenState extends State<TransferScreen> {
                   ),
                 ),
                 vSpace(12),
+                if (!hasWalletBalance) ...[
+                  const WalletFundingRequiredBanner(
+                    message:
+                        'You need a funded Communal wallet before you can '
+                        'transfer money. Fund your wallet to continue.',
+                  ),
+                ],
                 _optionCard(
                   icon: Icons.group,
                   title: 'Internal Transfer',
                   subtitle: 'Send money to Communal members instantly',
                   tag: 'Internal',
+                  enabled: hasWalletBalance,
                   onTap: () => context.pushNamed('transfer-internal'),
                 ),
                 vSpace(12),
@@ -129,6 +142,7 @@ class _TransferScreenState extends State<TransferScreen> {
                   title: 'To Other Banks',
                   subtitle: 'Transfer funds to any bank account in Nigeria',
                   tag: 'External',
+                  enabled: hasWalletBalance,
                   onTap: () => context.pushNamed('transfer-external'),
                 ),
                 if (_favorites.isNotEmpty) ...[
@@ -352,6 +366,19 @@ class _TransferScreenState extends State<TransferScreen> {
   }
 
   void _openFavorite(TransferFavorite f) {
+    final auth = context.read<AuthBloc>().state;
+    final hasBalance =
+        auth is AuthAuthenticated && auth.user.hasWalletBalance;
+    if (!hasBalance) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Fund your Communal wallet before making a transfer.',
+          ),
+        ),
+      );
+      return;
+    }
     if (f.isInternal) {
       context.pushNamed(
         'transfer-internal-amount',
@@ -402,6 +429,7 @@ class _TransferScreenState extends State<TransferScreen> {
     required String subtitle,
     required String tag,
     required VoidCallback onTap,
+    bool enabled = true,
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -420,8 +448,10 @@ class _TransferScreenState extends State<TransferScreen> {
         ? theme.primaryColor
         : (isDark ? externalAccent : const Color(0xFF1565C0));
 
-    return InkWell(
-      onTap: onTap,
+    return Opacity(
+      opacity: enabled ? 1 : 0.5,
+      child: InkWell(
+      onTap: enabled ? onTap : null,
       borderRadius: BorderRadius.circular(12.r),
       child: Container(
         width: double.infinity,
@@ -472,6 +502,7 @@ class _TransferScreenState extends State<TransferScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

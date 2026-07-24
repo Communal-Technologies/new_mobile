@@ -27,6 +27,7 @@ class NotificationModel {
     required this.status,
     required this.type,
     required this.createdAt,
+    this.data,
   });
 
   final String id;
@@ -37,11 +38,26 @@ class NotificationModel {
   final NotificationType type;
   final DateTime? createdAt;
 
+  /// Deep-link payload persisted alongside the row (push `type` + ids).
+  /// Drives tap-to-navigate; null/empty for informational messages.
+  final Map<String, dynamic>? data;
+
   bool get isUnread => status == NotificationStatus.unread;
+
+  /// True when this notification carries an actionable deep-link target.
+  bool get isActionable {
+    final t = data?['type']?.toString().trim() ?? '';
+    return t.isNotEmpty;
+  }
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     DateTime? parse(dynamic v) {
       if (v is String && v.isNotEmpty) return DateTime.tryParse(v);
+      return null;
+    }
+
+    Map<String, dynamic>? parseData(dynamic v) {
+      if (v is Map) return Map<String, dynamic>.from(v);
       return null;
     }
 
@@ -53,6 +69,7 @@ class NotificationModel {
       status: _parseStatus(json['status']?.toString()),
       type: _parseType(json['type']?.toString()),
       createdAt: parse(json['created_at']),
+      data: parseData(json['data']),
     );
   }
 
@@ -65,6 +82,7 @@ class NotificationModel {
       status: status ?? this.status,
       type: type,
       createdAt: createdAt,
+      data: data,
     );
   }
 }

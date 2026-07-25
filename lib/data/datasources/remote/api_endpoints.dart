@@ -80,6 +80,11 @@ class ApiEndpoints {
       '/api/cooperative/v2/fetch-cooperative-profile/$id';
   static String cooperativeStats(String id) =>
       '/api/cooperative/v2/cooperative-stats/$id';
+  // Member cooperative ratings are owned by cooperative-svc.
+  static String cooperativeRating(String cooperativeId) =>
+      '/api/cooperative/v2/cooperatives/$cooperativeId/rating';
+  static String cooperativeRatingMine(String cooperativeId) =>
+      '/api/cooperative/v2/cooperatives/$cooperativeId/rating/mine';
   static const String membersJoinRequests = '$_v1/members/join-requests';
   static const String membersJoinRequestsMine =
       '$_v1/members/join-requests/mine';

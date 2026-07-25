@@ -11,6 +11,7 @@ import 'package:communal_mobile/data/local/biometric_prefs.dart';
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
+import 'package:communal_mobile/data/repositories/community_settings_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
@@ -45,6 +46,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LoginRequested>(_onLoginRequested);
     on<LogoutRequested>(_onLogoutRequested);
     on<AuthUserUpdated>(_onAuthUserUpdated);
+    on<AuthCooperativeSwitched>(_onAuthCooperativeSwitched);
     on<AuthRefreshUserRequested>(_onAuthRefreshUserRequested);
     on<CheckAuthStatus>(_onCheckAuthStatus);
     on<CheckLoginRequested>(_onCheckLoginRequested);
@@ -160,12 +162,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           );
           if (user != null) {
             await _hydrateKycResumeFromBackend(user);
+            final effectiveUser = await _applyPersistedActiveCooperative(user);
             // Audit M5: session identifier is server-vouched on every cold
             // start (`/get-loggedin-user`), never read from local storage.
             emit(AuthAuthenticated(
-              userId: user.id,
-              login: user.login.trim(),
-              user: user,
+              userId: effectiveUser.id,
+              login: effectiveUser.login.trim(),
+              user: effectiveUser,
               sessionGeneration: 0,
             ));
           } else {
@@ -391,6 +394,58 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     ));
   }
 
+  Future<void> _onAuthCooperativeSwitched(
+    AuthCooperativeSwitched event,
+    Emitter<AuthState> emit,
+  ) async {
+    final s = state;
+    if (s is! AuthAuthenticated) return;
+    final coopId = event.cooperativeId.trim();
+    final ledger = event.ledgerNumber.trim();
+    if (coopId.isEmpty || ledger.isEmpty) return;
+    // No-op if already on that cooperative.
+    if (s.user.cooperativeId?.trim() == coopId &&
+        s.user.ledgerNumber?.trim() == ledger) {
+      return;
+    }
+
+    final switched = s.user.setActiveCooperative(
+      cooperativeId: coopId,
+      ledgerNumber: ledger,
+      cooperativeName: event.cooperativeName?.trim(),
+      cooperativeLogoUrl: event.cooperativeLogoUrl?.trim(),
+    );
+
+    // Persist so the choice survives a cold start (the full user is
+    // re-fetched, not restored, so this is re-applied in _onAppStarted).
+    await tokenManager.setActiveCooperative(coopId, ledger);
+
+    emit(AuthAuthenticated(
+      userId: s.userId,
+      login: s.login,
+      user: switched,
+      sessionGeneration: s.sessionGeneration + 1,
+    ));
+  }
+
+  /// Re-applies the persisted active-cooperative selection onto a freshly
+  /// fetched user. The selection only sticks when it matches one of the
+  /// member's actual memberships (the backend joins them as CSV on
+  /// `cooperative_id` / `ledger_number`); a stale selection (member left that
+  /// coop) is discarded and cleared so the app falls back to the default.
+  Future<UserModel> _applyPersistedActiveCooperative(UserModel user) async {
+    final saved = await tokenManager.readActiveCooperative();
+    if (saved == null) return user;
+    if (user.cooperativeId?.trim() == saved.cooperativeId &&
+        user.ledgerNumber?.trim() == saved.ledgerNumber) {
+      return user;
+    }
+    return user.setActiveCooperative(
+      cooperativeId: saved.cooperativeId,
+      ledgerNumber: saved.ledgerNumber,
+    );
+  }
+
   Future<void> _onAuthRefreshUserRequested(
     AuthRefreshUserRequested event,
     Emitter<AuthState> emit,
@@ -403,10 +458,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final user = await authRepository.getUserInfo(token);
       if (user != null) {
         await _hydrateKycResumeFromBackend(user);
+        final effectiveUser = await _applyPersistedActiveCooperative(user);
         emit(AuthAuthenticated(
-          userId: user.id.isNotEmpty ? user.id : s.userId,
+          userId: effectiveUser.id.isNotEmpty ? effectiveUser.id : s.userId,
           login: s.login,
-          user: user,
+          user: effectiveUser,
           sessionGeneration: s.sessionGeneration + 1,
         ));
       }
@@ -425,6 +481,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     await tokenManager.clear(); // access + refresh + expiry (audit M6)
     authRepository.clearToken(); // drop the in-memory dio bearer too
     await secureStorage.delete(key: 'user_id');
+    // Drop the cached cooperative membership list so the next user who signs
+    // in on this device doesn't briefly see the previous user's cooperatives
+    // in the sidebar (the repository is a lazySingleton and outlives the
+    // session otherwise).
+    try {
+      getIt<CommunitySettingsRepository>().invalidateMemberships();
+    } catch (_) {}
     // Back-compat: clear the legacy 'login' key so devices upgrading from
     // pre-audit-M5 builds don't carry forward the cached PII identifier.
     await secureStorage.delete(key: 'login');

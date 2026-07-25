@@ -44,6 +44,27 @@ class AuthUserUpdated extends AuthEvent {
   List<Object?> get props => [user];
 }
 
+/// Client-side cooperative switch. The cooperative_id + ledger_number are the
+/// only keys requests are keyed by, so switching re-keys the in-memory
+/// [UserModel] and persists the choice — no server round-trip required.
+class AuthCooperativeSwitched extends AuthEvent {
+  final String cooperativeId;
+  final String ledgerNumber;
+  final String? cooperativeName;
+  final String? cooperativeLogoUrl;
+
+  const AuthCooperativeSwitched({
+    required this.cooperativeId,
+    required this.ledgerNumber,
+    this.cooperativeName,
+    this.cooperativeLogoUrl,
+  });
+
+  @override
+  List<Object?> get props =>
+      [cooperativeId, ledgerNumber, cooperativeName, cooperativeLogoUrl];
+}
+
 class CheckAuthStatus extends AuthEvent {}
 
 /// Refresh the authenticated user from the API without clearing session (silent poll).

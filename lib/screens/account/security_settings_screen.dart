@@ -3,6 +3,7 @@ import 'package:communal_mobile/core/services/screenshot_service.dart';
 import 'package:communal_mobile/core/utils/biometric_service.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
+import 'package:communal_mobile/data/repositories/notifications_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -46,22 +47,63 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
   }
 
   Future<void> _loadAlertPrefs() async {
+    // Show the cached toggle state immediately, then reconcile with the
+    // server-authoritative preferences (login_alert/transaction_alert live on
+    // the notification-preferences row that drives backend alert dispatch).
     final prefs = getIt<SharedPreferences>();
-    if (!mounted) return;
-    setState(() {
-      _loginAlertEnabled = prefs.getBool(_kLoginAlert) ?? true;
-      _transactionAlertEnabled = prefs.getBool(_kTxAlert) ?? true;
-    });
+    if (mounted) {
+      setState(() {
+        _loginAlertEnabled = prefs.getBool(_kLoginAlert) ?? true;
+        _transactionAlertEnabled = prefs.getBool(_kTxAlert) ?? true;
+      });
+    }
+    try {
+      final server = await getIt<NotificationsRepository>().fetchPreferences();
+      if (!mounted) return;
+      setState(() {
+        _loginAlertEnabled = server.loginAlert;
+        _transactionAlertEnabled = server.transactionAlert;
+      });
+      await prefs.setBool(_kLoginAlert, server.loginAlert);
+      await prefs.setBool(_kTxAlert, server.transactionAlert);
+    } catch (_) {
+      // Offline / transient — keep the cached values.
+    }
+  }
+
+  Future<void> _persistAlertPref(
+    String prefsKey,
+    String apiField,
+    bool value,
+    VoidCallback revert,
+  ) async {
+    await getIt<SharedPreferences>().setBool(prefsKey, value);
+    try {
+      await getIt<NotificationsRepository>()
+          .updatePreferences({apiField: value});
+    } catch (e) {
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      revert();
+      await getIt<SharedPreferences>().setBool(prefsKey, !value);
+      messenger.showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
   }
 
   void _setLoginAlert(bool v) {
     setState(() => _loginAlertEnabled = v);
-    getIt<SharedPreferences>().setBool(_kLoginAlert, v);
+    _persistAlertPref(_kLoginAlert, 'login_alert', v, () {
+      setState(() => _loginAlertEnabled = !v);
+    });
   }
 
   void _setTransactionAlert(bool v) {
     setState(() => _transactionAlertEnabled = v);
-    getIt<SharedPreferences>().setBool(_kTxAlert, v);
+    _persistAlertPref(_kTxAlert, 'transaction_alert', v, () {
+      setState(() => _transactionAlertEnabled = !v);
+    });
   }
 
   Future<void> _loadActivity() async {

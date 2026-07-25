@@ -29,6 +29,13 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
 
   CommunityDetailStats? _liveStats;
 
+  // Server-authoritative rating aggregate; overrides the sample/location value
+  // once loaded. Refreshed after the member submits their own rating.
+  double? _ratingAverage;
+  int? _ratingCount;
+  MemberRating? _myRating;
+  bool _submittingRating = false;
+
   CommunityDetail get detail => widget.detail;
 
   @override
@@ -36,6 +43,30 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     super.initState();
     _resolveMembership();
     _loadLiveStats();
+    _loadRating();
+  }
+
+  Future<void> _loadRating() async {
+    final coopId = detail.location.id;
+    try {
+      final profile =
+          await getIt<CommunityRepository>().fetchCooperativeProfile(coopId);
+      if (!mounted) return;
+      setState(() {
+        _ratingAverage = profile.ratingAverage;
+        _ratingCount = profile.ratingCount;
+      });
+    } catch (_) {
+      // Keep the sample/location aggregate on failure.
+    }
+    // Only members can have a rating on file.
+    try {
+      final mine = await getIt<CommunityRepository>().fetchMyRating(coopId);
+      if (!mounted) return;
+      setState(() => _myRating = mine);
+    } catch (_) {
+      // Non-member (403) or transient — leave _myRating null.
+    }
   }
 
   Future<void> _loadLiveStats() async {
@@ -71,6 +102,49 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     } catch (_) {
       // Silent: defaulting to "not a member" so the join CTA is at
       // worst shown when it shouldn't be — backend 409 covers us.
+    }
+  }
+
+  String _ratingLabel(CommunityLocation location) {
+    final avg = _ratingAverage ?? (location.rating > 0 ? location.rating : null);
+    final count = _ratingCount ?? location.ratingCount;
+    if (avg == null || count == 0) return 'No ratings yet';
+    return '${avg.toStringAsFixed(1)} ($count)';
+  }
+
+  Future<void> _openRatingSheet() async {
+    final result = await showModalBottomSheet<MemberRating>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _RatingBottomSheet(
+        cooperativeName: detail.location.name,
+        existing: _myRating,
+      ),
+    );
+    if (result == null || !mounted) return;
+
+    setState(() => _submittingRating = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await getIt<CommunityRepository>().submitRating(
+        cooperativeId: detail.location.id,
+        stars: result.stars,
+        review: result.review,
+      );
+      if (!mounted) return;
+      setState(() => _myRating = result);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Thanks for rating this community.')),
+      );
+      await _loadRating();
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => _submittingRating = false);
     }
   }
 
@@ -248,7 +322,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
               ),
               _buildHeaderMeta(
                 icon: Icons.star,
-                label: '${location.rating.toStringAsFixed(1)} (89)',
+                label: _ratingLabel(location),
               ),
             ],
           ),
@@ -302,19 +376,31 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                         ),
                       ),
               ),
-              hSpace(12),
-              Container(
-                width: 48.w,
-                height: 48.w,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              if (_isMember) ...[
+                hSpace(12),
+                InkWell(
+                  onTap: _submittingRating ? null : _openRatingSheet,
                   borderRadius: BorderRadius.circular(16.r),
+                  child: Container(
+                    width: 48.w,
+                    height: 48.w,
+                    decoration: BoxDecoration(
+                      color: _myRating != null
+                          ? const Color(0xFFEFE6FD)
+                          : Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(16.r),
+                    ),
+                    child: Icon(
+                      _myRating != null ? Icons.star : Icons.star_border,
+                      color: _myRating != null
+                          ? const Color(0xFF742CE7)
+                          : const Color(0xFF9E9EB5),
+                    ),
+                  ),
                 ),
-                child: const Icon(
-                  Icons.favorite_border,
-                  color: Color(0xFF9E9EB5),
-                ),
-              ),
+              ],
             ],
           ),
         ],
@@ -737,6 +823,138 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Icon(icon, color: color, size: 20.sp),
+    );
+  }
+}
+
+class _RatingBottomSheet extends StatefulWidget {
+  const _RatingBottomSheet({required this.cooperativeName, this.existing});
+
+  final String cooperativeName;
+  final MemberRating? existing;
+
+  @override
+  State<_RatingBottomSheet> createState() => _RatingBottomSheetState();
+}
+
+class _RatingBottomSheetState extends State<_RatingBottomSheet> {
+  late int _stars = widget.existing?.stars ?? 0;
+  late final TextEditingController _reviewController =
+      TextEditingController(text: widget.existing?.review ?? '');
+
+  @override
+  void dispose() {
+    _reviewController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 24.h),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40.w,
+                height: 4.h,
+                decoration: BoxDecoration(
+                  color: theme.dividerColor,
+                  borderRadius: BorderRadius.circular(2.r),
+                ),
+              ),
+            ),
+            vSpace(16),
+            Text(
+              'Rate ${widget.cooperativeName}',
+              style: TextStyle(
+                fontSize: 20.sp,
+                fontWeight: FontWeight.w700,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            vSpace(4),
+            Text(
+              'Your rating helps other members discover great communities.',
+              style: TextStyle(
+                fontSize: 15.sp,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            vSpace(16),
+            Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(5, (i) {
+                  final filled = i < _stars;
+                  return IconButton(
+                    onPressed: () => setState(() => _stars = i + 1),
+                    icon: Icon(
+                      filled ? Icons.star : Icons.star_border,
+                      color: const Color(0xFFFFC107),
+                      size: 36.sp,
+                    ),
+                  );
+                }),
+              ),
+            ),
+            vSpace(8),
+            TextField(
+              controller: _reviewController,
+              maxLines: 3,
+              maxLength: 1000,
+              decoration: InputDecoration(
+                hintText: 'Add a review (optional)',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+              ),
+            ),
+            vSpace(8),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _stars > 0
+                    ? () => Navigator.of(context).pop(
+                          MemberRating(
+                            stars: _stars,
+                            review: _reviewController.text.trim().isEmpty
+                                ? null
+                                : _reviewController.text.trim(),
+                          ),
+                        )
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF742CE7),
+                  foregroundColor: Colors.white,
+                  minimumSize: Size(double.infinity, 48.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16.r),
+                  ),
+                ),
+                child: Text(
+                  widget.existing != null ? 'Update Rating' : 'Submit Rating',
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

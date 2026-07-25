@@ -8,6 +8,8 @@ import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/data/models/community_membership_model.dart';
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
 import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
@@ -30,9 +32,12 @@ class CommunityScreen extends StatefulWidget {
 
 class _CommunityScreenState extends State<CommunityScreen> {
   int _currentIndex = 2;
-  String? _activeCommunityId;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late Future<List<Community>> _communitiesFuture;
+  // Raw memberships keyed by cooperative id — needed to dispatch a real
+  // cooperative switch (ledger number, name, logo) when the user picks a
+  // community tile. The [Community] UI model doesn't carry the ledger.
+  Map<String, CommunityMembership> _membershipsById = const {};
   // Pending join requests survive across app reload — without this, a
   // user who submitted a request, closed the app, and reopened it
   // would have no surface to see their pending state and might
@@ -49,6 +54,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   Future<List<Community>> _loadMemberships() async {
     final memberships = await getIt<CommunitySettingsRepository>()
         .fetchMemberships();
+    _membershipsById = {for (final m in memberships) m.cooperativeId: m};
     return memberships.map((m) => Community.fromMembership(m)).toList();
   }
 
@@ -143,7 +149,26 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     children: [
                       _buildTopBar(),
                       vSpace(20),
-                      ..._buildBody(snapshot),
+                      BlocBuilder<AuthBloc, AuthState>(
+                        buildWhen: (prev, next) {
+                          final p = prev is AuthAuthenticated
+                              ? prev.user.cooperativeId
+                              : null;
+                          final n = next is AuthAuthenticated
+                              ? next.user.cooperativeId
+                              : null;
+                          return p != n;
+                        },
+                        builder: (context, authState) {
+                          final activeCoopId = authState is AuthAuthenticated
+                              ? authState.user.cooperativeId?.trim()
+                              : null;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: _buildBody(snapshot, activeCoopId),
+                          );
+                        },
+                      ),
                       if (_pendingRequests.isNotEmpty) ...[
                         vSpace(16),
                         ..._pendingRequests.map(_buildPendingBanner),
@@ -222,7 +247,29 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
   }
 
-  List<Widget> _buildBody(AsyncSnapshot<List<Community>> snapshot) {
+  void _switchToCommunity(Community community) {
+    final m = _membershipsById[community.id];
+    if (m == null) return;
+    final auth = context.read<AuthBloc>();
+    final current = auth.state;
+    final activeId =
+        current is AuthAuthenticated ? current.user.cooperativeId?.trim() : null;
+    if (activeId == m.cooperativeId.trim()) return;
+    auth.add(AuthCooperativeSwitched(
+      cooperativeId: m.cooperativeId,
+      ledgerNumber: m.ledgerNumber,
+      cooperativeName: m.cooperativeName,
+      cooperativeLogoUrl: m.logoUrl,
+    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Switched to ${m.cooperativeName}.')),
+    );
+  }
+
+  List<Widget> _buildBody(
+    AsyncSnapshot<List<Community>> snapshot,
+    String? activeCoopId,
+  ) {
     if (snapshot.connectionState == ConnectionState.waiting) {
       return [
         Padding(
@@ -253,19 +300,29 @@ class _CommunityScreenState extends State<CommunityScreen> {
     if (communities.isEmpty) {
       return [_buildEmptyState()];
     }
-    final featured = communities.firstWhere(
-      (c) => c.isFeatured,
-      orElse: () => communities.first,
-    );
-    _activeCommunityId ??= featured.id;
+    // The featured card mirrors the *active* cooperative (the one the rest of
+    // the app is scoped to), so switching updates it. Fall back to the
+    // default membership, then the first, when auth state has no active id.
+    final active = activeCoopId != null && activeCoopId.isNotEmpty
+        ? communities.firstWhere(
+            (c) => c.id == activeCoopId,
+            orElse: () => communities.firstWhere(
+              (c) => c.isFeatured,
+              orElse: () => communities.first,
+            ),
+          )
+        : communities.firstWhere(
+            (c) => c.isFeatured,
+            orElse: () => communities.first,
+          );
     return [
       FeaturedCommunityCard(
-        community: featured,
+        community: active,
         // Open Chat is hidden inside FeaturedCommunityCard with a TODO
         // until in-app chat ships. Callback is left wired so we don't
         // have to thread state through if/when it returns.
         onOpenChat: () => _showComingSoon('Open chat'),
-        onViewCommunity: () => _openCooperativeDetails(featured.id),
+        onViewCommunity: () => _openCooperativeDetails(active.id),
       ),
       vSpace(24),
       Text(
@@ -280,8 +337,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
       ...communities.map(
         (community) => CommunityTile(
           community: community,
-          isActive: community.id == _activeCommunityId,
-          onSelect: () => setState(() => _activeCommunityId = community.id),
+          isActive: community.id == active.id,
+          onSelect: () => _switchToCommunity(community),
         ),
       ),
     ];

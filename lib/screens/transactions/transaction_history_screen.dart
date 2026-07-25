@@ -191,15 +191,18 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       if (delivery == 'email' || delivery == 'both') {
         if (!mounted) return;
         final sent = result['email_sent'] == true;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              sent
-                  ? 'Statement sent to your email.'
-                  : 'Statement generated, but email delivery failed.',
-            ),
-          ),
-        );
+        final queued = result['email_queued'] == true;
+        final String msg;
+        if (sent) {
+          msg = 'Statement sent to your email.';
+        } else if (queued) {
+          msg = 'Statement queued — it will arrive in your email shortly.';
+        } else {
+          msg = 'Statement generated, but email delivery failed.';
+        }
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(msg)));
       }
     } catch (e) {
       if (!mounted) return;

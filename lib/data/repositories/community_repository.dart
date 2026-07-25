@@ -26,6 +26,23 @@ class CommunityJoinResult {
   }
 }
 
+/// The caller's own rating for a cooperative (cooperative-svc).
+class MemberRating {
+  MemberRating({required this.stars, this.review});
+
+  final int stars;
+  final String? review;
+
+  factory MemberRating.fromJson(Map<String, dynamic> json) {
+    final s = json['stars'];
+    final r = json['review']?.toString();
+    return MemberRating(
+      stars: s is num ? s.toInt() : int.tryParse(s?.toString() ?? '') ?? 0,
+      review: (r == null || r.trim().isEmpty) ? null : r.trim(),
+    );
+  }
+}
+
 enum JoinRequestStatus { pending, approved, declined, cancelled, unknown }
 
 JoinRequestStatus _parseStatus(String? raw) {
@@ -217,6 +234,47 @@ class CommunityRepository {
         );
       }
       throw Exception('Unexpected response from server.');
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  /// Submit (or update) the caller's 1-5 star rating for a cooperative they
+  /// belong to. Owned by cooperative-svc; upserts on (member, cooperative).
+  /// 403 when the caller is not a member; 422 on an out-of-range score.
+  Future<void> submitRating({
+    required String cooperativeId,
+    required int stars,
+    String? review,
+  }) async {
+    try {
+      await _dioClient.post(
+        ApiEndpoints.cooperativeRating(cooperativeId),
+        data: {
+          'stars': stars,
+          if (review != null && review.trim().isNotEmpty)
+            'review': review.trim(),
+        },
+      );
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  /// The caller's own rating for a cooperative, or null when they have not
+  /// rated it yet. Used to pre-fill the rating sheet.
+  Future<MemberRating?> fetchMyRating(String cooperativeId) async {
+    try {
+      final response = await _dioClient.get(
+        ApiEndpoints.cooperativeRatingMine(cooperativeId),
+      );
+      final body = response.data;
+      if (body is Map && body['rating'] is Map) {
+        return MemberRating.fromJson(
+          Map<String, dynamic>.from(body['rating'] as Map),
+        );
+      }
+      return null;
     } on DioException catch (e) {
       throw Exception(_messageFromDio(e));
     }

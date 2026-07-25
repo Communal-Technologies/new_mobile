@@ -587,18 +587,6 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
                         ),
                       ),
                     ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () {},
-                      child: Text(
-                        'View all',
-                        style: TextStyle(
-                          fontSize: 17.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF7434FF),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),

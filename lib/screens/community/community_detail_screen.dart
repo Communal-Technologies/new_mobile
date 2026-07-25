@@ -464,16 +464,22 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16.r),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16.sp, color: const Color(0xFF5B5CE2)),
-          hSpace(6),
-          Text(
-            label,
-            style: TextStyle(fontSize: 16.sp, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
-          ),
-        ],
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: 0.7.sw),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16.sp, color: const Color(0xFF5B5CE2)),
+            hSpace(6),
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 16.sp, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

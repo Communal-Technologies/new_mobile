@@ -145,13 +145,6 @@ class AccountLimitsScreen extends StatelessWidget {
                     disableUpgrade: tier2Pending,
                     upgradeButtonLabel:
                         tier2Pending ? 'Submitted - pending review' : null,
-                    statusBadgeLabel: tier2Pending
-                        ? 'Pending'
-                        : (tier2Rejected ? 'Rejected' : null),
-                    statusBadgeBgColor: tier2Pending
-                        ? const Color(0xFF3E267F)
-                        : (tier2Rejected ? const Color(0xFF7A1E1E) : null),
-                    statusBadgeColor: Colors.white,
                   ),
                   vSpace(24),
                   _buildKycBenefitSection(context),

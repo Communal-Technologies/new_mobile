@@ -102,7 +102,7 @@ class ApiEndpoints {
   static const String membersAccountClosureSubmit =
       '$_v1/members/account-closure/submit';
   static const String membersTransactionStatementExport =
-      '$_v1/members/transaction-statement/export';
+      '$_txnV2/members/statement/export';
 
   // --- Transfer (transactions micro-service at /api/transactions/v2) ------
   // Security-PIN verification is the one exception — it stays on the

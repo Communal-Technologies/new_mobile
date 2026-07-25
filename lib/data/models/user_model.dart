@@ -200,6 +200,100 @@ class UserModel extends Equatable {
     return w == 'tier2_submitted';
   }
 
+  UserModel copyWith({
+    String? id,
+    String? name,
+    String? login,
+    String? avatar,
+    bool? hasSecurityPin,
+    String? role,
+    String? cooperativeId,
+    String? cooperativeName,
+    String? cooperativeLogoUrl,
+    String? ledgerNumber,
+    String? firstName,
+    String? middleName,
+    String? lastName,
+    String? email,
+    String? phone,
+    String? countryIso,
+    String? communalTier,
+    String? kycStatus,
+    String? kycWorkflowStatus,
+    String? kycAnchorCustomerId,
+    bool? kycStep1Submitted,
+    bool? kycStep2Submitted,
+    bool? kycStep3Submitted,
+    TierLimitsSnapshot? tierLimits,
+    int? walletBalanceKobo,
+    int? walletPendingKobo,
+    int? walletLedgerKobo,
+    String? walletAccountNumber,
+    String? walletAccountName,
+    String? walletBankName,
+    String? walletAccountStatus,
+    String? walletFrozenBy,
+    String? walletCurrencyCode,
+    bool? subscriptionActive,
+    String? subscriptionEndDate,
+  }) {
+    return UserModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      login: login ?? this.login,
+      avatar: avatar ?? this.avatar,
+      hasSecurityPin: hasSecurityPin ?? this.hasSecurityPin,
+      role: role ?? this.role,
+      cooperativeId: cooperativeId ?? this.cooperativeId,
+      cooperativeName: cooperativeName ?? this.cooperativeName,
+      cooperativeLogoUrl: cooperativeLogoUrl ?? this.cooperativeLogoUrl,
+      ledgerNumber: ledgerNumber ?? this.ledgerNumber,
+      firstName: firstName ?? this.firstName,
+      middleName: middleName ?? this.middleName,
+      lastName: lastName ?? this.lastName,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      countryIso: countryIso ?? this.countryIso,
+      communalTier: communalTier ?? this.communalTier,
+      kycStatus: kycStatus ?? this.kycStatus,
+      kycWorkflowStatus: kycWorkflowStatus ?? this.kycWorkflowStatus,
+      kycAnchorCustomerId: kycAnchorCustomerId ?? this.kycAnchorCustomerId,
+      kycStep1Submitted: kycStep1Submitted ?? this.kycStep1Submitted,
+      kycStep2Submitted: kycStep2Submitted ?? this.kycStep2Submitted,
+      kycStep3Submitted: kycStep3Submitted ?? this.kycStep3Submitted,
+      tierLimits: tierLimits ?? this.tierLimits,
+      walletBalanceKobo: walletBalanceKobo ?? this.walletBalanceKobo,
+      walletPendingKobo: walletPendingKobo ?? this.walletPendingKobo,
+      walletLedgerKobo: walletLedgerKobo ?? this.walletLedgerKobo,
+      walletAccountNumber: walletAccountNumber ?? this.walletAccountNumber,
+      walletAccountName: walletAccountName ?? this.walletAccountName,
+      walletBankName: walletBankName ?? this.walletBankName,
+      walletAccountStatus: walletAccountStatus ?? this.walletAccountStatus,
+      walletFrozenBy: walletFrozenBy ?? this.walletFrozenBy,
+      walletCurrencyCode: walletCurrencyCode ?? this.walletCurrencyCode,
+      subscriptionActive: subscriptionActive ?? this.subscriptionActive,
+      subscriptionEndDate: subscriptionEndDate ?? this.subscriptionEndDate,
+    );
+  }
+
+  /// Re-keys the user to a different cooperative membership (client-side
+  /// cooperative switch). The cooperative_id + ledger_number are the only keys
+  /// requests are keyed by, so switching is purely a matter of swapping them
+  /// (plus the display name/logo) and re-emitting the auth state.
+  UserModel setActiveCooperative({
+    required String cooperativeId,
+    required String ledgerNumber,
+    String? cooperativeName,
+    String? cooperativeLogoUrl,
+  }) {
+    return copyWith(
+      cooperativeId: cooperativeId,
+      ledgerNumber: ledgerNumber,
+      cooperativeName: cooperativeName,
+      cooperativeLogoUrl: cooperativeLogoUrl,
+    );
+  }
+
   factory UserModel.fromJson(Map<String, dynamic> json) {
     final userMap = json['user'];
     final userData = userMap is Map

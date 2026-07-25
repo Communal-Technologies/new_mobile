@@ -16,6 +16,7 @@ class CommunityLocation {
     required this.rating,
     required this.coordinate,
     required this.markerHue,
+    this.ratingCount = 0,
     this.isFeatured = false,
     this.isVerified = false,
     this.isMember = false,
@@ -44,7 +45,8 @@ class CommunityLocation {
       minContribution: coop.minContributionKobo != null
           ? (coop.minContributionKobo! / 100).round()
           : 0,
-      rating: double.tryParse(coop.rating ?? '') ?? 0.0,
+      rating: coop.ratingAverage ?? double.tryParse(coop.rating ?? '') ?? 0.0,
+      ratingCount: coop.ratingCount,
       coordinate: coop.hasCoordinates
           ? LatLng(coop.latitude!, coop.longitude!)
           : null,
@@ -63,6 +65,7 @@ class CommunityLocation {
   final double distanceKm;
   final int minContribution;
   final double rating;
+  final int ratingCount;
   final LatLng? coordinate;
   final double markerHue;
   final bool isFeatured;

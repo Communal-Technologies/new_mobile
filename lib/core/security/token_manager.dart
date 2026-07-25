@@ -31,6 +31,8 @@ class TokenManager {
   static const String _kAccessKey = 'token';
   static const String _kRefreshKey = 'refresh_token';
   static const String _kExpKey = 'access_token_exp';
+  static const String _kActiveCoopKey = 'active_cooperative_id';
+  static const String _kActiveLedgerKey = 'active_ledger_number';
 
   /// Window before [_accessExpEpochSeconds] expires within which we treat
   /// the token as "about to expire" and refresh proactively. Tuned to be
@@ -123,6 +125,37 @@ class TokenManager {
     await _storage.delete(key: _kAccessKey);
     await _storage.delete(key: _kRefreshKey);
     await _storage.delete(key: _kExpKey);
+    await _storage.delete(key: _kActiveCoopKey);
+    await _storage.delete(key: _kActiveLedgerKey);
+  }
+
+  /// Persists the client-side active-cooperative selection so a cooperative
+  /// switch survives a cold start (the full [UserModel] is re-fetched, not
+  /// restored, so without this the app reverts to the backend's default coop).
+  Future<void> setActiveCooperative(
+      String cooperativeId, String ledgerNumber) async {
+    if (cooperativeId.isEmpty || ledgerNumber.isEmpty) return;
+    await _storage.write(key: _kActiveCoopKey, value: cooperativeId);
+    await _storage.write(key: _kActiveLedgerKey, value: ledgerNumber);
+  }
+
+  /// Returns the persisted active-cooperative selection, or null when none was
+  /// set (fresh install / never switched).
+  Future<({String cooperativeId, String ledgerNumber})?>
+      readActiveCooperative() async {
+    final coop = await _storage.read(key: _kActiveCoopKey);
+    final ledger = await _storage.read(key: _kActiveLedgerKey);
+    if (coop == null || coop.isEmpty || ledger == null || ledger.isEmpty) {
+      return null;
+    }
+    return (cooperativeId: coop, ledgerNumber: ledger);
+  }
+
+  /// Clears only the active-cooperative selection (e.g. the member left that
+  /// cooperative), without touching tokens.
+  Future<void> clearActiveCooperative() async {
+    await _storage.delete(key: _kActiveCoopKey);
+    await _storage.delete(key: _kActiveLedgerKey);
   }
 
   /// `true` when the current access token will expire within

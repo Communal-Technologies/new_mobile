@@ -20,6 +20,8 @@ class PublicCooperative {
     this.membersCount = 0,
     this.minContributionKobo,
     this.rating,
+    this.ratingAverage,
+    this.ratingCount = 0,
   });
 
   final String cooperativeId;
@@ -35,6 +37,12 @@ class PublicCooperative {
   final int membersCount;
   final int? minContributionKobo;
   final String? rating;
+
+  /// Aggregate member rating from cooperative-svc (tbl_cooperative_ratings).
+  /// Null until at least one member has rated; [ratingCount] is the number of
+  /// ratings that produced [ratingAverage].
+  final double? ratingAverage;
+  final int ratingCount;
 
   bool get hasCoordinates => latitude != null && longitude != null;
 
@@ -88,6 +96,8 @@ class PublicCooperative {
       membersCount: parseInt(json['members_count']) ?? 0,
       minContributionKobo: parseInt(json['min_contribution_kobo']),
       rating: json['rating']?.toString(),
+      ratingAverage: parseDouble(json['rating_average']),
+      ratingCount: parseInt(json['rating_count']) ?? 0,
     );
   }
 }

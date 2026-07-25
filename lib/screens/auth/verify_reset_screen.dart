@@ -227,12 +227,12 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
       return widget.contact;
     } else {
       // Mask phone
-      if (widget.contact.length >= 11) {
-        final prefix = widget.contact.substring(0, 7);
-        final suffix = widget.contact.substring(widget.contact.length - 4);
-        return '$prefix****$suffix';
+      if (widget.contact.length <= 7) {
+        return '*' * widget.contact.length;
       }
-      return widget.contact;
+      final start = widget.contact.substring(0, 3);
+      final end = widget.contact.substring(widget.contact.length - 4);
+      return '$start${'*' * (widget.contact.length - 7)}$end';
     }
   }
 

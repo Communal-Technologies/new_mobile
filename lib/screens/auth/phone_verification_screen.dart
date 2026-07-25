@@ -171,12 +171,13 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   }
 
   String get _maskedPhone {
-    if (widget.phoneNumber.length >= 11) {
-      final prefix = widget.phoneNumber.substring(0, 7);
-      final suffix = widget.phoneNumber.substring(widget.phoneNumber.length - 4);
-      return '$prefix****$suffix';
+    final phone = widget.phoneNumber;
+    if (phone.length <= 7) {
+      return '*' * phone.length;
     }
-    return widget.phoneNumber;
+    final start = phone.substring(0, 3);
+    final end = phone.substring(phone.length - 4);
+    return '$start${'*' * (phone.length - 7)}$end';
   }
 
   String get _title {

@@ -251,12 +251,29 @@ class PushNotificationService {
     try {
       // Same root-navigator-context rationale as above.
       // ignore: use_build_context_synchronously
-      ctx.goNamed(intent.routeName, extra: intent.extra);
+      _navigateToIntent(ctx, intent);
     } catch (_) {
       // Router refused (mid-rebuild or unknown route) — fall back to
       // queuing so the next safe moment can replay.
       pending?.store(intent);
     }
+  }
+
+  /// Navigate to a deep-link [intent] with `/home` (the dashboard) anchored
+  /// as the base of the stack, so the hardware back button from the opened
+  /// screen returns to the dashboard instead of exiting the app.
+  ///
+  /// A push tap can launch the app from terminated, where `goNamed` alone
+  /// would replace the whole stack with the single target route — leaving
+  /// back with nothing to pop. `go('/home')` resets the stack to `[/home]`
+  /// and the subsequent `push` stacks the target on top → back pops to home.
+  static void _navigateToIntent(BuildContext ctx, DeepLinkIntent intent) {
+    if (intent.routeName == 'home') {
+      ctx.goNamed(intent.routeName, extra: intent.extra);
+      return;
+    }
+    ctx.goNamed('home');
+    ctx.pushNamed(intent.routeName, extra: intent.extra);
   }
 
   /// Resolve a deep-link intent from a stored in-app notification's
@@ -392,7 +409,7 @@ class PushNotificationService {
     final ctx = rootNavigatorKey.currentContext;
     if (ctx == null) return;
     try {
-      ctx.goNamed(intent.routeName, extra: intent.extra);
+      _navigateToIntent(ctx, intent);
     } catch (_) {
       /* swallow — better no nav than a crash on resume */
     }

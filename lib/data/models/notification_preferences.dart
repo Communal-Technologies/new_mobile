@@ -6,6 +6,8 @@ class NotificationPreferences {
     this.pushNotifications = true,
     this.emailNotifications = true,
     this.smsNotifications = false,
+    this.loginAlert = true,
+    this.transactionAlert = true,
     this.paymentReminders = true,
     this.largeTransactions = true,
     this.promotionalOffers = false,
@@ -17,6 +19,8 @@ class NotificationPreferences {
   final bool pushNotifications;
   final bool emailNotifications;
   final bool smsNotifications;
+  final bool loginAlert;
+  final bool transactionAlert;
   final bool paymentReminders;
   final bool largeTransactions;
   final bool promotionalOffers;
@@ -37,6 +41,8 @@ class NotificationPreferences {
       pushNotifications: b('push_notifications', true),
       emailNotifications: b('email_notifications', true),
       smsNotifications: b('sms_notifications', false),
+      loginAlert: b('login_alert', true),
+      transactionAlert: b('transaction_alert', true),
       paymentReminders: b('payment_reminders', true),
       largeTransactions: b('large_transactions', true),
       promotionalOffers: b('promotional_offers', false),
@@ -51,6 +57,8 @@ class NotificationPreferences {
       'push_notifications': pushNotifications,
       'email_notifications': emailNotifications,
       'sms_notifications': smsNotifications,
+      'login_alert': loginAlert,
+      'transaction_alert': transactionAlert,
       'payment_reminders': paymentReminders,
       'large_transactions': largeTransactions,
       'promotional_offers': promotionalOffers,
@@ -64,6 +72,8 @@ class NotificationPreferences {
     bool? pushNotifications,
     bool? emailNotifications,
     bool? smsNotifications,
+    bool? loginAlert,
+    bool? transactionAlert,
     bool? paymentReminders,
     bool? largeTransactions,
     bool? promotionalOffers,
@@ -75,6 +85,8 @@ class NotificationPreferences {
       pushNotifications: pushNotifications ?? this.pushNotifications,
       emailNotifications: emailNotifications ?? this.emailNotifications,
       smsNotifications: smsNotifications ?? this.smsNotifications,
+      loginAlert: loginAlert ?? this.loginAlert,
+      transactionAlert: transactionAlert ?? this.transactionAlert,
       paymentReminders: paymentReminders ?? this.paymentReminders,
       largeTransactions: largeTransactions ?? this.largeTransactions,
       promotionalOffers: promotionalOffers ?? this.promotionalOffers,

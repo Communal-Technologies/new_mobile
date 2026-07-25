@@ -331,7 +331,8 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                 // Prefer the scheme title (e.g. "Welfare Loan") over the
                 // raw loan_code so the header is recognisable at a
                 // glance. displayLabel falls back to the code, then the
-                // reference id, when no title is available.
+                // reference id, when no title is available. The raw code
+                // is intentionally not shown as a subtitle.
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -343,18 +344,6 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                         color: Colors.white,
                       ),
                     ),
-                    if (_loan.loanTitle.trim().isNotEmpty &&
-                        _loan.loanCode.trim().isNotEmpty) ...[
-                      vSpace(2),
-                      Text(
-                        _loan.loanCode,
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          color: Colors.white.withValues(alpha: 0.85),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -452,17 +441,13 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           vSpace(12),
           if (_loan.referenceId.isNotEmpty)
             _detailRow('Reference', _loan.referenceId),
-          // Surface the scheme title up front so members recognise the
-          // loan; keep the bare code below as a separate Scheme code
-          // row for cross-referencing with admin tooling. When no title
-          // came back from the backend, fall through to the code only.
+          // Scheme shows the human-readable title (e.g. "Welfare Loan"),
+          // never the raw loan_code. Falls back to the code only when the
+          // backend returned no title for a legacy loan.
           if (_loan.loanTitle.trim().isNotEmpty)
-            _detailRow('Scheme', _loan.loanTitle.trim()),
-          if (_loan.loanCode.trim().isNotEmpty)
-            _detailRow(
-              _loan.loanTitle.trim().isNotEmpty ? 'Scheme code' : 'Scheme',
-              _loan.loanCode.trim(),
-            ),
+            _detailRow('Scheme', _loan.loanTitle.trim())
+          else if (_loan.loanCode.trim().isNotEmpty)
+            _detailRow('Scheme', _loan.loanCode.trim()),
           _detailRow('Principal', _loan.amountLabel),
           if (_loan.status == LoanStatus.approved) ...[
             _detailRow(
@@ -599,6 +584,11 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
 
   Widget _guarantorRow(LoanGuarantor g, {required bool actionable}) {
     final processing = _processingGuarantorActions.contains(g.approvalId);
+    // Loans use the orange brand accent; the guarantor actions previously
+    // inherited the app's purple primary (the obligations colour), making the
+    // loan area read as two products. Remind text stays legible in dark mode.
+    const loanOrange = Color(0xFFE67E22);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final (Color statusBg, Color statusFg, String label) = switch (g.status) {
       '1' => (const Color(0xFFE8F5E9), const Color(0xFF2E7D32), 'Approved'),
       '2' => (const Color(0xFFFDECEA), const Color(0xFFE74C3C), 'Declined'),
@@ -624,7 +614,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.person, size: 18.sp, color: const Color(0xFF7434FF)),
+                Icon(Icons.person, size: 18.sp, color: loanOrange),
                 hSpace(8),
                 Expanded(
                   child: Column(
@@ -689,6 +679,8 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                       child: OutlinedButton(
                         onPressed: processing ? null : () => _remindGuarantor(g),
                         style: OutlinedButton.styleFrom(
+                          foregroundColor: isDark ? Colors.white : loanOrange,
+                          side: BorderSide(color: loanOrange),
                           padding: EdgeInsets.symmetric(vertical: 10.h),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8.r),
@@ -723,7 +715,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                       child: ElevatedButton(
                         onPressed: processing ? null : () => _replaceGuarantor(g),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF7434FF),
+                          backgroundColor: loanOrange,
                           foregroundColor: Colors.white,
                           elevation: 0,
                           padding: EdgeInsets.symmetric(vertical: 10.h),

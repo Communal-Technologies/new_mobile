@@ -201,8 +201,18 @@ class _NotificationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final unread = notification.isUnread;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final Color tileColor;
+    if (unread) {
+      tileColor = isDark
+          ? const Color(0xFF7434FF).withValues(alpha: 0.18)
+          : const Color(0xFFEFE9FF);
+    } else {
+      tileColor = isDark ? theme.colorScheme.surface : Colors.white;
+    }
     return Material(
-      color: unread ? const Color(0xFFEFE9FF) : Colors.white,
+      color: tileColor,
       borderRadius: BorderRadius.circular(16.r),
       child: InkWell(
         borderRadius: BorderRadius.circular(16.r),

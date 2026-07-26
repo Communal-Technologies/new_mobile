@@ -53,7 +53,8 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
   // Active calibration values (derived from `_selectedScheme` if set,
   // otherwise the static fallbacks).
   double get _interestRate =>
-      _selectedScheme?.interestRate ?? _kFallbackInterestRate;
+      _selectedScheme?.rateForDuration(_loanDuration) ??
+      _kFallbackInterestRate;
   // Service charge from the backend is a flat fee in *minor units*
   // (kobo for NGN). It's added to the principal-derived interest as
   // a one-off cost — same shape as `LoanApplicationController`'s
@@ -83,14 +84,12 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
     return _kFallbackMaxDuration;
   }
 
-  /// Duration is locked only when the selected scheme has no real
-  /// range (min == max). Member-pickable schemes (the new shape from
-  /// Phase 1) leave the slider live so the member can pick any term
-  /// inside the cooperative's window.
+  /// The slider only moves on schemes where the cooperative let members
+  /// choose their own term; otherwise the term is fixed by the admin.
   bool get _durationLocked {
     final scheme = _selectedScheme;
     if (scheme == null) return false;
-    return !scheme.hasDurationRange;
+    return !scheme.memberCanPickDuration;
   }
 
   @override
@@ -124,14 +123,11 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
       if (!mounted) return;
       setState(() {
         _schemes = rows;
-        // Pick the first scheme by default. Snap the duration to the
-        // scheme's max so the summary reflects the most-conservative
-        // (longest term, lowest monthly) calculation immediately;
-        // the member can then drag the slider down within
-        // [min..max] for a faster repayment.
         if (rows.isNotEmpty) {
           _selectedScheme = rows.first;
-          final picked = rows.first.effectiveMaxDuration;
+          final picked = rows.first.memberCanPickDuration
+              ? rows.first.effectiveMinDuration
+              : rows.first.effectiveMaxDuration;
           if (picked > 0) {
             _loanDuration = picked;
           }
@@ -330,10 +326,9 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                   onTap: () {
                     setState(() {
                       _selectedScheme = scheme;
-                      // Snap to max on switch so the new scheme's
-                      // longest term is the visible default; member
-                      // can drag down within the new [min..max].
-                      final picked = scheme.effectiveMaxDuration;
+                      final picked = scheme.memberCanPickDuration
+                          ? scheme.effectiveMinDuration
+                          : scheme.effectiveMaxDuration;
                       if (picked > 0) {
                         _loanDuration = picked;
                       }

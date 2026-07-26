@@ -17,9 +17,7 @@ class LoanApplicationDraft {
   });
 
   /// Member-chosen duration within the scheme's [min..max] window.
-  /// Null when the scheme has a single fixed term (no slider was
-  /// shown). The repository falls back to [LoanScheme.effectiveMaxDuration]
-  /// when null.
+  /// Null when the scheme has a single fixed term (no slider was shown).
   final int? pickedDurationMonths;
 
   /// Scheme the member is applying under. Drives duration, guarantor
@@ -62,8 +60,15 @@ class LoanApplicationDraft {
     );
   }
 
-  /// Effective duration the apply call should use — the member's
-  /// pick if a slider was shown, otherwise the scheme's max.
+  /// Effective duration the apply call should use — the member's pick when
+  /// the scheme lets them choose, otherwise the scheme's max.
   int get effectiveDurationMonths =>
-      pickedDurationMonths ?? scheme.effectiveMaxDuration;
+      pickedDurationMonths ??
+      (scheme.memberCanPickDuration
+          ? scheme.effectiveMinDuration
+          : scheme.effectiveMaxDuration);
+
+  /// Interest rate the member was quoted for the term in this draft.
+  double get appliedInterestRate =>
+      scheme.rateForDuration(effectiveDurationMonths);
 }

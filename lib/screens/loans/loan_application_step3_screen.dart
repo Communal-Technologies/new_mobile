@@ -43,10 +43,11 @@ class _LoanApplicationStep3ScreenState
     scheme: widget.draft.scheme,
     interestType: widget.draft.interestType,
     currency: widget.draft.currency,
+    durationMonths: widget.draft.effectiveDurationMonths,
   );
 
   int get _interestMinor =>
-      (_principalMinor * widget.draft.scheme.interestRate / 100).round();
+      (_principalMinor * widget.draft.appliedInterestRate / 100).round();
 
   int get _totalMinor => widget.draft.interestType == '1'
       ? _principalMinor
@@ -157,6 +158,10 @@ class _LoanApplicationStep3ScreenState
                     vSpace(24),
                     _buildGuarantorsCard(),
                     vSpace(24),
+                    if (scheme.memberCanPickDuration) ...[
+                      _buildMemberTermNotice(),
+                      vSpace(24),
+                    ],
                     _buildTermsCard(),
                     vSpace(24),
                     _buildNoticeCard(),
@@ -247,8 +252,14 @@ class _LoanApplicationStep3ScreenState
             scheme.title.isNotEmpty ? scheme.title : scheme.loanCode,
           ),
           _row('Loan Amount', Money(_principalMinor, currency).format()),
-          _row('Duration', '${widget.draft.effectiveDurationMonths} month${widget.draft.effectiveDurationMonths == 1 ? '' : 's'}'),
-          _row('Interest Rate', scheme.interestRateLabel),
+          _row(
+            scheme.memberCanPickDuration ? 'Your Chosen Term' : 'Duration',
+            '${widget.draft.effectiveDurationMonths} month${widget.draft.effectiveDurationMonths == 1 ? '' : 's'}',
+          ),
+          _row(
+            'Interest Rate',
+            scheme.rateLabelForDuration(widget.draft.effectiveDurationMonths),
+          ),
           _row(
             'Interest Treatment',
             widget.draft.interestType == '1'
@@ -354,6 +365,61 @@ class _LoanApplicationStep3ScreenState
                   ),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMemberTermNotice() {
+    final months = widget.draft.effectiveDurationMonths;
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: const Color(0xFF742CE7).withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(
+          color: const Color(0xFF742CE7).withValues(alpha: 0.25),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.schedule_outlined,
+            size: 20.sp,
+            color: const Color(0xFF742CE7),
+          ),
+          hSpace(10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'You chose a $months-month term',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF742CE7),
+                  ),
+                ),
+                vSpace(4),
+                Text(
+                  'This loan will not be re-granted. You must clear it within '
+                  'the $months month${months == 1 ? '' : 's'} you selected — '
+                  'anything outstanding at the end becomes a debt to the '
+                  'cooperative and blocks any new loan until it is settled.',
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    height: 1.45,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.78),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

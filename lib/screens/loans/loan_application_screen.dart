@@ -252,7 +252,8 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                     // the cooperative's default) drives the math
                     // rendered below it.
                     _buildInterestTypeSection(),
-                    if (_selectedScheme != null && _selectedScheme!.hasDurationRange) ...[
+                    if (_selectedScheme != null &&
+                        _selectedScheme!.memberCanPickDuration) ...[
                       vSpace(24),
                       _buildDurationSection(),
                     ],
@@ -420,10 +421,14 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                   .toList(),
               onChanged: (s) => setState(() {
                 _selectedScheme = s;
-                // Snap to the new scheme's max so the most-conservative
-                // monthly figure is the visible default; the duration
-                // slider below lets the member shorten the term.
-                _pickedDuration = s?.effectiveMaxDuration;
+                // On a member-choice scheme start at the minimum — that is
+                // the cheapest rate, and every extra month the member adds
+                // raises it. Otherwise snap to max, the conservative figure.
+                _pickedDuration = s == null
+                    ? null
+                    : (s.memberCanPickDuration
+                          ? s.effectiveMinDuration
+                          : s.effectiveMaxDuration);
               }),
             ),
           ),
@@ -638,24 +643,24 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     );
   }
 
-  /// Phase 8 — member-pickable loan duration. Only rendered when the
-  /// selected scheme exposes a real range (min < max); otherwise the
-  /// term is fixed and we don't surface a slider that does nothing.
-  /// Snaps to scheme.effectiveMaxDuration on scheme change so the
-  /// most-conservative monthly is the visible default.
+  /// Member-chosen repayment term. Only rendered when the cooperative
+  /// opted the scheme in and the window is a real range. The rate rises
+  /// with the term, and these loans are never re-granted.
   Widget _buildDurationSection() {
     final scheme = _selectedScheme!;
     final theme = Theme.of(context);
-    final picked = _pickedDuration ?? scheme.effectiveMaxDuration;
     final min = scheme.effectiveMinDuration;
     final max = scheme.effectiveMaxDuration;
+    final picked = (_pickedDuration ?? min).clamp(min, max);
+    final rateLabel = scheme.rateLabelForDuration(picked);
+    final baseLabel = scheme.interestRateLabel;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             Text(
-              'Loan Duration',
+              'Choose Your Repayment Term',
               style: TextStyle(
                 fontSize: 17.sp,
                 fontWeight: FontWeight.w700,
@@ -710,6 +715,53 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             ),
           ],
         ),
+        vSpace(12),
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(12.w),
+          decoration: BoxDecoration(
+            color: const Color(0xFF742CE7).withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(10.r),
+            border: Border.all(
+              color: const Color(0xFF742CE7).withValues(alpha: 0.25),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.percent, size: 16.sp, color: const Color(0xFF742CE7)),
+                  hSpace(6),
+                  Expanded(
+                    child: Text(
+                      picked == min
+                          ? 'Interest rate: $rateLabel'
+                          : 'Interest rate: $rateLabel (base $baseLabel + longer term)',
+                      style: TextStyle(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF742CE7),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              vSpace(6),
+              Text(
+                'A longer term raises your interest rate. You must clear this '
+                'loan within the term you choose — it will not be re-granted, '
+                'and anything left unpaid at the end becomes a debt you owe '
+                'the cooperative.',
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  height: 1.4,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -724,12 +776,17 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         _eligibility?.defaultInterestType?.value ??
         '1';
     final principalMinor = (_loanAmount * factorFor(currency)).round();
-    final interestMinor = (principalMinor * scheme.interestRate / 100).round();
+    final installments = scheme.memberCanPickDuration
+        ? (_pickedDuration ?? scheme.effectiveMinDuration)
+        : (_pickedDuration ?? scheme.effectiveMaxDuration);
+    final appliedRate = scheme.rateForDuration(installments);
+    final interestMinor = (principalMinor * appliedRate / 100).round();
     final monthlyMinor = estimatedMonthlyRepaymentMinor(
       principalMinor: principalMinor,
       scheme: scheme,
       interestType: interestType,
       currency: currency,
+      durationMonths: installments,
     );
     // Repayment + disbursement per interest treatment:
     //  • '1' deduct now  → receive principal − interest; repay the principal.
@@ -742,13 +799,6 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         : principalMinor;
 
     final theme = Theme.of(context);
-    // Prefer the member's slider pick when the scheme exposes a real
-    // range; fall back to the legacy fixed term otherwise. The
-    // monthlyMinor below is still computed against scheme.durationMonths
-    // (the existing flat-interest helper) — for a non-default pick the
-    // displayed monthly is approximate; the materialised schedule on
-    // approval uses the picked duration via amortising math.
-    final installments = _pickedDuration ?? scheme.effectiveMaxDuration;
     final installmentLabel = installments == 1 ? 'installment' : 'installments';
 
     return Container(
@@ -788,7 +838,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           ),
           vSpace(4),
           Text(
-            'monthly · $installments $installmentLabel · ${scheme.interestRateLabel} interest',
+            'monthly · $installments $installmentLabel · ${scheme.rateLabelForDuration(installments)} interest',
             style: TextStyle(
               fontSize: 16.sp,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),

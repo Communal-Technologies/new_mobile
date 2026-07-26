@@ -22,6 +22,9 @@ class LoanScheme {
     required this.reGrantLimit,
     this.minDurationMonths,
     this.maxDurationMonths,
+    this.allowMemberDuration = false,
+    this.memberDurationRateMode,
+    this.memberDurationRateStep,
     this.interestType,
   });
 
@@ -62,10 +65,44 @@ class LoanScheme {
           ? maxDurationMonths!
           : durationMonths;
 
-  /// True when the scheme exposes a real range (min < max). Calculator
-  /// + apply form unlock the slider only in this case; otherwise the
-  /// duration is fixed and the slider is rendered read-only.
+  /// Admin opt-in: members may choose their own term inside the scheme
+  /// window. Loans taken this way are never re-granted, and the interest
+  /// rate escalates with the term via [memberDurationRateMode] /
+  /// [memberDurationRateStep].
+  final bool allowMemberDuration;
+
+  /// `'1'` adds [memberDurationRateStep] percentage points per extra month;
+  /// `'2'` scales the base rate by that many percent per extra month.
+  final String? memberDurationRateMode;
+  final double? memberDurationRateStep;
+
+  /// True when the scheme exposes a real range (min < max).
   bool get hasDurationRange => effectiveMaxDuration > effectiveMinDuration;
+
+  /// The member may only move the term when the admin opted in AND the
+  /// window is a real range.
+  bool get memberCanPickDuration => allowMemberDuration && hasDurationRange;
+
+  /// Interest rate a member is quoted for [months], mirroring the
+  /// backend's effectiveInterestRate so the app never shows a rate the
+  /// service would not apply.
+  double rateForDuration(int months) {
+    if (!allowMemberDuration || memberDurationRateStep == null) {
+      return interestRate;
+    }
+    final extra = months - effectiveMinDuration;
+    if (extra <= 0) return interestRate;
+    final step = memberDurationRateStep!;
+    final rate = memberDurationRateMode == '2'
+        ? interestRate * (1 + (step / 100) * extra)
+        : interestRate + step * extra;
+    return rate.clamp(0, 100).toDouble();
+  }
+
+  String rateLabelForDuration(int months) {
+    final r = rateForDuration(months);
+    return '${r.toStringAsFixed(r.truncateToDouble() == r ? 0 : 2)}%';
+  }
 
   /// `'1'` deducts interest up-front (member receives `amount - interest`),
   /// `'2'` adds interest to the principal (member repays `amount + interest`).
@@ -90,13 +127,14 @@ class LoanScheme {
         'loan_code': loanCode,
         'title': title,
         'category': category,
-        // The backend approve flow now reads `loan_data.duration`
-        // first, falling back to `scheme.max_duration_months` then
-        // the legacy `duration` column. Sending the picked value
-        // keeps the schedule materialisation honest.
         'duration': pickedDurationMonths ?? effectiveMaxDuration,
         'min_duration_months': effectiveMinDuration,
         'max_duration_months': effectiveMaxDuration,
+        'allow_member_duration': allowMemberDuration ? '1' : '0',
+        if (memberDurationRateMode != null)
+          'member_duration_rate_mode': memberDurationRateMode,
+        if (memberDurationRateStep != null)
+          'member_duration_rate_step': memberDurationRateStep,
         'interest_rate': interestRate,
         'service_charge': serviceCharge,
         'number_of_guarantors': numberOfGuarantors,
@@ -116,6 +154,15 @@ class LoanScheme {
       durationMonths: _asInt(m['duration']),
       minDurationMonths: minRaw == null ? null : _asInt(minRaw),
       maxDurationMonths: maxRaw == null ? null : _asInt(maxRaw),
+      allowMemberDuration:
+          m['allow_member_duration']?.toString().trim() == '1',
+      memberDurationRateMode:
+          m['member_duration_rate_mode']?.toString().trim().isEmpty ?? true
+              ? null
+              : m['member_duration_rate_mode'].toString().trim(),
+      memberDurationRateStep: m['member_duration_rate_step'] == null
+          ? null
+          : _asDouble(m['member_duration_rate_step']),
       interestRate: _asDouble(m['interest_rate']),
       serviceCharge: _asDouble(m['service_charge']),
       numberOfGuarantors: _asInt(m['number_of_guarantors']),
@@ -142,22 +189,26 @@ class LoanScheme {
 
 /// Convenience: estimated monthly repayment for a `(principal, scheme)`
 /// pair using the same arithmetic the backend applies on apply.
-/// `principalMinor` is integer minor units of [currency].
+/// `principalMinor` is integer minor units of [currency]. Pass
+/// [durationMonths] when the member picked a term so the escalated rate
+/// and the picked term are both reflected.
 int estimatedMonthlyRepaymentMinor({
   required int principalMinor,
   required LoanScheme scheme,
   required String interestType,
   required String currency,
+  int? durationMonths,
 }) {
-  if (scheme.durationMonths <= 0 || principalMinor <= 0) return 0;
-  final interest = (principalMinor * scheme.interestRate / 100).round();
+  final months = durationMonths ?? scheme.durationMonths;
+  if (months <= 0 || principalMinor <= 0) return 0;
+  final interest =
+      (principalMinor * scheme.rateForDuration(months) / 100).round();
   // Deduct-now ('1'): interest is taken upfront, member repays the FULL
-  // principal. Add-to-balance ('2'): repay principal + interest. (Previously
-  // '1' wrongly repaid principal − interest, so interest was never collected.)
+  // principal. Add-to-balance ('2'): repay principal + interest.
   final total = interestType == '1'
       ? principalMinor
       : (principalMinor + interest);
-  return (total / scheme.durationMonths).round();
+  return (total / months).round();
 }
 
 String estimatedMonthlyRepaymentLabel({
@@ -165,12 +216,14 @@ String estimatedMonthlyRepaymentLabel({
   required LoanScheme scheme,
   required String interestType,
   required String currency,
+  int? durationMonths,
 }) {
   final amount = estimatedMonthlyRepaymentMinor(
     principalMinor: principalMinor,
     scheme: scheme,
     interestType: interestType,
     currency: currency,
+    durationMonths: durationMonths,
   );
   return Money(amount, currency).format();
 }

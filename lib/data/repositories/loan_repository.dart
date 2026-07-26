@@ -435,7 +435,10 @@ class LoanRepository {
       'ledger_number': ledger,
       'cooperative_id': cooperativeId,
       'loan_code': scheme.loanCode,
-      'duration': pickedDurationMonths ?? scheme.effectiveMaxDuration,
+      'duration': pickedDurationMonths ??
+          (scheme.memberCanPickDuration
+              ? scheme.effectiveMinDuration
+              : scheme.effectiveMaxDuration),
       'loan_data': jsonEncode(scheme.toBackendJson(
         pickedDurationMonths: pickedDurationMonths,
       )),

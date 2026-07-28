@@ -154,12 +154,15 @@ class HomeAccountFrozenCard extends StatelessWidget {
     if (reason == null || reason.trim().length < 10) return;
 
     try {
-      await getIt<AuthRepository>().requestAccountUnfreeze(reason.trim());
+      final message =
+          await getIt<AuthRepository>().requestAccountUnfreeze(reason.trim());
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'Your unfreeze request has been submitted. Our team will review it shortly.',
+            message.isEmpty
+                ? 'Your unfreeze request has been submitted.'
+                : message,
           ),
         ),
       );

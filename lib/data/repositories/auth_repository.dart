@@ -766,7 +766,11 @@ class AuthRepository {
   }
 
   /// `POST /members/account/request-unfreeze` with `{ reason }` (min 10 chars).
-  Future<void> requestAccountUnfreeze(String reason) async {
+  ///
+  /// Returns the server's message: a member's own freeze is lifted immediately,
+  /// an administrator's freeze becomes a pending review, and only the server
+  /// knows which happened.
+  Future<String> requestAccountUnfreeze(String reason) async {
     try {
       final response = await dioClient.post(
         ApiEndpoints.membersRequestUnfreeze,
@@ -776,13 +780,13 @@ class AuthRepository {
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (data is Map &&
             (data['status'] == true || data['status'] == 'true')) {
-          return;
+          return data['message']?.toString() ?? '';
         }
         if (data is Map) {
           final msg = data['message']?.toString();
           if (msg != null && msg.isNotEmpty) throw Exception(msg);
         }
-        return;
+        return '';
       }
       throw Exception('Request failed');
     } on DioException catch (e) {

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/account_actions_repository.dart';
 import 'package:communal_mobile/injection.dart';
@@ -47,13 +50,27 @@ class _DeleteAccountFinalConfirmationScreenState
 
   Future<void> _handleDeleteAccount() async {
     if (!_canDelete || _submitting) return;
+    final auth = context.read<AuthBloc>().state;
+    final cooperativeId = auth is AuthAuthenticated
+        ? (auth.user.cooperativeId?.trim() ?? '')
+        : '';
+    if (cooperativeId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No cooperative selected.'),
+          backgroundColor: Color(0xFFD32F2F),
+        ),
+      );
+      return;
+    }
     setState(() => _submitting = true);
     try {
       // Account closure isn't instant — submitting creates a pending
       // request that the cooperative admin reviews. The backend
       // snapshots the user's debts/EPC at submit time so an admin
       // approving later still sees the values the member saw.
-      await getIt<AccountActionsRepository>().submitAccountClosure();
+      await getIt<AccountActionsRepository>()
+          .submitAccountClosure(cooperativeId: cooperativeId);
       if (!mounted) return;
       context.pushReplacementNamed('delete-account-success');
     } catch (e) {

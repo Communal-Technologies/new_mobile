@@ -41,11 +41,23 @@ class AccountActionsRepository {
   /// Submit an account-closure request. The cooperative admin reviews
   /// and approves/declines — closure is not instant. [reason] is
   /// optional; backend currently accepts the request without one.
-  Future<void> submitAccountClosure({String? reason}) async {
+  ///
+  /// Closure is per-cooperative: a member of several cooperatives leaves
+  /// one at a time, so [cooperativeId] identifies which membership is
+  /// being closed and the backend resolves the ledger from it.
+  Future<void> submitAccountClosure({
+    required String cooperativeId,
+    String? reason,
+  }) async {
+    final cooperative = cooperativeId.trim();
+    if (cooperative.isEmpty) {
+      throw Exception('No cooperative selected.');
+    }
     try {
       await _dioClient.post(
         ApiEndpoints.membersAccountClosureSubmit,
         data: {
+          'cooperative': cooperative,
           if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
         },
       );

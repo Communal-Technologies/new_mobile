@@ -517,10 +517,12 @@ class TransferRepository {
         ApiEndpoints.membersTransactionByReference(ref),
       );
       final data = response.data;
-      final raw = data is Map ? data['transaction'] : null;
+      // transactions-svc wraps every success in {status, data}; the older
+      // monolith route returned the row under `transaction`.
+      final raw = data is Map ? (data['data'] ?? data['transaction']) : null;
       if (raw is! Map) return null;
       // Reuse the list-row mapper — same shape returned by
-      // /fetch-transactions, so the existing communal-row builder
+      // /personal-transactions, so the existing communal-row builder
       // handles it without a parallel constructor.
       final item = mapCommunalTransactionToListItem(
         Map<String, dynamic>.from(raw),

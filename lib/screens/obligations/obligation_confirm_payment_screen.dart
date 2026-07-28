@@ -14,7 +14,7 @@ import 'package:communal_mobile/core/utils/idempotency.dart';
 import 'package:communal_mobile/core/utils/tap_debouncer.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/data/local/biometric_prefs.dart';
-import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
+import 'package:communal_mobile/data/repositories/coop_payout_route.dart';
 import 'package:communal_mobile/data/models/obligation.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
@@ -575,24 +575,7 @@ class _ObligationConfirmPaymentScreenState
       );
     }
 
-    final verified = await _transferRepo.verifyAccount(
-      bankCode: cash.bankCode,
-      accountNumber: cash.accountNumber,
-    );
-    final counterpartyId = await _transferRepo.createCounterParty(
-      bankCode: cash.bankCode,
-      accountNumber: cash.accountNumber,
-      accountName: verified.accountName,
-    );
-
-    final fav = TransferFavorite(
-      source: 'external',
-      accountId: counterpartyId,
-      bank: verified.bankName ?? 'Bank',
-      accountNumber: cash.accountNumber,
-      accountName: verified.accountName,
-      nipCode: cash.bankCode,
-    );
+    final route = await resolveCoopPayoutRoute(_transferRepo, cash);
 
     final coopId = authState.user.cooperativeId?.trim() ?? '';
     final settlement = ObligationNipSettlement(
@@ -620,10 +603,11 @@ class _ObligationConfirmPaymentScreenState
     );
 
     final result = await _transferRepo.initiateTransfer(
-      type: 'NIPTransfer',
+      type: route.type,
       amountMinor: widget.amountMinor,
       narration: narration.trim().isEmpty ? 'Transfer' : narration,
-      counterPartyId: fav.accountId,
+      counterPartyId: route.counterPartyId,
+      destinationAccountId: route.destinationAccountId,
       currencyCode: currencyCode,
       idempotencyKey: _idempotencyKey,
       biometricHeaders: authHeaders,
@@ -639,12 +623,12 @@ class _ObligationConfirmPaymentScreenState
       extra: {
         'details': TransactionDetailsData(
           id: result.transferId,
-          counterpartyName: fav.accountName,
-          counterpartyBank: fav.bank,
-          counterpartyAccount: fav.accountNumber,
+          counterpartyName: route.accountName,
+          counterpartyBank: route.bankLabel,
+          counterpartyAccount: cash.accountNumber,
           amount: amountMajor,
           currencySymbol: currencySymbol,
-          transactionType: 'NIP Transfer',
+          transactionType: route.isBook ? 'Transfer' : 'NIP Transfer',
           dateTime: DateTime.now(),
           sessionId: result.transferId,
           reference: result.reference,

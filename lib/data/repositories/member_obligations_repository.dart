@@ -43,36 +43,102 @@ bool _ledgerRowMatchesObligation(
 class CooperativeCashBankAccount {
   const CooperativeCashBankAccount({
     required this.id,
-    required this.bankCode,
+    required this.bank,
     required this.accountName,
     required this.accountNumber,
+    this.resolvedBankName = '',
+    this.anchorAccountId = '',
+    this.accountStatus = '1',
   });
 
   final String id;
-  final String bankCode;
   final String accountName;
   final String accountNumber;
 
-  /// The cash repository's bank (the `bank` column is the bank's display name,
-  /// e.g. "GTBank"). Exposed so the UI can disambiguate repositories that share
-  /// the same account name.
-  String get bankName => bankCode;
+  /// Display name the server resolved from [bank], sent as `bank_name`. It is
+  /// the only way a NIP code becomes a readable name, since the code itself
+  /// carries no name to fall back on.
+  final String resolvedBankName;
+
+  /// Raw `bank` column. Its meaning depends on who created the row: the coop
+  /// dashboard writes a NIP code ("000015"), while kycsvc writes a display name
+  /// ("PROVIDUS BANK") when Anchor provisions the account. Read it through
+  /// [bankCode] / [bankName] rather than directly.
+  final String bank;
+
+  /// Anchor's account id, set only on Anchor-provisioned repositories. Non-empty
+  /// means the account is reachable by BookTransfer and needs no bank code.
+  final String anchorAccountId;
+
+  /// Anchor-driven account state: 1=active, 2=frozen, 3=closed. A frozen account
+  /// cannot receive money, so it must not be offered as a payment destination.
+  final String accountStatus;
+
+  bool get isAnchor => anchorAccountId.isNotEmpty;
+
+  bool get isFrozen => accountStatus == '2';
+
+  bool get isPayable => accountStatus == '1';
+
+  /// A NIP code suitable for verify-account / create-counter-parties, or empty
+  /// when the column holds a name. Anchor codes are all-numeric.
+  String get bankCode {
+    final b = bank.trim();
+    if (b.isEmpty || b == '000') return '';
+    return RegExp(r'^\d+$').hasMatch(b) ? b : '';
+  }
+
+  /// A name: the server-resolved one when present, else the column itself when
+  /// it already holds a name rather than a code.
+  String get bankName {
+    if (resolvedBankName.isNotEmpty) return resolvedBankName;
+    return bankCode.isEmpty ? bank.trim() : '';
+  }
+
+  /// Whatever is available to show in a picker — the name when we have one,
+  /// else the raw code.
+  String get bankLabel {
+    final name = bankName;
+    return name.isNotEmpty ? name : bank.trim();
+  }
 
   factory CooperativeCashBankAccount.fromJson(Map<String, dynamic> m) {
     return CooperativeCashBankAccount(
       id: m['id']?.toString() ?? '',
-      bankCode: m['bank']?.toString().trim() ?? '',
+      bank: m['bank']?.toString().trim() ?? '',
       accountName: m['account_name']?.toString().trim() ?? '',
       accountNumber: m['account_number']?.toString().trim() ?? '',
+      resolvedBankName: m['bank_name']?.toString().trim() ?? '',
+      anchorAccountId: m['anchor_account_id']?.toString().trim() ?? '',
+      accountStatus: m['account_status']?.toString().trim().isNotEmpty == true
+          ? m['account_status'].toString().trim()
+          : '1',
     );
   }
 
   Map<String, dynamic> toJson() => {
     'id': id,
-    'bank': bankCode,
+    'bank': bank,
     'account_name': accountName,
     'account_number': accountNumber,
+    'bank_name': resolvedBankName,
+    'anchor_account_id': anchorAccountId,
+    'account_status': accountStatus,
   };
+}
+
+/// Whether a `trx_type=2` member-ledger row is money that genuinely left an
+/// obligation balance, as opposed to the phantom paired debit the backend writes
+/// alongside every inflow.
+///
+/// `source` is the discriminator, not `payment_mode`: a real outflow is always
+/// sourced from an obligation ("obligation-7408", "obligation"), while a phantom
+/// debit carries the funding gateway instead ("nip_transfer", "nip-…anc_trsf",
+/// "Brought Forward"). Keying off the mode misses withdrawals and fine payments,
+/// whose mode is the gateway or "obligation_withdrawal".
+bool _isRealObligationOutflow(Map<String, dynamic> row) {
+  final source = (row['source']?.toString() ?? '').trim().toLowerCase();
+  return source.startsWith('obligation');
 }
 
 class MemberObligationsRepository {
@@ -224,27 +290,14 @@ class MemberObligationsRepository {
               final rCoop = row['cooperative_id']?.toString().trim() ?? '';
               if (rCoop.isNotEmpty && rCoop != coopId) return false;
             }
-            // Inflows (`trx_type=1`, money entering this obligation
-            // from wallet/NIP/another obligation) always count.
-            //
-            // Outflows (`trx_type=2`) are only legitimate when this
-            // obligation actively funded ANOTHER obligation. Backend
-            // (FinancialObligationController::processPayment) writes a
-            // paired type=2 debit alongside the type=1 credit on every
-            // payment regardless of mode — that paired debit is
-            // re-anchored to the source obligation only for
-            // `payment_mode == 'obligation'`. For nip_transfer / gateway
-            // / wallet flows the debit row stays anchored to the target
-            // and shows up here as a phantom "Used to pay another
-            // obligation" entry. Drop those.
+            // Inflows (`trx_type=1`, money entering this obligation from
+            // wallet/NIP/another obligation) always count. Outflows are kept
+            // only when the money genuinely left this obligation — see
+            // [_isRealObligationOutflow] for why the paired debit written
+            // alongside every inflow has to be dropped.
             final t = row['trx_type']?.toString().trim();
             if (t != '1' && t != '2') return false;
-            if (t == '2') {
-              final mode = (row['payment_mode']?.toString() ?? '')
-                  .trim()
-                  .toLowerCase();
-              if (mode != 'obligation') return false;
-            }
+            if (t == '2' && !_isRealObligationOutflow(row)) return false;
             return _ledgerRowMatchesObligation(row, obligation);
           }).toList()..sort((a, b) {
             final ad =
@@ -273,7 +326,9 @@ class MemberObligationsRepository {
               // should name what was paid (target obligation / fine), not repeat
               // the source. The full "from … to …" line is kept for the general
               // (cooperative) transactions history instead.
-              if (desc.toLowerCase().startsWith('fine payment for')) {
+              if (modeLower == 'obligation_withdrawal') {
+                title = 'Withdrawn to your account';
+              } else if (desc.toLowerCase().startsWith('fine payment for')) {
                 // "Fine payment for {subject} from {src} balance" → drop source.
                 title = desc
                     .replaceFirst(
@@ -310,6 +365,8 @@ class MemberObligationsRepository {
                   .firstMatch(desc);
               final src = m?.group(1)?.trim() ?? '';
               method = src.isNotEmpty ? 'From $src' : 'From obligation balance';
+            } else if (modeLower == 'obligation_withdrawal') {
+              method = 'Withdrawal';
             } else if (modeLower.contains('nip')) {
               method = 'Bank transfer (NIP)';
             } else if (modeLower.contains('book')) {
@@ -369,14 +426,26 @@ class MemberObligationsRepository {
           .where(
             (e) =>
                 e.id.isNotEmpty &&
-                e.bankCode.isNotEmpty &&
-                e.accountNumber.isNotEmpty,
+                e.accountNumber.isNotEmpty &&
+                // A frozen or closed account cannot receive money at Anchor.
+                e.isPayable &&
+                // Payable either as a BookTransfer (Anchor-provisioned) or as a
+                // NIP transfer (needs a real bank code).
+                (e.isAnchor || e.bankCode.isNotEmpty),
           )
           .toList(growable: false);
       if (list.isEmpty) {
         final msg = data['message']?.toString().trim();
         if (msg != null && msg.isNotEmpty) {
           throw Exception(msg);
+        }
+        if (raw.whereType<Map>().any(
+          (e) => e['account_status']?.toString().trim() == '2',
+        )) {
+          throw Exception(
+            'The cooperative\'s bank account is currently frozen and cannot '
+            'receive payments. Please contact your cooperative administrator.',
+          );
         }
       }
       return list;

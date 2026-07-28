@@ -382,7 +382,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                                 value: e,
                                 child: Text(
                                   [
-                                    if (e.bankName.isNotEmpty) e.bankName,
+                                    if (e.bankLabel.isNotEmpty) e.bankLabel,
                                     e.accountName,
                                     e.accountNumber,
                                   ].join(' • '),
@@ -399,7 +399,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                   vSpace(10),
                   Text(
                     'Paying into: ${[
-                      if (_cashRepos.first.bankName.isNotEmpty) _cashRepos.first.bankName,
+                      if (_cashRepos.first.bankLabel.isNotEmpty) _cashRepos.first.bankLabel,
                       _cashRepos.first.accountName,
                       _cashRepos.first.accountNumber,
                     ].join(' • ')}',

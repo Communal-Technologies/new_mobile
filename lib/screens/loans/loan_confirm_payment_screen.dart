@@ -13,7 +13,7 @@ import 'package:communal_mobile/core/utils/idempotency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/utils/tap_debouncer.dart';
 import 'package:communal_mobile/data/local/biometric_prefs.dart';
-import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
+import 'package:communal_mobile/data/repositories/coop_payout_route.dart';
 import 'package:communal_mobile/data/models/loan_application.dart';
 import 'package:communal_mobile/data/repositories/loan_repository.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
@@ -528,24 +528,7 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
       );
     }
 
-    final verified = await _transferRepo.verifyAccount(
-      bankCode: cash.bankCode,
-      accountNumber: cash.accountNumber,
-    );
-    final counterpartyId = await _transferRepo.createCounterParty(
-      bankCode: cash.bankCode,
-      accountNumber: cash.accountNumber,
-      accountName: verified.accountName,
-    );
-
-    final fav = TransferFavorite(
-      source: 'external',
-      accountId: counterpartyId,
-      bank: verified.bankName ?? 'Bank',
-      accountNumber: cash.accountNumber,
-      accountName: verified.accountName,
-      nipCode: cash.bankCode,
-    );
+    final route = await resolveCoopPayoutRoute(_transferRepo, cash);
 
     final coopId = authState.user.cooperativeId?.trim() ?? '';
     final settlement = LoanNipSettlement(
@@ -567,13 +550,15 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
     );
 
     final result = await _transferRepo.initiateTransfer(
-      type: 'NIPTransfer',
+      type: route.type,
       amountMinor: widget.amountMinor,
       narration: narration,
-      counterPartyId: fav.accountId,
+      counterPartyId: route.counterPartyId,
+      destinationAccountId: route.destinationAccountId,
       currencyCode: currencyCode,
       idempotencyKey: _idempotencyKey,
       biometricHeaders: authHeaders,
+      obligationContext: settlement.toJson(),
     );
 
     if (!mounted) return;
@@ -585,9 +570,9 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
       extra: {
         'details': TransactionDetailsData(
           id: result.transferId,
-          counterpartyName: fav.accountName,
-          counterpartyBank: fav.bank,
-          counterpartyAccount: fav.accountNumber,
+          counterpartyName: route.accountName,
+          counterpartyBank: route.bankLabel,
+          counterpartyAccount: cash.accountNumber,
           amount: amountMajor,
           currencySymbol: currencySymbol,
           transactionType: 'Loan re-payment',
@@ -595,7 +580,7 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
           sessionId: result.transferId,
           reference: result.reference,
           description: narration,
-          paymentMethod: 'NIP transfer',
+          paymentMethod: route.isBook ? 'Transfer' : 'NIP transfer',
           fees: 0,
           isIncoming: false,
           status: mapped,

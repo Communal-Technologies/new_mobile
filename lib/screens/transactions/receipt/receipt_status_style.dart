@@ -181,9 +181,27 @@ class ReceiptStatusStyle {
 }
 
 String _humanizeTransferFailure(String code) {
-  switch (code.toUpperCase().trim()) {
+  final normalized = code.toUpperCase().trim().replaceAll(' ', '_');
+  switch (normalized) {
     case 'INSUFFICIENT_BALANCE':
       return 'Insufficient balance to complete this transfer.';
+    case 'ACCOUNT_FROZEN':
+    case 'DESTINATION_ACCOUNT_FROZEN':
+    case 'BENEFICIARY_ACCOUNT_FROZEN':
+      return 'The receiving account is frozen and cannot accept transfers. '
+          'Contact the cooperative to have it unfrozen, or pay to a different account.';
+    case 'SOURCE_ACCOUNT_FROZEN':
+      return 'Your account is frozen and cannot send transfers. Contact support.';
+    case 'INVALID_BANK_ID':
+    case 'INVALID_BANK_CODE':
+      return 'The receiving account has an invalid bank setting. '
+          'Ask the cooperative administrator to re-select the bank for this account.';
+    case 'ACCOUNT_NOT_FOUND':
+    case 'INVALID_ACCOUNT_NUMBER':
+      return 'The receiving account number could not be found at its bank.';
+    case 'LIMIT_EXCEEDED':
+    case 'TRANSACTION_LIMIT_EXCEEDED':
+      return 'This transfer exceeds your transaction limit.';
     default:
       final t = code.replaceAll('_', ' ').trim().toLowerCase();
       return t.isEmpty ? 'This transfer could not be completed.' : t;

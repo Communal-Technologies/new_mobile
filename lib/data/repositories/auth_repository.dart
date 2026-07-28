@@ -235,8 +235,11 @@ class AuthRepository {
       );
 
       if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
-        final data = response.data as Map<String, dynamic>;
-        return data['verified'] == true;
+        final body = response.data as Map<String, dynamic>;
+        // transactions-svc nests the payload under `data`.
+        final inner = body['data'];
+        if (inner is Map) return inner['verified'] == true;
+        return body['verified'] == true;
       }
 
       return false;

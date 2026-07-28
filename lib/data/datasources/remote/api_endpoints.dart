@@ -14,6 +14,7 @@
 ///     - Monolith (Laravel) → `/api/v1/…`
 ///     - KYC micro-service   → `/api/kyc/v2/…`
 ///     - Bills micro-service → `/api/bills/v2/…`
+///     - Cooperative service → `/api/cooperative/v2/…`
 /// - Dio merges `baseUrl + path` by plain concatenation, so an origin
 ///   base + a fully-prefixed path is exactly the final URL.
 class ApiEndpoints {
@@ -28,13 +29,19 @@ class ApiEndpoints {
 
   /// Transactions micro-service prefix. Handles transfers, beneficiaries,
   /// and fees at `/api/transactions/v2/…`. Security-PIN verification stays
-  /// on the monolith (`_v1`) — transactions-svc never touches tbl_users.
+  /// on the monolith (`membersVerifySecurityPin`) — the PIN lives on
+  /// tbl_users, which only the identity provider owns.
   static const String _txnV2 = '/api/transactions/v2';
 
   /// Loans micro-service prefix. Loans were migrated off the monolith; all
   /// member loan endpoints live at `/api/loans/v2/…` (gateway-routed to
   /// loans-svc). Responses use the `{status:"success", data:{…}}` envelope.
   static const String _loansV2 = '/api/loans/v2';
+
+  /// Cooperative micro-service prefix. Membership, join requests, member
+  /// settings, notifications, the member ledger, account freeze and closure
+  /// were all migrated off the monolith to `/api/cooperative/v2/…`.
+  static const String _coopV2 = '/api/cooperative/v2';
 
   // --- Auth ---------------------------------------------------------------
   static const String login = '$_v1/login';
@@ -64,48 +71,48 @@ class ApiEndpoints {
       '$_v1/members/update-security-pin';
   static const String membersVerifySecurityPin =
       '$_v1/members/verify-security-pin';
+  // Unfreeze requests sit directly under /members in cooperative-svc, not
+  // under /members/account like the freeze pair below.
   static const String membersRequestUnfreeze =
-      '$_v1/members/account/request-unfreeze';
+      '$_coopV2/members/request-unfreeze';
   static const String membersCommunitySettings =
-      '$_v1/members/community-settings';
+      '$_coopV2/members/community-settings';
   static String membersCommunitySettingsForCooperative(String cooperativeId) =>
-      '$_v1/members/community-settings/$cooperativeId';
+      '$_coopV2/members/community-settings/$cooperativeId';
   static const String membersRedeemInviteCode =
-      '$_v1/members/redeem-invite-code';
-  // Cooperative discovery is owned by cooperative-svc (/api/cooperative/v2/...);
-  // the monolith copy 500s post-migration (InternalAccount prefix trap).
-  static const String fetchCooperatives =
-      '/api/cooperative/v2/fetch-cooperatives';
+      '$_coopV2/members/redeem-invite-code';
+  // Cooperative discovery is owned by cooperative-svc; the monolith copy is
+  // gone post-migration.
+  static const String fetchCooperatives = '$_coopV2/fetch-cooperatives';
   static String fetchCooperativeProfile(String id) =>
-      '/api/cooperative/v2/fetch-cooperative-profile/$id';
-  static String cooperativeStats(String id) =>
-      '/api/cooperative/v2/cooperative-stats/$id';
+      '$_coopV2/fetch-cooperative-profile/$id';
+  static String cooperativeStats(String id) => '$_coopV2/cooperative-stats/$id';
   // Member cooperative ratings are owned by cooperative-svc.
   static String cooperativeRating(String cooperativeId) =>
-      '/api/cooperative/v2/cooperatives/$cooperativeId/rating';
+      '$_coopV2/cooperatives/$cooperativeId/rating';
   static String cooperativeRatingMine(String cooperativeId) =>
-      '/api/cooperative/v2/cooperatives/$cooperativeId/rating/mine';
-  static const String membersJoinRequests = '$_v1/members/join-requests';
+      '$_coopV2/cooperatives/$cooperativeId/rating/mine';
+  static const String membersJoinRequests = '$_coopV2/members/join-requests';
   static const String membersJoinRequestsMine =
-      '$_v1/members/join-requests/mine';
+      '$_coopV2/members/join-requests/mine';
   static String membersJoinRequestCancel(String id) =>
-      '$_v1/members/join-requests/$id/cancel';
-  static const String membersNotifications = '$_v1/members/notifications';
+      '$_coopV2/members/join-requests/$id/cancel';
+  static const String membersNotifications = '$_coopV2/members/notifications';
   static const String membersNotificationsUnreadCount =
-      '$_v1/members/notifications/unread-count';
+      '$_coopV2/members/notifications/unread-count';
   static String membersNotificationRead(String id) =>
-      '$_v1/members/notifications/$id/read';
+      '$_coopV2/members/notifications/$id/read';
   static const String membersNotificationsMarkAllRead =
-      '$_v1/members/notifications/mark-all-read';
+      '$_coopV2/members/notifications/mark-all-read';
   static const String membersNotificationPreferences =
-      '$_v1/members/notification-preferences';
+      '$_coopV2/members/notification-preferences';
   static String membersFetchUserDetails(String id) =>
       '$_v1/members/fetch-user-details/$id';
   static const String membersUpdateProfile = '$_v1/members/update-profile';
   static const String membersUploadAvatar = '$_v1/members/profile/avatar';
-  static const String membersAccountFreeze = '$_v1/members/account/freeze';
+  static const String membersAccountFreeze = '$_coopV2/members/account/freeze';
   static const String membersAccountClosureSubmit =
-      '$_v1/members/account-closure/submit';
+      '$_coopV2/members/account-closure/submit';
   static const String membersTransactionStatementExport =
       '$_txnV2/members/statement/export';
 
@@ -160,12 +167,16 @@ class ApiEndpoints {
   ) => '$_oblV2/$ledgerNumber/$cooperativeId';
   static String membersFines(String ledgerNumber, String cooperativeId) =>
       '$_oblV2/fines/$ledgerNumber/$cooperativeId';
-  // Cash repositories are owned by cooperative-svc (/api/cooperative/v2/...);
-  // the monolith copy 500s post-migration.
+  // Cash repositories are owned by cooperative-svc; the monolith copy is gone
+  // post-migration.
   static const String membersCooperativeCashRepositories =
-      '/api/cooperative/v2/members/cooperative-cash-repositories';
+      '$_coopV2/members/cooperative-cash-repositories';
+  // The member ledger is owned by cooperative-svc, which returns the full
+  // history unpaginated — the three callers filter client-side (by
+  // cooperative, trx_type, payment_mode, destination prefix), so a paginated
+  // source would silently truncate their results.
   static String membersFetchMemberTransactions(String ledgerNumber) =>
-      '$_v1/members/fetch-member-transactions/$ledgerNumber';
+      '$_coopV2/members/fetch-member-transactions/$ledgerNumber';
   // Personal transaction history is now served by transactions-svc (merged
   // transfers + bills, counterparty/beneficiary resolved there). The user is
   // derived from the JWT, so the userId arg is no longer part of the path.
@@ -176,7 +187,7 @@ class ApiEndpoints {
   /// scoped to the authenticated member. Used for push-tap deep
   /// linking into the receipt screen. 404 outside the caller's scope.
   static String membersTransactionByReference(String reference) =>
-      '$_v1/members/transactions/by-reference/$reference';
+      '$_txnV2/transactions/by-reference/$reference';
 
   /// Single-obligation fetch keyed by id. Server returns
   /// `{obligation: …, account: …}` — both halves needed by
@@ -263,13 +274,13 @@ class ApiEndpoints {
   static const String fetchRegions = '$_v1/fetch-regions';
   static const String fetchStates = '$_v1/fetch-states';
   static String fetchLgas(Object stateId) => '$_v1/fetch-lgas/$stateId';
-  // Internal accounts are owned by cooperative-svc (/api/cooperative/v2/...).
+  // Internal accounts are owned by cooperative-svc.
   static String fetchInternalAccounts(String cooperativeId) =>
-      '/api/cooperative/v2/fetch-internal-accounts/$cooperativeId';
+      '$_coopV2/fetch-internal-accounts/$cooperativeId';
 
   // --- Security / biometric (audit M7, M38) -------------------------------
   static const String securityVerifyPassword =
-      '$_v1/security/transaction/verify-password';
+      '$_txnV2/security/transaction/verify-password';
   static const String biometricEnroll = '$_v1/security/biometric/enroll';
   static const String biometricChallenge = '$_v1/security/biometric/challenge';
   static const String biometricRevoke = '$_v1/security/biometric/revoke';

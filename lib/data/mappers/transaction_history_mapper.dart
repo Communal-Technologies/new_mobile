@@ -339,9 +339,17 @@ TransactionListItem mapCommunalTransactionToListItem(
   // Bills/utilities carry consumer details (provider, phone/smartcard/meter,
   // plan) so the receipt says exactly what was bought and for whom.
   final bill = _billViewFromJson(json);
+  // A settlement payment (fine, obligation contribution, loan repayment) knows
+  // what it was for; the rail it travelled on does not. `purpose` names it, so
+  // it wins over "Transfer to ******8198", and `narration` is what the payer
+  // typed. Both are absent on a plain transfer.
+  final purpose = json['purpose']?.toString().trim() ?? '';
+  final narration = json['narration']?.toString().trim() ?? '';
   final String title;
   if (bill != null) {
     title = bill.title;
+  } else if (purpose.isNotEmpty) {
+    title = purpose;
   } else if (isTransfer) {
     if (incoming) {
       title = who != null ? 'Received from $who' : 'Money Received';
@@ -381,10 +389,14 @@ TransactionListItem mapCommunalTransactionToListItem(
     transactionType: bill != null ? bill.type : titleBase,
     dateTime: dt,
     sessionId: sessionFmt.format(dt),
-    // Leave description empty for bills (own breakdown) and transfers (the type
-    // already says "NIP/Book Transfer") so the receipt doesn't show a row that
-    // just repeats the transaction type.
-    description: (bill != null || isTransfer) ? '' : titleBase,
+    // The payer's narration is the real description; the purpose stands in when
+    // there is none. Bills carry their own breakdown, and a plain transfer's
+    // type already says "NIP/Book Transfer", so neither repeats it here.
+    description: narration.isNotEmpty
+        ? narration
+        : (purpose.isNotEmpty
+            ? purpose
+            : ((bill != null || isTransfer) ? '' : titleBase)),
     reference: trxRef.isNotEmpty ? trxRef : extRef,
     paymentMethod: bill != null
         ? 'Bill payment'

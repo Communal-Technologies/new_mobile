@@ -93,9 +93,6 @@ class ActiveLoanCard extends StatelessWidget {
                     ),
                     vSpace(4),
                     Text(
-                      // The reference, not the loan_code: the code is the
-                      // scheme's internal identifier and displayLabel above
-                      // already names the scheme.
                       loan.referenceId.isNotEmpty ? loan.referenceId : loan.id,
                       style: TextStyle(
                         fontSize: 16.sp,

@@ -47,8 +47,11 @@ DateTime? _parseDate(dynamic raw) {
 const _ipBank = (Icons.swap_horiz_rounded, Colors.white, Color(0xFF742CE7));
 const _ipReceive = (Icons.south_west_rounded, Colors.white, Color(0xFF1AAE70));
 const _ipSend = (Icons.north_east_rounded, Colors.white, Color(0xFF742CE7));
-const _ipDeposit =
-    (Icons.account_balance_wallet_rounded, Colors.white, Color(0xFF1AAE70));
+const _ipDeposit = (
+  Icons.account_balance_wallet_rounded,
+  Colors.white,
+  Color(0xFF1AAE70),
+);
 const _ipWithdraw = (Icons.payments_rounded, Colors.white, Color(0xFFE6A502));
 const _ipLoan = (Icons.handshake_rounded, Colors.white, Color(0xFF00BCD4));
 const _ipFine = (Icons.gavel_rounded, Colors.white, Color(0xFFD7263D));
@@ -63,17 +66,27 @@ const _ipBill = (Icons.receipt_long_rounded, Colors.white, Color(0xFF607D8B));
 // Classify a bill/utility from free text so cable/airtime/data/electricity each
 // get their own glyph instead of a generic receipt.
 (IconData, Color, Color)? _billIconFromText(String t) {
-  if (t.contains('electric') || t.contains('meter') || t.contains('power') ||
-      t.contains('disco') || t.contains('prepaid') || t.contains('postpaid')) {
+  if (t.contains('electric') ||
+      t.contains('meter') ||
+      t.contains('power') ||
+      t.contains('disco') ||
+      t.contains('prepaid') ||
+      t.contains('postpaid')) {
     return _ipElectric;
   }
   if (t.contains('airtime') || t.contains('recharge')) return _ipAirtime;
-  if (t.contains('data bundle') || t.contains('data plan') ||
-      t.contains(' data') || t.contains('internet')) {
+  if (t.contains('data bundle') ||
+      t.contains('data plan') ||
+      t.contains(' data') ||
+      t.contains('internet')) {
     return _ipData;
   }
-  if (t.contains('cable') || t.contains('tv') || t.contains('dstv') ||
-      t.contains('gotv') || t.contains('startimes') || t.contains('showmax')) {
+  if (t.contains('cable') ||
+      t.contains('tv') ||
+      t.contains('dstv') ||
+      t.contains('gotv') ||
+      t.contains('startimes') ||
+      t.contains('showmax')) {
     return _ipTv;
   }
   if (t.contains('bill')) return _ipBill;
@@ -109,7 +122,6 @@ const _ipBill = (Icons.receipt_long_rounded, Colors.white, Color(0xFF607D8B));
   if (text.contains('equity') || text.contains('share')) return _ipEquity;
   if (text.contains('transfer')) return _ipBank;
   if (text.contains('withdraw') || text.contains('payout')) return _ipWithdraw;
-  // Savings / patronage / general contribution.
   return _ipSavings;
 }
 
@@ -171,19 +183,27 @@ String _humanizeProvider(String raw) {
   final key = raw.trim().toLowerCase();
   if (key.isEmpty) return '';
   const known = {
-    // Mobile networks
-    'mtn': 'MTN', 'glo': 'Glo', 'airtel': 'Airtel',
-    '9mobile': '9mobile', 'etisalat': '9mobile',
-    // Cable / TV
-    'gotv': 'GOtv', 'dstv': 'DStv', 'startimes': 'StarTimes',
+    'mtn': 'MTN',
+    'glo': 'Glo',
+    'airtel': 'Airtel',
+    '9mobile': '9mobile',
+    'etisalat': '9mobile',
+    'gotv': 'GOtv',
+    'dstv': 'DStv',
+    'startimes': 'StarTimes',
     'showmax': 'Showmax',
-    // Electricity discos
-    'ikedc': 'Ikeja Electric', 'ekedc': 'Eko Electric',
-    'aedc': 'Abuja Electric', 'phedc': 'Port Harcourt Electric',
-    'kedco': 'Kano Electric', 'eedc': 'Enugu Electric',
-    'ibedc': 'Ibadan Electric', 'jedc': 'Jos Electric',
-    'kaedco': 'Kaduna Electric', 'bedc': 'Benin Electric',
-    'abedc': 'Aba Electric', 'yedc': 'Yola Electric',
+    'ikedc': 'Ikeja Electric',
+    'ekedc': 'Eko Electric',
+    'aedc': 'Abuja Electric',
+    'phedc': 'Port Harcourt Electric',
+    'kedco': 'Kano Electric',
+    'eedc': 'Enugu Electric',
+    'ibedc': 'Ibadan Electric',
+    'jedc': 'Jos Electric',
+    'kaedco': 'Kaduna Electric',
+    'bedc': 'Benin Electric',
+    'abedc': 'Aba Electric',
+    'yedc': 'Yola Electric',
   };
   return known[key] ?? _humanizeType(raw);
 }
@@ -194,15 +214,19 @@ String _humanizeProvider(String raw) {
 String _humanizeDataPlan(String raw, String providerCode) {
   var s = raw.trim().toLowerCase();
   if (s.isEmpty) return '';
-  // Drop a leading provider and/or "data" prefix.
   final p = providerCode.trim().toLowerCase();
   if (p.isNotEmpty) {
     s = s.replaceFirst(RegExp('^${RegExp.escape(p)}[_-]?'), '');
   }
-  s = s.replaceFirst(RegExp(r'^data[_-]?'), '').replaceAll(RegExp(r'[_-]+$'), '');
+  s = s
+      .replaceFirst(RegExp(r'^data[_-]?'), '')
+      .replaceAll(RegExp(r'[_-]+$'), '');
   s = s.replaceAll(RegExp(r'[_-]+'), ' ').trim();
   // 1_5gb -> "1 5gb" -> "1.5GB"; standalone "<n>gb"/"<n>mb" -> upper unit.
-  s = s.replaceAllMapped(RegExp(r'(\d+)\s+(\d+)\s*gb'), (m) => '${m[1]}.${m[2]}GB');
+  s = s.replaceAllMapped(
+    RegExp(r'(\d+)\s+(\d+)\s*gb'),
+    (m) => '${m[1]}.${m[2]}GB',
+  );
   s = s.replaceAllMapped(RegExp(r'(\d+)\s*gb'), (m) => '${m[1]}GB');
   s = s.replaceAllMapped(RegExp(r'(\d+)\s*mb'), (m) => '${m[1]}MB');
   return s.trim();
@@ -214,7 +238,8 @@ String _humanizeDataPlan(String raw, String providerCode) {
 typedef _BillView = ({
   String title,
   String type,
-  String provider, // display provider/biller, e.g. "MTN", "GOtv", "Ikeja Electric"
+  String
+  provider, // display provider/biller, e.g. "MTN", "GOtv", "Ikeja Electric"
   String recipient, // consumer identifier: phone / smartcard / meter number
   List<MapEntry<String, String>> extras,
   (IconData, Color, Color) icon,
@@ -265,7 +290,9 @@ _BillView? _billViewFromJson(Map<String, dynamic> json) {
       rawType.contains('cable') ||
       rawType.contains('tv')) {
     if (provider.isNotEmpty) extras.add(MapEntry('Provider', provider));
-    if (recipient.isNotEmpty) extras.add(MapEntry('Smartcard number', recipient));
+    if (recipient.isNotEmpty) {
+      extras.add(MapEntry('Smartcard number', recipient));
+    }
     if (product.isNotEmpty) {
       extras.add(MapEntry('Package', _humanizeType(product)));
     }
@@ -283,7 +310,9 @@ _BillView? _billViewFromJson(Map<String, dynamic> json) {
     // (e.g. `ikeja_electric_prepaid`); strip it since `meter_type` already
     // carries prepaid/postpaid, then humanize → "Ikeja Electric".
     final discoCode = billerCode.replaceFirst(
-        RegExp(r'[_-]?(prepaid|postpaid)$', caseSensitive: false), '');
+      RegExp(r'[_-]?(prepaid|postpaid)$', caseSensitive: false),
+      '',
+    );
     final disco = _humanizeProvider(discoCode);
     if (disco.isNotEmpty) extras.add(MapEntry('Disco', disco));
     if (meterType.isNotEmpty) {
@@ -378,8 +407,8 @@ TransactionListItem mapCommunalTransactionToListItem(
     counterpartyBank: bill != null
         ? ''
         : (isTransfer
-            ? ((cpBank != null && cpBank.isNotEmpty) ? cpBank : 'Communal')
-            : 'Communal Wallet'),
+              ? ((cpBank != null && cpBank.isNotEmpty) ? cpBank : 'Communal')
+              : 'Communal Wallet'),
     counterpartyAccount: bill != null
         ? (bill.recipient.isNotEmpty ? bill.recipient : null)
         : ((cpAcct != null && cpAcct.isNotEmpty) ? cpAcct : null),
@@ -395,18 +424,18 @@ TransactionListItem mapCommunalTransactionToListItem(
     description: narration.isNotEmpty
         ? narration
         : (purpose.isNotEmpty
-            ? purpose
-            : ((bill != null || isTransfer) ? '' : titleBase)),
+              ? purpose
+              : ((bill != null || isTransfer) ? '' : titleBase)),
     reference: trxRef.isNotEmpty ? trxRef : extRef,
     paymentMethod: bill != null
         ? 'Bill payment'
         : (isTransfer
-            ? (typeRaw.toLowerCase().contains('nip')
-                ? 'Bank transfer (NIP)'
-                : (typeRaw.toLowerCase().contains('book')
-                    ? 'Wallet transfer'
-                    : 'Wallet'))
-            : 'Wallet'),
+              ? (typeRaw.toLowerCase().contains('nip')
+                    ? 'Bank transfer (NIP)'
+                    : (typeRaw.toLowerCase().contains('book')
+                          ? 'Wallet transfer'
+                          : 'Wallet'))
+              : 'Wallet'),
     status: status,
     isIncoming: incoming,
     extraDetails: bill?.extras ?? const [],
@@ -455,10 +484,10 @@ TransactionListItem mapLedgerRowToListItem(
   final titleBase = usedDesc
       ? desc
       : modeLower.contains('loan repayment')
-          ? 'Loan re-payment'
-          : obligation.isNotEmpty
-              ? _humanizeType(obligation)
-              : 'Ledger transaction';
+      ? 'Loan re-payment'
+      : obligation.isNotEmpty
+      ? _humanizeType(obligation)
+      : 'Ledger transaction';
 
   // Payment method from the backend gateway/payment_mode token.
   final paymentMethod = _humanizePaymentMethod(paymentMode);
@@ -496,8 +525,9 @@ TransactionListItem mapLedgerRowToListItem(
   final details = TransactionDetailsData(
     id: id.isNotEmpty ? id : trxRef,
     counterpartyName: cooperativeLabel,
-    counterpartyBank:
-        coopAccount != null ? 'Cooperative cash account' : 'Cooperative ledger',
+    counterpartyBank: coopAccount != null
+        ? 'Cooperative cash account'
+        : 'Cooperative ledger',
     counterpartyAccount: coopAccount,
     amount: amountNaira,
     fees: 0,

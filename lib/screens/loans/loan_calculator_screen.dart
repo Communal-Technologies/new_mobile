@@ -20,7 +20,7 @@ const Color _kLoanOrange = Color(0xFFE67E22);
 /// Static fallback range / defaults used when the cooperative has no
 /// loan schemes configured (e.g. during onboarding). The calculator
 /// must still work in that window — the cooperative gets to refine
-/// these ranges by adding loan products.
+/// these ranges by adding loan schemes.
 const double _kFallbackMinAmount = 50000;
 const double _kFallbackMaxAmount = 2000000;
 const int _kFallbackMinDuration = 3;
@@ -285,7 +285,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
                 vSpace(4),
                 Text(
                   _schemes.isNotEmpty
-                      ? 'Pick one of your cooperative\'s loan products and adjust the amount to see your estimated repayment.'
+                      ? 'Pick one of your cooperative\'s loan schemes and adjust the amount to see your estimated repayment.'
                       : 'Adjust the loan amount and duration to see your estimated monthly payments and total repayment.',
                   style: TextStyle(
                     fontSize: 17.sp,
@@ -307,7 +307,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Loan Product',
+          'Loan Scheme',
           style: TextStyle(
             fontSize: 19.sp,
             fontWeight: FontWeight.w700,
@@ -360,7 +360,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
           hSpace(8),
           Expanded(
             child: Text(
-              'Your cooperative hasn\'t configured loan products yet. '
+              'Your cooperative hasn\'t configured loan schemes yet. '
               'These are sample ranges — your actual rate and limits '
               'will come from your cooperative.',
               style: TextStyle(
@@ -393,7 +393,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
           hSpace(8),
           Expanded(
             child: Text(
-              'Could not load loan products. Showing sample ranges. '
+              'Could not load loan schemes. Showing sample ranges. '
               '${_schemesError ?? ''}',
               style: TextStyle(fontSize: 16.sp, color: const Color(0xFFE74C3C)),
             ),

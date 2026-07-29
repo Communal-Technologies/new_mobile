@@ -9,6 +9,7 @@ class LoanNipSettlement {
     required this.loanId,
     required this.loanCode,
     required this.amountMinor,
+    this.loanTitle = '',
     this.currency = 'NGN',
   });
 
@@ -16,6 +17,10 @@ class LoanNipSettlement {
   final String cooperativeId;
   final String loanId;
   final String loanCode;
+
+  /// Scheme name, so the receipt and ledger can name the loan being repaid
+  /// rather than showing only its code.
+  final String loanTitle;
   final int amountMinor;
   final String currency;
 
@@ -24,6 +29,7 @@ class LoanNipSettlement {
     'cooperative_id': cooperativeId,
     'loan_id': loanId,
     'loan_code': loanCode,
+    'loan_title': loanTitle,
     'amount_minor': amountMinor,
     'currency': currency,
   };
@@ -55,6 +61,7 @@ class LoanNipSettlement {
       cooperativeId: coop,
       loanId: loanId,
       loanCode: m['loan_code']?.toString().trim() ?? '',
+      loanTitle: m['loan_title']?.toString().trim() ?? '',
       amountMinor: amountMinor,
       currency: currency,
     );

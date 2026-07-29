@@ -179,7 +179,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   }
 
   String? _validate() {
-    if (_selectedScheme == null) return 'Pick a loan product to continue';
+    if (_selectedScheme == null) return 'Pick a loan scheme to continue';
     if (_eligibility == null) return 'Loan limits not loaded yet';
     if (_loanAmount < _minAmount) {
       return 'Minimum loan amount is ${_eligibility!.minLabel}';
@@ -362,7 +362,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             ),
             vSpace(8),
             Text(
-              'No loan products available right now',
+              'No loan schemes available right now',
               style: TextStyle(
                 fontSize: 17.sp,
                 color: Theme.of(context).colorScheme.onSurface,
@@ -387,7 +387,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Loan Product',
+          'Loan Scheme',
           style: TextStyle(
             fontSize: 17.sp,
             fontWeight: FontWeight.w600,

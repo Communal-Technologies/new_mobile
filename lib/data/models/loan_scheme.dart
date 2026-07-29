@@ -1,6 +1,6 @@
 import 'package:communal_mobile/core/utils/money.dart';
 
-/// Cooperative-defined loan product. A scheme constrains the duration,
+/// Cooperative-defined loan scheme. A scheme constrains the duration,
 /// guarantor count, and interest a member sees on the application form.
 ///
 /// Money fields here are *not* present today — the backend's loan_schemes

@@ -102,7 +102,7 @@ class _GuarantorRequestDetailScreenState
                       _section('Loan details', [
                         _kv('Amount requested', r.amountLabel, emphasised: true),
                         if (r.schemeTitle != null && r.schemeTitle!.isNotEmpty)
-                          _kv('Loan product', r.schemeTitle!),
+                          _kv('Scheme', r.schemeTitle!),
                         if (r.schemeDurationMonths != null)
                           _kv('Duration',
                               '${r.schemeDurationMonths} month${r.schemeDurationMonths == 1 ? '' : 's'}'),

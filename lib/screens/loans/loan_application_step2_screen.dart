@@ -498,7 +498,7 @@ class _LoanApplicationStep2ScreenState
         border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Text(
-        'This loan product does not require any guarantors. Tap Continue to review.',
+        'This loan scheme does not require any guarantors. Tap Continue to review.',
         style: TextStyle(
           fontSize: 17.sp,
           color: Theme.of(context).colorScheme.onSurface,

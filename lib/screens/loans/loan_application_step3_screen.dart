@@ -248,7 +248,7 @@ class _LoanApplicationStep3ScreenState
           ),
           vSpace(20),
           _row(
-            'Product',
+            'Scheme',
             scheme.title.isNotEmpty ? scheme.title : scheme.loanCode,
           ),
           _row('Loan Amount', Money(_principalMinor, currency).format()),

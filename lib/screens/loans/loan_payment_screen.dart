@@ -376,7 +376,9 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
           ),
           vSpace(6),
           Text(
-            widget.loan.loanCode.isNotEmpty ? widget.loan.loanCode : 'Loan',
+            widget.loan.displayLabel.isNotEmpty
+                ? widget.loan.displayLabel
+                : 'Loan',
             style: TextStyle(
               fontSize: 19.sp,
               fontWeight: FontWeight.w700,

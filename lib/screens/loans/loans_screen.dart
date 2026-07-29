@@ -550,7 +550,7 @@ class _LoansScreenState extends State<LoansScreen> {
     if (_schemes.isEmpty) {
       return _emptyCard(
         icon: Icons.lightbulb_outline,
-        title: 'No loan products available',
+        title: 'No loan schemes available',
         subtitle: 'Check back later or ask your cooperative admin.',
       );
     }

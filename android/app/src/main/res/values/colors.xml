@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#FFFFFF</color>
+    <!-- Brand purple — referenced by the FCM default_notification_color meta-data
+         so Android paints the small notification icon's accent in our brand colour
+         in the expanded notification card. -->
+    <color name="colorPrimary">#742CE7</color>
+</resources>

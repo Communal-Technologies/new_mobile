@@ -1,36 +1,218 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 
-void main() {
-  runApp(const MyApp());
+import 'package:communal_mobile/core/constants/constants.dart';
+import 'package:communal_mobile/core/theme/colors.dart';
+import 'package:communal_mobile/injection.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:communal_mobile/routes/app_routes.dart';
+import 'package:communal_mobile/routes/auth_status_notifier.dart';
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_event.dart';
+import 'package:communal_mobile/cubits/obligation_categories/obligation_categories_cubit.dart';
+import 'package:communal_mobile/cubits/splash/splash_cubit.dart';
+import 'package:communal_mobile/cubits/settings/settings_cubit.dart';
+import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
+import 'package:communal_mobile/cubits/security/security_cubit.dart';
+import 'package:communal_mobile/core/services/push_notification_service.dart';
+import 'package:communal_mobile/core/services/screenshot_service.dart';
+import 'package:communal_mobile/core/widgets/connectivity_listener.dart';
+import 'package:communal_mobile/core/widgets/security_wrapper.dart';
+import 'package:communal_mobile/data/local/theme_mode_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:toastification/toastification.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/data/repositories/auth_repository.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  _assertBuildTimeConfig();
+  await configureDependencies();
+  // Re-apply screenshot preference from last session.
+  unawaited(ScreenshotService.applyFromPrefs());
+
+  // Push notifications used to live here behind an `await`, blocking
+  // runApp on Firebase.initializeApp + local-notif channel creation +
+  // foreground-listener wiring. On cold start that pushed first paint
+  // back ~1-2s and contributed to the "Skipped 365 frames" choreographer
+  // warning observed in logcat after a hot restart. Now deferred to a
+  // post-first-frame callback (see below). The FCM background-message
+  // handler is plugin-state on the native side, so registering it
+  // slightly later still catches every subsequent terminated-app push;
+  // the only gap is "app launched + immediately killed before first
+  // frame, then push arrives" which is too narrow to optimise for.
+
+  // Set system UI style (status bar)
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      // Light app surfaces need dark status bar icons by default.
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.light,
+    ),
+  );
+
+  // Lock to portrait only — fire-and-forget; the `.then` chains the
+  // runApp call so we don't await this at top level.
+  unawaited(SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]).then((_) {
+    // Defer push-notification setup until after the first frame
+    // paints so Firebase.initializeApp doesn't sit on the critical
+    // path. Wrapped in catchError because Firebase config may be
+    // absent on some build variants — push is optional, never fatal.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      PushNotificationService.initializeForApp().then((_) {
+        try {
+          FirebaseMessaging.onBackgroundMessage(
+            firebaseMessagingBackgroundHandler,
+          );
+        } catch (e) {
+          debugPrint('main: FCM background handler skipped: $e');
+        }
+      }).catchError((e) {
+        debugPrint('main: push notification setup skipped: $e');
+      });
+    });
+    runApp(
+      MultiBlocProvider(
+        providers: [
+          BlocProvider(create: (_) => getIt<SplashCubit>()),
+          BlocProvider(create: (_) => getIt<SettingsCubit>()),
+          BlocProvider(create: (_) => getIt<ConnectivityCubit>()),
+          BlocProvider(create: (_) => getIt<ObligationCategoriesCubit>()),
+        ],
+        child: const MyApp(),
+      ),
+    );
+  }));
+}
+
+/// Surfaces missing build-time `--dart-define` values at startup instead of
+/// letting features (Maps, geocoding) fail silently the first time they run.
+/// Hard-asserts in debug; logs a warning in release so the rest of the app
+/// (login, transfers, etc.) still works without map features.
+void _assertBuildTimeConfig() {
+  final mapsKey = AppConstants.googleMapsApiKey;
+  if (mapsKey.isEmpty) {
+    assert(
+      false,
+      'GOOGLE_MAPS_API_KEY is not set. Pass it via '
+      '--dart-define-from-file=tool/dart_defines.json (see README).',
+    );
+    if (kReleaseMode) {
+      // ignore: avoid_print
+      debugPrint('WARNING: GOOGLE_MAPS_API_KEY missing — map features disabled.');
+    }
+  }
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+    return ScreenUtilInit(
+      designSize: const Size(430, 932),
+      splitScreenMode: true,
+      builder: (context, _) {
+        return FutureBuilder<SharedPreferences>(
+          future: SharedPreferences.getInstance(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const MaterialApp(
+                home: Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                ),
+              );
+            }
+            
+            return MultiBlocProvider(
+              providers: [
+                BlocProvider<AuthBloc>(
+                  create: (_) => getIt<AuthBloc>()..add(AppStarted()),
+                ),
+                BlocProvider<SecurityCubit>(
+                  create: (_) => SecurityCubit(snapshot.data!, const FlutterSecureStorage()),
+                ),
+              ],
+              child: MultiBlocListener(
+                listeners: [
+                  // Audit M29: bridge AuthBloc state into the listenable that
+                  // appRouter's `redirect` consults. Fires on every state
+                  // transition (resolved vs. unresolved, authed vs. not) so a
+                  // logout immediately bounces protected routes back to /login.
+                  BlocListener<AuthBloc, AuthState>(
+                    // Fire on every transition (including same-type→same-type
+                    // identity changes) so a profile refresh that flips
+                    // `hasCompletedKyc` / `hasCooperative` reaches the
+                    // router. The previous `runtimeType` comparison missed
+                    // those because Authenticated→Authenticated has the
+                    // same runtime type.
+                    listenWhen: (previous, current) => previous != current,
+                    listener: (context, state) {
+                      final resolved = state is AuthAuthenticated ||
+                          state is AuthUnauthenticated;
+                      final user = state is AuthAuthenticated ? state.user : null;
+                      appAuthStatusNotifier.update(
+                        isAuthenticated: state is AuthAuthenticated,
+                        isResolved: resolved,
+                        hasCompletedKyc: user?.hasCompletedKyc ?? false,
+                        hasCooperative: user?.hasCooperativeMembership ?? false,
+                      );
+                    },
+                  ),
+                  BlocListener<AuthBloc, AuthState>(
+                    listenWhen: (previous, current) =>
+                        current is AuthAuthenticated && previous != current,
+                    listener: (context, state) async {
+                      if (state is! AuthAuthenticated) return;
+                      await PushNotificationService.instance.initializeAndSync(
+                        getIt<AuthRepository>(),
+                      );
+                    },
+                  ),
+                ],
+                child: ToastificationWrapper(
+                  // Must sit above [SecurityWrapper]: the lock UI swaps in a nested
+                  // [MaterialApp] and must not mount a second [ToastificationWrapper]
+                  // (the package uses one module-level GlobalKey for the overlay).
+                  child: SecurityWrapper(
+                    child: AnimatedBuilder(
+                      // Re-render the whole MaterialApp when the user
+                      // flips the dark-mode toggle. The controller is a
+                      // ChangeNotifier; rebuilding here is the simplest
+                      // way to flip the live theme without restarting.
+                      animation: getIt<ThemeModeController>(),
+                      builder: (context, _) {
+                        final mode = getIt<ThemeModeController>().mode;
+                        return MaterialApp.router(
+                      debugShowCheckedModeBanner: false,
+                      theme: AppTheme.light,
+                      darkTheme: AppTheme.dark,
+                      themeMode: mode,
+                      routerConfig: appRouter,
+                      builder: (context, child) {
+                        return ConnectivityListener(
+                          child: child ?? const SizedBox.shrink(),
+                        );
+                      },
+                    );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

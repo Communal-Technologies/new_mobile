@@ -1,0 +1,114 @@
+/// Build-time configuration.
+///
+/// Values come from `--dart-define` flags (or `--dart-define-from-file`),
+/// not from a bundled `.env` asset — bundling secrets into the APK was M2 in
+/// the audit. Use `tool/dart_defines.example.json` as a template:
+///
+///     flutter run --dart-define-from-file=tool/dart_defines.json
+///
+/// `BASE_URL` is only consulted when `APP_ENV` is `development` / `dev`;
+/// staging and production hit the fixed URLs below.
+class AppConstants {
+  AppConstants._();
+
+  static const String defaultLanguage = 'en';
+  static const String configUri = '/api/v1/fetch-system-settings';
+
+  /// Audit M25: OTP length used by the verify-reset, session-takeover, and
+  /// phone-verification screens. Backend issues 6-digit codes today; bumping
+  /// this constant is the only mobile change required if it ever changes.
+  static const int otpLength = 6;
+
+  /// Audit M26: quick-amount chips on the transfer-amount screen. Backend
+  /// doesn't expose a `/transfer/quick-amounts` endpoint today; this list
+  /// is the local fallback. When the backend ships the endpoint, swap the
+  /// `transfer_internal_amount_screen.dart` reference to a future-fetched
+  /// `List<int>` from `SettingsCubit` and treat this constant as the
+  /// fallback when the cubit value is empty.
+  ///
+  /// Values are the **major** unit of NGN (Naira) — the screen multiplies
+  /// by `factorFor(currency)` before submitting.
+  static const List<int> defaultQuickAmounts = <int>[
+    1000, 3000, 5000, 10000, 15000, 20000, 30000, 50000, 100000,
+  ];
+
+  static const String termsOfServiceUrl = 'https://communalhq.com/terms';
+  static const String privacyPolicyUrl   = 'https://communalhq.com/privacy-policy';
+
+  /// Staging API origin (used when `APP_ENV` is `staging`).
+  ///
+  /// Origin only — no `/api/v1` suffix. Every endpoint in [ApiEndpoints]
+  /// carries its own full path (`/api/v1/…`, `/api/kyc/v2/…`,
+  /// `/api/bills/v2/…`), so the base URL must not embed a path prefix.
+  static const String stagingApiBaseUrl =
+      'https://api-staging.communalhq.com';
+
+  /// Production API origin (used when `APP_ENV` is `production`).
+  static const String productionApiBaseUrl =
+      'https://api.communalhq.com';
+
+  static const String _baseUrlDefine =
+      String.fromEnvironment('BASE_URL');
+  static const String _googleMapsApiKeyDefine =
+      String.fromEnvironment('GOOGLE_MAPS_API_KEY');
+  static const String _appEnvDefine =
+      String.fromEnvironment('APP_ENV', defaultValue: 'development');
+
+  /// Development API from `--dart-define=BASE_URL=...`. Not used as [baseUrl]
+  /// until `APP_ENV` is development.
+  static String get developmentApiBaseUrl {
+    final raw = _baseUrlDefine.trim();
+    if (raw.isEmpty) return '';
+    return _stripOptionalQuotes(raw);
+  }
+
+  static String get googleMapsApiKey =>
+      _stripOptionalQuotes(_googleMapsApiKeyDefine.trim());
+
+  /// Current `APP_ENV` (missing or blank → `development`).
+  static String get appEnvironment {
+    final raw = _appEnvDefine.trim();
+    if (raw.isEmpty) return 'development';
+    return raw.toLowerCase();
+  }
+
+  /// Resolved API origin for [appEnvironment].
+  ///
+  /// This is the scheme + host only. Endpoint paths (including their
+  /// `/api/v1`, `/api/kyc/v2`, `/api/bills/v2` prefixes) live in
+  /// [ApiEndpoints] so each service's route is self-describing.
+  static String get baseUrl {
+    switch (appEnvironment) {
+      case 'development':
+      case 'dev':
+        final url = developmentApiBaseUrl;
+        if (url.isEmpty) {
+          throw StateError(
+            'BASE_URL must be passed via --dart-define when APP_ENV is development.',
+          );
+        }
+        return url;
+      case 'staging':
+        return stagingApiBaseUrl;
+      case 'production':
+      case 'prod':
+        return productionApiBaseUrl;
+      default:
+        throw StateError(
+          'Unknown APP_ENV "$_appEnvDefine". '
+          'Use development, staging, or production.',
+        );
+    }
+  }
+
+  static String _stripOptionalQuotes(String value) {
+    if (value.length >= 2) {
+      final first = value[0];
+      final last = value[value.length - 1];
+      if ((first == "'" && last == "'") || (first == '"' && last == '"')) {
+        return value.substring(1, value.length - 1);
+      }
+    }
+    return value;
+  }
+}

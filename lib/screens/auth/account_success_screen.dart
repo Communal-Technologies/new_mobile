@@ -12,6 +12,12 @@ class AccountSuccessScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    // The badge disc and the button both sit on cardColor, which is near-black
+    // in dark mode — so a primaryColor label/icon on it is purple-on-black.
+    final onCard = theme.brightness == Brightness.dark
+        ? Colors.white
+        : theme.primaryColor;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: Colors.transparent,
@@ -35,7 +41,7 @@ class AccountSuccessScreen extends StatelessWidget {
 
                   // Layered success badge: soft outer halo → translucent
                   // ring → solid white disc with the brand-coloured check.
-                  _SuccessBadge(theme: theme),
+                  _SuccessBadge(theme: theme, checkColor: onCard),
 
                   vSpace(36),
 
@@ -77,8 +83,8 @@ class AccountSuccessScreen extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () => pushKycResumeRoute(context),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).cardColor,
-                        foregroundColor: theme.primaryColor,
+                        backgroundColor: theme.cardColor,
+                        foregroundColor: onCard,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(28.r),
@@ -87,7 +93,7 @@ class AccountSuccessScreen extends StatelessWidget {
                       child: Text(
                         'Continue to Verify Account',
                         style: TextStyle(
-                          color: theme.primaryColor,
+                          color: onCard,
                           fontSize: 19.sp,
                           fontWeight: FontWeight.w700,
                         ),
@@ -106,51 +112,62 @@ class AccountSuccessScreen extends StatelessWidget {
     );
   }
 
+  // Mirrors the splash screen's arrangement: the glows are laid out first and
+  // the BackdropFilter is the LAST child, so it blurs the circles painted
+  // beneath it. Nesting them inside the filter (as this screen used to) blurs
+  // whatever is behind the filter instead, leaving the circles hard-edged.
   Widget _buildBackgroundGlows() {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+    return Positioned.fill(
+      child: ClipRect(
         child: Stack(
           children: [
-            // Light purple/pink glow - behind content area (left side)
             Positioned(
-              top: 200.h,
-              left: 20.w,
-              child: Container(
-                width: 200.w,
-                height: 200.w,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      const Color(0xFFE0B0FF).withValues(alpha: 0.5),
-                      const Color(0xFFB09FFF).withValues(alpha: 0.3),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
+              top: -40.h,
+              left: -60.w,
+              child: _glow(
+                220,
+                const Color(0xFFE0B0FF),
+                const Color(0xFFB09FFF),
               ),
             ),
 
-            // Bright blue glow - behind content area (right side)
             Positioned(
-              top: 300.h,
-              right: 20.w,
-              child: Container(
-                width: 200.w,
-                height: 200.w,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      const Color(0xFF00D9FF).withValues(alpha: 0.5),
-                      const Color(0xFF3B82F6).withValues(alpha: 0.3),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
+              top: 260.h,
+              right: -70.w,
+              child: _glow(
+                240,
+                const Color(0xFF00D9FF),
+                const Color(0xFF3B82F6),
               ),
             ),
+
+            Positioned(
+              bottom: -50.h,
+              left: -30.w,
+              child: _glow(200, Colors.orange, Colors.deepOrange),
+            ),
+
+            BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+              child: Container(color: Colors.transparent),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _glow(double size, Color inner, Color outer) {
+    return Container(
+      width: size.w,
+      height: size.w,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [
+            inner.withValues(alpha: 0.55),
+            outer.withValues(alpha: 0.3),
+            Colors.transparent,
           ],
         ),
       ),
@@ -162,9 +179,10 @@ class AccountSuccessScreen extends StatelessWidget {
 /// wrapped in two translucent rings that give it a soft glowing depth
 /// against the purple background.
 class _SuccessBadge extends StatelessWidget {
-  const _SuccessBadge({required this.theme});
+  const _SuccessBadge({required this.theme, required this.checkColor});
 
   final ThemeData theme;
+  final Color checkColor;
 
   @override
   Widget build(BuildContext context) {
@@ -202,7 +220,7 @@ class _SuccessBadge extends StatelessWidget {
                 child: Icon(
                   Icons.check_rounded,
                   size: 58.sp,
-                  color: theme.primaryColor,
+                  color: checkColor,
                 ),
               ),
             ),

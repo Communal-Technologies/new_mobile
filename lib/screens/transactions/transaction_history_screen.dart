@@ -1,0 +1,883 @@
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
+import 'package:communal_mobile/core/widgets/loader_overlay.dart';
+import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/core/utils/app_currency.dart';
+import 'package:communal_mobile/core/utils/money_formatter.dart';
+import 'package:communal_mobile/data/mappers/transaction_history_mapper.dart';
+import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
+import 'package:communal_mobile/data/models/user_model.dart';
+import 'package:communal_mobile/data/repositories/transactions_repository.dart';
+import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/screens/transactions/models/sample_transactions.dart';
+import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
+import 'package:communal_mobile/screens/transactions/widgets/transaction_tile.dart';
+import 'package:communal_mobile/screens/transactions/widgets/filter_category_bottomsheet.dart';
+import 'package:communal_mobile/screens/transactions/widgets/filter_status_bottomsheet.dart';
+import 'package:communal_mobile/screens/transactions/widgets/download_statement_bottomsheet.dart';
+import 'package:communal_mobile/screens/transactions/transaction_history_filters.dart';
+import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/widgets/back_to_exit_wrapper.dart';
+import 'package:communal_mobile/core/utils/system_ui_style.dart';
+import 'dart:convert';
+import 'package:share_plus/share_plus.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
+
+class TransactionHistoryScreen extends StatefulWidget {
+  const TransactionHistoryScreen({super.key, this.scope});
+
+  /// When set, the list is narrowed to entries matching this scope (e.g. the
+  /// same biller/phone/beneficiary/obligation) and a banner shows what's being
+  /// filtered. Driven by "View history" on the transaction details screen.
+  final TransactionHistoryScope? scope;
+
+  @override
+  State<TransactionHistoryScreen> createState() =>
+      _TransactionHistoryScreenState();
+}
+
+class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
+  late final TransactionsRepository _repo = TransactionsRepository(
+    getIt<DioClient>(),
+  );
+  int _currentTabIndex = 0;
+  int _currentNavIndex = 0;
+
+  bool _loading = true;
+  String? _error;
+  List<TransactionListItem> _personalFlat = [];
+  List<TransactionListItem> _ledgerFlat = [];
+  String _filterDirection = 'All';
+  String _filterPaymentType = 'All Categories';
+  String _filterStatus = 'All Status';
+  bool _exporting = false;
+
+  List<MapEntry<String, List<TransactionListItem>>> _personalMonthly = [];
+  List<MapEntry<String, List<TransactionListItem>>> _ledgerMonthly = [];
+  final Map<String, bool> _expandedPersonal = {};
+  final Map<String, bool> _expandedLedger = {};
+
+  String get _categoryFilterButtonLabel {
+    if (_filterDirection == 'All' && _filterPaymentType == 'All Categories') {
+      return 'All categories';
+    }
+    if (_filterDirection != 'All' && _filterPaymentType != 'All Categories') {
+      return '$_filterDirection · $_filterPaymentType';
+    }
+    return _filterDirection != 'All' ? _filterDirection : _filterPaymentType;
+  }
+
+  String get _statusFilterButtonLabel =>
+      _filterStatus == 'All Status' ? 'All statuses' : _filterStatus;
+
+  void _recomputeGrouped() {
+    // When opened scoped (from "View history"), pre-narrow to the same
+    // biller/beneficiary/obligation before the user's category/status filters.
+    final scope = widget.scope;
+    final personalSource = (scope == null || scope.isEmpty)
+        ? _personalFlat
+        : _personalFlat.where(scope.matches).toList(growable: false);
+    final ledgerSource = (scope == null || scope.isEmpty)
+        ? _ledgerFlat
+        : _ledgerFlat.where(scope.matches).toList(growable: false);
+    final pFiltered = applyTransactionHistoryFilters(
+      personalSource,
+      direction: _filterDirection,
+      paymentType: _filterPaymentType,
+      statusLabel: _filterStatus,
+    );
+    final lFiltered = applyTransactionHistoryFilters(
+      ledgerSource,
+      direction: _filterDirection,
+      paymentType: _filterPaymentType,
+      statusLabel: _filterStatus,
+    );
+    final pg = groupTransactionsByMonth(pFiltered);
+    final lg = groupTransactionsByMonth(lFiltered);
+    _personalMonthly = pg.entries.toList();
+    _ledgerMonthly = lg.entries.toList();
+    _expandedPersonal
+      ..clear()
+      ..addEntries(
+        List.generate(
+          _personalMonthly.length,
+          (i) => MapEntry(_personalMonthly[i].key, i == 0),
+        ),
+      );
+    _expandedLedger
+      ..clear()
+      ..addEntries(
+        List.generate(
+          _ledgerMonthly.length,
+          (i) => MapEntry(_ledgerMonthly[i].key, i == 0),
+        ),
+      );
+  }
+
+  Future<void> _exportStatement(
+    StatementExportRequest request,
+    UserModel user,
+  ) async {
+    if (_exporting) return;
+    final scope = _currentTabIndex == 0 ? 'communal' : 'ledger';
+    final delivery = switch (request.delivery) {
+      'Send to Email' => 'email',
+      'Both' => 'both',
+      _ => 'download',
+    };
+    final format = request.formatLabel.toLowerCase().contains('pdf')
+        ? 'pdf'
+        : 'csv';
+    final email = request.email?.trim();
+    if ((delivery == 'email' || delivery == 'both') &&
+        (email == null || email.isEmpty)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your account email.')),
+      );
+      return;
+    }
+
+    final ledgerNumber = scope == 'ledger' ? user.ledgerNumber?.trim() : null;
+
+    if (mounted) {
+      setState(() => _exporting = true);
+    }
+
+    try {
+      final result = await _repo.exportStatement(
+        scope: scope,
+        startInclusive: request.startInclusive,
+        endInclusive: request.endInclusive,
+        format: format,
+        delivery: delivery,
+        email: email,
+        ledgerNumber: ledgerNumber,
+      );
+
+      if (!mounted) return;
+
+      final status = result['status'] == true;
+      if (!status) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${result['message'] ?? 'Export failed'}')),
+        );
+        return;
+      }
+
+      if (delivery == 'download' || delivery == 'both') {
+        final fileB64 = result['file_base64']?.toString() ?? '';
+        if (fileB64.isNotEmpty) {
+          final fileBytes = base64Decode(fileB64);
+          final filename =
+              result['filename']?.toString() ?? 'statement.$format';
+          final mime =
+              result['mime']?.toString() ??
+              (format == 'pdf' ? 'application/pdf' : 'text/csv');
+          await Share.shareXFiles([
+            XFile.fromData(
+              Uint8List.fromList(fileBytes),
+              mimeType: mime,
+              name: filename,
+            ),
+          ], text: 'Communal transaction statement');
+        }
+      }
+
+      if (delivery == 'email' || delivery == 'both') {
+        if (!mounted) return;
+        final sent = result['email_sent'] == true;
+        final queued = result['email_queued'] == true;
+        final String msg;
+        if (sent) {
+          msg = 'Statement sent to your email.';
+        } else if (queued) {
+          msg = 'Statement queued — it will arrive in your email shortly.';
+        } else {
+          msg = 'Statement generated, but email delivery failed.';
+        }
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(msg)));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not export: $e')));
+    } finally {
+      if (mounted) {
+        setState(() => _exporting = false);
+      }
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  bool _showLedgerTab(UserModel? user) {
+    if (user == null) return false;
+    final ln = user.ledgerNumber?.trim() ?? '';
+    return user.hasCooperativeMembership && ln.isNotEmpty;
+  }
+
+  Future<void> _load() async {
+    final auth = context.read<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'Please sign in to view transactions.';
+        });
+      }
+      return;
+    }
+    final user = auth.user;
+    // Cache-first: render the last-cached history instantly and revalidate in
+    // the background, so the screen doesn't show a full-screen loader on every
+    // open. The loader only appears when there is nothing cached yet.
+    final cachedPersonal = _repo.cachedPersonalHistoryMerged(user);
+    final cachedLedger = _showLedgerTab(user)
+        ? _repo.cachedLedgerHistoryOnly(user)
+        : const <TransactionListItem>[];
+    final hasCache = cachedPersonal.isNotEmpty || cachedLedger.isNotEmpty;
+    if (hasCache) {
+      setState(() {
+        _personalFlat = cachedPersonal;
+        _ledgerFlat = cachedLedger;
+        if (!_showLedgerTab(user) && _currentTabIndex != 0) {
+          _currentTabIndex = 0;
+        }
+        _recomputeGrouped();
+        _loading = false;
+        _error = null;
+      });
+    } else {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
+    try {
+      final personal = await _repo.fetchPersonalHistoryMerged(user);
+      final ledger = _showLedgerTab(user)
+          ? await _repo.fetchLedgerHistoryOnly(user)
+          : const <TransactionListItem>[];
+
+      if (!mounted) return;
+      setState(() {
+        _personalFlat = personal;
+        _ledgerFlat = ledger;
+        if (!_showLedgerTab(user) && _currentTabIndex != 0) {
+          _currentTabIndex = 0;
+        }
+        _recomputeGrouped();
+        _loading = false;
+        _error = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        // Keep showing cached rows on a refresh failure; only surface the
+        // error when there's nothing cached to fall back to.
+        if (!hasCache) _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  List<MapEntry<String, List<TransactionListItem>>> get _activeMonthly =>
+      _currentTabIndex == 0 ? _personalMonthly : _ledgerMonthly;
+
+  Map<String, bool> get _activeExpanded =>
+      _currentTabIndex == 0 ? _expandedPersonal : _expandedLedger;
+
+  @override
+  Widget build(BuildContext context) {
+    return BackToExitWrapper(child: _buildRootBody(context));
+  }
+
+  Widget _buildRootBody(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: systemOverlayForTheme(Theme.of(context)),
+      child: Stack(
+        children: [
+          Scaffold(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            appBar: AppBar(
+              backgroundColor: Theme.of(context).cardColor,
+              elevation: 0,
+              leading: IconButton(
+                icon: Icon(
+                  Icons.arrow_back,
+                  color: Theme.of(context).colorScheme.onSurface,
+                  size: 24.sp,
+                ),
+                onPressed: () => context.pop(),
+              ),
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    widget.scope == null
+                        ? 'Transaction History'
+                        : 'Payment history',
+                    style: TextStyle(
+                      fontSize: 23.sp,
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  if (widget.scope != null && widget.scope!.label.isNotEmpty)
+                    Text(
+                      widget.scope!.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w500,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
+                      ),
+                    ),
+                ],
+              ),
+              actions: [
+                Padding(
+                  padding: EdgeInsets.only(right: 16.w),
+                  child: GestureDetector(
+                    onTap: _exporting
+                        ? null
+                        : () async {
+                            final auth = context.read<AuthBloc>().state;
+                            final u = auth is AuthAuthenticated
+                                ? auth.user
+                                : null;
+                            final email = u?.email?.trim();
+                            final req =
+                                await showModalBottomSheet<
+                                  StatementExportRequest
+                                >(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (ctx) =>
+                                      DownloadStatementBottomSheet(
+                                        initialEmail: email,
+                                      ),
+                                );
+                            if (!context.mounted || req == null || u == null) {
+                              return;
+                            }
+                            await _exportStatement(req, u);
+                          },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 14.w,
+                        vertical: 10.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).dividerColor,
+                        borderRadius: BorderRadius.circular(20.r),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.download,
+                            size: 18.sp,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                          hSpace(6),
+                          Text(
+                            _exporting ? 'Exporting...' : 'Statement',
+                            style: TextStyle(
+                              fontSize: 19.sp,
+                              fontWeight: FontWeight.w500,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            body: BlocConsumer<AuthBloc, AuthState>(
+              listenWhen: (prev, next) {
+                if (prev is AuthAuthenticated && next is AuthAuthenticated) {
+                  return prev.user.id != next.user.id ||
+                      prev.user.walletBalanceKobo !=
+                          next.user.walletBalanceKobo ||
+                      prev.user.ledgerNumber != next.user.ledgerNumber ||
+                      prev.user.countryIso != next.user.countryIso ||
+                      prev.user.walletCurrencyCode !=
+                          next.user.walletCurrencyCode ||
+                      prev.user.hasCooperativeMembership !=
+                          next.user.hasCooperativeMembership;
+                }
+                return prev.runtimeType != next.runtimeType;
+              },
+              listener: (_, __) => _load(),
+              builder: (context, authState) {
+                final user = authState is AuthAuthenticated
+                    ? authState.user
+                    : null;
+                final showLedger = _showLedgerTab(user);
+
+                if (_loading) {
+                  // Body stays empty — the full-screen LoaderOverlay
+                  // sits at the Stack level so it covers the AppBar and
+                  // bottom nav rather than just the body.
+                  return const SizedBox.shrink();
+                }
+                if (_error != null) {
+                  return Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24.w),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _error!,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 19.sp),
+                          ),
+                          vSpace(16),
+                          FilledButton(
+                            onPressed: _load,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                return Column(
+                  children: [
+                    if (showLedger)
+                      Container(
+                        color: Theme.of(context).cardColor,
+                        padding: EdgeInsets.symmetric(horizontal: 16.w),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _buildTab('Communal (Personal)', 0, theme),
+                            ),
+                            Expanded(
+                              child: _buildTab(
+                                'Ledger (Cooperative)',
+                                1,
+                                theme,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Container(
+                        width: double.infinity,
+                        color: Theme.of(context).cardColor,
+                        padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
+                        child: Text(
+                          'Communal (Personal)',
+                          style: TextStyle(
+                            fontSize: 19.sp,
+                            fontWeight: FontWeight.w700,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                    Container(
+                      color: Theme.of(context).cardColor,
+                      padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 12.h),
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: _buildFilterButton(
+                              icon: Icons.filter_list,
+                              label: _categoryFilterButtonLabel,
+                              onTap: _openCategoryFilterSheet,
+                            ),
+                          ),
+                          hSpace(12),
+                          Flexible(
+                            child: _buildFilterButton(
+                              icon: null,
+                              label: _statusFilterButtonLabel,
+                              onTap: _openStatusFilterSheet,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    vSpace(8),
+                    Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: _load,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Theme.of(context).primaryColor,
+                        child: _activeMonthly.isEmpty
+                            ? ListView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                children: [
+                                  SizedBox(height: 120.h),
+                                  Icon(
+                                    Icons.receipt_long_outlined,
+                                    size: 48.sp,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.4),
+                                  ),
+                                  vSpace(12),
+                                  Center(
+                                    child: Text(
+                                      'No transactions yet',
+                                      style: TextStyle(
+                                        fontSize: 19.sp,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.6),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : ListView.separated(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 28.h),
+                                itemBuilder: (_, index) => _buildMonthSection(
+                                  _activeMonthly[index].key,
+                                  _activeMonthly[index].value,
+                                  user != null
+                                      ? currencySymbolForUser(user)
+                                      : currencySymbolForCode('NGN'),
+                                ),
+                                separatorBuilder: (_, __) => vSpace(16),
+                                itemCount: _activeMonthly.length,
+                              ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+            bottomNavigationBar: BottomNavBar(
+              currentIndex: _currentNavIndex,
+              onTap: (index) {
+                setState(() => _currentNavIndex = index);
+                switch (index) {
+                  case 0:
+                    context.goNamed('home');
+                    break;
+                  case 1:
+                    context.pushNamed('obligations');
+                    break;
+                  case 2:
+                    context.pushNamed('community');
+                    break;
+                  case 3:
+                    context.goNamed('loans');
+                    break;
+                  case 4:
+                    context.goNamed('account-settings');
+                    break;
+                }
+              },
+            ),
+          ),
+          if (_loading) const Positioned.fill(child: LoaderOverlay()),
+          if (_exporting)
+            Positioned.fill(
+              child: AbsorbPointer(
+                absorbing: true,
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  child: Center(
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 20.w,
+                        vertical: 16.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).cardColor,
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 20.w,
+                            height: 20.w,
+                            child: const CircularProgressIndicator(
+                              strokeWidth: 2.4,
+                            ),
+                          ),
+                          hSpace(10),
+                          Text(
+                            'Generating statement...',
+                            style: TextStyle(
+                              fontSize: 17.sp,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTab(String label, int index, ThemeData theme) {
+    final isActive = _currentTabIndex == index;
+    final activeColor = theme.brightness == Brightness.dark
+        ? Colors.white
+        : theme.primaryColor;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _currentTabIndex = index;
+        });
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 19.sp,
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+              color: isActive
+                  ? activeColor
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          vSpace(8),
+          Container(
+            height: 3.h,
+            decoration: BoxDecoration(
+              color: isActive ? activeColor : Colors.transparent,
+              borderRadius: BorderRadius.circular(2.r),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openCategoryFilterSheet() async {
+    final result = await showModalBottomSheet<CategoryFilterResult?>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => FilterCategoryBottomSheet(
+        initialDirection: _filterDirection,
+        initialPaymentType: _filterPaymentType,
+      ),
+    );
+    if (!mounted || result == null) return;
+    setState(() {
+      _filterDirection = result.direction;
+      _filterPaymentType = result.paymentType;
+      _recomputeGrouped();
+    });
+  }
+
+  Future<void> _openStatusFilterSheet() async {
+    final result = await showModalBottomSheet<String?>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => FilterStatusBottomSheet(initialStatus: _filterStatus),
+    );
+    if (!mounted || result == null) return;
+    setState(() {
+      _filterStatus = result;
+      _recomputeGrouped();
+    });
+  }
+
+  Widget _buildFilterButton({
+    IconData? icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 11.h),
+        decoration: BoxDecoration(
+          color: Theme.of(context).dividerColor,
+          borderRadius: BorderRadius.circular(20.r),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 18.sp,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+              hSpace(6),
+            ],
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 19.sp,
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+            ),
+            hSpace(4),
+            Icon(
+              Icons.keyboard_arrow_down,
+              size: 18.sp,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMonthSection(
+    String month,
+    List<TransactionListItem> transactions,
+    String currencySymbol,
+  ) {
+    final expanded = _activeExpanded;
+    final isExpanded = expanded[month] ?? false;
+    // API `type` is debit whenever the user is sender, even if the transfer
+    // failed — exclude failed rows from In/Out totals (no balance movement).
+    final incoming = transactions
+        .where(
+          (t) => t.isCredit && t.details.status != TransactionStatus.failed,
+        )
+        .fold<double>(0, (sum, item) => sum + item.details.amount);
+    final outgoing = transactions
+        .where(
+          (t) => !t.isCredit && t.details.status != TransactionStatus.failed,
+        )
+        .fold<double>(0, (sum, item) => sum + item.details.amount);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              expanded[month] = !isExpanded;
+            });
+          },
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            child: Row(
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      month,
+                      style: TextStyle(
+                        fontSize: 19.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    hSpace(6),
+                    Icon(
+                      isExpanded
+                          ? Icons.keyboard_arrow_down
+                          : Icons.keyboard_arrow_right,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
+                      size: 22.sp,
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Text(
+                  'In: $currencySymbol${formatMoney(incoming)}',
+                  style: TextStyle(
+                    fontSize: 19.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.green,
+                  ),
+                ),
+                hSpace(12),
+                Text(
+                  'Out: $currencySymbol${formatMoney(outgoing)}',
+                  style: TextStyle(
+                    fontSize: 19.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.red,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (isExpanded) ...[
+          vSpace(8),
+          for (int i = 0; i < transactions.length; i++)
+            Padding(
+              padding: EdgeInsets.only(
+                bottom: i == transactions.length - 1 ? 0 : 8.h,
+              ),
+              child: TransactionTile(
+                item: transactions[i],
+                onTap: () => context.pushNamed(
+                  'transaction-details',
+                  extra: transactions[i].details,
+                ),
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+}

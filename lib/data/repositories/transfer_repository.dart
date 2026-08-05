@@ -1,0 +1,654 @@
+import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
+import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
+import 'package:communal_mobile/data/mappers/transaction_history_mapper.dart';
+import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
+import 'package:dio/dio.dart';
+
+class TransferSuggestion {
+  const TransferSuggestion({
+    required this.source,
+    required this.accountId,
+    required this.bank,
+    required this.cooperativeName,
+    required this.accountNumber,
+    required this.accountName,
+    this.nipCode,
+  });
+
+  final String source; // internal | external
+  final String accountId;
+  final String bank;
+  final String cooperativeName;
+  final String accountNumber;
+  final String accountName;
+  final String? nipCode;
+
+  bool get isInternal => source.trim().toLowerCase() == 'internal';
+  bool get isExternal => source.trim().toLowerCase() == 'external';
+
+  factory TransferSuggestion.fromJson(Map<String, dynamic> json) {
+    return TransferSuggestion(
+      source: json['source']?.toString() ?? '',
+      accountId: json['account_id']?.toString() ?? '',
+      bank: json['bank']?.toString() ?? '',
+      cooperativeName: json['cooperative_name']?.toString() ?? '',
+      accountNumber: json['accountNumber']?.toString() ?? '',
+      accountName: json['accountName']?.toString() ?? '',
+      nipCode: json['nipCode']?.toString(),
+    );
+  }
+}
+
+class TransferBank {
+  const TransferBank({required this.name, required this.nipCode});
+
+  final String name;
+  final String nipCode;
+
+  factory TransferBank.fromJson(Map<String, dynamic> json) {
+    // Two shapes in the wild:
+    //
+    // 1. New (BankRegistryManager → AnchorNigerianBankRegistry):
+    //      { code: "058", label: "GTB", metadata: { nipCode, cbnCode } }
+    //
+    // 2. Legacy (raw Anchor pass-through some flows still use):
+    //      { id, attributes: { name, nipCode, cbnCode } }
+    //
+    // Read the new shape first because that's what /transfer/banks
+    // currently returns; fall through to attributes for anything
+    // still emitting the old format. Dropping the legacy branch
+    // entirely silently empties the picker (which is what user
+    // reported: list-not-loading was actually list-empty-after-parse).
+    final label = json['label']?.toString();
+    final code = json['code']?.toString();
+    if (label != null && label.isNotEmpty) {
+      final meta = (json['metadata'] is Map)
+          ? Map<String, dynamic>.from(json['metadata'] as Map)
+          : const <String, dynamic>{};
+      final nip =
+          meta['nipCode']?.toString() ??
+          code ??
+          meta['cbnCode']?.toString() ??
+          '';
+      return TransferBank(name: label, nipCode: nip);
+    }
+
+    final attr = (json['attributes'] is Map)
+        ? Map<String, dynamic>.from(json['attributes'] as Map)
+        : const <String, dynamic>{};
+    return TransferBank(
+      name: attr['name']?.toString() ?? '',
+      nipCode: attr['nipCode']?.toString() ?? attr['cbnCode']?.toString() ?? '',
+    );
+  }
+}
+
+class AccountVerificationResult {
+  const AccountVerificationResult({
+    required this.accountName,
+    required this.accountNumber,
+    required this.bankCode,
+    this.bankName,
+  });
+
+  final String accountName;
+  final String accountNumber;
+  final String bankCode;
+  final String? bankName;
+
+  factory AccountVerificationResult.fromJson(
+    Map<String, dynamic> json, {
+    required String fallbackBankCode,
+    required String fallbackAccountNumber,
+  }) {
+    final attr = (json['attributes'] is Map)
+        ? Map<String, dynamic>.from(json['attributes'] as Map)
+        : <String, dynamic>{};
+    return AccountVerificationResult(
+      accountName: attr['accountName']?.toString() ?? '',
+      accountNumber: attr['accountNumber']?.toString() ?? fallbackAccountNumber,
+      bankCode: attr['bankCode']?.toString() ?? fallbackBankCode,
+      bankName: (attr['bank'] is Map)
+          ? (attr['bank']['name']?.toString())
+          : null,
+    );
+  }
+}
+
+class TransferInitiationResult {
+  const TransferInitiationResult({
+    required this.transferId,
+    required this.reference,
+    required this.status,
+    required this.type,
+    this.failureReason,
+  });
+
+  final String transferId;
+  final String reference;
+  final String status;
+  final String type;
+  final String? failureReason;
+
+  factory TransferInitiationResult.fromJson(
+    Map<String, dynamic> json, {
+    required String fallbackType,
+  }) {
+    final attr = (json['attributes'] is Map)
+        ? Map<String, dynamic>.from(json['attributes'] as Map)
+        : <String, dynamic>{};
+    final fr = attr['failureReason'] ?? attr['failure_reason'];
+    return TransferInitiationResult(
+      transferId: json['id']?.toString() ?? '',
+      reference: attr['reference']?.toString() ?? '',
+      status: attr['status']?.toString() ?? 'PENDING',
+      type: json['type']?.toString() ?? fallbackType,
+      failureReason: fr?.toString(),
+    );
+  }
+}
+
+DateTime? _parseProviderDateTime(String? raw) {
+  if (raw == null || raw.trim().isEmpty) return null;
+  var s = raw.trim();
+  final direct = DateTime.tryParse(s);
+  if (direct != null) return direct;
+
+  final m = RegExp(r'^(.*?)(\.\d{7,})(Z|[\+\-]\d{2}:?\d{2})$').firstMatch(s);
+  if (m != null) {
+    s = '${m[1]}${m[2]!.substring(0, 7)}${m[3]}';
+  }
+  return DateTime.tryParse(s);
+}
+
+/// Normalized transfer row from `GET /members/transfer/transactions/{id}/status`.
+class RemoteTransferStatus {
+  const RemoteTransferStatus({
+    required this.statusRaw,
+    required this.reference,
+    this.failureReason,
+    this.amountKobo,
+    this.providerOccurredAt,
+  });
+
+  final String statusRaw;
+  final String reference;
+  final String? failureReason;
+
+  /// Anchor amount in kobo when present.
+  final int? amountKobo;
+  final DateTime? providerOccurredAt;
+
+  factory RemoteTransferStatus.fromDataJson(Map<String, dynamic> json) {
+    final rawAmt = json['amount'];
+    int? kobo;
+    if (rawAmt is int) {
+      kobo = rawAmt;
+    } else if (rawAmt is num) {
+      kobo = rawAmt.round();
+    }
+    final updated = json['updated_at']?.toString();
+    final created = json['created_at']?.toString();
+    final when =
+        _parseProviderDateTime(updated) ?? _parseProviderDateTime(created);
+    return RemoteTransferStatus(
+      statusRaw: json['status']?.toString() ?? '',
+      reference: json['reference']?.toString() ?? '',
+      failureReason: json['failure_reason']?.toString(),
+      amountKobo: kobo,
+      providerOccurredAt: when,
+    );
+  }
+}
+
+class TransferBeneficiary {
+  const TransferBeneficiary({
+    required this.accountId,
+    required this.accountNumber,
+    required this.accountName,
+    required this.bankName,
+    required this.type,
+    this.nipCode,
+  });
+
+  final String accountId;
+  final String accountNumber;
+  final String accountName;
+  final String bankName;
+  final String type; // internal | external
+  final String? nipCode;
+
+  bool get isInternal => type.trim().toLowerCase() == 'internal';
+
+  factory TransferBeneficiary.fromJson(Map<String, dynamic> json) {
+    return TransferBeneficiary(
+      accountId: json['account_id']?.toString() ?? '',
+      accountNumber: json['account_number']?.toString() ?? '',
+      accountName: json['account_name']?.toString() ?? '',
+      bankName: json['bank_name']?.toString() ?? '',
+      type: json['type']?.toString() ?? '',
+      nipCode: json['nip_code']?.toString(),
+    );
+  }
+}
+
+class NipFeeResult {
+  const NipFeeResult({
+    required this.fee,
+    required this.totalDebit,
+    required this.currency,
+  });
+
+  final int fee;
+  final int totalDebit;
+  final String currency;
+
+  factory NipFeeResult.fromJson(Map<String, dynamic> json) {
+    return NipFeeResult(
+      fee: (json['fee'] as num?)?.toInt() ?? 0,
+      totalDebit: (json['total_debit'] as num?)?.toInt() ?? 0,
+      currency: json['currency']?.toString() ?? 'NGN',
+    );
+  }
+}
+
+class TransferRepository {
+  TransferRepository(this._dioClient);
+
+  final DioClient _dioClient;
+
+  // In-memory cache for the bank list. Banks rarely change and the
+  // payload is the same for every user, so re-fetching on every
+  // external-transfer screen open just burns a network round-trip
+  // (and on a flaky link, leaves the picker empty). Cache lives for
+  // the lifetime of the singleton repository (which is app session)
+  // and is invalidated by passing forceRefresh: true.
+  static const Duration _bankCacheTtl = Duration(hours: 24);
+  List<TransferBank>? _cachedBanks;
+  DateTime? _cachedBanksAt;
+
+  Future<List<TransferBank>> fetchBanks({bool forceRefresh = false}) async {
+    if (!forceRefresh && _cachedBanks != null && _cachedBanksAt != null) {
+      final age = DateTime.now().difference(_cachedBanksAt!);
+      if (age < _bankCacheTtl) {
+        return _cachedBanks!;
+      }
+    }
+
+    try {
+      final response = await _dioClient.get(ApiEndpoints.transferBanks);
+      final data = response.data;
+      if (data is! Map || data['status'] != true) {
+        throw Exception('Could not load bank list.');
+      }
+      final raw = data['data'];
+      if (raw is! List) return const [];
+      final parsed = raw
+          .whereType<Map>()
+          .map((e) => TransferBank.fromJson(Map<String, dynamic>.from(e)))
+          .where((e) => e.name.trim().isNotEmpty && e.nipCode.trim().isNotEmpty)
+          .toList(growable: false);
+      // Only overwrite the cache when the response actually contained
+      // banks; an empty response (transient backend hiccup) shouldn't
+      // poison a perfectly good cache from the previous fetch.
+      if (parsed.isNotEmpty) {
+        _cachedBanks = parsed;
+        _cachedBanksAt = DateTime.now();
+      }
+      return parsed;
+    } on DioException catch (e) {
+      // Network/4xx/5xx — fall back to the cached list (if any) so
+      // the user can still pick a bank rather than seeing an empty
+      // picker. Throw only when there is nothing to show.
+      if (_cachedBanks != null && _cachedBanks!.isNotEmpty) {
+        return _cachedBanks!;
+      }
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  Future<List<TransferSuggestion>> fetchBankSuggestions({String? query}) async {
+    try {
+      final response = await _dioClient.get(
+        ApiEndpoints.transferBankSuggestions,
+        queryParameters: {
+          if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+        },
+      );
+      final data = response.data;
+      if (data is! Map || data['status'] != true) {
+        throw Exception('Could not load transfer recipients.');
+      }
+      final rawList = data['data'];
+      if (rawList is! List) return const [];
+      return rawList
+          .whereType<Map>()
+          .map((e) => TransferSuggestion.fromJson(Map<String, dynamic>.from(e)))
+          .where(
+            (e) =>
+                e.accountId.trim().isNotEmpty &&
+                e.accountName.trim().isNotEmpty &&
+                e.accountNumber.trim().isNotEmpty,
+          )
+          .toList(growable: false);
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  Future<AccountVerificationResult> verifyAccount({
+    required String bankCode,
+    required String accountNumber,
+  }) async {
+    try {
+      final response = await _dioClient.post(
+        ApiEndpoints.transferVerifyAccount(bankCode, accountNumber),
+        data: const <String, dynamic>{},
+      );
+      final data = response.data;
+      if (data is! Map || data['status'] != true) {
+        throw Exception('Account verification failed.');
+      }
+      final raw = data['data'];
+      if (raw is! Map) {
+        throw Exception('Account verification returned invalid response.');
+      }
+      return AccountVerificationResult.fromJson(
+        Map<String, dynamic>.from(raw),
+        fallbackBankCode: bankCode.trim(),
+        fallbackAccountNumber: accountNumber.trim(),
+      );
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  Future<String> createCounterParty({
+    required String bankCode,
+    required String accountNumber,
+    required String accountName,
+  }) async {
+    try {
+      final response = await _dioClient.post(
+        ApiEndpoints.transferCreateCounterParties,
+        data: {
+          'bankCode': bankCode.trim(),
+          'accountNumber': accountNumber.trim(),
+          'accountName': accountName.trim(),
+        },
+      );
+      final data = response.data;
+      if (data is! Map || data['status'] != true) {
+        throw Exception('Could not create counterparty.');
+      }
+      final raw = data['data'];
+      if (raw is! Map || raw['id'] == null) {
+        throw Exception('Counterparty creation returned invalid response.');
+      }
+      final id = raw['id'].toString().trim();
+      if (id.isEmpty) {
+        throw Exception('Counterparty id is empty.');
+      }
+      return id;
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  Future<void> verifySecurityPin(String pin) async {
+    try {
+      final response = await _dioClient.post(
+        ApiEndpoints.membersVerifySecurityPin,
+        data: {'security_pin': pin},
+      );
+      final data = response.data;
+      if (data is! Map || data['status'] != true) {
+        throw Exception('Security PIN verification failed.');
+      }
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  Future<void> updateSecurityPin(String pin) async {
+    try {
+      final response = await _dioClient.put(
+        ApiEndpoints.membersUpdateSecurityPin,
+        data: {'security_pin': pin.trim()},
+      );
+      final data = response.data;
+      if (data is! Map) {
+        throw Exception('Unable to update PIN.');
+      }
+      final code = response.statusCode ?? 0;
+      if (code < 200 || code >= 300) {
+        throw Exception(data['message']?.toString() ?? 'Unable to update PIN.');
+      }
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  Future<TransferInitiationResult> initiateTransfer({
+    required String type,
+    required int amountMinor,
+    required String narration,
+    String? destinationAccountId,
+    String? counterPartyId,
+    String? currencyCode,
+    String? idempotencyKey,
+    Map<String, String>? biometricHeaders,
+    String? pin,
+    Map<String, dynamic>? obligationContext,
+    String? beneficiaryName,
+    String? beneficiaryBank,
+    String? beneficiaryAccount,
+  }) async {
+    try {
+      var ccy = (currencyCode ?? 'NGN').trim().toUpperCase();
+      if (ccy.length != 3) ccy = 'NGN';
+      final body = <String, dynamic>{
+        'type': type,
+        'amount': amountMinor,
+        'currency': ccy,
+        'narration': narration.trim(),
+        if (destinationAccountId != null &&
+            destinationAccountId.trim().isNotEmpty)
+          'destinationAccountId': destinationAccountId.trim(),
+        if (counterPartyId != null && counterPartyId.trim().isNotEmpty)
+          'counterPartyId': counterPartyId.trim(),
+        if (obligationContext != null && obligationContext.isNotEmpty)
+          'obligation_context': obligationContext,
+        // Beneficiary display info so the recipient shows in history (NIP has no
+        // local receiver record server-side).
+        if (beneficiaryName != null && beneficiaryName.trim().isNotEmpty)
+          'beneficiaryName': beneficiaryName.trim(),
+        if (beneficiaryBank != null && beneficiaryBank.trim().isNotEmpty)
+          'beneficiaryBank': beneficiaryBank.trim(),
+        if (beneficiaryAccount != null && beneficiaryAccount.trim().isNotEmpty)
+          'beneficiaryAccount': beneficiaryAccount.trim(),
+      };
+      // Caller must supply EITHER biometricHeaders OR pin. The backend
+      // middleware (RequireBiometricSignature) treats them as mutually
+      // exclusive: a partial biometric header set is rejected, and a
+      // missing-biometric request falls through to X-Security-Pin.
+      final headers = <String, String>{
+        if (biometricHeaders != null) ...biometricHeaders,
+        if (pin != null && pin.isNotEmpty) 'X-Security-Pin': pin,
+      };
+      final response = await _dioClient.post(
+        ApiEndpoints.transferInitiate,
+        data: body,
+        idempotencyKey: idempotencyKey,
+        extraHeaders: headers.isEmpty ? null : headers,
+      );
+      final data = response.data;
+      if (data is! Map || data['status'] != true) {
+        throw Exception('Transfer initiation failed.');
+      }
+      final raw = data['data'];
+      if (raw is! Map) {
+        throw Exception('Transfer initiation returned invalid response.');
+      }
+      return TransferInitiationResult.fromJson(
+        Map<String, dynamic>.from(raw),
+        fallbackType: type,
+      );
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  /// Single-transaction fetch keyed by trx_reference OR
+  /// external_reference. Used by the push-tap deep link — a
+  /// transaction-typed push only carries a reference and the receipt
+  /// screen needs a fully built [TransactionDetailsData] in `extra`.
+  ///
+  /// Returns null when the reference is empty or the row doesn't
+  /// belong to the caller (server returns 404 in that case).
+  Future<TransactionDetailsData?> fetchTransactionByReference(
+    String reference, {
+    required String currencySymbol,
+  }) async {
+    final ref = reference.trim();
+    if (ref.isEmpty) return null;
+    try {
+      final response = await _dioClient.get(
+        ApiEndpoints.membersTransactionByReference(ref),
+      );
+      final data = response.data;
+      // transactions-svc wraps every success in {status, data}; the older
+      // monolith route returned the row under `transaction`.
+      final raw = data is Map ? (data['data'] ?? data['transaction']) : null;
+      if (raw is! Map) return null;
+      // Reuse the list-row mapper — same shape returned by
+      // /personal-transactions, so the existing communal-row builder
+      // handles it without a parallel constructor.
+      final item = mapCommunalTransactionToListItem(
+        Map<String, dynamic>.from(raw),
+        currencySymbol: currencySymbol,
+      );
+      return item.details;
+    } on DioException {
+      return null;
+    }
+  }
+
+  Future<RemoteTransferStatus> fetchTransferStatus(String transferId) async {
+    final id = transferId.trim();
+    if (id.isEmpty) {
+      throw Exception('Missing transfer id.');
+    }
+    try {
+      final response = await _dioClient.get(
+        ApiEndpoints.membersTransferStatus(id),
+      );
+      final data = response.data;
+      if (data is! Map || data['status'] != true) {
+        throw Exception('Could not load transfer status.');
+      }
+      final raw = data['data'];
+      if (raw is! Map) {
+        throw Exception('Invalid transfer status response.');
+      }
+      return RemoteTransferStatus.fromDataJson(Map<String, dynamic>.from(raw));
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  Future<NipFeeResult> fetchNipFee({required int amountMinor}) async {
+    try {
+      final response = await _dioClient.get(
+        ApiEndpoints.transferFee,
+        queryParameters: {'amount': amountMinor, 'type': 'NIPTransfer'},
+      );
+      final data = response.data;
+      if (data is! Map || data['status'] != true) {
+        throw Exception('Could not load transfer fee.');
+      }
+      final raw = data['data'];
+      if (raw is! Map) {
+        throw Exception('Invalid fee response.');
+      }
+      return NipFeeResult.fromJson(Map<String, dynamic>.from(raw));
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  Future<List<TransferBeneficiary>> fetchBeneficiaries() async {
+    try {
+      final response = await _dioClient.get(
+        ApiEndpoints.membersTransferBeneficiaries,
+      );
+      final data = response.data;
+      if (data is! Map || data['status'] != true) {
+        throw Exception('Could not load beneficiaries.');
+      }
+      final raw = data['data'];
+      if (raw is! List) return const [];
+      return raw
+          .whereType<Map>()
+          .map(
+            (e) => TransferBeneficiary.fromJson(Map<String, dynamic>.from(e)),
+          )
+          .toList(growable: false);
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  String _messageFromDio(DioException e) {
+    // Server-supplied message wins when there is one. The backend
+    // already shapes these for end users (validation errors,
+    // domain-level failures, etc.).
+    final data = e.response?.data;
+    if (data is Map) {
+      final msg = data['message']?.toString();
+      if (msg != null && msg.isNotEmpty) return msg;
+      final errors = data['errors'];
+      if (errors is Map) {
+        final values = <String>[];
+        for (final entry in errors.entries) {
+          final v = entry.value;
+          if (v is List && v.isNotEmpty) {
+            values.add(v.first.toString());
+          } else if (v != null) {
+            values.add(v.toString());
+          }
+        }
+        if (values.isNotEmpty) return values.join(' ');
+      }
+    }
+    // No body / no message → translate the transport failure to copy
+    // the user can act on. Dio's raw `e.message` (e.g. "The request
+    // was canceled.", "Connecting timed out [10s]") leaks
+    // implementation language and was being shown verbatim in
+    // toasts.
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        return 'The server is taking too long to respond. Please try again.';
+      case DioExceptionType.connectionError:
+        return "Couldn't reach the server. Check your internet connection and try again.";
+      case DioExceptionType.cancel:
+        return 'The request was cancelled. Please try again.';
+      case DioExceptionType.badCertificate:
+        return 'Secure connection to the server failed. Please try again later.';
+      case DioExceptionType.badResponse:
+        // Body had no message; status code-only context.
+        final code = e.response?.statusCode;
+        if (code == 401 || code == 403) {
+          return 'You are not authorised. Sign out and back in, then retry.';
+        }
+        if (code != null && code >= 500) {
+          return 'The server is having trouble right now. Please try again in a moment.';
+        }
+        return 'Request failed. Please try again.';
+      case DioExceptionType.unknown:
+        return 'Network error. Please check your connection and try again.';
+    }
+  }
+}

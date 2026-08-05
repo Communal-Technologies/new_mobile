@@ -1,0 +1,480 @@
+# Builds Communal Mobile.
+#
+# - dev   → staging  → APK only, published as a GitHub Release.
+# - main  → production → signed AAB + APK on a GitHub Release, plus a Play
+#                        Store upload if the Play secrets are set (the upload
+#                        step is skipped gracefully when they're not).
+#
+# Versioning: pubspec.yaml carries `version: <X.Y.Z>` (3 decimals, no `+N`).
+# CI injects the build number from github.run_number so versionCode is
+# monotonically increasing — required by Play Store.
+#
+# Direct download URLs (always point at the current "Latest" release):
+#   APK:  https://github.com/<owner>/<repo>/releases/latest/download/communal-mobile.apk
+#   AAB:  https://github.com/<owner>/<repo>/releases/latest/download/communal-mobile.aab
+#
+# Keeps the 5 most recent releases per branch; older ones are deleted.
+
+name: Communal Mobile
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - "lib/**"
+      - "android/**"
+      - "assets/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - "tool/**"
+      - ".github/workflows/communal-mobile.yml"
+
+concurrency:
+  group: communal-mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    # Pick the right secret bucket based on the branch.
+    environment: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+
+    env:
+      IS_PROD: ${{ github.ref_name == 'main' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Read & validate version from pubspec
+        id: meta
+        run: |
+          set -euo pipefail
+          LINE=$(grep '^version:' pubspec.yaml)
+          BASE=$(echo "$LINE" | sed -E 's/^version:[[:space:]]*//' | cut -d+ -f1)
+          if ! echo "$BASE" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::pubspec version '$BASE' is not in MAJOR.MINOR.PATCH form" >&2
+            exit 1
+          fi
+          if [[ "${{ env.IS_PROD }}" == "true" ]]; then
+            ENV_TAG="prod"
+          else
+            ENV_TAG="staging"
+          fi
+          echo "version_name=$BASE" >> "$GITHUB_OUTPUT"
+          echo "build_number=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "env_tag=$ENV_TAG" >> "$GITHUB_OUTPUT"
+          echo "file_tag=${BASE}-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "release_tag=communal-mobile-${ENV_TAG}-build-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate tool/dart_defines.json
+        run: |
+          set -euo pipefail
+          mkdir -p tool
+          cat > tool/dart_defines.json <<EOF
+          {
+            "APP_ENV": "${{ vars.APP_ENV }}",
+            "BASE_URL": "${{ vars.BASE_URL }}",
+            "GOOGLE_MAPS_API_KEY": "${{ secrets.MAPS_API_KEY }}"
+          }
+          EOF
+
+      - name: Decode keystore & write key.properties
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PW: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$KEYSTORE_B64" ]]; then
+            echo "ANDROID_KEYSTORE_BASE64 not set — release will fall back to debug signing."
+            exit 0
+          fi
+          # printf '%s' avoids the trailing newline that `echo` appends, which
+          # combined with the heredoc rendering can corrupt the decoded binary.
+          # Reading the secret from an env var also avoids workflow-template
+          # interpolation quirks on multi-line values.
+          printf '%s' "$KEYSTORE_B64" | base64 -d > android/app/upload.jks
+          cat > android/key.properties <<EOF
+          storeFile=app/upload.jks
+          storePassword=${KEYSTORE_PW}
+          keyAlias=${KEY_ALIAS}
+          keyPassword=${KEY_PW}
+          EOF
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build release APK
+        env:
+          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
+        run: |
+          flutter build apk --release \
+            --dart-define-from-file=tool/dart_defines.json \
+            --build-name="${{ steps.meta.outputs.version_name }}" \
+            --build-number="${{ steps.meta.outputs.build_number }}"
+
+      - name: Build release AAB (production only)
+        if: env.IS_PROD == 'true'
+        env:
+          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
+        run: |
+          flutter build appbundle --release \
+            --dart-define-from-file=tool/dart_defines.json \
+            --build-name="${{ steps.meta.outputs.version_name }}" \
+            --build-number="${{ steps.meta.outputs.build_number }}"
+
+      - name: Stage artifacts
+        id: stage
+        run: |
+          set -euo pipefail
+          # Versioned APK — immutable audit trail.
+          cp build/app/outputs/flutter-apk/app-release.apk \
+            "communal-mobile-${{ steps.meta.outputs.env_tag }}-${{ steps.meta.outputs.file_tag }}.apk"
+          # Stable env-aware APK — overwritten each run, used as the public
+          # "latest" download. Copied to its final name on disk so we don't
+          # need gh's `file#display-name` rename syntax (which proved flaky).
+          cp build/app/outputs/flutter-apk/app-release.apk \
+            "communal-mobile-${{ steps.meta.outputs.env_tag }}.apk"
+          # Backwards-compat copy used elsewhere in the workflow.
+          cp build/app/outputs/flutter-apk/app-release.apk communal-mobile.apk
+          if [[ "${{ env.IS_PROD }}" == "true" ]]; then
+            cp build/app/outputs/bundle/release/app-release.aab \
+              "communal-mobile-${{ steps.meta.outputs.file_tag }}.aab"
+            cp build/app/outputs/bundle/release/app-release.aab communal-mobile.aab
+            echo "aab_path=communal-mobile.aab" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Mirror the APK to a separate PUBLIC GitHub repo so non-collaborators
+      # can install via a plain HTTPS link. Gated on the mirror secrets being
+      # configured — if not, the step is skipped and the release-notes section
+      # is omitted.
+      - name: Check public mirror credentials
+        id: mirror_check
+        run: |
+          if [[ -n "${{ secrets.PUBLIC_RELEASES_PAT }}" && -n "${{ vars.PUBLIC_RELEASES_REPO }}" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Public mirror upload skipped — set PUBLIC_RELEASES_PAT (secret) and PUBLIC_RELEASES_REPO (var) to publish a public download URL."
+          fi
+
+      - name: Push APK to public mirror repo
+        if: steps.mirror_check.outputs.available == 'true'
+        id: mirror_upload
+        env:
+          GH_TOKEN: ${{ secrets.PUBLIC_RELEASES_PAT }}
+        run: |
+          set -euo pipefail
+          REPO="${{ vars.PUBLIC_RELEASES_REPO }}"
+          ENV_TAG="${{ steps.meta.outputs.env_tag }}"
+          VERSION="${{ steps.meta.outputs.version_name }}"
+          BUILD="${{ steps.meta.outputs.build_number }}"
+          BUILD_TAG="${ENV_TAG}-build-${BUILD}"
+          LATEST_TAG="${ENV_TAG}-latest"
+          VERSIONED_NAME="communal-mobile-${ENV_TAG}-${{ steps.meta.outputs.file_tag }}.apk"
+          STABLE_NAME="communal-mobile-${ENV_TAG}.apk"
+
+          # Versioned release — immutable audit trail.
+          gh release create "$BUILD_TAG" \
+            --repo "$REPO" \
+            --title "Communal Mobile ${VERSION} (build ${BUILD}) — ${ENV_TAG}" \
+            --notes "Source: \`${{ github.repository }}@${{ github.sha }}\`" \
+            "$VERSIONED_NAME"
+
+          # Latest pointer — overwritten each run. Delete first if exists, then
+          # recreate so the asset list (and therefore the stable URL) refreshes.
+          if gh release view "$LATEST_TAG" --repo "$REPO" >/dev/null 2>&1; then
+            gh release delete "$LATEST_TAG" --repo "$REPO" --yes --cleanup-tag
+          fi
+          # Upload the file under its stable env-aware name so the public URL is
+          # /releases/download/<env>-latest/communal-mobile-<env>.apk
+          gh release create "$LATEST_TAG" \
+            --repo "$REPO" \
+            --title "Latest ${ENV_TAG} build" \
+            --notes "Always points at the most recent ${ENV_TAG} build. Direct link: https://github.com/${REPO}/releases/download/${LATEST_TAG}/${STABLE_NAME}" \
+            "$STABLE_NAME"
+
+          LATEST_URL="https://github.com/${REPO}/releases/download/${LATEST_TAG}/${STABLE_NAME}"
+          VERSIONED_URL="https://github.com/${REPO}/releases/download/${BUILD_TAG}/${VERSIONED_NAME}"
+          echo "latest_url=$LATEST_URL" >> "$GITHUB_OUTPUT"
+          echo "versioned_url=$VERSIONED_URL" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Public APK download"
+            echo "- Latest (${ENV_TAG}): $LATEST_URL"
+            echo "- This build: $VERSIONED_URL"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check Play Store credentials
+        id: play_check
+        if: env.IS_PROD == 'true'
+        run: |
+          if [[ -n "${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}" \
+                && -n "${{ secrets.PLAY_STORE_PACKAGE_NAME }}" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Play Store secrets not set — skipping Play upload. Add PLAY_STORE_SERVICE_ACCOUNT_JSON and PLAY_STORE_PACKAGE_NAME to enable."
+          fi
+
+      - name: Upload to Google Play
+        if: env.IS_PROD == 'true' && steps.play_check.outputs.available == 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ secrets.PLAY_STORE_PACKAGE_NAME }}
+          releaseFiles: communal-mobile.aab
+          track: ${{ vars.PLAY_STORE_TRACK || 'internal' }}
+          status: ${{ vars.PLAY_STORE_RELEASE_STATUS || 'draft' }}
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          NOTES_FILE=$(mktemp)
+          APK_URL="${{ github.server_url }}/${{ github.repository }}/releases/latest/download/communal-mobile.apk"
+          AAB_URL="${{ github.server_url }}/${{ github.repository }}/releases/latest/download/communal-mobile.aab"
+          {
+            echo "**Environment:** ${{ steps.meta.outputs.env_tag }}"
+            echo ""
+            echo "**Version:** ${{ steps.meta.outputs.version_name }}+${{ steps.meta.outputs.build_number }}"
+            echo ""
+            echo "**Commit:** \`${{ github.sha }}\`"
+            echo ""
+            echo "**Tag:** \`${{ steps.meta.outputs.release_tag }}\`"
+            echo ""
+            if [[ "${{ steps.mirror_check.outputs.available }}" == "true" ]]; then
+              echo "### Public APK download (no login required)"
+              echo ""
+              echo "- Latest: ${{ steps.mirror_upload.outputs.latest_url }}"
+              echo "- This build: ${{ steps.mirror_upload.outputs.versioned_url }}"
+              echo ""
+            fi
+            echo "**GitHub Release APK (private repo — login required):** \`$APK_URL\`"
+            if [[ "${{ env.IS_PROD }}" == "true" ]]; then
+              echo ""
+              echo "**GitHub Release AAB (private repo — login required):** \`$AAB_URL\`"
+              echo ""
+              if [[ "${{ steps.play_check.outputs.available }}" == "true" ]]; then
+                echo "Play Store: uploaded to \`${{ vars.PLAY_STORE_TRACK || 'internal' }}\` track (status: \`${{ vars.PLAY_STORE_RELEASE_STATUS || 'draft' }}\`)."
+              else
+                echo "Play Store: skipped (credentials not configured)."
+              fi
+            fi
+          } > "$NOTES_FILE"
+
+          if [[ "${{ env.IS_PROD }}" == "true" ]]; then
+            gh release create "${{ steps.meta.outputs.release_tag }}" \
+              "communal-mobile-${{ steps.meta.outputs.env_tag }}-${{ steps.meta.outputs.file_tag }}.apk" \
+              communal-mobile.apk \
+              "communal-mobile-${{ steps.meta.outputs.file_tag }}.aab" \
+              communal-mobile.aab \
+              --title "Communal Mobile ${{ steps.meta.outputs.version_name }} (build ${{ steps.meta.outputs.build_number }}) — prod" \
+              --notes-file "$NOTES_FILE"
+          else
+            gh release create "${{ steps.meta.outputs.release_tag }}" \
+              "communal-mobile-${{ steps.meta.outputs.env_tag }}-${{ steps.meta.outputs.file_tag }}.apk" \
+              communal-mobile.apk \
+              --title "Communal Mobile ${{ steps.meta.outputs.version_name }} (build ${{ steps.meta.outputs.build_number }}) — staging" \
+              --notes-file "$NOTES_FILE"
+          fi
+          rm -f "$NOTES_FILE"
+
+      - name: Prune old releases (keep last 5 per env)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          PREFIX="communal-mobile-${{ steps.meta.outputs.env_tag }}-build-"
+          mapfile -t TO_DELETE < <(gh api "repos/$REPO/releases" --paginate -q "
+            [.[] | select(.draft == false) | select(.tag_name | startswith(\"$PREFIX\"))]
+            | sort_by(.published_at) | reverse | .[5:] | .[].tag_name
+          ")
+          for tag in "${TO_DELETE[@]}"; do
+            if [[ -n "$tag" ]]; then
+              echo "Removing old release: $tag"
+              gh release delete "$tag" --yes --cleanup-tag
+            fi
+          done
+
+  ios:
+    # Skip iOS entirely on dev unless explicitly dispatched, since macOS minutes
+    # are 10x more expensive and `--no-codesign` is just a smoke test. Production
+    # always runs.
+    runs-on: macos-latest
+    environment: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+
+    env:
+      IS_PROD: ${{ github.ref_name == 'main' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Read & validate version from pubspec
+        id: meta
+        run: |
+          set -euo pipefail
+          LINE=$(grep '^version:' pubspec.yaml)
+          BASE=$(echo "$LINE" | sed -E 's/^version:[[:space:]]*//' | cut -d+ -f1)
+          if ! echo "$BASE" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::pubspec version '$BASE' is not in MAJOR.MINOR.PATCH form" >&2
+            exit 1
+          fi
+          echo "version_name=$BASE" >> "$GITHUB_OUTPUT"
+          echo "build_number=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate tool/dart_defines.json
+        run: |
+          set -euo pipefail
+          mkdir -p tool
+          cat > tool/dart_defines.json <<EOF
+          {
+            "APP_ENV": "${{ vars.APP_ENV }}",
+            "BASE_URL": "${{ vars.BASE_URL }}",
+            "GOOGLE_MAPS_API_KEY": "${{ secrets.MAPS_API_KEY }}"
+          }
+          EOF
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Pod install
+        run: cd ios && pod install --repo-update
+
+      # Staging / dev: just verify it compiles. No artifact, no signing.
+      - name: Verify iOS build (staging only)
+        if: env.IS_PROD == 'false'
+        run: |
+          flutter build ios --release --no-codesign \
+            --dart-define-from-file=tool/dart_defines.json \
+            --build-name="${{ steps.meta.outputs.version_name }}" \
+            --build-number="${{ steps.meta.outputs.build_number }}"
+
+      # Production-only: full archive + sign + TestFlight upload, gated on creds.
+      - name: Check iOS signing credentials
+        if: env.IS_PROD == 'true'
+        id: ios_check
+        run: |
+          set -euo pipefail
+          MISSING=()
+          [[ -z "${{ secrets.IOS_CERT_BASE64 }}" ]] && MISSING+=("IOS_CERT_BASE64")
+          [[ -z "${{ secrets.IOS_CERT_PASSWORD }}" ]] && MISSING+=("IOS_CERT_PASSWORD")
+          [[ -z "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" ]] && MISSING+=("IOS_PROVISIONING_PROFILE_BASE64")
+          [[ -z "${{ vars.IOS_BUNDLE_ID }}" ]] && MISSING+=("IOS_BUNDLE_ID (var)")
+          [[ -z "${{ vars.IOS_TEAM_ID }}" ]] && MISSING+=("IOS_TEAM_ID (var)")
+          if (( ${#MISSING[@]} > 0 )); then
+            echo "::warning::iOS signing skipped — missing: ${MISSING[*]}"
+            echo "signing_available=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "signing_available=true" >> "$GITHUB_OUTPUT"
+          fi
+          MISSING_ASC=()
+          [[ -z "${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}" ]] && MISSING_ASC+=("APP_STORE_CONNECT_API_KEY_ID")
+          [[ -z "${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}" ]] && MISSING_ASC+=("APP_STORE_CONNECT_API_ISSUER_ID")
+          [[ -z "${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}" ]] && MISSING_ASC+=("APP_STORE_CONNECT_API_KEY_BASE64")
+          if (( ${#MISSING_ASC[@]} > 0 )); then
+            echo "::warning::TestFlight upload will be skipped — missing: ${MISSING_ASC[*]}"
+            echo "upload_available=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "upload_available=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Smoke build (no-codesign) when prod creds missing
+        if: env.IS_PROD == 'true' && steps.ios_check.outputs.signing_available == 'false'
+        run: |
+          flutter build ios --release --no-codesign \
+            --dart-define-from-file=tool/dart_defines.json \
+            --build-name="${{ steps.meta.outputs.version_name }}" \
+            --build-number="${{ steps.meta.outputs.build_number }}"
+
+      - name: Import code-signing certificate
+        if: env.IS_PROD == 'true' && steps.ios_check.outputs.signing_available == 'true'
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.IOS_CERT_BASE64 }}
+          p12-password: ${{ secrets.IOS_CERT_PASSWORD }}
+
+      - name: Install provisioning profile
+        if: env.IS_PROD == 'true' && steps.ios_check.outputs.signing_available == 'true'
+        id: profile
+        run: |
+          set -euo pipefail
+          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILES_DIR"
+          PROFILE_PATH="$PROFILES_DIR/communal-mobile.mobileprovision"
+          echo "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" | base64 -d > "$PROFILE_PATH"
+          # Extract the human-readable Name field; ExportOptions.plist needs it.
+          PROFILE_NAME=$(security cms -D -i "$PROFILE_PATH" \
+            | /usr/libexec/PlistBuddy -c 'Print :Name' /dev/stdin)
+          echo "profile_name=$PROFILE_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Generate ExportOptions.plist
+        if: env.IS_PROD == 'true' && steps.ios_check.outputs.signing_available == 'true'
+        run: |
+          cat > ios/ExportOptions.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>${{ vars.IOS_TEAM_ID }}</string>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>${{ vars.IOS_BUNDLE_ID }}</key>
+              <string>${{ steps.profile.outputs.profile_name }}</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Build IPA
+        if: env.IS_PROD == 'true' && steps.ios_check.outputs.signing_available == 'true'
+        run: |
+          flutter build ipa --release \
+            --export-options-plist=ios/ExportOptions.plist \
+            --dart-define-from-file=tool/dart_defines.json \
+            --build-name="${{ steps.meta.outputs.version_name }}" \
+            --build-number="${{ steps.meta.outputs.build_number }}"
+
+      - name: Upload to TestFlight
+        if: env.IS_PROD == 'true' && steps.ios_check.outputs.signing_available == 'true' && steps.ios_check.outputs.upload_available == 'true'
+        uses: apple-actions/upload-testflight-build@v1
+        with:
+          app-path: build/ios/ipa/Runner.ipa
+          api-key-id: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          api-key-issuer-id: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          api-private-key: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}

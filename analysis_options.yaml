@@ -10,19 +10,20 @@
 include: package:flutter_lints/flutter.yaml
 
 linter:
-  # The lint rules applied to this project can be customized in the
-  # section below to disable rules from the `package:flutter_lints/flutter.yaml`
-  # included above or to enable additional rules. A list of all available lints
-  # and their documentation is published at https://dart.dev/lints.
+  # Audit M43: turn the audit-called-out lints into errors so the noisy
+  # info-level remediation pass can't regress.
   #
-  # Instead of disabling a lint rule for the entire project in the
-  # section below, it can also be suppressed for a single line of code
-  # or a specific dart file by using the `// ignore: name_of_lint` and
-  # `// ignore_for_file: name_of_lint` syntax on the line or in the file
-  # producing the lint.
+  # `avoid_print` was previously commented out (so any new `print()` was
+  # ignored). With the M15-M18 logging cleanup we now have AppLogger as
+  # the single chokepoint; reintroducing `print()` from now on will
+  # warn instead of disappearing.
+  #
+  # `unawaited_futures` catches `someAsyncCall();` (no `await`, no
+  # `unawaited(...)`) — a class of bug we hit repeatedly in the audit
+  # passes around `secureStorage.write` and DI bootstrap.
   rules:
-    # avoid_print: false  # Uncomment to disable the `avoid_print` rule
-    # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
+    avoid_print: true
+    unawaited_futures: true
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

@@ -377,6 +377,10 @@ jobs:
       - name: Generate tool/dart_defines.json
         run: |
           set -euo pipefail
+          if [[ -z "${{ vars.APP_ENV }}" ]]; then
+            echo "::error::APP_ENV is not set for the '${{ github.ref_name == 'main' && 'production' || 'staging' }}' environment. The build would point at no API and crash on launch." >&2
+            exit 1
+          fi
           mkdir -p tool
           cat > tool/dart_defines.json <<EOF
           {

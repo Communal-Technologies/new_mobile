@@ -88,6 +88,13 @@ jobs:
       - name: Generate tool/dart_defines.json
         run: |
           set -euo pipefail
+          # An unset APP_ENV resolves to `development` in constants.dart, whose
+          # baseUrl getter throws on an empty BASE_URL — the app crashes on
+          # launch. Never ship that as a release; fail the build instead.
+          if [[ -z "${{ vars.APP_ENV }}" ]]; then
+            echo "::error::APP_ENV is not set for the '${{ github.ref_name == 'main' && 'production' || 'staging' }}' environment. The build would point at no API and crash on launch." >&2
+            exit 1
+          fi
           mkdir -p tool
           cat > tool/dart_defines.json <<EOF
           {
@@ -106,6 +113,13 @@ jobs:
         run: |
           set -euo pipefail
           if [[ -z "$KEYSTORE_B64" ]]; then
+            # A debug-signed artifact is rejected by Play and can never be
+            # upgraded to a properly signed build, so production must not
+            # silently fall through to it.
+            if [[ "${{ env.IS_PROD }}" == "true" ]]; then
+              echo "::error::ANDROID_KEYSTORE_BASE64 is not set for the production environment. Refusing to publish a debug-signed release." >&2
+              exit 1
+            fi
             echo "ANDROID_KEYSTORE_BASE64 not set — release will fall back to debug signing."
             exit 0
           fi
@@ -194,25 +208,34 @@ jobs:
           VERSIONED_NAME="communal-mobile-${ENV_TAG}-${{ steps.meta.outputs.file_tag }}.apk"
           STABLE_NAME="communal-mobile-${ENV_TAG}.apk"
 
-          # Versioned release — immutable audit trail.
+          # Versioned release — immutable audit trail. Carries the stable-named
+          # copy too, so `/releases/latest/download/<stable name>` resolves even
+          # if the moving pointer below cannot be refreshed.
           gh release create "$BUILD_TAG" \
             --repo "$REPO" \
             --title "Communal Mobile ${VERSION} (build ${BUILD}) — ${ENV_TAG}" \
             --notes "Source: \`${{ github.repository }}@${{ github.sha }}\`" \
-            "$VERSIONED_NAME"
+            "$VERSIONED_NAME" "$STABLE_NAME"
 
           # Latest pointer — overwritten each run. Delete first if exists, then
           # recreate so the asset list (and therefore the stable URL) refreshes.
+          #
+          # A repo with GitHub's "immutable releases" setting enabled burns the
+          # tag permanently, so the recreate fails with HTTP 422. Warn and keep
+          # going rather than failing the build: the versioned release above
+          # already carries the stable-named asset.
           if gh release view "$LATEST_TAG" --repo "$REPO" >/dev/null 2>&1; then
-            gh release delete "$LATEST_TAG" --repo "$REPO" --yes --cleanup-tag
+            gh release delete "$LATEST_TAG" --repo "$REPO" --yes --cleanup-tag || true
           fi
           # Upload the file under its stable env-aware name so the public URL is
           # /releases/download/<env>-latest/communal-mobile-<env>.apk
-          gh release create "$LATEST_TAG" \
+          if ! gh release create "$LATEST_TAG" \
             --repo "$REPO" \
             --title "Latest ${ENV_TAG} build" \
             --notes "Always points at the most recent ${ENV_TAG} build. Direct link: https://github.com/${REPO}/releases/download/${LATEST_TAG}/${STABLE_NAME}" \
-            "$STABLE_NAME"
+            "$STABLE_NAME"; then
+            echo "::warning::Could not refresh the ${LATEST_TAG} pointer — this happens when '${REPO}' has immutable releases enabled. Turn that setting off to restore the ${LATEST_TAG} download link."
+          fi
 
           LATEST_URL="https://github.com/${REPO}/releases/download/${LATEST_TAG}/${STABLE_NAME}"
           VERSIONED_URL="https://github.com/${REPO}/releases/download/${BUILD_TAG}/${VERSIONED_NAME}"
@@ -366,8 +389,13 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Pod install
-        run: cd ios && pod install --repo-update
+      # `flutter build ios` generates ios/Podfile (this repo does not track one)
+      # and runs pod install itself. Calling pod install first fails on a
+      # Podfile-less checkout — CocoaPods resolves `Flutter` against the CDN
+      # instead of the local generated podspec and reports that every candidate
+      # "required a higher minimum deployment target".
+      - name: Prepare iOS Pods
+        run: flutter precache --ios
 
       # Staging / dev: just verify it compiles. No artifact, no signing.
       - name: Verify iOS build (staging only)

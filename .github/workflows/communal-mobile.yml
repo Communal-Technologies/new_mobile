@@ -1,19 +1,25 @@
 # Builds Communal Mobile.
 #
-# - dev   → staging  → APK only, published as a GitHub Release.
-# - main  → production → signed AAB + APK on a GitHub Release, plus a Play
-#                        Store upload if the Play secrets are set (the upload
-#                        step is skipped gracefully when they're not).
+# - dev  → staging    → signed APK on the public mirror, plus an unsigned iOS
+#                       simulator build as a workflow artifact.
+# - main → production → signed APK + AAB on the public mirror, a Play Store
+#                       upload and a TestFlight upload when those creds exist,
+#                       and a `v<semver>` tag + pubspec bump committed back here.
 #
-# Versioning: pubspec.yaml carries `version: <X.Y.Z>` (3 decimals, no `+N`).
-# CI injects the build number from github.run_number so versionCode is
-# monotonically increasing — required by Play Store.
+# THIS REPO STORES NO BINARIES. Every artifact is published to the public mirror
+# named by the PUBLIC_RELEASES_REPO variable, so the download link needs no login.
 #
-# Direct download URLs (always point at the current "Latest" release):
-#   APK:  https://github.com/<owner>/<repo>/releases/latest/download/communal-mobile.apk
-#   AAB:  https://github.com/<owner>/<repo>/releases/latest/download/communal-mobile.aab
+# Versioning is derived, not hand-maintained. The next version is computed from
+# the Conventional Commits since the last `v*` tag (feat → minor, `!`/BREAKING
+# CHANGE → major, anything else → patch) and committed back to pubspec.yaml on
+# production runs. pubspec is the floor, so a manual bump is still honoured.
+# versionCode comes from github.run_number, which Play requires to be monotonic.
 #
-# Keeps the 5 most recent releases per branch; older ones are deleted.
+# Public download URLs (the `<env>-latest` tag is repointed every run):
+#   https://github.com/<mirror>/releases/download/staging-latest/communal-mobile-staging.apk
+#   https://github.com/<mirror>/releases/download/prod-latest/communal-mobile-prod.apk
+#
+# Keeps the 5 most recent mirror releases per environment; older ones are deleted.
 
 name: Communal Mobile
 
@@ -50,7 +56,11 @@ jobs:
 
     steps:
       - name: Checkout
+        # Full history + tags so the version bump can find the last release tag
+        # and read the commit subjects since it.
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -64,26 +74,69 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Read & validate version from pubspec
+      # Derives the next semver from the Conventional Commits since the last
+      # `v*` tag. `pubspec.yaml` holds the last released version and is the
+      # floor; the bump is committed back on production releases so the file
+      # and the tags never drift.
+      - name: Resolve next version
         id: meta
         run: |
           set -euo pipefail
           LINE=$(grep '^version:' pubspec.yaml)
-          BASE=$(echo "$LINE" | sed -E 's/^version:[[:space:]]*//' | cut -d+ -f1)
-          if ! echo "$BASE" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "::error::pubspec version '$BASE' is not in MAJOR.MINOR.PATCH form" >&2
+          CURRENT=$(echo "$LINE" | sed -E 's/^version:[[:space:]]*//' | cut -d+ -f1)
+          if ! echo "$CURRENT" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::pubspec version '$CURRENT' is not in MAJOR.MINOR.PATCH form" >&2
             exit 1
           fi
+
+          LAST_TAG=$(git tag -l 'v*' --sort=-v:refname | head -n1)
+          if [[ -n "$LAST_TAG" ]]; then
+            RANGE="${LAST_TAG}..HEAD"
+            BASE=$(echo "$LAST_TAG" | sed 's/^v//')
+          else
+            RANGE="HEAD"
+            BASE="$CURRENT"
+          fi
+
+          # Never regress: if pubspec was bumped by hand past the last tag, that wins.
+          BASE=$(printf '%s\n%s\n' "$BASE" "$CURRENT" | sort -V | tail -n1)
+
+          SUBJECTS=$(git log --format='%s%n%b' "$RANGE" 2>/dev/null || echo "")
+          BUMP=patch
+          if echo "$SUBJECTS" | grep -Eq '^[a-zA-Z]+(\([^)]*\))?!:|^BREAKING[ -]CHANGE:'; then
+            BUMP=major
+          elif echo "$SUBJECTS" | grep -Eq '^feat(\([^)]*\))?:'; then
+            BUMP=minor
+          fi
+
+          IFS='.' read -r MA MI PA <<< "$BASE"
+          case "$BUMP" in
+            major) MA=$((MA+1)); MI=0; PA=0 ;;
+            minor) MI=$((MI+1)); PA=0 ;;
+            patch) PA=$((PA+1)) ;;
+          esac
+          NEXT="${MA}.${MI}.${PA}"
+          echo "Last tag: ${LAST_TAG:-none} | base: $BASE | bump: $BUMP | next: $NEXT"
+
           if [[ "${{ env.IS_PROD }}" == "true" ]]; then
             ENV_TAG="prod"
           else
             ENV_TAG="staging"
           fi
-          echo "version_name=$BASE" >> "$GITHUB_OUTPUT"
+          echo "version_name=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "bump=$BUMP" >> "$GITHUB_OUTPUT"
           echo "build_number=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
           echo "env_tag=$ENV_TAG" >> "$GITHUB_OUTPUT"
-          echo "file_tag=${BASE}-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
-          echo "release_tag=communal-mobile-${ENV_TAG}-build-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "file_tag=${NEXT}-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "release_tag=v${NEXT}" >> "$GITHUB_OUTPUT"
+
+      # pubspec is rewritten in the workspace so the built artifact carries the
+      # resolved version even on staging, where nothing is committed back.
+      - name: Apply resolved version to pubspec
+        run: |
+          set -euo pipefail
+          sed -i -E "s/^version:.*/version: ${{ steps.meta.outputs.version_name }}/" pubspec.yaml
+          grep '^version:' pubspec.yaml
 
       - name: Generate tool/dart_defines.json
         run: |
@@ -203,14 +256,14 @@ jobs:
           ENV_TAG="${{ steps.meta.outputs.env_tag }}"
           VERSION="${{ steps.meta.outputs.version_name }}"
           BUILD="${{ steps.meta.outputs.build_number }}"
-          BUILD_TAG="${ENV_TAG}-build-${BUILD}"
+          BUILD_TAG="${ENV_TAG}-v${VERSION}-${BUILD}"
           LATEST_TAG="${ENV_TAG}-latest"
           VERSIONED_NAME="communal-mobile-${ENV_TAG}-${{ steps.meta.outputs.file_tag }}.apk"
           STABLE_NAME="communal-mobile-${ENV_TAG}.apk"
 
-          # Versioned release — immutable audit trail. Carries the stable-named
-          # copy too, so `/releases/latest/download/<stable name>` resolves even
-          # if the moving pointer below cannot be refreshed.
+          # GitHub always attaches auto-generated source zip/tarballs to a release
+          # and offers no way to suppress them. They are harmless here: the mirror
+          # holds no app source, so they contain only its README/.vscode files.
           gh release create "$BUILD_TAG" \
             --repo "$REPO" \
             --title "Communal Mobile ${VERSION} (build ${BUILD}) — ${ENV_TAG}" \
@@ -247,6 +300,27 @@ jobs:
             echo "- This build: $VERSIONED_URL"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # Artifacts only ever accumulate on the mirror now, so the retention sweep
+      # belongs here rather than on the source repo.
+      - name: Prune old mirror releases (keep last 5 per env)
+        if: steps.mirror_check.outputs.available == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.PUBLIC_RELEASES_PAT }}
+        run: |
+          set -euo pipefail
+          REPO="${{ vars.PUBLIC_RELEASES_REPO }}"
+          PREFIX="${{ steps.meta.outputs.env_tag }}-v"
+          mapfile -t TO_DELETE < <(gh api "repos/$REPO/releases" --paginate -q "
+            [.[] | select(.draft == false) | select(.tag_name | startswith(\"$PREFIX\"))]
+            | sort_by(.published_at) | reverse | .[5:] | .[].tag_name
+          ")
+          for tag in "${TO_DELETE[@]}"; do
+            if [[ -n "$tag" ]]; then
+              echo "Removing old mirror release: $tag"
+              gh release delete "$tag" --repo "$REPO" --yes --cleanup-tag
+            fi
+          done
+
       - name: Check Play Store credentials
         id: play_check
         if: env.IS_PROD == 'true'
@@ -269,82 +343,60 @@ jobs:
           track: ${{ vars.PLAY_STORE_TRACK || 'internal' }}
           status: ${{ vars.PLAY_STORE_RELEASE_STATUS || 'draft' }}
 
-      - name: Create GitHub Release
+      # This repo holds source, not binaries — every artifact lives on the public
+      # mirror. Production still records the released version here as a commit +
+      # `v<semver>` tag, which is what the next run's bump reads.
+      - name: Record the released version
+        if: env.IS_PROD == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          NOTES_FILE=$(mktemp)
-          APK_URL="${{ github.server_url }}/${{ github.repository }}/releases/latest/download/communal-mobile.apk"
-          AAB_URL="${{ github.server_url }}/${{ github.repository }}/releases/latest/download/communal-mobile.aab"
+          VERSION="${{ steps.meta.outputs.version_name }}"
+          TAG="${{ steps.meta.outputs.release_tag }}"
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null \
+             || git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error::Tag $TAG already exists. The bump resolved to a version that has shipped." >&2
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pubspec.yaml
+          if git diff --cached --quiet; then
+            echo "pubspec already at $VERSION — tagging only."
+          else
+            git commit -m "Release v${VERSION} (build ${{ steps.meta.outputs.build_number }}) [skip ci]"
+          fi
+          git tag -a "$TAG" -m "Communal Mobile ${VERSION} (build ${{ steps.meta.outputs.build_number }})"
+          git push origin "HEAD:${{ github.ref_name }}"
+          git push origin "$TAG"
+
+      - name: Build summary
+        run: |
           {
-            echo "**Environment:** ${{ steps.meta.outputs.env_tag }}"
+            echo "## Communal Mobile ${{ steps.meta.outputs.version_name }} (build ${{ steps.meta.outputs.build_number }})"
             echo ""
-            echo "**Version:** ${{ steps.meta.outputs.version_name }}+${{ steps.meta.outputs.build_number }}"
-            echo ""
-            echo "**Commit:** \`${{ github.sha }}\`"
-            echo ""
-            echo "**Tag:** \`${{ steps.meta.outputs.release_tag }}\`"
-            echo ""
+            echo "- Environment: \`${{ steps.meta.outputs.env_tag }}\`"
+            echo "- Version bump: \`${{ steps.meta.outputs.bump }}\`"
+            echo "- Commit: \`${{ github.sha }}\`"
             if [[ "${{ steps.mirror_check.outputs.available }}" == "true" ]]; then
-              echo "### Public APK download (no login required)"
-              echo ""
-              echo "- Latest: ${{ steps.mirror_upload.outputs.latest_url }}"
-              echo "- This build: ${{ steps.mirror_upload.outputs.versioned_url }}"
-              echo ""
+              echo "- Download: ${{ steps.mirror_upload.outputs.latest_url }}"
+            else
+              echo "- Download: mirror not configured — no artifact published."
             fi
-            echo "**GitHub Release APK (private repo — login required):** \`$APK_URL\`"
             if [[ "${{ env.IS_PROD }}" == "true" ]]; then
-              echo ""
-              echo "**GitHub Release AAB (private repo — login required):** \`$AAB_URL\`"
-              echo ""
               if [[ "${{ steps.play_check.outputs.available }}" == "true" ]]; then
-                echo "Play Store: uploaded to \`${{ vars.PLAY_STORE_TRACK || 'internal' }}\` track (status: \`${{ vars.PLAY_STORE_RELEASE_STATUS || 'draft' }}\`)."
+                echo "- Play Store: uploaded to \`${{ vars.PLAY_STORE_TRACK || 'internal' }}\`."
               else
-                echo "Play Store: skipped (credentials not configured)."
+                echo "- Play Store: skipped (credentials not configured)."
               fi
             fi
-          } > "$NOTES_FILE"
-
-          if [[ "${{ env.IS_PROD }}" == "true" ]]; then
-            gh release create "${{ steps.meta.outputs.release_tag }}" \
-              "communal-mobile-${{ steps.meta.outputs.env_tag }}-${{ steps.meta.outputs.file_tag }}.apk" \
-              communal-mobile.apk \
-              "communal-mobile-${{ steps.meta.outputs.file_tag }}.aab" \
-              communal-mobile.aab \
-              --title "Communal Mobile ${{ steps.meta.outputs.version_name }} (build ${{ steps.meta.outputs.build_number }}) — prod" \
-              --notes-file "$NOTES_FILE"
-          else
-            gh release create "${{ steps.meta.outputs.release_tag }}" \
-              "communal-mobile-${{ steps.meta.outputs.env_tag }}-${{ steps.meta.outputs.file_tag }}.apk" \
-              communal-mobile.apk \
-              --title "Communal Mobile ${{ steps.meta.outputs.version_name }} (build ${{ steps.meta.outputs.build_number }}) — staging" \
-              --notes-file "$NOTES_FILE"
-          fi
-          rm -f "$NOTES_FILE"
-
-      - name: Prune old releases (keep last 5 per env)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          REPO="${{ github.repository }}"
-          PREFIX="communal-mobile-${{ steps.meta.outputs.env_tag }}-build-"
-          mapfile -t TO_DELETE < <(gh api "repos/$REPO/releases" --paginate -q "
-            [.[] | select(.draft == false) | select(.tag_name | startswith(\"$PREFIX\"))]
-            | sort_by(.published_at) | reverse | .[5:] | .[].tag_name
-          ")
-          for tag in "${TO_DELETE[@]}"; do
-            if [[ -n "$tag" ]]; then
-              echo "Removing old release: $tag"
-              gh release delete "$tag" --yes --cleanup-tag
-            fi
-          done
+          } >> "$GITHUB_STEP_SUMMARY"
 
   ios:
-    # Skip iOS entirely on dev unless explicitly dispatched, since macOS minutes
-    # are 10x more expensive and `--no-codesign` is just a smoke test. Production
-    # always runs.
+    # Runs on both branches. macOS minutes cost 10x, but an unsigned staging
+    # build is the only iOS feedback available without a Mac, and a Flutter/pod
+    # break that only surfaces on iOS is otherwise invisible until release day.
     runs-on: macos-latest
     environment: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
 
@@ -354,6 +406,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -361,18 +415,46 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Read & validate version from pubspec
+      # Mirrors the android job's resolver so both platforms stamp the same
+      # version. Nothing is committed or tagged here — the android job owns that.
+      - name: Resolve next version
         id: meta
         run: |
           set -euo pipefail
           LINE=$(grep '^version:' pubspec.yaml)
-          BASE=$(echo "$LINE" | sed -E 's/^version:[[:space:]]*//' | cut -d+ -f1)
-          if ! echo "$BASE" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "::error::pubspec version '$BASE' is not in MAJOR.MINOR.PATCH form" >&2
+          CURRENT=$(echo "$LINE" | sed -E 's/^version:[[:space:]]*//' | cut -d+ -f1)
+          if ! echo "$CURRENT" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::pubspec version '$CURRENT' is not in MAJOR.MINOR.PATCH form" >&2
             exit 1
           fi
-          echo "version_name=$BASE" >> "$GITHUB_OUTPUT"
+
+          LAST_TAG=$(git tag -l 'v*' --sort=-v:refname | head -n1)
+          if [[ -n "$LAST_TAG" ]]; then
+            RANGE="${LAST_TAG}..HEAD"
+            BASE=$(echo "$LAST_TAG" | sed 's/^v//')
+          else
+            RANGE="HEAD"
+            BASE="$CURRENT"
+          fi
+          BASE=$(printf '%s\n%s\n' "$BASE" "$CURRENT" | sort -V | tail -n1)
+
+          SUBJECTS=$(git log --format='%s%n%b' "$RANGE" 2>/dev/null || echo "")
+          BUMP=patch
+          if echo "$SUBJECTS" | grep -Eq '^[a-zA-Z]+(\([^)]*\))?!:|^BREAKING[ -]CHANGE:'; then
+            BUMP=major
+          elif echo "$SUBJECTS" | grep -Eq '^feat(\([^)]*\))?:'; then
+            BUMP=minor
+          fi
+
+          IFS='.' read -r MA MI PA <<< "$BASE"
+          case "$BUMP" in
+            major) MA=$((MA+1)); MI=0; PA=0 ;;
+            minor) MI=$((MI+1)); PA=0 ;;
+            patch) PA=$((PA+1)) ;;
+          esac
+          echo "version_name=${MA}.${MI}.${PA}" >> "$GITHUB_OUTPUT"
           echo "build_number=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "file_tag=${MA}.${MI}.${PA}-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
       - name: Generate tool/dart_defines.json
         run: |
@@ -401,14 +483,39 @@ jobs:
       - name: Prepare iOS Pods
         run: flutter precache --ios
 
-      # Staging / dev: just verify it compiles. No artifact, no signing.
-      - name: Verify iOS build (staging only)
+      # Staging: compile unsigned to prove the iOS build is not broken, then also
+      # build a simulator .app. Installing on a physical device needs a signing
+      # identity we do not have; a simulator build needs none and can be run from
+      # any Mac (or a cloud Mac) with `xcrun simctl install booted <app>`, which
+      # is the only iOS smoke test available without a Mac of your own.
+      - name: Verify iOS build (staging)
         if: env.IS_PROD == 'false'
         run: |
+          set -euo pipefail
           flutter build ios --release --no-codesign \
             --dart-define-from-file=tool/dart_defines.json \
             --build-name="${{ steps.meta.outputs.version_name }}" \
             --build-number="${{ steps.meta.outputs.build_number }}"
+
+      - name: Build iOS simulator app (staging)
+        if: env.IS_PROD == 'false'
+        run: |
+          set -euo pipefail
+          flutter build ios --debug --simulator \
+            --dart-define-from-file=tool/dart_defines.json \
+            --build-name="${{ steps.meta.outputs.version_name }}" \
+            --build-number="${{ steps.meta.outputs.build_number }}"
+          cd build/ios/iphonesimulator
+          zip -qry "$GITHUB_WORKSPACE/communal-mobile-staging-sim-${{ steps.meta.outputs.file_tag }}.zip" Runner.app
+
+      - name: Upload iOS simulator build
+        if: env.IS_PROD == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-staging-${{ steps.meta.outputs.file_tag }}
+          path: communal-mobile-staging-sim-${{ steps.meta.outputs.file_tag }}.zip
+          retention-days: 14
+          if-no-files-found: error
 
       # Production-only: full archive + sign + TestFlight upload, gated on creds.
       - name: Check iOS signing credentials

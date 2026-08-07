@@ -8,7 +8,10 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/bottom_nav_bar.dart';
 import 'package:communal_mobile/core/widgets/cooperative_sidebar.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/services/transaction_activity_service.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
 import 'package:communal_mobile/screens/home/widgets/home_account_card_section.dart';
 import 'package:communal_mobile/screens/home/widgets/home_account_frozen_card.dart';
@@ -31,6 +34,28 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  late final TransactionActivityService _activity =
+      getIt<TransactionActivityService>();
+
+  @override
+  void initState() {
+    super.initState();
+    _activity.revision.addListener(_onTransactionActivity);
+  }
+
+  @override
+  void dispose() {
+    _activity.revision.removeListener(_onTransactionActivity);
+    super.dispose();
+  }
+
+  /// A deposit or transfer alert landed. Pull the balance from the API rather
+  /// than waiting for the next screen visit — the balance drives the card here
+  /// and previously only changed on a cold refresh.
+  void _onTransactionActivity() {
+    if (!mounted) return;
+    context.read<AuthBloc>().add(AuthRefreshUserRequested());
+  }
 
   @override
   Widget build(BuildContext context) {

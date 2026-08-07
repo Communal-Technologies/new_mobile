@@ -1,6 +1,7 @@
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/constants/images.dart';
+import 'package:communal_mobile/core/services/transaction_activity_service.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/local/home_wallet_prefs.dart';
@@ -25,14 +26,21 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
   late final TransactionsRepository _repo =
       TransactionsRepository(getIt<DioClient>());
   late final HomeWalletPrefs _walletPrefs = getIt<HomeWalletPrefs>();
+  late final TransactionActivityService _activity =
+      getIt<TransactionActivityService>();
   List<TransactionListItem> _items = const [];
   bool _loading = true;
   String? _error;
+
+  /// A movement ping and the balance change it causes both ask for a reload.
+  /// One fetch is enough, so a second request while one is in flight is dropped.
+  bool _inFlight = false;
 
   @override
   void initState() {
     super.initState();
     _walletPrefs.addListener(_onPrefsChanged);
+    _activity.revision.addListener(_onActivity);
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
@@ -40,13 +48,25 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
     if (mounted) setState(() {});
   }
 
+  /// A push told us the member's money moved. Reload rather than waiting for
+  /// the wallet balance to change — an inbound deposit can be recorded before
+  /// the balance propagates, and the two are not always in step.
+  void _onActivity() {
+    if (mounted) _load(showLoader: false);
+  }
+
   @override
   void dispose() {
     _walletPrefs.removeListener(_onPrefsChanged);
+    _activity.revision.removeListener(_onActivity);
     super.dispose();
   }
 
-  Future<void> _load() async {
+  /// [showLoader] false refreshes in place, leaving the current rows on screen.
+  /// A background refresh triggered by a push must not blank a list the member
+  /// is already reading, and must not replace it with an error if the network
+  /// blips — the rows shown are still the last known good ones.
+  Future<void> _load({bool showLoader = true}) async {
     final auth = context.read<AuthBloc>().state;
     if (auth is! AuthAuthenticated) {
       if (mounted) {
@@ -57,23 +77,31 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
       }
       return;
     }
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    if (_inFlight) return;
+    _inFlight = true;
+    if (showLoader) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
     try {
       final list = await _repo.fetchPersonalHistoryMerged(auth.user);
       if (!mounted) return;
       setState(() {
         _items = list.take(5).toList(growable: false);
         _loading = false;
+        _error = null;
       });
     } catch (e) {
       if (!mounted) return;
+      if (!showLoader) return;
       setState(() {
         _loading = false;
         _error = e.toString().replaceFirst('Exception: ', '');
       });
+    } finally {
+      _inFlight = false;
     }
   }
 

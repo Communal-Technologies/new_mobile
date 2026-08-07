@@ -11,6 +11,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/services/transaction_activity_service.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/loan_repository.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
@@ -114,6 +115,10 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         context.read<AuthBloc>().add(AuthRefreshUserRequested());
+        // The sender is standing in front of the receipt, so the home screen
+        // behind it must not still be showing the pre-transfer list. Pinging
+        // here does not depend on their own push arriving.
+        _pingTransactionActivity();
       });
     }
     if (_details.status == TransactionStatus.pending &&
@@ -164,6 +169,16 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
     super.dispose();
   }
 
+  /// Tells the home screen its transaction list is stale. Best-effort: a
+  /// missing registration must not break a settled transfer's receipt.
+  void _pingTransactionActivity() {
+    try {
+      getIt<TransactionActivityService>().ping();
+    } catch (_) {
+      /* ignore — service may not be registered in tests */
+    }
+  }
+
   Future<void> _refreshTransferStatus() async {
     if (_details.status != TransactionStatus.pending) return;
     _pollTicks++;
@@ -200,6 +215,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
           context.read<AuthBloc>().add(AuthRefreshUserRequested());
+          _pingTransactionActivity();
           // ignore: unawaited_futures
           _postObligationNipIfNeeded();
           // ignore: unawaited_futures

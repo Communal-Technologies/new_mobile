@@ -7,6 +7,7 @@ import 'package:communal_mobile/data/repositories/account_actions_repository.dar
 import 'package:communal_mobile/data/repositories/community_repository.dart';
 import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/core/services/pending_deep_link_service.dart';
+import 'package:communal_mobile/core/services/transaction_activity_service.dart';
 import 'package:communal_mobile/core/services/unread_notifications_service.dart';
 import 'package:communal_mobile/data/repositories/notifications_repository.dart';
 import 'package:communal_mobile/data/repositories/obligation_categories_repository.dart';
@@ -79,6 +80,11 @@ Future<void> configureDependencies() async {
   if (!getIt.isRegistered<PendingDeepLinkService>()) {
     getIt.registerLazySingleton<PendingDeepLinkService>(
       () => PendingDeepLinkService(),
+    );
+  }
+  if (!getIt.isRegistered<TransactionActivityService>()) {
+    getIt.registerLazySingleton<TransactionActivityService>(
+      () => TransactionActivityService(),
     );
   }
   if (!getIt.isRegistered<ProfileRepository>()) {

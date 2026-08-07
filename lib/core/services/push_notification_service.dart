@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:communal_mobile/core/navigation/root_navigator_key.dart';
 import 'package:communal_mobile/core/services/pending_deep_link_service.dart';
+import 'package:communal_mobile/core/services/transaction_activity_service.dart';
 import 'package:communal_mobile/core/services/unread_notifications_service.dart';
 import 'package:communal_mobile/cubits/security/security_cubit.dart';
 import 'package:communal_mobile/data/models/loan_application.dart';
@@ -133,6 +134,11 @@ class PushNotificationService {
     // the app is open, mirror it through the local-notifications channel so
     // Android shows it (iOS handles via setForegroundNotificationPresentationOptions).
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      // A movement alert arriving while the app is open refreshes the home
+      // screen immediately, without waiting for the balance to change or the
+      // user to tap the notification.
+      _pingTransactionActivity(message.data);
+
       final notification = message.notification;
       final android = notification?.android;
       if (notification == null || android == null) {
@@ -205,6 +211,17 @@ class PushNotificationService {
   /// wrapper consumes it on unlock. Same logic also handles the
   /// cold-start case where the user tapped a push from the system
   /// tray and Firebase replays it before our app fully comes up.
+  /// Signals the home screen that the member's money moved. Swallows a missing
+  /// registration so a push can never crash the app on a DI edge case.
+  static void _pingTransactionActivity(Map<String, dynamic> data) {
+    if (!TransactionActivityService.describesMovement(data)) return;
+    try {
+      getIt<TransactionActivityService>().ping();
+    } catch (_) {
+      /* ignore — service may not be registered in tests */
+    }
+  }
+
   static Future<void> _routeFromData(Map<String, dynamic> data) async {
     // Refresh the unread-count badge optimistically — a push usually
     // means a new in-app row landed. Cheap on success, no-op on err.
@@ -215,6 +232,11 @@ class PushNotificationService {
     } catch (_) {
       /* ignore — service may not be registered in tests */
     }
+
+    // Also ping here, not only in the foreground listener: a push tapped from
+    // the tray or one that cold-starts the app never passes through onMessage,
+    // and the home screen behind the opened route still needs to be current.
+    _pingTransactionActivity(data);
 
     final intent = await _intentForData(data);
     if (intent == null) return;

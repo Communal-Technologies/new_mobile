@@ -1,5 +1,6 @@
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/utils/amount_input_formatter.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
@@ -289,7 +290,7 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
               ],
               if (_validatedCustomer != null) ...[
                 vSpace(10),
-                _buildCustomerCard(_validatedCustomer!),
+                billCustomerCard(context, _validatedCustomer!),
               ],
               vSpace(20),
               _label('Phone number (for receipt SMS)'),
@@ -311,8 +312,9 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                  AmountInputFormatter(),
                 ],
-                decoration: billInputDecoration(context, 'e.g. 5000'),
+                decoration: billInputDecoration(context, 'e.g. 5,000'),
               ),
             ],
           ),
@@ -415,7 +417,10 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
     if (_products.isEmpty) {
       return Text(
         'No meter types available for this disco.',
-        style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade600),
+        style: TextStyle(
+          fontSize: 16.sp,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+        ),
       );
     }
     return Wrap(
@@ -430,43 +435,6 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
             onTap: () => setState(() => _selectedProduct = p),
           ),
       ],
-    );
-  }
-
-  Widget _buildCustomerCard(BillCustomer c) {
-    return Container(
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: Colors.green.shade50,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: Colors.green.shade200),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.check_circle_outline, color: Colors.green.shade700),
-          hSpace(10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  c.customerName,
-                  style: TextStyle(
-                    fontSize: 17.sp,
-                    fontWeight: FontWeight.w700,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                if (c.address != null && c.address!.isNotEmpty)
-                  Text(
-                    c.address!,
-                    style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade700),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 

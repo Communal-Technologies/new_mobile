@@ -305,7 +305,7 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
               ],
               if (_validatedCustomer != null) ...[
                 vSpace(10),
-                _buildCustomerCard(_validatedCustomer!),
+                billCustomerCard(context, _validatedCustomer!),
               ],
               vSpace(20),
               _label('Plan'),
@@ -451,33 +451,6 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildCustomerCard(BillCustomer c) {
-    return Container(
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: Colors.green.shade50,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: Colors.green.shade200),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.check_circle_outline, color: Colors.green.shade700),
-          hSpace(10),
-          Expanded(
-            child: Text(
-              c.customerName,
-              style: TextStyle(
-                fontSize: 17.sp,
-                fontWeight: FontWeight.w700,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

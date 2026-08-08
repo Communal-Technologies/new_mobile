@@ -740,7 +740,7 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 16.sp,
-              color: Colors.grey.shade700,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               height: 1.4,
             ),
           ),

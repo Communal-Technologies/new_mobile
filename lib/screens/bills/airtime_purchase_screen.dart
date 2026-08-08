@@ -1,5 +1,6 @@
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/utils/amount_input_formatter.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
@@ -159,6 +160,7 @@ class _AirtimePurchaseScreenState extends State<AirtimePurchaseScreen> {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                  AmountInputFormatter(),
                 ],
                 decoration: billInputDecoration(context, 'e.g. 500'),
               ),
@@ -169,9 +171,9 @@ class _AirtimePurchaseScreenState extends State<AirtimePurchaseScreen> {
                 children: [
                   for (final n in _quickAmounts)
                     ActionChip(
-                      label: Text('₦$n'),
-                      onPressed: () =>
-                          _amountController.text = n.toString(),
+                      label: Text('₦${AmountInputFormatter.formatInt(n)}'),
+                      onPressed: () => _amountController.text =
+                          AmountInputFormatter.formatInt(n),
                     ),
                 ],
               ),

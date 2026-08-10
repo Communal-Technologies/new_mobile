@@ -115,6 +115,8 @@ class ApiEndpoints {
   static const String membersUpdateProfile = '$_v1/members/update-profile';
   static const String membersUploadAvatar = '$_v1/members/profile/avatar';
   static const String membersAccountFreeze = '$_coopV2/members/account/freeze';
+  static const String membersAccountFreezeStatus =
+      '$_coopV2/members/account/freeze-status';
   static const String membersAccountClosureSubmit =
       '$_coopV2/members/account-closure/submit';
   static const String membersTransactionStatementExport =

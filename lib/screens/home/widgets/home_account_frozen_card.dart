@@ -9,9 +9,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-/// Shown when `user.wallet.account_status` is frozen (`2`). Unfreeze CTA only for
-/// self-freeze (`frozen_by` === member `user.id`); admin freezes hide the button.
-/// Backend: `AccountController::requestUnfreeze`, `getFreezeStatus` (`is_self_frozen`).
+/// Shown when `user.wallet.account_status` is frozen (`2`). The CTA posts to
+/// cooperative-svc `members/request-unfreeze`, which lifts a self-freeze
+/// (`frozen_by` === member `user.id`) immediately and files an admin freeze for
+/// review; only the label differs between the two.
 class HomeAccountFrozenCard extends StatelessWidget {
   const HomeAccountFrozenCard({super.key, required this.user});
 
@@ -25,7 +26,11 @@ class HomeAccountFrozenCard extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!user.isWalletFrozen) return const SizedBox.shrink();
 
-    final showUnfreeze = user.isWalletSelfFrozen;
+    // request-unfreeze serves both cases: a member's own freeze is lifted
+    // immediately, an admin freeze becomes a pending review. Hiding the button
+    // on an admin freeze left the member with no route to that review at all.
+    final selfFrozen = user.isWalletSelfFrozen;
+    final actionLabel = selfFrozen ? 'Unfreeze Account' : 'Request Unfreeze';
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
@@ -49,11 +54,7 @@ class HomeAccountFrozenCard extends StatelessWidget {
                       color: _iconCircleBg,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      Icons.ac_unit,
-                      size: 22.sp,
-                      color: _accent,
-                    ),
+                    child: Icon(Icons.ac_unit, size: 22.sp, color: _accent),
                   ),
                   hSpace(12),
                   Expanded(
@@ -102,42 +103,41 @@ class HomeAccountFrozenCard extends StatelessWidget {
                   color: _accent,
                 ),
               ),
-              if (showUnfreeze) ...[
-                vSpace(14),
-                SizedBox(
-                  width: double.infinity,
-                  height: 46.h,
-                  child: Material(
-                    color: _accent,
+              vSpace(14),
+              SizedBox(
+                width: double.infinity,
+                height: 46.h,
+                child: Material(
+                  color: _accent,
+                  borderRadius: BorderRadius.circular(12.r),
+                  child: InkWell(
+                    onTap: () =>
+                        _onUnfreezeAccount(context, selfFrozen: selfFrozen),
                     borderRadius: BorderRadius.circular(12.r),
-                    child: InkWell(
-                      onTap: () => _onUnfreezeAccount(context),
-                      borderRadius: BorderRadius.circular(12.r),
-                      child: Center(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Unfreeze Account',
-                              style: TextStyle(
-                                fontSize: 19.sp,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
-                            SizedBox(width: 6.w),
-                            Icon(
-                              Icons.chevron_right_rounded,
+                    child: Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            actionLabel,
+                            style: TextStyle(
+                              fontSize: 19.sp,
+                              fontWeight: FontWeight.w700,
                               color: Colors.white,
-                              size: 22.sp,
                             ),
-                          ],
-                        ),
+                          ),
+                          SizedBox(width: 6.w),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            color: Colors.white,
+                            size: 22.sp,
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
-              ],
+              ),
             ],
           ),
         ),
@@ -145,17 +145,21 @@ class HomeAccountFrozenCard extends StatelessWidget {
     );
   }
 
-  Future<void> _onUnfreezeAccount(BuildContext context) async {
+  Future<void> _onUnfreezeAccount(
+    BuildContext context, {
+    required bool selfFrozen,
+  }) async {
     final reason = await showDialog<String>(
       context: context,
-      builder: (ctx) => const _UnfreezeReasonDialog(),
+      builder: (ctx) => _UnfreezeReasonDialog(selfFrozen: selfFrozen),
     );
     if (!context.mounted) return;
     if (reason == null || reason.trim().length < 10) return;
 
     try {
-      final message =
-          await getIt<AuthRepository>().requestAccountUnfreeze(reason.trim());
+      final message = await getIt<AuthRepository>().requestAccountUnfreeze(
+        reason.trim(),
+      );
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -185,7 +189,9 @@ class HomeAccountFrozenCard extends StatelessWidget {
 }
 
 class _UnfreezeReasonDialog extends StatefulWidget {
-  const _UnfreezeReasonDialog();
+  const _UnfreezeReasonDialog({required this.selfFrozen});
+
+  final bool selfFrozen;
 
   @override
   State<_UnfreezeReasonDialog> createState() => _UnfreezeReasonDialogState();
@@ -204,7 +210,7 @@ class _UnfreezeReasonDialogState extends State<_UnfreezeReasonDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Unfreeze account'),
+      title: Text(widget.selfFrozen ? 'Unfreeze account' : 'Request unfreeze'),
       content: Form(
         key: _formKey,
         child: TextFormField(
@@ -217,9 +223,11 @@ class _UnfreezeReasonDialogState extends State<_UnfreezeReasonDialog> {
             }
             return null;
           },
-          decoration: const InputDecoration(
-            hintText: 'Tell us why we should unfreeze your account',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            hintText: widget.selfFrozen
+                ? 'Tell us why you want to unfreeze your account'
+                : 'Your account was frozen by an administrator. Tell us why it should be unfrozen — this goes to them for review',
+            border: const OutlineInputBorder(),
           ),
         ),
       ),

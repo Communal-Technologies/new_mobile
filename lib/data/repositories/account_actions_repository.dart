@@ -25,6 +25,26 @@ class AccountActionsRepository {
     }
   }
 
+  /// Server truth for the wallet's freeze state. The PIN gate rejects every
+  /// call with 403 ACCOUNT_FROZEN once a wallet is frozen, so the freeze
+  /// screen has to read this before offering the action rather than letting
+  /// the user reach the PIN step and fail there.
+  Future<FreezeStatus> fetchFreezeStatus() async {
+    try {
+      final response = await _dioClient.get(
+        ApiEndpoints.membersAccountFreezeStatus,
+      );
+      final body = response.data;
+      final data = body is Map ? body['data'] : null;
+      if (data is Map) {
+        return FreezeStatus.fromJson(Map<String, dynamic>.from(data));
+      }
+      return const FreezeStatus();
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
   /// Self-freeze the user's wallet. Backend requires a [reason] string
   /// of at least 10 characters (validated server-side).
   Future<void> freezeAccount(String reason) async {
@@ -58,7 +78,8 @@ class AccountActionsRepository {
         ApiEndpoints.membersAccountClosureSubmit,
         data: {
           'cooperative': cooperative,
-          if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+          if (reason != null && reason.trim().isNotEmpty)
+            'reason': reason.trim(),
         },
       );
     } on DioException catch (e) {
@@ -81,5 +102,30 @@ class AccountActionsRepository {
       }
     }
     return 'Unable to complete request.';
+  }
+}
+
+/// Wallet freeze state as reported by `GET members/account/freeze-status`.
+class FreezeStatus {
+  const FreezeStatus({
+    this.isFrozen = false,
+    this.isSelfFrozen = false,
+    this.frozenReason,
+  });
+
+  final bool isFrozen;
+  final bool isSelfFrozen;
+  final String? frozenReason;
+
+  factory FreezeStatus.fromJson(Map<String, dynamic> json) {
+    bool flag(dynamic v) => v == true || v == 1 || v == '1' || v == 'true';
+    final reason = json['frozen_reason']?.toString().trim();
+    return FreezeStatus(
+      isFrozen:
+          flag(json['is_frozen']) ||
+          json['account_status']?.toString().trim() == '2',
+      isSelfFrozen: flag(json['is_self_frozen']),
+      frozenReason: (reason == null || reason.isEmpty) ? null : reason,
+    );
   }
 }

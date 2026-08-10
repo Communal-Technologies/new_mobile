@@ -6,11 +6,27 @@ class NetworkInterceptor extends Interceptor {
 
   NetworkInterceptor(this.connectivityCubit);
 
+  /// `extra` flag for requests that must fail fast instead of waiting for the
+  /// network. Sign-out sets it: a user asking to log out while offline has to
+  /// be logged out now, not in five minutes when connectivity returns.
+  static const String skipConnectivityWaitKey = 'skipConnectivityWait';
+
   @override
   void onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
+    if (options.extra[skipConnectivityWaitKey] == true &&
+        !connectivityCubit.isConnected) {
+      return handler.reject(
+        DioException(
+          requestOptions: options,
+          error: 'No internet connection.',
+          type: DioExceptionType.connectionError,
+        ),
+      );
+    }
+
     // Check if we have connectivity before making the request
     if (!connectivityCubit.isConnected) {
       // Wait for connection to be restored

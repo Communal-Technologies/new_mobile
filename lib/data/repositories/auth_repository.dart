@@ -36,6 +36,27 @@ class AuthRepository {
     dioClient.clearToken();
   }
 
+  /// Revokes the session server-side: the access token and every refresh token
+  /// for this user die now rather than staying usable until they expire.
+  ///
+  /// Must run *before* the local wipe, since it authenticates with the token
+  /// that wipe destroys. Never throws — a signed-out user is signed out whether
+  /// or not the server could be reached, so every failure is swallowed and the
+  /// caller proceeds to clear local state regardless.
+  ///
+  /// [logoutRevoke] on DioClient exists for this call alone: it skips the
+  /// connectivity wait (an offline sign-out must not block for minutes) and the
+  /// 401 handler (a token the server has already rejected is exactly what we
+  /// were trying to achieve, not a session-takeover to warn about).
+  Future<void> revokeSession() async {
+    try {
+      await dioClient.logoutRevoke(ApiEndpoints.logout);
+    } catch (e) {
+      AppLogger.warn(_tag, 'logout revoke failed; clearing locally anyway',
+          error: e);
+    }
+  }
+
   Future<LoginResponse?> login(String login, String password) async {
     try {
       // This endpoint doesn't require authentication (public login endpoint)

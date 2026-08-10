@@ -45,6 +45,10 @@ class ApiEndpoints {
 
   // --- Auth ---------------------------------------------------------------
   static const String login = '$_v1/login';
+
+  /// The one platform-wide logout. Multi-guard on the backend, so the same
+  /// route serves members, cooperative admins and the admin portal.
+  static const String logout = '$_v1/logout';
   static const String loginChecker = '$_v1/login-checker';
   static const String sessionTakeoverVerify =
       '$_v1/login/session-takeover/verify';

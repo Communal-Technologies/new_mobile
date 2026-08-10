@@ -30,7 +30,8 @@ class CommunityScreen extends StatefulWidget {
   State<CommunityScreen> createState() => _CommunityScreenState();
 }
 
-class _CommunityScreenState extends State<CommunityScreen> {
+class _CommunityScreenState extends State<CommunityScreen>
+    with WidgetsBindingObserver {
   int _currentIndex = 2;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late Future<List<Community>> _communitiesFuture;
@@ -47,13 +48,48 @@ class _CommunityScreenState extends State<CommunityScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Serve the cached list immediately, then reconcile against the server.
+    // A join approved by a cooperative admin happens with no client-side
+    // event, so without this the cache stays stale until something else
+    // invalidates it and the newly-joined community never appears.
     _communitiesFuture = _loadMemberships();
     _refreshPendingRequests();
+    _revalidateMemberships();
   }
 
-  Future<List<Community>> _loadMemberships() async {
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _revalidateMemberships();
+      _refreshPendingRequests();
+    }
+  }
+
+  /// Forces a network read and swaps in the result without showing a spinner,
+  /// so an approval that landed while the app was backgrounded is picked up.
+  Future<void> _revalidateMemberships() async {
+    try {
+      final fresh = await _loadMemberships(forceRefresh: true);
+      if (!mounted) return;
+      setState(() {
+        _communitiesFuture = Future.value(fresh);
+      });
+    } catch (_) {
+      // Already showing the cached list; a failed revalidation must not
+      // blank it or raise an error over usable data.
+    }
+  }
+
+  Future<List<Community>> _loadMemberships({bool forceRefresh = false}) async {
     final memberships = await getIt<CommunitySettingsRepository>()
-        .fetchMemberships();
+        .fetchMemberships(forceRefresh: forceRefresh);
     _membershipsById = {for (final m in memberships) m.cooperativeId: m};
     return memberships.map((m) => Community.fromMembership(m)).toList();
   }
@@ -75,7 +111,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
   Future<void> _refresh() async {
     setState(() {
-      _communitiesFuture = _loadMemberships();
+      _communitiesFuture = _loadMemberships(forceRefresh: true);
     });
     await Future.wait([_communitiesFuture, _refreshPendingRequests()]);
   }
@@ -232,7 +268,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     // memberships so the new cooperative appears in this list.
     context.read<AuthBloc>().add(AuthRefreshUserRequested());
     setState(() {
-      _communitiesFuture = _loadMemberships();
+      _communitiesFuture = _loadMemberships(forceRefresh: true);
     });
     // ignore: unawaited_futures
     _refreshPendingRequests();

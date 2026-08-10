@@ -320,6 +320,31 @@ class DioClient {
     }
   }
 
+  /// Authenticated POST used only by sign-out to revoke the session upstream.
+  ///
+  /// Deliberately not `post(...)`, because both of that method's behaviours are
+  /// wrong here:
+  /// - a 401 must NOT call [markSessionInvalidated] — the token being rejected
+  ///   is the goal of the request, not evidence of a takeover, and raising the
+  ///   "Session Ended" modal mid-logout would be nonsense;
+  /// - the request must not wait on connectivity, so an offline sign-out
+  ///   completes locally at once instead of blocking on
+  ///   [NetworkInterceptor]'s five-minute wait.
+  ///
+  /// Short timeouts for the same reason: sign-out is a foreground action and
+  /// the local wipe is what actually matters.
+  Future<Response> logoutRevoke(String uri) async {
+    return dio.post(
+      uri,
+      data: const <String, dynamic>{},
+      options: Options(
+        extra: {NetworkInterceptor.skipConnectivityWaitKey: true},
+        sendTimeout: const Duration(seconds: 8),
+        receiveTimeout: const Duration(seconds: 8),
+      ),
+    );
+  }
+
   Future<Response> delete(
     String uri, {
     dynamic data,

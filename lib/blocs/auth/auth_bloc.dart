@@ -475,6 +475,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     LogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
+    // Revoke upstream FIRST, while the bearer still exists: tokenManager.clear()
+    // below drops the token this call authenticates with. Without it, signing
+    // out only forgot the tokens locally — they stayed valid server-side until
+    // expiry, so a copy lifted from a backup or an intercepted request kept
+    // working on an account the user believed they had left.
+    await authRepository.revokeSession();
+
     // Clear ALL user-related keys from secure storage (preserve app-level
     // settings like onboarding_completed). The onboarding flag persists
     // through logout but is cleared on app uninstall.

@@ -10,7 +10,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Shown when `user.wallet.account_status` is frozen (`2`). The CTA posts to
-/// cooperative-svc `members/request-unfreeze`, which lifts a self-freeze
+/// `members/account/request-unfreeze`, which lifts a self-freeze
 /// (`frozen_by` === member `user.id`) immediately and files an admin freeze for
 /// review; only the label differs between the two.
 class HomeAccountFrozenCard extends StatelessWidget {

@@ -39,8 +39,9 @@ class ApiEndpoints {
   static const String _loansV2 = '/api/loans/v2';
 
   /// Cooperative micro-service prefix. Membership, join requests, member
-  /// settings, notifications, the member ledger, account freeze and closure
-  /// were all migrated off the monolith to `/api/cooperative/v2/…`.
+  /// settings, notifications, the member ledger and per-cooperative account
+  /// closure were migrated off the monolith to `/api/cooperative/v2/…`.
+  /// Wallet freeze is not here — see `membersAccountFreeze`.
   static const String _coopV2 = '/api/cooperative/v2';
 
   // --- Auth ---------------------------------------------------------------
@@ -75,10 +76,6 @@ class ApiEndpoints {
       '$_v1/members/update-security-pin';
   static const String membersVerifySecurityPin =
       '$_v1/members/verify-security-pin';
-  // Unfreeze requests sit directly under /members in cooperative-svc, not
-  // under /members/account like the freeze pair below.
-  static const String membersRequestUnfreeze =
-      '$_coopV2/members/request-unfreeze';
   static const String membersCommunitySettings =
       '$_coopV2/members/community-settings';
   static String membersCommunitySettingsForCooperative(String cooperativeId) =>
@@ -114,7 +111,17 @@ class ApiEndpoints {
       '$_v1/members/fetch-user-details/$id';
   static const String membersUpdateProfile = '$_v1/members/update-profile';
   static const String membersUploadAvatar = '$_v1/members/profile/avatar';
-  static const String membersAccountFreeze = '$_coopV2/members/account/freeze';
+  // Wallet freeze is authsvc's: it owns `wallets` and the Anchor freeze call,
+  // and freezing one has nothing to do with any cooperative. Account closure
+  // below stays on cooperative-svc — that is a member leaving one cooperative.
+  static const String membersAccountFreeze = '$_v1/members/account/freeze';
+  // request-unfreeze, not the bare unfreeze endpoint: it lifts a self-freeze
+  // immediately and files an admin freeze for review, so the app needs only
+  // this one call and the server decides which case applies.
+  static const String membersRequestUnfreeze =
+      '$_v1/members/account/request-unfreeze';
+  static const String membersAccountFreezeStatus =
+      '$_v1/members/account/freeze-status';
   static const String membersAccountClosureSubmit =
       '$_coopV2/members/account-closure/submit';
   static const String membersTransactionStatementExport =
@@ -150,8 +157,9 @@ class ApiEndpoints {
 
   /// Pre-purchase meter (electricity) or smartcard (television) lookup.
   static String billsCustomerValidation(
-          String billerSlug, String accountNumber) =>
-      '$_billsV2/validate/${billerSlug.trim()}/${accountNumber.trim()}';
+    String billerSlug,
+    String accountNumber,
+  ) => '$_billsV2/validate/${billerSlug.trim()}/${accountNumber.trim()}';
 
   static const String billsAirtimePurchase = '$_billsV2/airtime';
   static const String billsDataPurchase = '$_billsV2/data';
@@ -197,10 +205,8 @@ class ApiEndpoints {
   /// `{obligation: …, account: …}` — both halves needed by
   /// `Obligation.fromBackend`. 404 when the row doesn't belong to
   /// the authenticated member.
-  static String membersObligationById(String id) =>
-      '$_oblV2/$id';
-  static const String membersObligationWithdrawal =
-      '$_oblV2/withdrawals';
+  static String membersObligationById(String id) => '$_oblV2/$id';
+  static const String membersObligationWithdrawal = '$_oblV2/withdrawals';
   static String membersRevokeObligationWithdrawal(String id) =>
       '$_oblV2/withdrawals/$id';
 
@@ -242,6 +248,7 @@ class ApiEndpoints {
   static String membersFetchGuarantorRequests(String ledgerNumber) =>
       '$_loansV2/guarantors/requests/$ledgerNumber';
   static const String membersLoanApplication = '$_loansV2/application';
+
   /// Cancel a pending loan request (PUT /{id}/cancel).
   static String membersLoanCancelRequest(String loanId) =>
       '$_loansV2/$loanId/cancel';
@@ -252,8 +259,7 @@ class ApiEndpoints {
   static String membersGuarantorRemind(String approvalId) =>
       '$_loansV2/guarantors/$approvalId/remind';
 
-  static const String membersGuarantorReplace =
-      '$_loansV2/guarantors/replace';
+  static const String membersGuarantorReplace = '$_loansV2/guarantors/replace';
 
   static const String membersPayLoan = '$_loansV2/pay';
 
@@ -261,6 +267,7 @@ class ApiEndpoints {
       '$_loansV2/record-nip-payment';
   static const String membersUpdateGuarantorApproval =
       '$_loansV2/guarantors/update-approval';
+
   /// Guarantor search — caller passes `?cooperative=&q=` query params.
   static const String membersLoanSearchGuarantors =
       '$_loansV2/guarantors/search';

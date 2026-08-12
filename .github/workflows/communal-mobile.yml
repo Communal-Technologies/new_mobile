@@ -2,9 +2,10 @@
 #
 # - dev  → staging    → signed APK on the public mirror, plus an unsigned iOS
 #                       simulator build as a workflow artifact.
-# - main → production → signed APK + AAB on the public mirror, a Play Store
-#                       upload and a TestFlight upload when those creds exist,
-#                       and a `v<semver>` tag + pubspec bump committed back here.
+# - main → production → signed APK on the public mirror, the AAB as a workflow
+#                       artifact, a Play Store upload and a TestFlight upload
+#                       when those creds exist, and a `v<semver>` tag + pubspec
+#                       bump committed back here.
 #
 # THIS REPO STORES NO BINARIES. Every artifact is published to the public mirror
 # named by the PUBLIC_RELEASES_REPO variable, so the download link needs no login.
@@ -231,6 +232,20 @@ jobs:
             cp build/app/outputs/bundle/release/app-release.aab communal-mobile.aab
             echo "aab_path=communal-mobile.aab" >> "$GITHUB_OUTPUT"
           fi
+
+      # The AAB goes to a workflow artifact, not the public mirror: an AAB is
+      # not installable, only Play consumes it, and the mirror exists to hand
+      # testers a plain APK link. Needed as a download because Play's API
+      # refuses to create a release until one artifact has been uploaded to the
+      # console by hand, so the first release has to be fetched from here.
+      - name: Upload AAB (production only)
+        if: env.IS_PROD == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-aab-${{ steps.meta.outputs.file_tag }}
+          path: communal-mobile-${{ steps.meta.outputs.file_tag }}.aab
+          retention-days: 90
+          if-no-files-found: error
 
       # Mirror the APK to a separate PUBLIC GitHub repo so non-collaborators
       # can install via a plain HTTPS link. Gated on the mirror secrets being

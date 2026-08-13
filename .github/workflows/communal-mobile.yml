@@ -47,6 +47,11 @@ concurrency:
 permissions:
   contents: write
 
+env:
+  # The toolchain that built v2.1.6. Both jobs read this so android and iOS
+  # never stamp a release from different Flutter versions.
+  FLUTTER_VERSION: "3.44.9"
+
 jobs:
   android:
     runs-on: ubuntu-latest
@@ -70,9 +75,14 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      # Pinned, not floating on stable. An unpinned channel means an upstream
+      # Flutter release can break a release build with no commit of ours: 3.47.0
+      # raised the minimum Gradle to 8.14 and broke assembleRelease against our
+      # 8.12 wrapper. Bump this deliberately, together with the Gradle wrapper.
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
 
@@ -434,6 +444,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
 

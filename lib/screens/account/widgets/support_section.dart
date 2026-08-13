@@ -59,14 +59,16 @@ class SupportSection extends StatelessWidget {
           ),
         ),
         vSpace(12),
-        SettingItem(
-          icon: Icons.headphones,
-          title: 'Help & FAQ',
-          description: 'Get help and find answers',
-          onTap: () {
-            context.pushNamed('help-support');
-          },
-        ),
+        // Hidden for the closed-testing release; restore once the help centre
+        // content is ready.
+        // SettingItem(
+        //   icon: Icons.headphones,
+        //   title: 'Help & FAQ',
+        //   description: 'Get help and find answers',
+        //   onTap: () {
+        //     context.pushNamed('help-support');
+        //   },
+        // ),
         SettingItem(
           icon: Icons.logout,
           iconColor: Colors.red,

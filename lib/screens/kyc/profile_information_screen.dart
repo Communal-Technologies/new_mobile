@@ -89,6 +89,20 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
   PhoneNumber? _phoneInitial;
   bool _prefillDone = false;
 
+  /// Set when an Anchor customer already exists for this user, which turns the
+  /// screen into an edit: submitting PATCHes that customer instead of POSTing a
+  /// new one. Anchor refuses a second customer on the same email and phone, and
+  /// those are usually the only ones the member has.
+  String? _anchorCustomerId;
+
+  /// State and LGA are stored as names but the pickers select by row, so the
+  /// stored values are held here until the catalogs they belong to have loaded.
+  String? _prefillStateName;
+  String? _prefillLgaName;
+
+  bool get _isEditing =>
+      _anchorCustomerId != null && _anchorCustomerId!.isNotEmpty;
+
   String _digitsOnlyPostal(String raw) => raw.replaceAll(RegExp(r'\D'), '');
 
   String _internationalPhone(PhoneNumber p) {
@@ -218,14 +232,22 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
     final authEarly = context.read<AuthBloc>().state;
     if (authEarly is AuthAuthenticated) {
       final storage = getIt<KycProgressStorage>();
-      final anchor = storage.getAnchor(authEarly.userId);
+      // Local prefs are cleared once the flow finishes (all_set_screen), so the
+      // backend copy is the one that survives; re-sync it so the later steps
+      // still receive the id through navigation extras.
+      final anchor =
+          storage.getAnchor(authEarly.userId) ??
+          authEarly.user.kycAnchorCustomerId;
       if (anchor != null && anchor.isNotEmpty) {
+        await storage.ensureAnchorSynced(authEarly.userId, anchor);
+        _anchorCustomerId = anchor;
         final dest = storage.resumeDestination(
           authEarly.userId,
           communalTier: authEarly.user.communalTier,
           backendStep1Submitted: authEarly.user.kycStep1Submitted,
           backendStep2Submitted: authEarly.user.kycStep2Submitted,
           backendStep3Submitted: authEarly.user.kycStep3Submitted,
+          kycRejected: authEarly.user.isKycRejected,
         );
         final extra = <String, dynamic>{'anchorCustomerId': anchor};
         if (!mounted) return;
@@ -290,6 +312,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
       });
 
       await _loadStatesForCountry(defaultReg.countryIso, locRepo);
+      await _applyLocationPrefill();
     } catch (_) {
       if (!mounted) return;
       final fb = RegionModel.offlineFallback;
@@ -368,12 +391,69 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
     if (user.email != null) {
       _emailController.text = user.email!;
     }
+    if (user.address1 != null) {
+      _address1Controller.text = user.address1!;
+    }
+    if (user.address2 != null) {
+      _address2Controller.text = user.address2!;
+    }
+    if (user.city != null) {
+      _cityController.text = user.city!;
+    }
+    if (user.postalCode != null) {
+      _postalCodeController.text = _digitsOnlyPostal(user.postalCode!);
+    }
+    _prefillStateName = user.state;
+    _prefillLgaName = user.lga;
 
     final initial = _phoneFromStored(user.phone, regions);
     if (initial != null) {
       _phoneInitial = initial;
       _phoneNumber = initial;
     }
+  }
+
+  /// Selects the stored state and LGA in their pickers once both catalogs are
+  /// available. Matching is by name because that is what the profile stores.
+  Future<void> _applyLocationPrefill() async {
+    final stateName = _prefillStateName;
+    if (stateName == null || stateName.isEmpty || _states.isEmpty) return;
+    if (_selectedStateId != null) return;
+
+    StateModel? row;
+    for (final s in _states) {
+      if (_samePlaceName(s.name, stateName)) {
+        row = s;
+        break;
+      }
+    }
+    if (row == null) return;
+
+    await _onStateSelected(row.id);
+    if (!mounted) return;
+
+    final lgaName = _prefillLgaName;
+    if (lgaName == null || lgaName.isEmpty) return;
+    for (final l in _lgas) {
+      if (_samePlaceName(l.name, lgaName)) {
+        setState(() => _selectedLgaName = l.name);
+        return;
+      }
+    }
+  }
+
+  /// Compares place names ignoring the " State" suffix: the catalog holds the
+  /// official name ("Lagos State") but kycsvc strips the suffix before sending
+  /// the address to Anchor, so a round-tripped profile stores the bare form.
+  bool _samePlaceName(String a, String b) {
+    String norm(String v) {
+      final s = v.trim().toLowerCase();
+      return s.endsWith(' state')
+          ? s.substring(0, s.length - ' state'.length).trim()
+          : s;
+    }
+
+    return norm(a) == norm(b);
   }
 
   Future<void> _onStateSelected(int? stateId) async {
@@ -561,6 +641,17 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
     final middle = _middleNameController.text.trim();
     final addr2 = _address2Controller.text.trim();
 
+    if (_isEditing) {
+      await _submitUpdate(
+        anchorCustomerId: _anchorCustomerId!,
+        stateRow: stateRow,
+        countryRegion: countryRegion,
+        middle: middle,
+        addr2: addr2,
+      );
+      return;
+    }
+
     final body = <String, dynamic>{
       'first_name': _firstNameController.text.trim(),
       'last_name': _lastNameController.text.trim(),
@@ -595,16 +686,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
         authState.userId,
         customerId,
       );
-      try {
-        final token = await getIt<FlutterSecureStorage>().read(key: 'token');
-        if (token != null) {
-          getIt<AuthRepository>().updateToken(token);
-          final fresh = await getIt<AuthRepository>().getUserInfo(token);
-          if (fresh != null && mounted) {
-            context.read<AuthBloc>().add(AuthUserUpdated(fresh));
-          }
-        }
-      } catch (_) {}
+      await _refreshUser();
       if (!mounted) return;
       setState(() => _submitting = false);
       // ignore: unawaited_futures
@@ -622,6 +704,78 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
         msg.isNotEmpty ? msg : 'Could not save. Please try again.',
       );
     }
+  }
+
+  /// PATCH path: the Anchor customer already exists, so the edited fields are
+  /// pushed onto it. Anchor replaces whole objects, hence the full name and
+  /// address are always sent in one piece.
+  Future<void> _submitUpdate({
+    required String anchorCustomerId,
+    required StateModel stateRow,
+    required RegionModel countryRegion,
+    required String middle,
+    required String addr2,
+  }) async {
+    final body = <String, dynamic>{
+      'full_name': <String, dynamic>{
+        'first_name': _firstNameController.text.trim(),
+        'last_name': _lastNameController.text.trim(),
+        if (middle.isNotEmpty) 'middle_name': middle,
+      },
+      'email': _emailController.text.trim(),
+      'phone_number': _internationalPhone(_phoneNumber!),
+      'address': <String, dynamic>{
+        'address_line_1': _address1Controller.text.trim(),
+        if (addr2.isNotEmpty) 'address_line_2': addr2,
+        'city': _cityController.text.trim(),
+        'state': stateRow.name,
+        'lga': _selectedLgaName!,
+        'postal_code': _digitsOnlyPostal(_postalCodeController.text),
+        'country': countryRegion.countryIso,
+      },
+    };
+
+    setState(() {
+      _submitting = true;
+    });
+
+    try {
+      await getIt<KycRepository>().updateProfile(
+        anchorCustomerId: anchorCustomerId,
+        body: body,
+        idempotencyKey: _idempotencyKey,
+      );
+      await _refreshUser();
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      AppToast.success('Profile updated.');
+      // ignore: unawaited_futures
+      context.push(
+        '/kyc/bank-info',
+        extra: <String, dynamic>{'anchorCustomerId': anchorCustomerId},
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+      });
+      final msg = e.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
+      AppToast.error(
+        msg.isNotEmpty ? msg : 'Could not save. Please try again.',
+      );
+    }
+  }
+
+  Future<void> _refreshUser() async {
+    try {
+      final token = await getIt<FlutterSecureStorage>().read(key: 'token');
+      if (token == null) return;
+      getIt<AuthRepository>().updateToken(token);
+      final fresh = await getIt<AuthRepository>().getUserInfo(token);
+      if (fresh != null && mounted) {
+        context.read<AuthBloc>().add(AuthUserUpdated(fresh));
+      }
+    } catch (_) {}
   }
 
   @override
@@ -676,7 +830,9 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                     vSpace(4),
                     Center(
                       child: Text(
-                        'Tell us about yourself',
+                        _isEditing
+                            ? 'Check your details and correct anything wrong'
+                            : 'Tell us about yourself',
                         style: TextStyle(
                           fontSize: 19.sp,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -969,10 +1125,10 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                   ],
                 ),
                 child: AppElevatedButton(
-                  title: 'Continue',
+                  title: _isEditing ? 'Save changes' : 'Continue',
                   onPressed: _submitting ? null : _continue,
                   isLoading: _submitting,
-                  loadingLabel: 'Submitting…',
+                  loadingLabel: _isEditing ? 'Saving…' : 'Submitting…',
                 ),
               ),
             ],

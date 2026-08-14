@@ -18,16 +18,22 @@ class AccountLimitsScreen extends StatelessWidget {
 
   static String _norm(String? value) => value?.trim().toLowerCase() ?? '';
 
-  static bool _isTier2PendingStatus(String? value) {
+  /// A submission is with the verification provider and awaiting a decision.
+  ///
+  /// Bare `pending` is deliberately absent: the KYC record is created with that
+  /// status the moment profile information is registered, long before anything
+  /// has been submitted for review. Treating it as "pending review" showed
+  /// members a Pending badge against a tier they had not started.
+  static bool _isAwaitingReviewStatus(String? value) {
     final s = _norm(value);
     return s == 'tier2_submitted' ||
         s == 'awaitingdocument' ||
+        s == 'awaiting_document' ||
         s == 'pending_review' ||
-        s == 'pending.manual.review' ||
-        s == 'pending';
+        s == 'pending.manual.review';
   }
 
-  static String _effectiveTier2Status({
+  static String _effectiveKycStatus({
     required String? profileKycStatus,
     required String? workflowStatus,
     required bool step3Submitted,
@@ -40,7 +46,7 @@ class AccountLimitsScreen extends StatelessWidget {
     return '';
   }
 
-  static bool _isTier2RejectedStatus(String? value) {
+  static bool _isRejectedStatus(String? value) {
     final s = _norm(value);
     return s == 'rejected' || s == 'reenter_information' || s == 'error';
   }
@@ -119,19 +125,20 @@ class AccountLimitsScreen extends StatelessWidget {
               ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
             final nextKey = tl.nextTierKey;
-            final tier2Status = _effectiveTier2Status(
+            final kycStatus = _effectiveKycStatus(
               profileKycStatus: u.kycStatus,
               workflowStatus: u.kycWorkflowStatus,
               step3Submitted: u.kycStep3Submitted,
             );
-            final tier2Pending =
-                _isTier2PendingStatus(tier2Status);
-            final tier2Rejected =
-                _isTier2RejectedStatus(tier2Status);
-            final onResume =
-                (nextKey != null && !tier2Pending)
-                    ? () => pushKycResumeRoute(context)
-                    : null;
+            final awaitingReview = _isAwaitingReviewStatus(kycStatus);
+            final rejected = _isRejectedStatus(kycStatus);
+            // A pending or rejected submission belongs to the tier the member is
+            // being assessed for, which is whichever tier comes next — not
+            // always tier 2.
+            final statusTierKey = awaitingReview || rejected ? nextKey : null;
+            final onResume = (nextKey != null && !awaitingReview)
+                ? () => pushKycResumeRoute(context)
+                : null;
 
             return SingleChildScrollView(
               child: Column(
@@ -142,10 +149,18 @@ class AccountLimitsScreen extends StatelessWidget {
                     current: tl.current,
                     nextTierKey: nextKey,
                     onContinueVerification: onResume,
-                    disableUpgrade: tier2Pending,
+                    disableUpgrade: awaitingReview,
                     upgradeButtonLabel:
-                        tier2Pending ? 'Submitted - pending review' : null,
+                        awaitingReview ? 'Submitted - pending review' : null,
                   ),
+                  if (rejected) ...[
+                    vSpace(16),
+                    _buildRejectionNotice(
+                      context,
+                      reason: u.kycRejectionMessage,
+                      onResubmit: onResume,
+                    ),
+                  ],
                   vSpace(24),
                   _buildKycBenefitSection(context),
                   vSpace(16),
@@ -175,15 +190,15 @@ class AccountLimitsScreen extends StatelessWidget {
                           maxBalanceKobo: e.maxBalanceKobo,
                           requirements: req,
                           isCurrent: e.tierKey == tl.current.tierKey,
-                          statusBadgeLabel: e.tierKey == 'tier_2'
-                              ? (tier2Pending
+                          statusBadgeLabel: e.tierKey == statusTierKey
+                              ? (awaitingReview
                                   ? 'Pending'
-                                  : (tier2Rejected ? 'Rejected' : null))
+                                  : (rejected ? 'Rejected' : null))
                               : null,
-                          statusBadgeBgColor: e.tierKey == 'tier_2'
-                              ? (tier2Pending
+                          statusBadgeBgColor: e.tierKey == statusTierKey
+                              ? (awaitingReview
                                   ? const Color(0xFF3E267F)
-                                  : (tier2Rejected
+                                  : (rejected
                                       ? const Color(0xFF7A1E1E)
                                       : null))
                               : null,
@@ -196,6 +211,81 @@ class AccountLimitsScreen extends StatelessWidget {
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+
+  /// Shown when the last submission was turned down, with the provider's own
+  /// wording where it gave one. Without this the member sees only a tier badge
+  /// and has no way to learn what to correct.
+  Widget _buildRejectionNotice(
+    BuildContext context, {
+    required String? reason,
+    required VoidCallback? onResubmit,
+  }) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
+      child: Container(
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: const Color(0xFF7A1E1E).withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(color: const Color(0xFF7A1E1E).withValues(alpha: 0.35)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.error_outline, size: 20.sp, color: const Color(0xFF7A1E1E)),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: Text(
+                    'Your verification was not approved',
+                    style: TextStyle(
+                      fontSize: 19.sp,
+                      fontWeight: FontWeight.w600,
+                      color: onSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            vSpace(8),
+            Text(
+              reason ??
+                  'Please review the details you submitted and try again. Your name, '
+                      'date of birth and phone number must match your BVN records exactly.',
+              style: TextStyle(
+                fontSize: 18.sp,
+                height: 1.4,
+                color: onSurface.withValues(alpha: 0.75),
+              ),
+            ),
+            if (onResubmit != null) ...[
+              vSpace(12),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: onResubmit,
+                  style: TextButton.styleFrom(
+                    backgroundColor: const Color(0xFF742CE7),
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
+                  ),
+                  child: Text(
+                    'Update my details',
+                    style: TextStyle(fontSize: 19.sp, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );

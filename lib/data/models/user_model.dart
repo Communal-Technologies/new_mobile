@@ -25,6 +25,14 @@ class UserModel extends Equatable {
   final String? phone;
   /// Profile `country` when stored as a 2-letter ISO code (e.g. NG).
   final String? countryIso;
+  final String? address1;
+  final String? address2;
+  final String? city;
+  /// Profile `state` and `lga` as names, which is how they are stored and how
+  /// the KYC form's pickers identify their options.
+  final String? state;
+  final String? lga;
+  final String? postalCode;
 
   /// From `profile.tier` on `get-loggedin-user` (e.g. tier_0, tier_1, tier_2).
   final String? communalTier;
@@ -32,6 +40,9 @@ class UserModel extends Equatable {
   final String? kycStatus;
   /// From top-level `kyc.status` workflow state (e.g. tier2_submitted, awaitingDocument).
   final String? kycWorkflowStatus;
+  /// From top-level `kyc.rejection_reason` — the verification provider's own
+  /// wording for why the last submission failed.
+  final String? kycRejectionReason;
 
   /// From top-level `kyc.anchor_customer_id` on `get-loggedin-user`.
   final String? kycAnchorCustomerId;
@@ -98,9 +109,16 @@ class UserModel extends Equatable {
     this.email,
     this.phone,
     this.countryIso,
+    this.address1,
+    this.address2,
+    this.city,
+    this.state,
+    this.lga,
+    this.postalCode,
     this.communalTier,
     this.kycStatus,
     this.kycWorkflowStatus,
+    this.kycRejectionReason,
     this.kycAnchorCustomerId,
     this.kycStep1Submitted = false,
     this.kycStep2Submitted = false,
@@ -187,12 +205,29 @@ class UserModel extends Equatable {
   bool get hasWalletBalance =>
       hasProvisionedWalletAccountNumber && walletBalanceKobo > 0;
 
+  /// True when the last verification submission was turned down and the member
+  /// has to submit again. Covers the outright rejection as well as the
+  /// reenter-information and error outcomes, which need the same correction
+  /// from the member.
+  bool get isKycRejected {
+    const rejected = {'rejected', 'reenter_information', 'error'};
+    final s = kycStatus?.trim().toLowerCase() ?? '';
+    final w = kycWorkflowStatus?.trim().toLowerCase() ?? '';
+    return rejected.contains(s) || rejected.contains(w);
+  }
+
+  /// The provider's wording for the rejection, or null when none was supplied.
+  String? get kycRejectionMessage {
+    final r = kycRejectionReason?.trim();
+    return (r == null || r.isEmpty) ? null : r;
+  }
+
   /// Home banner: KYC step 2 (bank/BVN) is in — either the backend has already
   /// promoted the tier (tier_1/tier_2) or the tier is still tier_0 but step 2 was
   /// submitted / the workflow reports tier2_submitted — while the virtual account
   /// number is not on the user yet (provisioning / review pending).
   bool get shouldShowHomeKycPendingWalletProvisioning {
-    if (hasProvisionedWalletAccountNumber) return false;
+    if (hasProvisionedWalletAccountNumber || isKycRejected) return false;
     final t = communalTier?.trim().toLowerCase() ?? '';
     if (t == 'tier_1' || t == 'tier_2') return true;
     if (kycStep2Submitted) return true;
@@ -217,9 +252,16 @@ class UserModel extends Equatable {
     String? email,
     String? phone,
     String? countryIso,
+    String? address1,
+    String? address2,
+    String? city,
+    String? state,
+    String? lga,
+    String? postalCode,
     String? communalTier,
     String? kycStatus,
     String? kycWorkflowStatus,
+    String? kycRejectionReason,
     String? kycAnchorCustomerId,
     bool? kycStep1Submitted,
     bool? kycStep2Submitted,
@@ -254,9 +296,16 @@ class UserModel extends Equatable {
       email: email ?? this.email,
       phone: phone ?? this.phone,
       countryIso: countryIso ?? this.countryIso,
+      address1: address1 ?? this.address1,
+      address2: address2 ?? this.address2,
+      city: city ?? this.city,
+      state: state ?? this.state,
+      lga: lga ?? this.lga,
+      postalCode: postalCode ?? this.postalCode,
       communalTier: communalTier ?? this.communalTier,
       kycStatus: kycStatus ?? this.kycStatus,
       kycWorkflowStatus: kycWorkflowStatus ?? this.kycWorkflowStatus,
+      kycRejectionReason: kycRejectionReason ?? this.kycRejectionReason,
       kycAnchorCustomerId: kycAnchorCustomerId ?? this.kycAnchorCustomerId,
       kycStep1Submitted: kycStep1Submitted ?? this.kycStep1Submitted,
       kycStep2Submitted: kycStep2Submitted ?? this.kycStep2Submitted,
@@ -355,6 +404,7 @@ class UserModel extends Equatable {
       kycStatusVal = rawKyc;
     }
     String? kycWorkflowStatusVal;
+    String? kycRejectionReasonVal;
 
     String? kycAnchorId;
     bool kycStep1SubmittedVal = false;
@@ -377,6 +427,10 @@ class UserModel extends Equatable {
       if (workflow != null && workflow.isNotEmpty) {
         kycWorkflowStatusVal = workflow;
       }
+      final reason = k['rejection_reason']?.toString().trim();
+      if (reason != null && reason.isNotEmpty) {
+        kycRejectionReasonVal = reason;
+      }
     }
     final kycProgressRaw = json['kyc_progress'];
     if (kycProgressRaw is Map) {
@@ -392,6 +446,11 @@ class UserModel extends Equatable {
     final tierLimitsParsed = tierLimitsRaw is Map
         ? TierLimitsSnapshot.fromJson(Map<String, dynamic>.from(tierLimitsRaw))
         : null;
+
+    String? profileField(String key) {
+      final v = profile?[key]?.toString().trim();
+      return (v == null || v.isEmpty) ? null : v;
+    }
 
     String? profileCountryIso;
     final rawCountry = profile?['country']?.toString().trim();
@@ -512,9 +571,16 @@ class UserModel extends Equatable {
       email: emailVal != null && emailVal.isNotEmpty ? emailVal : null,
       phone: phoneVal != null && phoneVal.isNotEmpty ? phoneVal : null,
       countryIso: profileCountryIso,
+      address1: profileField('address_1'),
+      address2: profileField('address_2'),
+      city: profileField('city'),
+      state: profileField('state'),
+      lga: profileField('lga'),
+      postalCode: profileField('postal_code'),
       communalTier: communalTierVal,
       kycStatus: kycStatusVal,
       kycWorkflowStatus: kycWorkflowStatusVal,
+      kycRejectionReason: kycRejectionReasonVal,
       kycAnchorCustomerId: kycAnchorId,
       kycStep1Submitted: kycStep1SubmittedVal,
       kycStep2Submitted: kycStep2SubmittedVal,
@@ -552,9 +618,16 @@ class UserModel extends Equatable {
       'email': email,
       'phone': phone,
       'country_iso': countryIso,
+      'address_1': address1,
+      'address_2': address2,
+      'city': city,
+      'state': state,
+      'lga': lga,
+      'postal_code': postalCode,
       'communal_tier': communalTier,
       'kyc_status': kycStatus,
       'kyc_workflow_status': kycWorkflowStatus,
+      'kyc_rejection_reason': kycRejectionReason,
       'kyc_anchor_customer_id': kycAnchorCustomerId,
       'kyc_step_1_submitted': kycStep1Submitted,
       'kyc_step_2_submitted': kycStep2Submitted,
@@ -591,9 +664,16 @@ class UserModel extends Equatable {
         email,
         phone,
         countryIso,
+        address1,
+        address2,
+        city,
+        state,
+        lga,
+        postalCode,
         communalTier,
         kycStatus,
         kycWorkflowStatus,
+        kycRejectionReason,
         kycAnchorCustomerId,
         kycStep1Submitted,
         kycStep2Submitted,

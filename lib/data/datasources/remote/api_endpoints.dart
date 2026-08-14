@@ -274,6 +274,11 @@ class ApiEndpoints {
 
   // --- KYC / compliance (kycsvc — /api/kyc/v2/...) ------------------------
   static const String kycCreate = '/api/kyc/v2';
+  /// PATCH — edits the customer that [kycCreate] created. Re-POSTing instead
+  /// would try to create a second Anchor customer on the same email and phone,
+  /// which Anchor refuses.
+  static String kycUpdateCustomer(String anchorCustomerId) =>
+      '/api/kyc/v2/$anchorCustomerId';
   static String kycGetByUserId(String userId) => '/api/kyc/v2/user/$userId';
   static const String kycRecordConsent = '/api/kyc/v2/consent';
   static String kycUpgradeTier1(String anchorCustomerId) =>

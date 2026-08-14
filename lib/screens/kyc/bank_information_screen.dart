@@ -278,26 +278,21 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
     }
   }
 
+  /// Skip leaves the KYC flow for the dashboard rather than advancing to the
+  /// next step. A member who skips this step may well be here only to get to
+  /// identity verification, and pushing them into the next screen made Skip
+  /// indistinguishable from Continue.
   Future<void> _skip() async {
     if (_isSubmitting) return;
-    final id = _effectiveAnchor();
-    if (id == null || id.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Missing customer id. Complete profile verification first.',
-          ),
-        ),
-      );
-      return;
-    }
     final auth = context.read<AuthBloc>().state;
-    if (auth is AuthAuthenticated) {
+    final id = _effectiveAnchor();
+    if (auth is AuthAuthenticated && id != null && id.isNotEmpty) {
+      // Only record the step as passed once the customer exists on Anchor —
+      // without it there is nothing for a later step to submit against.
       await getIt<KycProgressStorage>().markBankStepDone(auth.userId);
     }
     if (!mounted) return;
-    // ignore: unawaited_futures
-    context.push('/kyc/proof-of-identity', extra: _kycExtra());
+    context.go('/home');
   }
 
   Future<void> _continue() async {

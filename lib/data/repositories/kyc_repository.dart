@@ -39,6 +39,24 @@ class KycRepository {
     }
   }
 
+  /// Step 1 again, for a customer that already exists: edits the Anchor
+  /// customer instead of creating one. Returns 204 with no body.
+  Future<void> updateProfile({
+    required String anchorCustomerId,
+    required Map<String, dynamic> body,
+    String? idempotencyKey,
+  }) async {
+    try {
+      await _dioClient.patch(
+        ApiEndpoints.kycUpdateCustomer(anchorCustomerId),
+        data: body,
+        idempotencyKey: idempotencyKey,
+      );
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
   /// Step 2 (BVN): submits BVN to Anchor for tier-1 verification.
   /// Returns the `data` payload on success (contains `message`).
   Future<Map<String, dynamic>?> upgradeToTier1({

@@ -320,6 +320,53 @@ class DioClient {
     }
   }
 
+  Future<Response> patch(
+    String uri, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+    bool requireAuth = true,
+    String? idempotencyKey,
+  }) async {
+    try {
+      final options = Options();
+      if (!requireAuth) {
+        // Public endpoint — strip the Authorization header.
+        options.headers = {
+          HttpHeaders.contentTypeHeader: 'application/json; charset=UTF-8',
+          'X-localization': AppConstants.defaultLanguage,
+        };
+      }
+      if (idempotencyKey != null && idempotencyKey.isNotEmpty) {
+        final headers = options.headers ?? <String, dynamic>{};
+        headers['Idempotency-Key'] = idempotencyKey;
+        options.headers = headers;
+      }
+      return await dio.patch(
+        uri,
+        data: data,
+        queryParameters: queryParameters,
+        cancelToken: cancelToken,
+        onSendProgress: onSendProgress,
+        onReceiveProgress: onReceiveProgress,
+        options: options,
+      );
+    } on DioException catch (e) {
+      _handleUnauthorizedResponse(e, requireAuth: requireAuth);
+      AppLogger.warn(
+        'DioClient',
+        'PATCH $uri failed (${e.type.name}, status=${e.response?.statusCode})',
+      );
+      rethrow;
+    } on FormatException {
+      throw const FormatException("Unable to process the data");
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   /// Authenticated POST used only by sign-out to revoke the session upstream.
   ///
   /// Deliberately not `post(...)`, because both of that method's behaviours are

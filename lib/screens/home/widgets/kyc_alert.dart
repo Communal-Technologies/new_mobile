@@ -4,7 +4,18 @@ import 'package:communal_mobile/core/navigation/kyc_resume.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 
 class KycAlert extends StatelessWidget {
-  const KycAlert({super.key});
+  const KycAlert({
+    super.key,
+    this.title = 'KYC NOT COMPLETED',
+    this.message =
+        'We\'ve detected that some of your details may be inaccurate or incomplete, kindly update to continue.',
+  });
+
+  final String title;
+
+  /// Body copy. Carries the verification provider's own wording when a
+  /// submission was turned down, so the member knows what to correct.
+  final String message;
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +50,7 @@ class KycAlert extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'KYC NOT COMPLETED',
+                      title,
                       style: TextStyle(
                         fontSize: 19.sp,
                         fontWeight: FontWeight.w700,
@@ -48,7 +59,7 @@ class KycAlert extends StatelessWidget {
                     ),
                     vSpace(8),
                     Text(
-                      'We\'ve detected that some of your details may be inaccurate or incomplete, kindly update to continue.',
+                      message,
                       style: TextStyle(
                         fontSize: 17.sp,
                         color: const Color(0xFF1A1A1A).withValues(alpha: 0.7),

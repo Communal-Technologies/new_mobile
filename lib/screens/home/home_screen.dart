@@ -98,6 +98,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         (a.communalTier ?? '') != (b.communalTier ?? '') ||
                         (a.kycWorkflowStatus ?? '') !=
                             (b.kycWorkflowStatus ?? '') ||
+                        (a.kycStatus ?? '') != (b.kycStatus ?? '') ||
+                        (a.kycRejectionReason ?? '') !=
+                            (b.kycRejectionReason ?? '') ||
                         a.kycStep2Submitted != b.kycStep2Submitted ||
                         a.kycStep3Submitted != b.kycStep3Submitted;
                   },
@@ -109,6 +112,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       }
                       if (u.shouldShowHomeKycPendingWalletProvisioning) {
                         return const KycPendingApprovalCard();
+                      }
+                      if (u.isKycRejected) {
+                        return KycAlert(
+                          title: 'KYC NOT APPROVED',
+                          message: u.kycRejectionMessage ??
+                              'Your verification was not approved. Kindly review the '
+                                  'details you submitted and try again.',
+                        );
                       }
                     }
                     return const KycAlert();

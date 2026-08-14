@@ -45,6 +45,7 @@ class KycProgressStorage {
     bool? backendStep1Submitted,
     bool? backendStep2Submitted,
     bool? backendStep3Submitted,
+    bool kycRejected = false,
   }) {
     final anchor = getAnchor(userId);
     final step = getResumeStep(userId);
@@ -52,6 +53,19 @@ class KycProgressStorage {
         ((anchor != null && anchor.isNotEmpty) || step >= 1);
     if (!step1Done) {
       return KycResumeDestination.profile;
+    }
+    // A rejected submission has to be re-made, so the "first incomplete step"
+    // rule does not apply: the completed-step flags are exactly what a rejection
+    // invalidates. The tier says which submission failed — still tier_0 means
+    // Tier 1 (BVN) was turned down, anything higher means the documents were.
+    // A turned-down BVN starts at the profile, not at bank: the usual cause is
+    // that the name or date of birth does not match the BVN record, and that is
+    // only fixable on the profile form (which edits the Anchor customer when one
+    // already exists).
+    if (kycRejected) {
+      return _tierPastBank(communalTier)
+          ? KycResumeDestination.proof
+          : KycResumeDestination.profile;
     }
     final bankDone = backendStep2Submitted ?? _bankTierComplete(communalTier, step);
     if (!bankDone) {
@@ -64,9 +78,13 @@ class KycProgressStorage {
     return KycResumeDestination.verifying;
   }
 
-  static bool _bankTierComplete(String? communalTier, int resumeStep) {
+  static bool _tierPastBank(String? communalTier) {
     final t = communalTier?.trim().toLowerCase();
-    if (t == 'tier_1' || t == 'tier_2') return true;
+    return t == 'tier_1' || t == 'tier_2';
+  }
+
+  static bool _bankTierComplete(String? communalTier, int resumeStep) {
+    if (_tierPastBank(communalTier)) return true;
     // tier_0 or unknown: local step 2+ means Continue or Skip passed bank in the wizard.
     return resumeStep >= 2;
   }

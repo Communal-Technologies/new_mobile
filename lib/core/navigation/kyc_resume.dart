@@ -22,8 +22,11 @@ void pushKycResumeRoute(BuildContext context) {
     backendStep1Submitted: auth.user.kycStep1Submitted,
     backendStep2Submitted: auth.user.kycStep2Submitted,
     backendStep3Submitted: auth.user.kycStep3Submitted,
+    kycRejected: auth.user.isKycRejected,
   );
-  final anchor = storage.getAnchor(userId);
+  // Prefs are cleared when the flow completes, so fall back to the backend copy
+  // — the later steps take the id from these extras and have no other source.
+  final anchor = storage.getAnchor(userId) ?? auth.user.kycAnchorCustomerId;
   final extra = anchor != null && anchor.isNotEmpty
       ? <String, dynamic>{'anchorCustomerId': anchor}
       : <String, dynamic>{};

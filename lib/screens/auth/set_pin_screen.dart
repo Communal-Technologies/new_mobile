@@ -13,14 +13,14 @@ import 'package:go_router/go_router.dart';
 class SetPinScreen extends StatefulWidget {
   const SetPinScreen({
     super.key,
-    this.phone,
+    this.contact,
     this.userId,
   });
 
   /// Forwarded from the OTP-verify screen so we can hand them off to
   /// [CreatePasswordRequested]. Null when the user navigates here from
   /// outside the signup chain (we redirect back to /signup in that case).
-  final String? phone;
+  final String? contact;
   final String? userId;
 
   @override
@@ -83,7 +83,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
       // create-account-password. Send them back to the start of the
       // signup chain so the OTP step mints a fresh user id.
       setState(() {
-        _pinError = 'Please restart signup from the phone-verification screen.';
+        _pinError = 'Please restart signup from the verification screen.';
       });
       return;
     }
@@ -97,7 +97,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
             userId: userId,
             password: _pin,
             confirmPassword: _confirmPin,
-            contact: widget.phone,
+            contact: widget.contact,
           ),
         );
   }

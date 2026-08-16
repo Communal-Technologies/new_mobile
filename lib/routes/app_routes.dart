@@ -226,8 +226,10 @@ final GoRouter appRouter = GoRouter(
             ? state.extra as Map<String, dynamic>
             : const <String, dynamic>{};
         final phoneArg = extra['phoneNumber'];
+        final emailArg = extra['email'];
         return LoginScreen(
           initialPhone: phoneArg is PhoneNumber ? phoneArg : null,
+          initialEmail: emailArg is String && emailArg.isNotEmpty ? emailArg : null,
         );
       },
     ),
@@ -318,12 +320,14 @@ final GoRouter appRouter = GoRouter(
       name: 'verify-phone',
       builder: (context, state) {
         final extra = state.extra as Map<String, dynamic>?;
-        final phone = extra?['phone'] ?? '';
+        final contact = (extra?['contact'] ?? extra?['phone'] ?? '').toString();
+        final isEmail = extra?['isEmail'] == true;
         final method = extra?['method'] ?? 'sms';
         final userId = extra?['userId']?.toString();
 
         return PhoneVerificationScreen(
-          phoneNumber: phone,
+          contact: contact,
+          isEmail: isEmail,
           userId: userId == null || userId.isEmpty ? null : userId,
           method: method == 'sms'
               ? VerificationMethod.sms
@@ -341,7 +345,7 @@ final GoRouter appRouter = GoRouter(
             ? state.extra as Map<String, dynamic>
             : const <String, dynamic>{};
         return SetPinScreen(
-          phone: extra['phone']?.toString(),
+          contact: (extra['contact'] ?? extra['phone'])?.toString(),
           userId: extra['userId']?.toString(),
         );
       },

@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/constants/constants.dart';
+import 'package:communal_mobile/cubits/settings/settings_cubit.dart';
 import 'package:communal_mobile/core/constants/images.dart';
 import 'package:communal_mobile/core/utils/app_launcher.dart';
 import 'package:communal_mobile/core/widgets/phone_input_field.dart';
@@ -184,8 +186,66 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
+  Widget _buildSignupClosed(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).cardColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24.w),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.lock_outline,
+                size: 64.w,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+              ),
+              vSpace(24),
+              Text(
+                'Registration is closed',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 26.sp,
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              vSpace(12),
+              Text(
+                'New account registration is paused at the moment. If you already have an account you can still sign in.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 17.sp,
+                  height: 1.5,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+              vSpace(32),
+              AppElevatedButton(
+                title: 'Sign in',
+                onPressed: () => context.go('/login'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (!context.watch<SettingsCubit>().memberSignupOpen) {
+      return _buildSignupClosed(context);
+    }
+
     return Scaffold(
       backgroundColor: Theme.of(context).cardColor,
       appBar: AppBar(

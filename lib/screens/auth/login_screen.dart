@@ -17,6 +17,7 @@ import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
+import 'package:communal_mobile/cubits/settings/settings_cubit.dart';
 import 'package:communal_mobile/cubits/splash/splash_cubit.dart';
 
 enum LoginType { phone, email }
@@ -363,27 +364,28 @@ class _LoginScreenState extends State<LoginScreen> {
               vSpace(200),
 
               // Don't have account
-              Center(
-                child: Column(
-                  children: [
-                    Text(
-                      'Don\'t have a Communal account?',
-                      style: TextStyle(
-                        fontSize: 17.sp,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              if (context.watch<SettingsCubit>().memberSignupOpen)
+                Center(
+                  child: Column(
+                    children: [
+                      Text(
+                        'Don\'t have a Communal account?',
+                        style: TextStyle(
+                          fontSize: 17.sp,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
                       ),
-                    ),
-                    vSpace(12),
-                    AppSecondaryButton(
-                      title: 'Sign up',
-                      isDark: false,
-                      onPressed: () {
-                        context.push('/signup');
-                      },
-                    ),
-                  ],
+                      vSpace(12),
+                      AppSecondaryButton(
+                        title: 'Sign up',
+                        isDark: false,
+                        onPressed: () {
+                          context.push('/signup');
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-              ),
 
               vSpace(24),
                     ],

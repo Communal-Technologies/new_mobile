@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/constants/constants.dart';
+import 'package:communal_mobile/cubits/settings/settings_cubit.dart';
 import 'package:communal_mobile/core/constants/images.dart';
 import 'package:communal_mobile/core/utils/app_launcher.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
@@ -92,6 +94,8 @@ class WelcomeScreen extends StatelessWidget {
   }
 
   Widget _buildMainContent(BuildContext context, ThemeData theme) {
+    final signupOpen = context.watch<SettingsCubit>().memberSignupOpen;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -123,25 +127,33 @@ class WelcomeScreen extends StatelessWidget {
 
         vSpace(48),
 
-        // Create account button
-        AppElevatedButton(
-          title: 'Create an account',
-          onPressed: () {
-            // Navigate to sign up
-            context.push('/signup');
-          },
-        ),
+        if (signupOpen) ...[
+          // Create account button
+          AppElevatedButton(
+            title: 'Create an account',
+            onPressed: () {
+              // Navigate to sign up
+              context.push('/signup');
+            },
+          ),
 
-        vSpace(16),
+          vSpace(16),
 
-        // Sign in button (secondary style)
-        AppSecondaryButton(
-          title: 'Sign in',
-          onPressed: () {
-            // Navigate to login
-            context.push('/login');
-          },
-        ),
+          // Sign in button (secondary style)
+          AppSecondaryButton(
+            title: 'Sign in',
+            onPressed: () {
+              // Navigate to login
+              context.push('/login');
+            },
+          ),
+        ] else
+          AppElevatedButton(
+            title: 'Sign in',
+            onPressed: () {
+              context.push('/login');
+            },
+          ),
       ],
     );
   }

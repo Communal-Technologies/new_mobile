@@ -200,6 +200,23 @@ jobs:
           keyPassword=${KEY_PW}
           EOF
 
+      - name: Check TLS cert pins against live hosts
+        run: |
+          set +e
+          bash tool/check_cert_pins.sh
+          rc=$?
+          set -e
+          if [[ $rc -eq 1 ]]; then
+            MSG="CertPinning.pinsByHost is stale — the API host is serving a different key. Refresh the pins before shipping; see tool/check_cert_pins.sh output above."
+            if [[ "${{ env.IS_PROD }}" == "true" ]]; then
+              echo "::error::$MSG" >&2
+              exit 1
+            fi
+            echo "::warning::$MSG"
+          elif [[ $rc -ne 0 ]]; then
+            echo "::warning::Could not verify TLS cert pins (host unreachable from the runner)."
+          fi
+
       - name: Install dependencies
         run: flutter pub get
 

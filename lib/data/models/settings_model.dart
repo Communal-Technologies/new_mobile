@@ -4,15 +4,21 @@ class SettingsResponse {
   SettingsResponse({required this.settings});
 
   factory SettingsResponse.fromJson(Map<String, dynamic> json) {
-    final settingsList = (json['settings'] as List)
-        .map((e) => SettingModel.fromJson(e))
-        .toList();
+    final raw = json['settings'];
+    if (raw is! List) return SettingsResponse(settings: const []);
+
+    final settingsList = <SettingModel>[];
+    for (final entry in raw) {
+      if (entry is! Map) continue;
+      final model = SettingModel.fromJson(Map<String, dynamic>.from(entry));
+      if (model.key.isEmpty) continue;
+      settingsList.add(model);
+    }
 
     return SettingsResponse(settings: settingsList);
   }
 
   Map<String, dynamic> asMap() {
-    // Converts settings list into Map<String, dynamic>
     return {
       for (var setting in settings) setting.key: setting.value,
     };
@@ -20,17 +26,25 @@ class SettingsResponse {
 }
 
 class SettingModel {
-  final String id;
+  final String? id;
   final String key;
   final dynamic value;
 
-  SettingModel({required this.id, required this.key, required this.value});
+  SettingModel({this.id, required this.key, required this.value});
 
   factory SettingModel.fromJson(Map<String, dynamic> json) {
-    return SettingModel(id: json['id'], key: json['key'], value: json['value']);
+    return SettingModel(
+      id: json['id']?.toString(),
+      key: json['key']?.toString() ?? '',
+      value: json['value'],
+    );
   }
 
   Map<String, dynamic> toJson() {
-    return {'id': id, 'key': key, 'value': value};
+    return {
+      if (id != null) 'id': id,
+      'key': key,
+      'value': value,
+    };
   }
 }

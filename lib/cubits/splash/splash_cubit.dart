@@ -219,8 +219,8 @@ class SplashCubit extends Cubit<SplashState> {
         return null;
       } catch (e, st) {
         AppLogger.error('SplashCubit', 'Settings: unexpected error', error: e, stackTrace: st);
-        emit(SplashError('Could not load app settings. Please try again.'));
-        return null;
+        settingsCubit.setSettings(const <String, dynamic>{});
+        return const <String, dynamic>{};
       }
     }
 

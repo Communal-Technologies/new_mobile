@@ -16,12 +16,19 @@ enum VerificationMethod { sms, whatsapp, call }
 class PhoneVerificationScreen extends StatefulWidget {
   const PhoneVerificationScreen({
     super.key,
-    required this.phoneNumber,
+    required this.contact,
+    this.isEmail = false,
     this.method = VerificationMethod.sms,
     this.userId,
   });
 
-  final String phoneNumber;
+  /// Phone number in API format, or an email address when [isEmail].
+  final String contact;
+
+  /// Signup started from the email field, so the code went to an inbox and
+  /// the SMS/voice alternatives below do not apply.
+  final bool isEmail;
+
   final VerificationMethod method;
 
   /// Pre-fetched on the signup screen by an OTP-send call there. When
@@ -81,6 +88,10 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   }
 
   String _deliveryMethodForRequest() {
+    // The backend only accepts auto/sms/voice_call and rejects `sms` outright
+    // for an email contact, so email rides on `auto` and is resolved from the
+    // contact server-side.
+    if (widget.isEmail) return 'auto';
     switch (widget.method) {
       case VerificationMethod.call:
         return 'voice_call';
@@ -101,7 +112,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
       }
       try {
         final data = await _authRepository.getOtpDeliveryStatus(
-          widget.phoneNumber,
+          widget.contact,
           purpose: 'signup',
         );
         if (!mounted || data == null) return;
@@ -141,7 +152,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
     });
     try {
       final id = await _authRepository.requestOtpForSignup(
-        widget.phoneNumber,
+        widget.contact,
         deliveryMethod: _deliveryMethodForRequest(),
       );
       if (!mounted) return;
@@ -170,17 +181,24 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
     await _sendOtp();
   }
 
-  String get _maskedPhone {
-    final phone = widget.phoneNumber;
-    if (phone.length <= 7) {
-      return '*' * phone.length;
+  String get _maskedContact {
+    final contact = widget.contact;
+    if (widget.isEmail) {
+      final at = contact.indexOf('@');
+      if (at <= 1) return contact;
+      final visible = contact.substring(0, at < 3 ? 1 : 2);
+      return '$visible${'*' * (at - visible.length)}${contact.substring(at)}';
     }
-    final start = phone.substring(0, 3);
-    final end = phone.substring(phone.length - 4);
-    return '$start${'*' * (phone.length - 7)}$end';
+    if (contact.length <= 7) {
+      return '*' * contact.length;
+    }
+    final start = contact.substring(0, 3);
+    final end = contact.substring(contact.length - 4);
+    return '$start${'*' * (contact.length - 7)}$end';
   }
 
   String get _title {
+    if (widget.isEmail) return 'Verify your Email';
     switch (widget.method) {
       case VerificationMethod.sms:
         return 'Verify Phone via SMS';
@@ -192,6 +210,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   }
 
   String get _instruction {
+    if (widget.isEmail) return 'Enter the code we sent to your email address';
     switch (widget.method) {
       case VerificationMethod.sms:
         return 'Enter the code we sent to your phone number (SMS)';
@@ -203,6 +222,14 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   }
 
   List<String> get _howToCheckSteps {
+    if (widget.isEmail) {
+      return [
+        'Open your email app or webmail',
+        'Check for a message from Communal',
+        'Look in your spam or promotions folder if it is not in your inbox',
+        'Enter the 6-digit code in the box above',
+      ];
+    }
     switch (widget.method) {
       case VerificationMethod.sms:
         return [
@@ -227,6 +254,10 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   List<Widget> get _alternativeMethods {
     final methods = <Widget>[];
 
+    // Nothing to offer for an email signup: SMS and voice need a phone number,
+    // and the account does not have one yet.
+    if (widget.isEmail) return methods;
+
     if (widget.method != VerificationMethod.sms) {
       methods.add(
         _MethodButton(
@@ -234,7 +265,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
           label: 'SMS',
           onTap: () {
             context.pushReplacement('/verify-phone', extra: {
-              'phone': widget.phoneNumber,
+              'contact': widget.contact,
               'method': 'sms',
             });
           },
@@ -251,7 +282,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
     //       iconColor: Colors.green,
     //       onTap: () {
     //         context.pushReplacement('/verify-phone', extra: {
-    //           'phone': widget.phoneNumber,
+    //           'contact': widget.contact,
     //           'method': 'whatsapp',
     //         });
     //       },
@@ -266,7 +297,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
           label: 'Voice Call',
           onTap: () {
             context.pushReplacement('/verify-phone', extra: {
-              'phone': widget.phoneNumber,
+              'contact': widget.contact,
               'method': 'call',
             });
           },
@@ -286,7 +317,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
     });
     try {
       final result = await _authRepository.verifyOtpForSignup(
-        widget.phoneNumber,
+        widget.contact,
         _code,
       );
       if (!mounted) return;
@@ -312,7 +343,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
       // pops back; the signup chain doesn't pop, so we intentionally
       // discard it.
       unawaited(context.push('/set-pin', extra: {
-        'phone': widget.phoneNumber,
+        'contact': widget.contact,
         'userId': userId,
       }));
     } catch (e) {
@@ -387,7 +418,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                     children: [
                       TextSpan(text: _instruction),
                       TextSpan(
-                        text: '\n$_maskedPhone',
+                        text: '\n$_maskedContact',
                         style: TextStyle(
                           color: theme.primaryColor,
                           fontWeight: FontWeight.w600,

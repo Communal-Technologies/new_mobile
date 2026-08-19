@@ -398,9 +398,14 @@ TransactionListItem mapCommunalTransactionToListItem(
     // For bills the "recipient" is the biller/provider and the consumer
     // identifier (phone/smartcard/meter) — the full breakdown lives in
     // extraDetails, so the generic recipient row is suppressed downstream.
+    // The account number is a better answer than the platform's own name when
+    // the party has no name on the row: "Communal | Communal" told the sender
+    // nothing about who their money went to.
     counterpartyName: bill != null
         ? (bill.provider.isNotEmpty ? bill.provider : bill.type)
-        : ((cpName != null && cpName.isNotEmpty) ? cpName : 'Communal'),
+        : ((cpName != null && cpName.isNotEmpty)
+              ? cpName
+              : (who ?? 'Communal')),
     // Show the recipient's actual bank for transfers (from the persisted
     // beneficiary) instead of a misleading "Communal Wallet". Book transfers
     // and unknown rows fall back to "Communal".

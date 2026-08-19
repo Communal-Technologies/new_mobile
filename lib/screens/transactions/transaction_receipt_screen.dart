@@ -104,23 +104,17 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
         }
       });
     }
-    // Wallet balance refresh on terminal status. Pending lands in the
-    // poll loop below (refresh fires when it flips to successful), but
-    // a transfer that returns SUCCESSFUL on the initial response (book
-    // transfers commonly do) used to skip the refresh entirely — so
-    // the home/transfer screens kept showing the pre-transfer balance
-    // until the user navigated away and back. Schedule a refresh on
-    // first frame for any non-pending arrival.
-    if (_details.status != TransactionStatus.pending) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        context.read<AuthBloc>().add(AuthRefreshUserRequested());
-        // The sender is standing in front of the receipt, so the home screen
-        // behind it must not still be showing the pre-transfer list. Pinging
-        // here does not depend on their own push arriving.
-        _pingTransactionActivity();
-      });
-    }
+    // Refresh on arrival whatever the status, pending included. The transfer
+    // has already been debited and recorded by the time this screen opens, so
+    // the balance and the list behind the receipt are stale from that moment —
+    // waiting for a terminal status left the home screen showing the
+    // pre-transfer balance and no sign of the transaction until the webhook
+    // landed. The poll loop below refreshes again when the status settles.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<AuthBloc>().add(AuthRefreshUserRequested());
+      _pingTransactionActivity();
+    });
     if (_details.status == TransactionStatus.pending &&
         _details.id.trim().isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -207,15 +201,20 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
               : _details.note,
         );
       });
+      // A failed transfer changes the balance too — the amount reserved when it
+      // was initiated goes back — so the refresh is not gated on success.
       if (mapped != TransactionStatus.pending) {
         _pollTimer?.cancel();
         _pollTimer = null;
-      }
-      if (mapped == TransactionStatus.successful) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
           context.read<AuthBloc>().add(AuthRefreshUserRequested());
           _pingTransactionActivity();
+        });
+      }
+      if (mapped == TransactionStatus.successful) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
           // ignore: unawaited_futures
           _postObligationNipIfNeeded();
           // ignore: unawaited_futures

@@ -41,11 +41,18 @@ class TransactionListItem {
     return '${isCredit ? '+' : '-'}${details.amountLabel}';
   }
 
+  /// Green/red state a debit or credit that has actually happened. A pending
+  /// transfer has not moved anyone's money yet, so it carries the same warning
+  /// colour the receipt uses for that status rather than claiming an outcome.
   Color get amountColor {
-    if (details.status == TransactionStatus.failed) {
-      return Colors.grey.shade700;
+    switch (details.status) {
+      case TransactionStatus.failed:
+        return Colors.grey.shade700;
+      case TransactionStatus.pending:
+        return const Color(0xFFE6A502);
+      case TransactionStatus.successful:
+        return isCredit ? const Color(0xFF1AAE70) : const Color(0xFFD7263D);
     }
-    return isCredit ? const Color(0xFF1AAE70) : const Color(0xFFD7263D);
   }
 }
 

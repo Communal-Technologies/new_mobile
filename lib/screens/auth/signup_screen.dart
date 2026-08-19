@@ -2,11 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/constants/constants.dart';
+import 'package:communal_mobile/cubits/settings/settings_cubit.dart';
 import 'package:communal_mobile/core/constants/images.dart';
 import 'package:communal_mobile/core/utils/app_launcher.dart';
 import 'package:communal_mobile/core/widgets/phone_input_field.dart';
+import 'package:communal_mobile/core/widgets/custom_text_field.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:go_router/go_router.dart';
@@ -17,6 +20,8 @@ import 'package:communal_mobile/data/repositories/regions_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 
+enum SignupType { phone, email }
+
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
 
@@ -26,8 +31,11 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
   bool _agreedToTerms = false;
   String? _phoneError;
+  String? _emailError;
+  SignupType _signupType = SignupType.phone;
   // When the backend reports an existing account for this number, surface
   // the prompt with a direct "Sign in" call-to-action instead of pushing
   // the user forward into the OTP step.
@@ -64,7 +72,18 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   void dispose() {
     _phoneController.dispose();
+    _emailController.dispose();
     super.dispose();
+  }
+
+  void _toggleSignupType() {
+    setState(() {
+      _signupType =
+          _signupType == SignupType.phone ? SignupType.email : SignupType.phone;
+      _phoneError = null;
+      _emailError = null;
+      _accountAlreadyExists = false;
+    });
   }
 
   Future<void> _validateAndContinue() async {
@@ -72,10 +91,27 @@ class _SignupScreenState extends State<SignupScreen> {
 
     setState(() {
       _phoneError = null;
+      _emailError = null;
       _accountAlreadyExists = false;
     });
 
-    if (_phoneNumber == null || !_phoneValid) {
+    final isEmail = _signupType == SignupType.email;
+
+    if (isEmail) {
+      final email = _emailController.text.trim();
+      if (email.isEmpty) {
+        setState(() {
+          _emailError = 'Email is required';
+        });
+        return;
+      }
+      if (!email.contains('@')) {
+        setState(() {
+          _emailError = 'Please enter a valid email address';
+        });
+        return;
+      }
+    } else if (_phoneNumber == null || !_phoneValid) {
       setState(() {
         _phoneError = 'Enter a valid phone number';
       });
@@ -95,7 +131,9 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
-    final apiPhone = PhoneLoginFormat.apiLoginFromPhoneNumber(_phoneNumber!);
+    final contact = isEmail
+        ? _emailController.text.trim()
+        : PhoneLoginFormat.apiLoginFromPhoneNumber(_phoneNumber!);
 
     setState(() => _submitting = true);
     String? userId;
@@ -104,20 +142,20 @@ class _SignupScreenState extends State<SignupScreen> {
       // User row + sends the code AND surfaces the account-exists case
       // (HTTP 409, error_code: account_exists) so we can stop the user
       // here instead of letting them discover it on the OTP screen.
-      userId = await getIt<AuthRepository>().requestOtpForSignup(apiPhone);
+      userId = await getIt<AuthRepository>().requestOtpForSignup(contact);
     } on AccountAlreadyExistsException catch (e) {
       if (!mounted) return;
       setState(() {
         _submitting = false;
         _accountAlreadyExists = true;
-        _phoneError = e.message;
+        _setContactError(e.message);
       });
       return;
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _phoneError = e.toString().replaceFirst('Exception: ', '');
+        _setContactError(e.toString().replaceFirst('Exception: ', ''));
       });
       return;
     }
@@ -127,20 +165,87 @@ class _SignupScreenState extends State<SignupScreen> {
 
     if (userId == null || userId.isEmpty) {
       setState(() {
-        _phoneError = 'Could not start your signup. Please try again.';
+        _setContactError('Could not start your signup. Please try again.');
       });
       return;
     }
 
     unawaited(context.push('/verify-phone', extra: {
-      'phone': apiPhone,
+      'contact': contact,
+      'isEmail': isEmail,
       'method': 'sms',
       'userId': userId,
     }));
   }
 
+  void _setContactError(String? message) {
+    if (_signupType == SignupType.email) {
+      _emailError = message;
+    } else {
+      _phoneError = message;
+    }
+  }
+
+  Widget _buildSignupClosed(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).cardColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24.w),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.lock_outline,
+                size: 64.w,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+              ),
+              vSpace(24),
+              Text(
+                'Registration is closed',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 26.sp,
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              vSpace(12),
+              Text(
+                'New account registration is paused at the moment. If you already have an account you can still sign in.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 17.sp,
+                  height: 1.5,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+              vSpace(32),
+              AppElevatedButton(
+                title: 'Sign in',
+                onPressed: () => context.go('/login'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (!context.watch<SettingsCubit>().memberSignupOpen) {
+      return _buildSignupClosed(context);
+    }
+
     return Scaffold(
       backgroundColor: Theme.of(context).cardColor,
       appBar: AppBar(
@@ -190,7 +295,9 @@ class _SignupScreenState extends State<SignupScreen> {
               // Subtitle
               Center(
                 child: Text(
-                  'Enter your phone number to get started',
+                  _signupType == SignupType.phone
+                      ? 'Enter your phone number to get started'
+                      : 'Enter your email to get started',
                   style: TextStyle(
                     fontSize: 17.sp,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -200,43 +307,86 @@ class _SignupScreenState extends State<SignupScreen> {
 
               vSpace(32),
 
-              // Phone input
-              _regionsLoading
-                  ? Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24.h),
-                      child: Center(
-                        child: SizedBox(
-                          width: 28.w,
-                          height: 28.w,
-                          child: const CircularProgressIndicator(),
+              // Phone or Email input
+              if (_signupType == SignupType.phone)
+                _regionsLoading
+                    ? Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24.h),
+                        child: Center(
+                          child: SizedBox(
+                            width: 28.w,
+                            height: 28.w,
+                            child: const CircularProgressIndicator(),
+                          ),
                         ),
-                      ),
-                    )
-                  : PhoneInputField(
-                      controller: _phoneController,
-                      regions: _regions,
-                      errorText: _phoneError,
-                      onChanged: () {
-                        if (_phoneError != null || _accountAlreadyExists) {
-                          setState(() {
-                            _phoneError = null;
-                            _accountAlreadyExists = false;
-                          });
-                        }
-                      },
-                      onPhoneNumberChanged: (phone, valid) {
-                        setState(() {
-                          _phoneNumber = phone;
-                          _phoneValid = valid;
-                          if (_accountAlreadyExists) {
-                            _accountAlreadyExists = false;
-                            _phoneError = null;
+                      )
+                    : PhoneInputField(
+                        controller: _phoneController,
+                        regions: _regions,
+                        errorText: _phoneError,
+                        onChanged: () {
+                          if (_phoneError != null || _accountAlreadyExists) {
+                            setState(() {
+                              _phoneError = null;
+                              _accountAlreadyExists = false;
+                            });
                           }
-                        });
-                      },
-                    ),
+                        },
+                        onPhoneNumberChanged: (phone, valid) {
+                          setState(() {
+                            _phoneNumber = phone;
+                            _phoneValid = valid;
+                            if (_accountAlreadyExists) {
+                              _accountAlreadyExists = false;
+                              _phoneError = null;
+                            }
+                          });
+                        },
+                      )
+              else
+                CustomTextField(
+                  controller: _emailController,
+                  hintText: 'Enter your email',
+                  keyboardType: TextInputType.emailAddress,
+                  errorText: _emailError,
+                  onChanged: (_) {
+                    if (_emailError != null || _accountAlreadyExists) {
+                      setState(() {
+                        _emailError = null;
+                        _accountAlreadyExists = false;
+                      });
+                    }
+                  },
+                ),
 
-              vSpace(24),
+              vSpace(12),
+
+              // Toggle link
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: _submitting ? null : _toggleSignupType,
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    _signupType == SignupType.phone
+                        ? 'Use email instead'
+                        : 'Use phone number instead',
+                    style: TextStyle(
+                      fontSize: 17.sp,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Theme.of(context).primaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+
+              vSpace(16),
 
               // Account-exists CTA replaces the Sign Up button when the
               // backend has already told us this contact has an account.
@@ -246,7 +396,10 @@ class _SignupScreenState extends State<SignupScreen> {
                 AppElevatedButton(
                   title: 'Sign in instead',
                   onPressed: () => context.push('/login', extra: {
-                    if (_phoneNumber != null) 'phoneNumber': _phoneNumber,
+                    if (_signupType == SignupType.phone && _phoneNumber != null)
+                      'phoneNumber': _phoneNumber,
+                    if (_signupType == SignupType.email)
+                      'email': _emailController.text.trim(),
                   }),
                 )
               else

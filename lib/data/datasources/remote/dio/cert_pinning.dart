@@ -40,13 +40,15 @@ import 'package:crypto/crypto.dart';
 /// ## Configuration
 ///
 /// Pins live in [pinsByHost]. Each host gets a list of base64-encoded
-/// SHA-256 hashes of the SPKI. **The list ships empty.** With an empty list
-/// the verifier returns `false` for cert errors (i.e. behaves like the
-/// default — no override), so the app continues to work using the platform's
-/// default trust validation. This means M8 is "infrastructure landed,
-/// pins-to-fill-in" until you generate real pins per the README procedure.
+/// SHA-256 hashes of the SPKI. A host with an empty list is unpinned: the
+/// verifier returns `false` for cert errors (i.e. behaves like the default —
+/// no override), so the app falls back to the platform's default trust
+/// validation.
 ///
 /// ## Generating a pin
+///
+/// `tool/check_cert_pins.sh` prints the live pin for every pinned host and
+/// fails when it has drifted from [pinsByHost]. By hand:
 ///
 /// ```sh
 /// echo | openssl s_client -showcerts -servername api.communalhq.com \
@@ -55,9 +57,6 @@ import 'package:crypto/crypto.dart';
 ///   openssl pkey -pubin -outform DER | \
 ///   openssl dgst -sha256 -binary | base64
 /// ```
-///
-/// Run twice per host: once for the **current** cert, once for the **next**
-/// (which you'll have provisioned with your CA before the rotation window).
 class CertPinning {
   CertPinning._();
 
@@ -70,30 +69,38 @@ class CertPinning {
   /// separate future extension.
   ///
   /// ## Rotation procedure
-  /// Let's Encrypt auto-renews ~30 days before expiry. If Certbot reuses the
-  /// same key pair (the default with `--keep-until-expiring`), the SPKI hash
-  /// is unchanged and no app update is needed. If the key pair is rotated:
-  ///   1. Generate the new pin from the fresh cert (see class doc-block).
-  ///   2. Add it to the list alongside the current pin (two-pin window).
-  ///   3. Release the app update BEFORE the old cert expires.
-  ///   4. After rollout completes, remove the old pin in a follow-up release.
+  /// These pins are compiled into the binary. Nothing refreshes them at
+  /// runtime — a shipped build carries whatever hash was current when it was
+  /// built, forever.
+  ///
+  /// Certbot does **not** reuse the key pair across renewals unless
+  /// `reuse_key = True` is set in `/etc/letsencrypt/renewal/<host>.conf`
+  /// (`--keep-until-expiring` only controls *when* it renews, not the key).
+  /// Without it every ~60-day renewal produces a new key, a new SPKI, and a
+  /// stale pin in every installed app. So either:
+  ///   - set `reuse_key = True` on both hosts so the SPKI stays stable; or
+  ///   - refresh these pins on every renewal:
+  ///       1. `tool/check_cert_pins.sh` — prints the live pin per host and
+  ///          exits non-zero when it no longer matches this map.
+  ///       2. Add the new hash alongside the current one (two-pin window).
+  ///       3. Ship the update BEFORE the old cert expires.
+  ///       4. Drop the old hash in a follow-up release once rollout completes.
   ///
   /// ## Intermediate CA pins (for reference)
   /// These are NOT checked by the current `badCertificateCallback` path but are
   /// documented here for future chain-level pinning:
   ///   api.communalhq.com         → Let's Encrypt YE2  (exp 2028-09-02):
   ///                                 s/tdAOmUzd8syaTuqfgGvFcn6DzA5Cmb+Vby1ST+U3Y=
-  ///   api-staging.communalhq.com → Let's Encrypt E7   (exp 2027-03-12):
-  ///                                 y7xVm0TVJNahMr2sZydE2jQH8SquXV9yLF9seROHHHU=
+  ///   api-staging.communalhq.com → Let's Encrypt YE1  (exp 2028-09-02):
+  ///                                 brzvtCELCIZUo4sD/qPX0ccRtPsd3DY6RfmxpOU9oB4=
   static const Map<String, List<String>> pinsByHost = <String, List<String>>{
-    // Leaf cert expires 2026-09-04. Pin survives renewal if the same key pair
-    // is reused. Add the next-key pin here before any planned key rotation.
+    // Leaf cert expires 2026-11-03.
     'api.communalhq.com': <String>[
-      'T17DqoUPjNUHEUgY8MsmjfU26MwnGWGXrnw+qHMvE9I=',
+      'VszrvU0kRgGfsxXTmvawUAnb4ZY+a1QeiTS6yZC/IqA=',
     ],
-    // Leaf cert pin — update on key rotation using the same procedure above.
+    // Leaf cert expires 2026-10-16.
     'api-staging.communalhq.com': <String>[
-      '2ST/8DUQhzzR7uCE3JQ7udQXOqBCdoblHe5uDllL9OU=',
+      '9kqXJkQ83swlpJtSulHja12pW+agoLS4DuxGCfxNJlk=',
     ],
   };
 

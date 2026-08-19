@@ -17,17 +17,22 @@ import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
+import 'package:communal_mobile/cubits/settings/settings_cubit.dart';
 import 'package:communal_mobile/cubits/splash/splash_cubit.dart';
 
 enum LoginType { phone, email }
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, this.initialPhone});
+  const LoginScreen({super.key, this.initialPhone, this.initialEmail});
 
   /// Pre-fills the phone field. Currently used by the signup screen's
   /// "Sign in instead" CTA (when the backend already had an account for
   /// the entered number) so the user doesn't retype.
   final PhoneNumber? initialPhone;
+
+  /// Pre-fills the email field and opens the form on the email tab, for the
+  /// same CTA when signup was started from the email field.
+  final String? initialEmail;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -53,6 +58,11 @@ class _LoginScreenState extends State<LoginScreen> {
       // Seed the visible text. PhoneInputField will reconcile with the
       // structured value on first onPhoneNumberChanged callback.
       _phoneController.text = widget.initialPhone?.phoneNumber ?? '';
+    }
+    final initialEmail = widget.initialEmail;
+    if (initialEmail != null && initialEmail.isNotEmpty) {
+      _emailController.text = initialEmail;
+      _loginType = LoginType.email;
     }
     _loadRegions();
   }
@@ -354,27 +364,28 @@ class _LoginScreenState extends State<LoginScreen> {
               vSpace(200),
 
               // Don't have account
-              Center(
-                child: Column(
-                  children: [
-                    Text(
-                      'Don\'t have a Communal account?',
-                      style: TextStyle(
-                        fontSize: 17.sp,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              if (context.watch<SettingsCubit>().memberSignupOpen)
+                Center(
+                  child: Column(
+                    children: [
+                      Text(
+                        'Don\'t have a Communal account?',
+                        style: TextStyle(
+                          fontSize: 17.sp,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
                       ),
-                    ),
-                    vSpace(12),
-                    AppSecondaryButton(
-                      title: 'Sign up',
-                      isDark: false,
-                      onPressed: () {
-                        context.push('/signup');
-                      },
-                    ),
-                  ],
+                      vSpace(12),
+                      AppSecondaryButton(
+                        title: 'Sign up',
+                        isDark: false,
+                        onPressed: () {
+                          context.push('/signup');
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-              ),
 
               vSpace(24),
                     ],

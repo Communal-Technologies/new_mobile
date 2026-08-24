@@ -301,4 +301,12 @@ class ApiEndpoints {
   static const String biometricChallenge = '$_v1/security/biometric/challenge';
   static const String biometricRevoke = '$_v1/security/biometric/revoke';
   static const String biometricStatus = '$_v1/security/biometric/status';
+
+  /// Exchanges a signature for the marker the Go services read. They gate every
+  /// money-moving route on `pin_verified:{id}` in shared Redis and none of them
+  /// can verify a biometric signature, so the PIN path's
+  /// `membersVerifySecurityPin` had an authsvc counterpart and the biometric
+  /// path had none. [intent] must be the one the nonce was minted for.
+  static String biometricPaymentAuthorization(String intent) =>
+      '$_v1/security/payment-authorization/$intent';
 }

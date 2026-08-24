@@ -142,7 +142,7 @@ class BiometricSignerService {
     String promptTitle = 'Authorize transfer',
     String promptSubtitle = 'Use biometrics to confirm this transfer',
   }) async {
-    return _signIntent(
+    return _signAndAuthorize(
       'transfer',
       promptTitle: promptTitle,
       promptSubtitle: promptSubtitle,
@@ -154,7 +154,7 @@ class BiometricSignerService {
     String promptTitle = 'Authorize payment',
     String promptSubtitle = 'Use biometrics to confirm this payment',
   }) async {
-    return _signIntent(
+    return _signAndAuthorize(
       'pay-obligation',
       promptTitle: promptTitle,
       promptSubtitle: promptSubtitle,
@@ -173,6 +173,47 @@ class BiometricSignerService {
       promptTitle: promptTitle,
       promptSubtitle: promptSubtitle,
     );
+  }
+
+  /// Signs [intent], then spends the signature on the authsvc route that writes
+  /// the `pin_verified:{id}` marker.
+  ///
+  /// The services that own these routes — transactions-svc `/transfer/initiate`,
+  /// obligations-svc `/payments` and `/fines/payments`, loans-svc `/pay` — gate on
+  /// that marker and cannot verify a signature themselves, so the headers alone
+  /// bought nothing and every biometric-mode payment came back 403. The PIN mode
+  /// of these same screens has always called `verifySecurityPin` for exactly this
+  /// reason; this is its biometric counterpart, and it lives here so a screen
+  /// cannot sign without it.
+  ///
+  /// The headers are still returned and still attached to the payment request:
+  /// authsvc's own `/transfer/initiate` verifies them, and `X-Biometric-Device-Id`
+  /// is what transactions-svc records as the acting device.
+  Future<BiometricSignedHeaders> _signAndAuthorize(
+    String intent, {
+    required String promptTitle,
+    required String promptSubtitle,
+  }) async {
+    final headers = await _signIntent(
+      intent,
+      promptTitle: promptTitle,
+      promptSubtitle: promptSubtitle,
+    );
+    try {
+      await _dio.post(
+        ApiEndpoints.biometricPaymentAuthorization(intent),
+        extraHeaders: headers.toHeaders(),
+      );
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      final message = data is Map ? data['message']?.toString() : null;
+      throw Exception(
+        message?.isNotEmpty == true
+            ? message
+            : 'Could not authorise this payment. Please try again.',
+      );
+    }
+    return headers;
   }
 
   Future<BiometricSignedHeaders> _signIntent(

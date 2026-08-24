@@ -16,6 +16,7 @@ import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:communal_mobile/core/security/secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -50,7 +51,7 @@ class WelcomeBackScreen extends StatefulWidget {
 class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
   final _pinController = TextEditingController();
   final LocalAuthentication _localAuth = LocalAuthentication();
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  final FlutterSecureStorage _secureStorage = appSecureStorage;
   late final AuthRepository _authRepository;
   String _password = '';
   bool _isPasswordVisible = false; // Hide password by default (show dots)

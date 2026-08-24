@@ -502,7 +502,9 @@ class LoanRepository {
       final response = await _dio.post(
         ApiEndpoints.membersPayLoan,
         data: {
-          'amount': amountMinor.toString(),
+          // loans-svc reads `amount` as a JSON number in major currency and
+          // multiplies by 100 itself, same as the loan application above.
+          'amount': amountMinor / 100,
           'loan_id': id,
           'ledger_number': ledgerNumber,
           'gateway': 'obligation',
@@ -555,7 +557,7 @@ class LoanRepository {
       final response = await _dio.post(
         ApiEndpoints.membersRecordNipLoanPayment,
         data: {
-          'amount': amountMinor.toString(),
+          'amount': amountMinor / 100,
           'loan_id': id,
           'ledger_number': ledgerNumber,
           'gateway': 'nip_transfer',

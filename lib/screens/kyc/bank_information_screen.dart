@@ -649,47 +649,47 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
         context: context,
         showDragHandle: true,
         isScrollControlled: true,
-        builder: (ctx) => DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.72,
-          minChildSize: 0.45,
-          maxChildSize: 0.92,
-          builder: (sheetCtx, scrollController) => SafeArea(
-            child: CustomScrollView(
-              controller: scrollController,
-              physics: const ClampingScrollPhysics(),
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.only(top: 4.h, bottom: 6.h),
-                    child: Center(
-                      child: Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 19.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+        // Sized by its contents: a two-option account type is a short sheet,
+        // while the bank list fills the cap and scrolls from there.
+        builder: (ctx) => SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(top: 4.h, bottom: 6.h),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 19.sp,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-                SliverList.builder(
-                  itemCount: items.length,
-                  itemBuilder: (_, index) {
-                    final item = items[index];
-                    return ListTile(
-                      title: Text(item, style: TextStyle(fontSize: 19.sp)),
-                      trailing: value == item
-                          ? Icon(
-                              Icons.check_circle,
-                              color: Theme.of(context).primaryColor,
-                            )
-                          : null,
-                      onTap: () => Navigator.of(ctx).pop(item),
-                    );
-                  },
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    physics: const ClampingScrollPhysics(),
+                    padding: EdgeInsets.only(bottom: 8.h),
+                    itemCount: items.length,
+                    itemBuilder: (_, index) {
+                      final item = items[index];
+                      return ListTile(
+                        title: Text(item, style: TextStyle(fontSize: 19.sp)),
+                        trailing: value == item
+                            ? Icon(
+                                Icons.check_circle,
+                                color: Theme.of(context).primaryColor,
+                              )
+                            : null,
+                        onTap: () => Navigator.of(ctx).pop(item),
+                      );
+                    },
+                  ),
                 ),
-                SliverToBoxAdapter(child: vSpace(8)),
               ],
             ),
           ),

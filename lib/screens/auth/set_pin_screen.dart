@@ -233,6 +233,12 @@ class _SetPinScreenState extends State<SetPinScreen> {
                   _confirmPin = code;
                   _clearErrorIfNeeded();
                 },
+                onCompleted: (_) {
+                  // Both PINs are in, so there is nothing left to type. Dropping
+                  // the keyboard uncovers Continue instead of leaving the member
+                  // to dismiss it before they can press it.
+                  FocusScope.of(context).unfocus();
+                },
               ),
 
               if (_pinError != null) ...[

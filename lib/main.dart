@@ -23,7 +23,7 @@ import 'package:communal_mobile/core/widgets/connectivity_listener.dart';
 import 'package:communal_mobile/core/widgets/security_wrapper.dart';
 import 'package:communal_mobile/data/local/theme_mode_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:communal_mobile/core/security/secure_storage.dart';
 import 'package:toastification/toastification.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
@@ -139,7 +139,7 @@ class MyApp extends StatelessWidget {
                   create: (_) => getIt<AuthBloc>()..add(AppStarted()),
                 ),
                 BlocProvider<SecurityCubit>(
-                  create: (_) => SecurityCubit(snapshot.data!, const FlutterSecureStorage()),
+                  create: (_) => SecurityCubit(snapshot.data!, appSecureStorage),
                 ),
               ],
               child: MultiBlocListener(

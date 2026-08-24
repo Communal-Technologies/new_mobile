@@ -293,31 +293,53 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
     final choice = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (ctx) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: EdgeInsets.only(bottom: 4.h, top: 4.h),
-                child: Text(
-                  'Select ID type',
-                  style: TextStyle(
-                    fontSize: 19.sp,
-                    fontWeight: FontWeight.w600,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(bottom: 4.h, top: 4.h),
+                  child: Text(
+                    'Select ID type',
+                    style: TextStyle(
+                      fontSize: 19.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-              for (final label in _kycIdTypeDisplayLabels)
-                ListTile(
-                  title: Text(label, style: TextStyle(fontSize: 19.sp)),
-                  trailing: _selectedIdType == label
-                      ? Icon(Icons.check_circle, color: theme.primaryColor)
-                      : null,
-                  onTap: () => Navigator.of(ctx).pop(label),
+                Flexible(
+                  child: SingleChildScrollView(
+                    physics: const ClampingScrollPhysics(),
+                    padding: EdgeInsets.only(bottom: 8.h),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (final label in _kycIdTypeDisplayLabels)
+                          ListTile(
+                            title: Text(
+                              label,
+                              style: TextStyle(fontSize: 19.sp),
+                            ),
+                            trailing: _selectedIdType == label
+                                ? Icon(
+                                    Icons.check_circle,
+                                    color: theme.primaryColor,
+                                  )
+                                : null,
+                            onTap: () => Navigator.of(ctx).pop(label),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
-              SizedBox(height: 8.h),
-            ],
+              ],
+            ),
           ),
         );
       },

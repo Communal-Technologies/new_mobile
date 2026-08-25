@@ -196,7 +196,7 @@ class _TransferInternalVerifyScreenState
       // initiateTransfer below too — transactions-svc ignores it, but the
       // header is harmless to send and this keeps the call shape
       // unchanged for any other backend still reading it.
-      await _repo.verifySecurityPin(_pin);
+      await _repo.verifySecurityPin(_pin, intent: 'transfer');
       await _runInitiate(pin: _pin, biometricHeaders: null);
     } catch (e) {
       if (!mounted) return;

@@ -39,7 +39,7 @@ class _FreezeAccountPinScreenState extends State<FreezeAccountPinScreen> {
     });
     final repo = getIt<AccountActionsRepository>();
     try {
-      await repo.verifySecurityPin(pin);
+      await repo.verifySecurityPin(pin, intent: 'account-action');
       final reason = (widget.reason?.trim().isNotEmpty == true)
           ? widget.reason!.trim()
           : 'Self-frozen via mobile app';

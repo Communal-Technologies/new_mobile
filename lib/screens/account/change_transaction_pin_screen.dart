@@ -137,7 +137,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
     if (_hasExistingPin && _phase == 0) {
       setState(() => _submitting = true);
       try {
-        await _repo.verifySecurityPin(input);
+        await _repo.verifySecurityPin(input, intent: 'account-action');
         if (!mounted) return;
         setState(() {
           _currentPin = input;

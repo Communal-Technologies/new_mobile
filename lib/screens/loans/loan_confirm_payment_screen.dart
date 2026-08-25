@@ -460,7 +460,7 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
       // validating the PIN inline (it can't — security_pin lives on
       // tbl_users, owned exclusively by the monolith), so that call has
       // to happen before initiateTransfer below.
-      await _transferRepo.verifySecurityPin(pin);
+      await _transferRepo.verifySecurityPin(pin, intent: 'pay-obligation');
       return {'X-Security-Pin': pin};
     }
     final result = transfer

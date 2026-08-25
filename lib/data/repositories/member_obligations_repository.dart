@@ -458,11 +458,11 @@ class MemberObligationsRepository {
     }
   }
 
-  Future<void> verifySecurityPin(String pin) async {
+  Future<void> verifySecurityPin(String pin, {required String intent}) async {
     try {
       final response = await _dioClient.post(
         ApiEndpoints.membersVerifySecurityPin,
-        data: {'security_pin': pin},
+        data: {'security_pin': pin, 'intent': intent},
       );
       final data = response.data;
       if (data is Map && data['status'] == true) return;

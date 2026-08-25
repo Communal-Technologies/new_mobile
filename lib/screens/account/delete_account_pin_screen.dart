@@ -31,7 +31,7 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
       _errorMessage = null;
     });
     try {
-      await getIt<AccountActionsRepository>().verifySecurityPin(pin);
+      await getIt<AccountActionsRepository>().verifySecurityPin(pin, intent: 'account-action');
       if (!mounted) return;
       // ignore: unawaited_futures
       context.pushNamed('delete-account-final-confirmation');

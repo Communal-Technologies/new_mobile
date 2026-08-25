@@ -395,11 +395,15 @@ class TransferRepository {
     }
   }
 
-  Future<void> verifySecurityPin(String pin) async {
+  /// [intent] is what the verification may be spent on: `transfer`,
+  /// `pay-obligation`, or `account-action` for a PIN checked to freeze, close or
+  /// change a PIN. The service that moves the money accepts only its own, so a
+  /// PIN entered to confirm a transfer no longer settles a loan repayment.
+  Future<void> verifySecurityPin(String pin, {required String intent}) async {
     try {
       final response = await _dioClient.post(
         ApiEndpoints.membersVerifySecurityPin,
-        data: {'security_pin': pin},
+        data: {'security_pin': pin, 'intent': intent},
       );
       final data = response.data;
       if (data is! Map || data['status'] != true) {

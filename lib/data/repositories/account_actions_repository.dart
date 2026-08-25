@@ -14,11 +14,14 @@ class AccountActionsRepository {
   /// Verify the user's transaction PIN. Throws on incorrect / locked /
   /// frozen with a backend-provided message. Used by the freeze /
   /// delete account flows as a PIN gate before mutating state.
-  Future<void> verifySecurityPin(String pin) async {
+  /// [intent] is what the verification may be spent on. These flows are not
+  /// payments, so they take `account-action`, which no money route accepts: a PIN
+  /// entered to freeze an account used to be spendable on a transfer.
+  Future<void> verifySecurityPin(String pin, {required String intent}) async {
     try {
       await _dioClient.post(
         ApiEndpoints.membersVerifySecurityPin,
-        data: {'security_pin': pin},
+        data: {'security_pin': pin, 'intent': intent},
       );
     } on DioException catch (e) {
       throw Exception(_messageFromDio(e));

@@ -59,16 +59,17 @@ class SupportSection extends StatelessWidget {
           ),
         ),
         vSpace(12),
-        // Hidden for the closed-testing release; restore once the help centre
-        // content is ready.
-        // SettingItem(
-        //   icon: Icons.headphones,
-        //   title: 'Help & FAQ',
-        //   description: 'Get help and find answers',
-        //   onTap: () {
-        //     context.pushNamed('help-support');
-        //   },
-        // ),
+        // Restored: the help centre now has content behind it — the knowledge
+        // base feeds the FAQ, and the assistant opens a real ticket that an
+        // operator can pick up. This entry was the only route to any of it.
+        SettingItem(
+          icon: Icons.headphones,
+          title: 'Help & Support',
+          description: 'Ask us anything, or find an answer',
+          onTap: () {
+            context.pushNamed('help-support');
+          },
+        ),
         SettingItem(
           icon: Icons.logout,
           iconColor: Colors.red,

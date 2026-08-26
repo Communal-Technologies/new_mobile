@@ -54,6 +54,8 @@ import 'package:communal_mobile/data/repositories/profile_repository.dart'
     as _i1013;
 import 'package:communal_mobile/data/repositories/regions_repository.dart'
     as _i835;
+import 'package:communal_mobile/data/repositories/support_repository.dart'
+    as _i107;
 import 'package:communal_mobile/data/repositories/transfer_repository.dart'
     as _i218;
 import 'package:dio/dio.dart' as _i361;
@@ -157,6 +159,9 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i218.TransferRepository>(
       () => repositoryModule.provideTransferRepository(gh<_i750.DioClient>()),
+    );
+    gh.lazySingleton<_i107.SupportRepository>(
+      () => repositoryModule.provideSupportRepository(gh<_i750.DioClient>()),
     );
     gh.factory<_i789.AuthBloc>(
       () => _i789.AuthBloc(

@@ -38,6 +38,12 @@ class ApiEndpoints {
   /// loans-svc). Responses use the `{status:"success", data:{…}}` envelope.
   static const String _loansV2 = '/api/loans/v2';
 
+  /// Support micro-service prefix. Tickets, the first-line bot and the one
+  /// knowledge base behind every FAQ surface are served from
+  /// `/api/support/v1/…`. Bare JSON bodies, not the `{status, data}` envelope
+  /// the Laravel routes use.
+  static const String _supportV1 = '/api/support/v1';
+
   /// Cooperative micro-service prefix. Membership, join requests, member
   /// settings, notifications, the member ledger and per-cooperative account
   /// closure were migrated off the monolith to `/api/cooperative/v2/…`.
@@ -285,6 +291,33 @@ class ApiEndpoints {
       '/api/kyc/v2/$anchorCustomerId/tier1';
   static String kycUpgradeTier2(String anchorCustomerId) =>
       '/api/kyc/v2/$anchorCustomerId/tier2';
+
+  // --- Support / help desk (support-svc) ----------------------------------
+
+  /// Contact details, support hours, whether the bot is on and whether an
+  /// operator is at the desk. Readable without a token.
+  static const String supportConfig = '$_supportV1/config';
+
+  /// The knowledge base. `?q=` searches, `?category=` filters; the audience is
+  /// resolved from the token, never from a query parameter.
+  static const String supportKb = '$_supportV1/kb';
+  static const String supportKbCategories = '$_supportV1/kb/categories';
+  static String supportKbArticle(String slug) => '$_supportV1/kb/$slug';
+  static String supportKbVote(String slug) => '$_supportV1/kb/$slug/vote';
+
+  /// GET lists this member's tickets; POST opens one and returns the thread
+  /// with the bot's first answer already in it.
+  static const String supportTickets = '$_supportV1/tickets';
+  static String supportTicket(String id) => '$_supportV1/tickets/$id';
+
+  /// GET with `?after=<seq>` is the four-second thread poll; POST writes a
+  /// message and runs the bot turn when the bot still owns the ticket.
+  static String supportTicketMessages(String id) =>
+      '$_supportV1/tickets/$id/messages';
+  static String supportTicketEscalate(String id) =>
+      '$_supportV1/tickets/$id/escalate';
+  static String supportTicketClose(String id) => '$_supportV1/tickets/$id/close';
+  static String supportTicketCsat(String id) => '$_supportV1/tickets/$id/csat';
 
   // --- Regions / locations ------------------------------------------------
   static const String fetchRegions = '$_v1/fetch-regions';

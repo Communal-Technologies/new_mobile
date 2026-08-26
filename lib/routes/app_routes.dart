@@ -94,6 +94,9 @@ import 'package:communal_mobile/screens/account/account_limits_screen.dart';
 import 'package:communal_mobile/screens/account/community_settings_screen.dart';
 import 'package:communal_mobile/screens/account/help_support_screen.dart';
 import 'package:communal_mobile/screens/account/faq_screen.dart';
+import 'package:communal_mobile/screens/support/my_tickets_screen.dart';
+import 'package:communal_mobile/screens/support/support_chat_screen.dart';
+import 'package:communal_mobile/data/models/support_models.dart';
 import 'package:communal_mobile/screens/account/notification_settings_screen.dart';
 import 'package:communal_mobile/screens/account/security_settings_screen.dart';
 import 'package:communal_mobile/screens/account/biometric_enrollment_screen.dart';
@@ -712,7 +715,39 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/faq',
       name: 'faq',
-      builder: (context, state) => const FaqScreen(),
+      builder: (context, state) => FaqScreen(
+        initialQuery: state.uri.queryParameters['q'] ?? '',
+      ),
+    ),
+    GoRoute(
+      path: '/support/requests',
+      name: 'support-tickets',
+      builder: (context, state) => const MyTicketsScreen(),
+    ),
+    // One screen for both entry points: an existing thread carries `ticketId`,
+    // a tapped help card carries the `category` it should open on. No ticket is
+    // created until the member actually writes something.
+    GoRoute(
+      path: '/support/chat',
+      name: 'support-chat',
+      builder: (context, state) {
+        final extra = state.extra is Map<String, dynamic>
+            ? state.extra as Map<String, dynamic>
+            : const <String, dynamic>{};
+        final ticketId = extra['ticketId'];
+        final category = extra['category'];
+        final title = extra['categoryTitle'];
+        final opening = extra['openingMessage'];
+        return SupportChatScreen(
+          ticketId: ticketId is String && ticketId.isNotEmpty ? ticketId : null,
+          category: category is String && category.isNotEmpty
+              ? category
+              : SupportCategory.other,
+          categoryTitle: title is String && title.isNotEmpty ? title : null,
+          openingMessage:
+              opening is String && opening.isNotEmpty ? opening : null,
+        );
+      },
     ),
     GoRoute(
       path: '/notification-settings',

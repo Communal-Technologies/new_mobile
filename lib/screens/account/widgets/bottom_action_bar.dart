@@ -1,10 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/models/support_models.dart';
 
+/// The two things a member on the help screen most often wants: to report
+/// something urgent, or to talk to us.
+///
+/// Both open a support conversation. "Report Scam" is not a separate flow — it
+/// is a ticket in the security category, which the assistant is required to hand
+/// straight to a person rather than answer, and which arrives in the queue with
+/// whatever the member typed.
 class BottomActionBar extends StatelessWidget {
-  const BottomActionBar({super.key});
+  const BottomActionBar({super.key, this.operatorsOnline = false});
+
+  /// Whether an operator is at the desk right now, from the support config. The
+  /// dot and the subtitle used to claim a one-minute response unconditionally.
+  final bool operatorsOnline;
+
+  void _open(
+    BuildContext context,
+    String category,
+    String title, {
+    String? openingMessage,
+  }) {
+    context.pushNamed(
+      'support-chat',
+      extra: <String, dynamic>{
+        'category': category,
+        'categoryTitle': title,
+        if (openingMessage != null) 'openingMessage': openingMessage,
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,12 +54,12 @@ class BottomActionBar extends StatelessWidget {
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () {
-                  // TODO: Navigate to report scam
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Report Scam')),
-                  );
-                },
+                onPressed: () => _open(
+                  context,
+                  SupportCategory.security,
+                  'Report Scam',
+                  openingMessage: 'I want to report a scam. ',
+                ),
                 icon: Icon(
                   Icons.warning,
                   color: Colors.red,
@@ -57,20 +86,16 @@ class BottomActionBar extends StatelessWidget {
             Expanded(
               flex: 2,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  // TODO: Open live chat
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Opening Live Chat...')),
-                  );
-                },
+                onPressed: () =>
+                    _open(context, SupportCategory.general, 'Live Chat'),
                 icon: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
                       width: 8.w,
                       height: 8.w,
-                      decoration: const BoxDecoration(
-                        color: Colors.green,
+                      decoration: BoxDecoration(
+                        color: operatorsOnline ? Colors.green : Colors.amber,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -95,10 +120,12 @@ class BottomActionBar extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'AVG. Response time: 1 min',
+                      operatorsOnline
+                          ? 'Our team is online now'
+                          : 'Assistant replies right away',
                       style: TextStyle(
                         fontSize: 16.sp,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                       ),
                     ),
                   ],
@@ -120,4 +147,3 @@ class BottomActionBar extends StatelessWidget {
     );
   }
 }
-

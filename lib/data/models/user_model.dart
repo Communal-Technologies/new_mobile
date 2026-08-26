@@ -172,6 +172,24 @@ class UserModel extends Equatable {
     return kycStep1Submitted;
   }
 
+  /// Whether anything on file names this member.
+  ///
+  /// cooperative-svc will not take a join request or an invite code from an
+  /// account with no name — an admin reviews an application by the applicant's,
+  /// and a phone-and-password sign-up need never have given one. Either source
+  /// counts: the profile, written by KYC step 1 or by a cooperative admin, or the
+  /// name a website sign-up types before its first OTP, which authsvc keeps on the
+  /// user row and which [name] falls back to. Deliberately not [kycStep1Submitted]
+  /// — step 1 opens an Anchor customer record and asks nothing sensitive, so an
+  /// applicant who named themselves elsewhere owes a cooperative nothing further.
+  bool get hasProfileInformation {
+    final fn = firstName?.trim();
+    final ln = lastName?.trim();
+    if (fn != null && fn.isNotEmpty && ln != null && ln.isNotEmpty) return true;
+    final display = name.trim();
+    return display.isNotEmpty && display != 'Member';
+  }
+
   /// Whether this member can perform cooperative actions (pay obligations,
   /// apply for loans, pay fines). False when `subscriptionActive` is
   /// explicitly `false`; `null` (no record) is treated as active.

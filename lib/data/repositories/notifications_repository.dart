@@ -1,3 +1,4 @@
+import 'package:communal_mobile/core/security/token_manager.dart';
 import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/models/notification_model.dart';
@@ -12,9 +13,27 @@ class NotificationsResult {
 }
 
 class NotificationsRepository {
-  NotificationsRepository(this._dioClient);
+  NotificationsRepository(this._dioClient, this._tokenManager);
 
   final DioClient _dioClient;
+  final TokenManager _tokenManager;
+
+  /// The cooperative the member has switched to, as a query parameter.
+  ///
+  /// Resolved here rather than passed in by each caller: the feed, the badge
+  /// poller and the push handler all want the same scope, and a screen that
+  /// forgot to pass it would quietly show another cooperative's notices under
+  /// this one's name.
+  ///
+  /// Empty when nothing has been selected yet — a fresh install, or a member in
+  /// no cooperative. cooperative-svc treats an absent scope as no filter, which
+  /// for those two cases is exactly right: they still get the platform's own
+  /// notices, and the feed is filtered on their own user id regardless.
+  Future<Map<String, dynamic>> _scope() async {
+    final active = await _tokenManager.readActiveCooperative();
+    final id = active?.cooperativeId ?? '';
+    return id.isEmpty ? const {} : {'cooperative_id': id};
+  }
 
   /// Fetch the user's notifications. Pass [unreadOnly] to filter
   /// server-side, e.g. to populate an "Unread" tab.
@@ -25,6 +44,7 @@ class NotificationsRepository {
         queryParameters: {
           if (unreadOnly) 'status': 'unread',
           'limit': limit,
+          ...await _scope(),
         },
       );
       final body = response.data;
@@ -54,6 +74,7 @@ class NotificationsRepository {
     try {
       final response = await _dioClient.get(
         ApiEndpoints.membersNotificationsUnreadCount,
+        queryParameters: await _scope(),
       );
       final body = response.data;
       if (body is Map) {
@@ -73,9 +94,13 @@ class NotificationsRepository {
     }
   }
 
+  /// Scoped like the feed: "mark all read" means the list on screen.
   Future<void> markAllAsRead() async {
     try {
-      await _dioClient.post(ApiEndpoints.membersNotificationsMarkAllRead);
+      await _dioClient.post(
+        ApiEndpoints.membersNotificationsMarkAllRead,
+        queryParameters: await _scope(),
+      );
     } on DioException catch (e) {
       throw Exception(_messageFromDio(e));
     }

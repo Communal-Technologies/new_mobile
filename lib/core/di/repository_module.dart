@@ -1,3 +1,4 @@
+import 'package:communal_mobile/core/security/token_manager.dart';
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/data/repositories/community_repository.dart';
@@ -42,8 +43,10 @@ abstract class RepositoryModule {
       CommunityRepository(dioClient);
 
   @lazySingleton
-  NotificationsRepository provideNotificationsRepository(DioClient dioClient) =>
-      NotificationsRepository(dioClient);
+  NotificationsRepository provideNotificationsRepository(
+    DioClient dioClient,
+    TokenManager tokenManager,
+  ) => NotificationsRepository(dioClient, tokenManager);
 
   @lazySingleton
   ProfileRepository provideProfileRepository(DioClient dioClient) =>

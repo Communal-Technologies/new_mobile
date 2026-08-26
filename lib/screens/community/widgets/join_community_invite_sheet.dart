@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/bottomsheet_handlebar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/community_repository.dart';
 import 'package:communal_mobile/injection.dart';
 
+/// Joining with an invite code. The cooperative already decided by issuing it, so
+/// redeeming makes the member a member on the spot — but it still needs a name to
+/// file the membership under, and cooperative-svc refuses the redemption without
+/// one. It does not mark the code used when it does, so nothing is spent.
 class JoinCommunityInviteSheet extends StatefulWidget {
   const JoinCommunityInviteSheet({super.key});
 
@@ -23,6 +31,14 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
   void dispose() {
     _codeController.dispose();
     super.dispose();
+  }
+
+  /// Whether anything on file names the member. Unknown counts as present — the
+  /// service is the authority, and holding a member back on a state we could not
+  /// read is worse than showing its answer.
+  bool get _named {
+    final auth = context.read<AuthBloc>().state;
+    return auth is! AuthAuthenticated || auth.user.hasProfileInformation;
   }
 
   Future<void> _submit() async {
@@ -94,6 +110,38 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                         ),
                       ),
                     ),
+                    if (!_named) ...[
+                      vSpace(16),
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(14.w),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3E9FF),
+                          borderRadius: BorderRadius.circular(16.r),
+                          border: Border.all(color: const Color(0xFFE2D2FF)),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.badge_outlined,
+                                color: Color(0xFF7434FF)),
+                            hSpace(12),
+                            Expanded(
+                              child: Text(
+                                'Your profile does not have a name on it yet, '
+                                'and a cooperative needs one to add you. '
+                                'Complete your profile information, then '
+                                'redeem your code.',
+                                style: TextStyle(
+                                  fontSize: 16.sp,
+                                  color: const Color(0xFF41129A),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     vSpace(20),
                     Align(
                       alignment: Alignment.centerLeft,
@@ -110,7 +158,7 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                     TextField(
                       controller: _codeController,
                       textCapitalization: TextCapitalization.characters,
-                      enabled: !_isSubmitting,
+                      enabled: !_isSubmitting && _named,
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
@@ -260,7 +308,14 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                         hSpace(12),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: _isSubmitting ? null : _submit,
+                            onPressed: _isSubmitting
+                                ? null
+                                : !_named
+                                    ? () {
+                                        Navigator.of(context).pop();
+                                        context.pushNamed('kyc-profile-info');
+                                      }
+                                    : _submit,
                             style: ElevatedButton.styleFrom(
                               minimumSize: Size(double.infinity, 52.h),
                               backgroundColor: const Color(0xFF7434FF),
@@ -282,7 +337,9 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
                                     ),
                                   )
                                 : Text(
-                                    'Join Community',
+                                    _named
+                                        ? 'Join Community'
+                                        : 'Complete profile',
                                     style: TextStyle(
                                       fontSize: 19.sp,
                                       fontWeight: FontWeight.w700,

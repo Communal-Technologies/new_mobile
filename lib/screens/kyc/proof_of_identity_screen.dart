@@ -111,7 +111,6 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
   PlatformFile? _pickedFrontFile;
   PlatformFile? _pickedBackFile;
   bool _isSubmitting = false;
-  bool _consentGiven = false;
 
   /// Audit M23: minted once per screen mount; reused across user retries so
   /// duplicate Anchor identity submissions are deduped server-side.
@@ -131,10 +130,7 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
     if (auth is! AuthAuthenticated) return;
     final alreadyGiven =
         getIt<KycProgressStorage>().hasConsentGiven(auth.userId);
-    if (alreadyGiven) {
-      if (mounted) setState(() => _consentGiven = true);
-      return;
-    }
+    if (alreadyGiven) return;
     _showConsentModal();
   }
 
@@ -147,7 +143,6 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
         onAgree: () async {
           Navigator.of(ctx).pop();
           await _recordConsent('agreed');
-          if (mounted) setState(() => _consentGiven = true);
         },
         onDecline: () async {
           Navigator.of(ctx).pop();
@@ -158,9 +153,11 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
     );
   }
 
+  // Sent even without a resolved anchor id — a member who skipped the BVN step
+  // meets the consent here first, and kycsvc 403s the document submission unless
+  // a decision is on file. The endpoint accepts the field empty.
   Future<void> _recordConsent(String decision) async {
-    final id = _effectiveAnchor();
-    if (id == null || id.isEmpty) return;
+    final id = _effectiveAnchor() ?? '';
     final auth = context.read<AuthBloc>().state;
     try {
       await getIt<KycRepository>().recordConsent(
@@ -171,9 +168,9 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
         await getIt<KycProgressStorage>().markConsentGiven(auth.userId);
       }
     } catch (_) {
-      if (decision == 'agreed' && auth is AuthAuthenticated) {
-        await getIt<KycProgressStorage>().markConsentGiven(auth.userId);
-      }
+      // Not marked on failure — kycsvc has no decision on file, so it would 403
+      // the document submission, and a flag saying otherwise would stop the modal
+      // ever appearing again to fix it.
     }
   }
 

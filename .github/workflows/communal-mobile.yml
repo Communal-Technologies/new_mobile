@@ -637,8 +637,58 @@ jobs:
             | /usr/libexec/PlistBuddy -c 'Print :Name' /dev/stdin)
           echo "profile_name=$PROFILE_NAME" >> "$GITHUB_OUTPUT"
 
+          # Runner's Release entitlements ask for aps-environment=production, so
+          # the profile has to grant it. Checked here because codesign's own
+          # failure much later reads as a generic entitlement mismatch, and
+          # because the alternative — no entitlement at all — is a build that
+          # installs fine and never receives a push.
+          APS=$(security cms -D -i "$PROFILE_PATH" \
+            | /usr/libexec/PlistBuddy -c 'Print :Entitlements:aps-environment' /dev/stdin 2>/dev/null || true)
+          if [[ "$APS" != "production" ]]; then
+            echo "::error::Provisioning profile grants aps-environment='${APS:-none}', not 'production'. Enable Push Notifications on the App ID, regenerate the App Store distribution profile, and update IOS_PROVISIONING_PROFILE_BASE64."
+            exit 1
+          fi
+
+      # The archive has to be signed for distribution, not only the export.
+      # project.pbxproj pins CODE_SIGN_IDENTITY to "iPhone Developer" at the
+      # project level, so xcodebuild would hunt for a development identity that is
+      # not in this keychain and fail before ExportOptions.plist is ever read. The
+      # Runner target's Release xcconfig is the level that overrides it.
+      - name: Pin manual distribution signing for the archive
+        if: env.IS_PROD == 'true' && steps.ios_check.outputs.signing_available == 'true'
+        # Through env for the same reason the credential check is: these are
+        # expanded inside a heredoc, and a value carrying a quote or a $ would be
+        # interpreted by the shell rather than written to the file.
+        env:
+          TEAM_ID: ${{ vars.IOS_TEAM_ID }}
+          PROFILE_NAME: ${{ steps.profile.outputs.profile_name }}
+        run: |
+          set -euo pipefail
+          # Read the identity out of the keychain instead of hardcoding a name: a
+          # certificate issued now is "Apple Distribution", an older one is
+          # "iPhone Distribution", and codesign matches on the full common name.
+          IDENTITY=$(security find-identity -v -p codesigning \
+            | sed -nE 's/.*"((Apple|iPhone) Distribution:[^"]*)".*/\1/p' | head -1)
+          if [[ -z "$IDENTITY" ]]; then
+            echo "::error::No distribution identity in the keychain — IOS_CERT_BASE64 is most likely a development certificate."
+            security find-identity -v -p codesigning || true
+            exit 1
+          fi
+          echo "Signing as: $IDENTITY"
+          cat > ios/Flutter/Signing.xcconfig <<EOF
+          CODE_SIGN_STYLE = Manual
+          CODE_SIGN_IDENTITY = $IDENTITY
+          CODE_SIGN_IDENTITY[sdk=iphoneos*] = $IDENTITY
+          DEVELOPMENT_TEAM = $TEAM_ID
+          PROVISIONING_PROFILE_SPECIFIER = $PROFILE_NAME
+          EOF
+
       - name: Generate ExportOptions.plist
         if: env.IS_PROD == 'true' && steps.ios_check.outputs.signing_available == 'true'
+        env:
+          TEAM_ID: ${{ vars.IOS_TEAM_ID }}
+          BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID }}
+          PROFILE_NAME: ${{ steps.profile.outputs.profile_name }}
         run: |
           cat > ios/ExportOptions.plist <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -648,15 +698,15 @@ jobs:
             <key>method</key>
             <string>app-store</string>
             <key>teamID</key>
-            <string>${{ vars.IOS_TEAM_ID }}</string>
+            <string>$TEAM_ID</string>
             <key>uploadSymbols</key>
             <true/>
             <key>signingStyle</key>
             <string>manual</string>
             <key>provisioningProfiles</key>
             <dict>
-              <key>${{ vars.IOS_BUNDLE_ID }}</key>
-              <string>${{ steps.profile.outputs.profile_name }}</string>
+              <key>$BUNDLE_ID</key>
+              <string>$PROFILE_NAME</string>
             </dict>
           </dict>
           </plist>

@@ -102,6 +102,13 @@ class CooperativeCashBankAccount {
     return name.isNotEmpty ? name : bank.trim();
   }
 
+  /// How a cooperative account is named to a member: the account name and the
+  /// bank, never the account number.
+  String get displayLabel => [
+    if (accountName.isNotEmpty) accountName,
+    if (bankLabel.isNotEmpty) bankLabel,
+  ].join(' • ');
+
   factory CooperativeCashBankAccount.fromJson(Map<String, dynamic> m) {
     return CooperativeCashBankAccount(
       id: m['id']?.toString() ?? '',

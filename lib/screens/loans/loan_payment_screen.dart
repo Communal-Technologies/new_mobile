@@ -282,7 +282,7 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
                                   (e) => DropdownMenuItem(
                                     value: e,
                                     child: Text(
-                                      '${e.accountName} • ${e.accountNumber}',
+                                      e.displayLabel,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
@@ -296,7 +296,7 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
                     ] else if (_cashRepos.length == 1) ...[
                       vSpace(10),
                       Text(
-                        'Paying into: ${_cashRepos.first.accountName} • ${_cashRepos.first.accountNumber}',
+                        'Paying into: ${_cashRepos.first.displayLabel}',
                         style: TextStyle(
                           fontSize: 17.sp,
                           color: Colors.grey.shade700,

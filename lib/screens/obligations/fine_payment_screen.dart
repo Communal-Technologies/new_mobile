@@ -302,11 +302,7 @@ class _FinePaymentScreenState extends State<FinePaymentScreen> {
                                 .map((e) => DropdownMenuItem(
                                       value: e,
                                       child: Text(
-                                        [
-                                          if (e.bankLabel.isNotEmpty) e.bankLabel,
-                                          e.accountName,
-                                          e.accountNumber,
-                                        ].join(' • '),
+                                        e.displayLabel,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ))
@@ -318,11 +314,7 @@ class _FinePaymentScreenState extends State<FinePaymentScreen> {
                     ] else if (_cashRepos.length == 1) ...[
                       vSpace(10),
                       Text(
-                        'Paying into: ${[
-                          if (_cashRepos.first.bankLabel.isNotEmpty) _cashRepos.first.bankLabel,
-                          _cashRepos.first.accountName,
-                          _cashRepos.first.accountNumber,
-                        ].join(' • ')}',
+                        'Paying into: ${_cashRepos.first.displayLabel}',
                         style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade700),
                       ),
                     ],

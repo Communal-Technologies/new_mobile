@@ -52,6 +52,30 @@
 	<key>NSFaceIDUsageDescription</key>
 	<string>Communal uses Face ID to securely authenticate you when signing in.</string>
 	<!--
+		Needed for the messages firebase_messaging handles while the app is not
+		in the foreground. An alert push would arrive without it; a data-only
+		message — which is how a balance or an approval is refreshed silently —
+		would be dropped by iOS.
+	-->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+	<!--
+		Answers Apple's export-compliance question in the build itself. Without
+		it, every upload sits in App Store Connect as "Missing Compliance" until
+		someone answers the same question by hand in the web UI, which blocks the
+		build from reaching testers.
+
+		`false` is the declaration that the app uses no *non-exempt* encryption:
+		HTTPS/TLS, the Keychain, and the Secure Enclave signing in
+		BiometricKeyChannel are all Apple-provided and exempt, and `crypto` is
+		used for hashing, which is not encryption. Adding our own cipher over
+		stored or transmitted data would make this answer wrong.
+	-->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<!--
 		Audit M10: explicit App Transport Security policy. iOS enforces
 		HTTPS-only by default, but we set it explicitly so a future change
 		to NSAllowsArbitraryLoads is intentional rather than accidental.

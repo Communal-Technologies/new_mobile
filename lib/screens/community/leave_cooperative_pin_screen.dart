@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
+import 'package:communal_mobile/core/widgets/biometric_action_button.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/account_actions_repository.dart';
 import 'package:communal_mobile/injection.dart';
@@ -34,10 +35,20 @@ class _LeaveCooperativePinScreenState extends State<LeaveCooperativePinScreen> {
       _submitting = true;
       _errorMessage = null;
     });
-    final repo = getIt<AccountActionsRepository>();
     try {
-      await repo.verifySecurityPin(pin, intent: 'account-action');
-      await repo.submitAccountClosure(
+      await getIt<AccountActionsRepository>()
+          .verifySecurityPin(pin, intent: 'account-action');
+      await _submit();
+    } catch (e) {
+      _fail(e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  /// Runs once the action is authorised, by PIN or by biometrics — the server
+  /// takes the same marker either way.
+  Future<void> _submit() async {
+    try {
+      await getIt<AccountActionsRepository>().submitAccountClosure(
         cooperativeId: widget.request.location.id,
         reason: widget.request.reason,
       );
@@ -47,12 +58,16 @@ class _LeaveCooperativePinScreenState extends State<LeaveCooperativePinScreen> {
         extra: widget.request.location,
       );
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _submitting = false;
-        _errorMessage = e.toString().replaceFirst('Exception: ', '');
-      });
+      _fail(e.toString().replaceFirst('Exception: ', ''));
     }
+  }
+
+  void _fail(String message) {
+    if (!mounted) return;
+    setState(() {
+      _submitting = false;
+      _errorMessage = message;
+    });
   }
 
   void _handlePinChanged(String pin) {
@@ -161,6 +176,19 @@ class _LeaveCooperativePinScreenState extends State<LeaveCooperativePinScreen> {
                       ],
                     ),
                   ),
+                BiometricActionButton(
+                  label: 'Leave ${widget.request.location.name}',
+                  promptSubtitle: 'Use biometrics to send your request',
+                  enabled: !_submitting,
+                  onAuthorized: () {
+                    setState(() {
+                      _submitting = true;
+                      _errorMessage = null;
+                    });
+                    return _submit();
+                  },
+                  onFailed: _fail,
+                ),
                 if (_errorMessage != null) ...[
                   vSpace(24),
                   Container(

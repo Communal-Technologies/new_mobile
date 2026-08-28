@@ -118,6 +118,54 @@ class AccountActionsRepository {
     }
   }
 
+  /// The checkpoints standing between the member and deleting their whole
+  /// Communal account. Read before the flow starts: the app renders
+  /// [AccountDeletionPreview.blockers] as they come and offers the delete only
+  /// when [AccountDeletionPreview.canDelete] is true. It never computes any of
+  /// this itself — the server re-checks all of it on the delete anyway.
+  Future<AccountDeletionPreview> fetchAccountDeletionPreview() async {
+    try {
+      final response = await _dioClient.get(
+        ApiEndpoints.membersAccountDeletionPreview,
+      );
+      final body = response.data;
+      final data = body is Map ? body['data'] : null;
+      if (data is Map) {
+        return AccountDeletionPreview.fromJson(Map<String, dynamic>.from(data));
+      }
+      throw Exception('The server returned no deletion preview.');
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  /// Delete the member's whole Communal account. Final, and immediate: on
+  /// success the identity is closed and every token the app holds is dead, so
+  /// the caller's only remaining job is to sign out locally.
+  ///
+  /// [confirmation] is the word the member typed. It is sent because the server
+  /// checks it too — the typed word is a checkpoint, not screen decoration.
+  /// A PIN must have been verified with intent `account-action` just before
+  /// this call: the server spends that authorisation here and will not accept a
+  /// second attempt on the same one.
+  Future<void> deleteAccount({
+    required String confirmation,
+    String? reason,
+  }) async {
+    try {
+      await _dioClient.post(
+        ApiEndpoints.membersAccountDeletion,
+        data: {
+          'confirmation': confirmation,
+          if (reason != null && reason.trim().isNotEmpty)
+            'reason': reason.trim(),
+        },
+      );
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
   String _messageFromDio(DioException e) {
     final response = e.response;
     if (response == null) return 'Network error. Please check your connection.';
@@ -159,6 +207,100 @@ class FreezeStatus {
       frozenReason: (reason == null || reason.isEmpty) ? null : reason,
     );
   }
+}
+
+/// What `GET members/account/deletion/preview` says about deleting the whole
+/// Communal account.
+///
+/// Every entry in [blockers] is a refusal, not something to acknowledge: nobody
+/// reviews a deletion, so anything still attached to the account has to be
+/// resolved first. Each one carries the [AccountDeletionBlocker.message] the
+/// server wrote, which names the door to go through instead — the app must not
+/// paraphrase them or invent its own.
+class AccountDeletionPreview {
+  const AccountDeletionPreview({
+    this.canDelete = false,
+    this.blockers = const [],
+    this.walletBalance = 0,
+    this.isFrozen = false,
+    this.memberships = const [],
+    this.loansOwing = 0,
+    this.interestOwing = 0,
+    this.finesOwing = 0,
+    this.totalOwing = 0,
+    this.loansGuaranteed = 0,
+    this.purgeAfterDays = 30,
+  });
+
+  final bool canDelete;
+  final List<AccountDeletionBlocker> blockers;
+  final int walletBalance;
+  final bool isFrozen;
+  final List<String> memberships;
+  final int loansOwing;
+  final int interestOwing;
+  final int finesOwing;
+  final int totalOwing;
+  final int loansGuaranteed;
+  final int purgeAfterDays;
+
+  factory AccountDeletionPreview.fromJson(Map<String, dynamic> json) {
+    int whole(dynamic v) =>
+        v is int ? v : (v is num ? v.toInt() : int.tryParse('$v') ?? 0);
+
+    final memberships = json['memberships'];
+
+    return AccountDeletionPreview(
+      canDelete: json['can_delete'] == true,
+      blockers: json['blockers'] is List
+          ? (json['blockers'] as List)
+                .whereType<Map>()
+                .map(
+                  (e) => AccountDeletionBlocker.fromJson(
+                    Map<String, dynamic>.from(e),
+                  ),
+                )
+                .toList()
+          : const [],
+      walletBalance: whole(json['wallet_balance']),
+      isFrozen: json['is_frozen'] == true,
+      memberships: memberships is List
+          ? memberships
+                .whereType<Map>()
+                .map(
+                  (e) =>
+                      (e['name'] ?? e['cooperative_id'] ?? '')
+                          .toString()
+                          .trim(),
+                )
+                .where((e) => e.isNotEmpty)
+                .toList()
+          : const <String>[],
+      loansOwing: whole(json['loans_owing']),
+      interestOwing: whole(json['interest_owing']),
+      finesOwing: whole(json['fines_owing']),
+      totalOwing: whole(json['total_owing']),
+      loansGuaranteed: whole(json['loans_guaranteed']),
+      purgeAfterDays: json['purge_after_days'] == null
+          ? 30
+          : whole(json['purge_after_days']),
+    );
+  }
+}
+
+/// One reason the account cannot be deleted yet. [code] is for the app to key
+/// an icon or a shortcut off; [message] is what the member reads.
+class AccountDeletionBlocker {
+  const AccountDeletionBlocker({required this.code, required this.message});
+
+  final String code;
+  final String message;
+
+  factory AccountDeletionBlocker.fromJson(Map<String, dynamic> json) =>
+      AccountDeletionBlocker(
+        code: json['code']?.toString() ?? '',
+        message: json['message']?.toString() ?? '',
+      );
 }
 
 /// What `GET members/account-closure/preview` says about leaving one cooperative.

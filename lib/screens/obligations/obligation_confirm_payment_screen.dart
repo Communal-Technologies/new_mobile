@@ -115,14 +115,16 @@ class _ObligationConfirmPaymentScreenState
         setState(() => _authMode = _AuthMode.pin);
         return;
       }
-      final enrolled = await _biometricSigner.isEnrolled();
+      final canAuthorize = await _biometricSigner.canAuthorizePayments();
       if (!mounted) return;
-      if (enrolled) {
+      if (canAuthorize) {
         setState(() => _authMode = _AuthMode.biometric);
       } else {
-        // No biometric enrolled on this device — drop to the PIN
-        // prompt instead of marching the user off to the enrollment
-        // screen for what is just a confirmation step.
+        // No biometric on this device, a sign-in-only enrollment, or no
+        // transaction PIN on the account — drop to the PIN prompt instead of
+        // marching the user off to the enrollment screen for what is just a
+        // confirmation step. Biometrics is the alternative to that PIN, so where
+        // there is no PIN the keypad is the only honest path.
         setState(() => _authMode = _AuthMode.pin);
       }
     } catch (e) {

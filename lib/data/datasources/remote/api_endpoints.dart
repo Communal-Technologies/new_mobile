@@ -134,6 +134,15 @@ class ApiEndpoints {
   // whatever stops the member asking at all. Takes ?cooperative=.
   static const String membersAccountClosurePreview =
       '$_coopV2/members/account-closure/preview';
+  // Deleting the whole Communal account, which is a different act from the
+  // closure above: that one leaves a single cooperative and its administrators
+  // settle the member's position, this one closes the identity and answers to
+  // nobody. Both endpoints are authsvc's — it owns `users`, the wallet and the
+  // Anchor customer. The preview is the only source of the checkpoints; the
+  // delete re-checks every one of them.
+  static const String membersAccountDeletionPreview =
+      '$_v1/members/account/deletion/preview';
+  static const String membersAccountDeletion = '$_v1/members/account/deletion';
   static const String membersTransactionStatementExport =
       '$_txnV2/members/statement/export';
 

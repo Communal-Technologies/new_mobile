@@ -59,9 +59,13 @@ class DeleteAccountActionButtons extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  context.pushNamed('delete-account-confirmation');
-                },
+                // The caller passes onDeleteAccount because the next screen
+                // needs the deletion preview handed to it; the bare push is kept
+                // as the fallback for any caller that has nothing to pass.
+                onPressed: onDeleteAccount ??
+                    () {
+                      context.pushNamed('delete-account-confirmation');
+                    },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
                   foregroundColor: Colors.white,

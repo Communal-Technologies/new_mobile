@@ -1,25 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
-import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/screens/account/widgets/what_happens_next_item.dart';
-import 'package:communal_mobile/screens/account/widgets/email_confirmation_box.dart';
 
+/// The one screen in the app that stands without a session — the account it
+/// belonged to no longer exists by the time this is shown, so nothing here
+/// reads the auth state and every exit leads to the login screen.
 class DeleteAccountSuccessScreen extends StatelessWidget {
   const DeleteAccountSuccessScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthBloc>().state;
-    final email = auth is AuthAuthenticated
-        ? (auth.user.email?.trim() ?? '')
-        : '';
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
@@ -27,13 +22,7 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
         appBar: AppBar(
           backgroundColor: Theme.of(context).cardColor,
           elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              // Navigate to home since account is deleted
-              context.go('/');
-            },
-          ),
+          automaticallyImplyLeading: false,
           title: Text(
             'Delete Account',
             style: TextStyle(
@@ -57,10 +46,6 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
                   _buildSuccessMessage(context),
                   vSpace(32),
                   _buildWhatHappensNext(context),
-                  if (email.isNotEmpty) ...[
-                    vSpace(24),
-                    EmailConfirmationBox(email: email),
-                  ],
                   vSpace(32),
                   _buildCloseButton(context),
                   vSpace(32),
@@ -93,7 +78,7 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
     return Column(
       children: [
         Text(
-          'Account Deleted Successfully',
+          'Your Account Has Been Deleted',
           style: TextStyle(
             fontSize: 24.sp,
             fontWeight: FontWeight.w700,
@@ -103,7 +88,8 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
         ),
         vSpace(16),
         Text(
-          'Your account has been scheduled for permanent deletion',
+          'You have been signed out and can no longer sign in with these '
+          'details.',
           style: TextStyle(
             fontSize: 17.sp,
             color: Theme.of(
@@ -114,8 +100,12 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
         vSpace(8),
+        // No recovery is offered because there is none: the deletion is not a
+        // request an admin can reverse, and the previous copy promised a
+        // support team that could bring the account back.
         Text(
-          'We\'re sorry to see you go. If you change your mind\nwithin the next 30 days, contact our support team to\nrecover your account.',
+          'We\'re sorry to see you go. This cannot be undone — you would need '
+          'to open a new account to use Communal again.',
           style: TextStyle(
             fontSize: 17.sp,
             color: Theme.of(
@@ -153,15 +143,19 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
         ),
         vSpace(16),
         const WhatHappensNextItem(
-          text: 'Your account has been immediately deactivated',
+          text: 'Your account is closed and your wallet is frozen — it can no '
+              'longer send or receive money',
         ),
         vSpace(12),
         const WhatHappensNextItem(
-          text: 'All data will be permanently deleted within 30 days',
+          text: 'Your personal data is erased within 30 days. Your email and '
+              'phone number are released then, so they can be used for a new '
+              'account after that',
         ),
         vSpace(12),
         const WhatHappensNextItem(
-          text: 'You\'ve been removed from all cooperative memberships',
+          text: 'Records of money that moved through your account are kept for '
+              'as long as the law requires',
         ),
       ],
     );
@@ -171,10 +165,7 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () {
-          // Navigate to home
-          context.go('/');
-        },
+        onPressed: () => context.go('/login'),
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF7434FF), // Purple
           foregroundColor: Colors.white,
@@ -185,7 +176,7 @@ class DeleteAccountSuccessScreen extends StatelessWidget {
           elevation: 0,
         ),
         child: Text(
-          'Close',
+          'Done',
           style: TextStyle(fontSize: 19.sp, fontWeight: FontWeight.w600),
         ),
       ),

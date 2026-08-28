@@ -61,6 +61,34 @@ class AccountActionsRepository {
     }
   }
 
+  /// What leaving [cooperativeId] would cost, and whether it can be asked for
+  /// at all. Read before the confirmation screen so the member decides against
+  /// the same figures the administrator will review.
+  Future<AccountClosurePreview> fetchAccountClosurePreview(
+    String cooperativeId,
+  ) async {
+    final cooperative = cooperativeId.trim();
+    if (cooperative.isEmpty) {
+      throw Exception('No cooperative selected.');
+    }
+    try {
+      final response = await _dioClient.get(
+        ApiEndpoints.membersAccountClosurePreview,
+        queryParameters: {'cooperative': cooperative},
+      );
+      final body = response.data;
+      final preview = body is Map ? body['preview'] : null;
+      if (preview is Map) {
+        return AccountClosurePreview.fromJson(
+          Map<String, dynamic>.from(preview),
+        );
+      }
+      throw Exception('The server returned no closure preview.');
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
   /// Submit an account-closure request. The cooperative admin reviews
   /// and approves/declines — closure is not instant. [reason] is
   /// optional; backend currently accepts the request without one.
@@ -129,6 +157,72 @@ class FreezeStatus {
           json['account_status']?.toString().trim() == '2',
       isSelfFrozen: flag(json['is_self_frozen']),
       frozenReason: (reason == null || reason.isEmpty) ? null : reason,
+    );
+  }
+}
+
+/// What `GET members/account-closure/preview` says about leaving one cooperative.
+///
+/// [blockers] are refusals the server will repeat if the member submits anyway,
+/// so an empty list is [canSubmit]. [warnings] are not refusals — whether a
+/// member carrying debt may leave is the cooperative's decision, taken when an
+/// administrator reviews the request — so the app shows them as things to
+/// acknowledge, never as a dead end.
+class AccountClosurePreview {
+  const AccountClosurePreview({
+    this.ledgerNumber = '',
+    this.loansBalance = 0,
+    this.interestBalance = 0,
+    this.finesBalance = 0,
+    this.epcBalance = 0,
+    this.netAmount = 0,
+    this.netType = 'balanced',
+    this.hasPending = false,
+    this.loansGuaranteed = 0,
+    this.canSubmit = false,
+    this.blockers = const [],
+    this.warnings = const [],
+  });
+
+  final String ledgerNumber;
+  final int loansBalance;
+  final int interestBalance;
+  final int finesBalance;
+  final int epcBalance;
+  final int netAmount;
+  final String netType;
+  final bool hasPending;
+  final int loansGuaranteed;
+  final bool canSubmit;
+  final List<String> blockers;
+  final List<String> warnings;
+
+  int get totalDebt => loansBalance + interestBalance + finesBalance;
+
+  factory AccountClosurePreview.fromJson(Map<String, dynamic> json) {
+    int whole(dynamic v) =>
+        v is int ? v : (v is num ? v.toInt() : int.tryParse('$v') ?? 0);
+    List<String> lines(dynamic v) => v is List
+        ? v.map((e) => e.toString()).where((e) => e.isNotEmpty).toList()
+        : const <String>[];
+
+    final snapshot = json['snapshot'] is Map
+        ? Map<String, dynamic>.from(json['snapshot'] as Map)
+        : const <String, dynamic>{};
+
+    return AccountClosurePreview(
+      ledgerNumber: json['ledger_number']?.toString() ?? '',
+      loansBalance: whole(snapshot['loans_balance']),
+      interestBalance: whole(snapshot['interest_balance']),
+      finesBalance: whole(snapshot['fines_balance']),
+      epcBalance: whole(snapshot['epc_balance']),
+      netAmount: whole(snapshot['net_amount']),
+      netType: snapshot['net_type']?.toString() ?? 'balanced',
+      hasPending: json['has_pending'] == true,
+      loansGuaranteed: whole(json['loans_guaranteed']),
+      canSubmit: json['can_submit'] == true,
+      blockers: lines(json['blockers']),
+      warnings: lines(json['warnings']),
     );
   }
 }

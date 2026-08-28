@@ -219,10 +219,11 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
     return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Disable for transactions?'),
+        title: const Text('Disable for payments and account actions?'),
         content: const Text(
-          'Transfers and bill payments will be blocked until biometric '
-          'authorization is re-enabled. App login can stay biometric.',
+          'You will type your transaction PIN to authorize transfers, bill '
+          'payments, and account actions like leaving a community or deleting '
+          'your account. App login can stay biometric.',
         ),
         actions: [
           TextButton(
@@ -393,9 +394,11 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
               icon: Icons.check_circle_outline,
               iconColor: const Color(0xFF16A34A),
               backgroundTint: const Color(0xFF16A34A).withValues(alpha: 0.10),
-              title: 'Transaction Authorization',
+              title: 'Payment & Account Authorization',
               subtitle:
-                  'Authorize payments and transfers with $method or fingerprint',
+                  'Authorize payments, transfers and account actions — leaving '
+                  'a community, freezing or deleting your account — with '
+                  '$method or fingerprint',
               value: _prefs.transactionsEnabled,
               onChanged: _onTransactionsToggle,
             ),

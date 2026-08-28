@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
+import 'package:communal_mobile/core/widgets/biometric_action_button.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/account_actions_repository.dart';
 import 'package:communal_mobile/injection.dart';
@@ -32,10 +33,6 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
   /// Verifying and deleting live in the same handler on purpose. The PIN mints a
   /// short-lived marker in shared Redis that the delete endpoint consumes, so
   /// there is no step in between where a verified PIN sits around unspent.
-  ///
-  /// Every checkpoint is re-run by the server here, against the state of the
-  /// account at this moment rather than the preview the flow started from — a
-  /// 409 means something changed while the user was reading the warnings.
   Future<void> _handlePinCompleted(String pin) async {
     if (_submitting) return;
     setState(() {
@@ -43,11 +40,25 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
       _showError = false;
       _errorMessage = null;
     });
+    try {
+      await getIt<AccountActionsRepository>()
+          .verifySecurityPin(pin, intent: 'account-action');
+      await _delete();
+    } catch (e) {
+      _fail(e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  /// Runs once the account action is authorised, by PIN or by biometrics — the
+  /// server takes the same marker either way.
+  ///
+  /// Every checkpoint is re-run here, against the state of the account at this
+  /// moment rather than the preview the flow started from: a 409 means something
+  /// changed while the user was reading the warnings.
+  Future<void> _delete() async {
     final auth = context.read<AuthBloc>();
     try {
-      final repository = getIt<AccountActionsRepository>();
-      await repository.verifySecurityPin(pin, intent: 'account-action');
-      await repository.deleteAccount(
+      await getIt<AccountActionsRepository>().deleteAccount(
         confirmation: widget.request.confirmation,
         reason: widget.request.reason,
       );
@@ -58,13 +69,17 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
       context.goNamed('delete-account-success');
       auth.add(LogoutRequested());
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _submitting = false;
-        _showError = true;
-        _errorMessage = e.toString().replaceFirst('Exception: ', '');
-      });
+      _fail(e.toString().replaceFirst('Exception: ', ''));
     }
+  }
+
+  void _fail(String message) {
+    if (!mounted) return;
+    setState(() {
+      _submitting = false;
+      _showError = true;
+      _errorMessage = message;
+    });
   }
 
   void _handlePinChanged(String pin) {
@@ -146,6 +161,21 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
                   obscureText: _obscurePin,
                   onCompleted: _handlePinCompleted,
                   onChanged: _handlePinChanged,
+                ),
+                BiometricActionButton(
+                  label: 'Delete your account',
+                  promptSubtitle:
+                      'Use biometrics to confirm deleting your account',
+                  enabled: !_submitting,
+                  onAuthorized: () {
+                    setState(() {
+                      _submitting = true;
+                      _showError = false;
+                      _errorMessage = null;
+                    });
+                    return _delete();
+                  },
+                  onFailed: _fail,
                 ),
                 if (_submitting) ...[
                   vSpace(24),

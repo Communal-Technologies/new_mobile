@@ -452,16 +452,27 @@ class _FineConfirmPaymentScreenState extends State<FineConfirmPaymentScreen> {
       await _transferRepo.verifySecurityPin(pin, intent: 'pay-obligation');
       return {'X-Security-Pin': pin};
     }
-    final result = transfer
-        ? await _biometricSigner.signTransferIntent(
-            promptTitle: 'Authorize payment',
-            promptSubtitle: promptSubtitle,
-          )
-        : await _biometricSigner.signObligationIntent(
-            promptTitle: 'Authorize payment',
-            promptSubtitle: promptSubtitle,
-          );
-    return result.toHeaders();
+    try {
+      final result = transfer
+          ? await _biometricSigner.signTransferIntent(
+              promptTitle: 'Authorize payment',
+              promptSubtitle: promptSubtitle,
+            )
+          : await _biometricSigner.signObligationIntent(
+              promptTitle: 'Authorize payment',
+              promptSubtitle: promptSubtitle,
+            );
+      return result.toHeaders();
+    } catch (e) {
+      // Biometrics is the shortcut and the PIN is the fallback, so a cancelled
+      // scan or a refused signature has to land the member on the keypad rather
+      // than on a retry of the thing that just failed.
+      if (mounted) setState(() => _authMode = _AuthMode.pin);
+      throw Exception(
+        '${e.toString().replaceFirst('Exception: ', '')} '
+        'Enter your transaction PIN to continue.',
+      );
+    }
   }
 
   Future<void> _onConfirm() async {

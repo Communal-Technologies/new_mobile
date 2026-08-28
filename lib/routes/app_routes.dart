@@ -105,6 +105,7 @@ import 'package:communal_mobile/screens/account/security_settings_screen.dart';
 import 'package:communal_mobile/screens/account/biometric_enrollment_screen.dart';
 import 'package:communal_mobile/screens/account/change_login_pin_screen.dart';
 import 'package:communal_mobile/screens/account/change_transaction_pin_screen.dart';
+import 'package:communal_mobile/screens/account/delete_account_request.dart';
 import 'package:communal_mobile/screens/account/delete_account_screen.dart';
 import 'package:communal_mobile/screens/account/delete_account_confirmation_screen.dart';
 import 'package:communal_mobile/screens/account/delete_account_feedback_screen.dart';
@@ -133,6 +134,10 @@ const Set<String> _publicPaths = <String>{
   '/verify-reset',
   '/reset-password',
   '/password-reset-success',
+  // The account this screen reports on is gone, and the flow signs the user out
+  // on the way in — treating it as protected would bounce it to /login before
+  // the user reads what happens next.
+  '/delete-account-success',
 };
 
 /// Routes the post-login KYC gate considers part of the KYC flow. While
@@ -827,25 +832,53 @@ final GoRouter appRouter = GoRouter(
       name: 'delete-account',
       builder: (context, state) => const DeleteAccountScreen(),
     ),
+    // Every step after /delete-account carries the server's eligibility
+    // decision, so none of them can be entered directly — landing on one
+    // without it would mean a screen that never asked whether the account can
+    // be deleted at all.
     GoRoute(
       path: '/delete-account-confirmation',
       name: 'delete-account-confirmation',
-      builder: (context, state) => const DeleteAccountConfirmationScreen(),
+      redirect: (context, state) =>
+          state.extra is DeleteAccountRequest ? null : '/delete-account',
+      builder: (context, state) => state.extra is DeleteAccountRequest
+          ? DeleteAccountConfirmationScreen(
+              request: state.extra as DeleteAccountRequest,
+            )
+          : const _MissingExtraRedirect(target: '/delete-account'),
     ),
     GoRoute(
       path: '/delete-account-feedback',
       name: 'delete-account-feedback',
-      builder: (context, state) => const DeleteAccountFeedbackScreen(),
-    ),
-    GoRoute(
-      path: '/delete-account-pin',
-      name: 'delete-account-pin',
-      builder: (context, state) => const DeleteAccountPinScreen(),
+      redirect: (context, state) =>
+          state.extra is DeleteAccountRequest ? null : '/delete-account',
+      builder: (context, state) => state.extra is DeleteAccountRequest
+          ? DeleteAccountFeedbackScreen(
+              request: state.extra as DeleteAccountRequest,
+            )
+          : const _MissingExtraRedirect(target: '/delete-account'),
     ),
     GoRoute(
       path: '/delete-account-final-confirmation',
       name: 'delete-account-final-confirmation',
-      builder: (context, state) => const DeleteAccountFinalConfirmationScreen(),
+      redirect: (context, state) =>
+          state.extra is DeleteAccountRequest ? null : '/delete-account',
+      builder: (context, state) => state.extra is DeleteAccountRequest
+          ? DeleteAccountFinalConfirmationScreen(
+              request: state.extra as DeleteAccountRequest,
+            )
+          : const _MissingExtraRedirect(target: '/delete-account'),
+    ),
+    GoRoute(
+      path: '/delete-account-pin',
+      name: 'delete-account-pin',
+      redirect: (context, state) =>
+          state.extra is DeleteAccountRequest ? null : '/delete-account',
+      builder: (context, state) => state.extra is DeleteAccountRequest
+          ? DeleteAccountPinScreen(
+              request: state.extra as DeleteAccountRequest,
+            )
+          : const _MissingExtraRedirect(target: '/delete-account'),
     ),
     GoRoute(
       path: '/delete-account-success',

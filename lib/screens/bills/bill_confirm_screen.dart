@@ -160,11 +160,13 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
       final shared = await shared_prefs.SharedPreferences.getInstance();
       final prefs = BiometricPrefs(shared);
       // Biometric is offered only when the user has enabled it for
-      // transactions AND the device has it enrolled. Anything else
-      // means PIN-only — which is the default path anyway.
+      // transactions AND the backend says this device's key may authorise a
+      // purchase — which needs a factor-verified enrollment and a transaction
+      // PIN on the account, since biometrics is the quick alternative to that
+      // PIN. Anything else means PIN-only — which is the default path anyway.
       final enabledForTransactions = prefs.transactionsEnabled;
       final enrolled = enabledForTransactions
-          ? await _biometricSigner.isEnrolled()
+          ? await _biometricSigner.canAuthorizePayments()
           : false;
       String label = 'Biometrics';
       if (enrolled) {

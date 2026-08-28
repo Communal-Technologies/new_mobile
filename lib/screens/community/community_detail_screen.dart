@@ -222,6 +222,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
             ],
             vSpace(16),
             _buildRecentActivities(),
+            if (_isMember) ...[
+              vSpace(24),
+              _buildLeaveSection(location),
+            ],
             vSpace(32),
           ],
         ),
@@ -403,28 +407,74 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
               ],
             ],
           ),
-          if (_isMember) ...[
-            vSpace(4),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () => _handleLeave(location),
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFFD32F2F),
-                  padding: EdgeInsets.symmetric(horizontal: 4.w),
-                  visualDensity: VisualDensity.compact,
+        ],
+      ),
+    );
+  }
+
+  /// Leaving is the last thing on the screen, not part of the header.
+  ///
+  /// It needs a cooperative administrator's approval and settles the member's
+  /// loans, fines and EPC out of their savings — the same weight as Delete
+  /// Account, which sits at the bottom of account settings for the same reason.
+  /// In the header it was the third thing a member saw, with its tap target
+  /// directly under the one for rating the community.
+  Widget _buildLeaveSection(CommunityLocation location) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Leaving this community',
+            style: TextStyle(
+              fontSize: 17.sp,
+              fontWeight: FontWeight.w700,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          vSpace(6),
+          Text(
+            'An administrator has to approve it, and anything you owe is settled '
+            'from your savings first.',
+            style: TextStyle(
+              fontSize: 16.sp,
+              height: 1.5,
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.7),
+            ),
+          ),
+          vSpace(12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _handleLeave(location),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFD32F2F),
+                side: const BorderSide(color: Color(0xFFD32F2F), width: 1.5),
+                padding: EdgeInsets.symmetric(vertical: 14.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
                 ),
-                icon: Icon(Icons.logout, size: 18.sp),
-                label: Text(
-                  'Leave this community',
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
+              ),
+              icon: Icon(Icons.logout, size: 18.sp),
+              label: Text(
+                'Leave this community',
+                style: TextStyle(
+                  fontSize: 17.sp,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-          ],
+          ),
         ],
       ),
     );

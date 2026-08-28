@@ -161,6 +161,26 @@ class BiometricSignerService {
     );
   }
 
+  /// Authorises an account action — leaving a cooperative, freezing the wallet,
+  /// deleting the account.
+  ///
+  /// Those screens gate on the same `pin_verified` marker a payment does, so this
+  /// goes through [_signAndAuthorize] like the payment intents: the signature
+  /// alone buys nothing, the marker is what the action spends.
+  ///
+  /// Changing the transaction PIN is the one account action with no biometric
+  /// path, on purpose — a new PIN has to be set with the old one.
+  Future<BiometricSignedHeaders> signAccountActionIntent({
+    String promptTitle = 'Authorize this action',
+    String promptSubtitle = 'Use biometrics to confirm',
+  }) async {
+    return _signAndAuthorize(
+      'account-action',
+      promptTitle: promptTitle,
+      promptSubtitle: promptSubtitle,
+    );
+  }
+
   /// Used by the bill-payment confirm screen (airtime + data, plus any
   /// future Anchor bill categories sharing the same `/v1/bills/*` route
   /// family). Backend middleware: `biometric-sig:bill-purchase`.

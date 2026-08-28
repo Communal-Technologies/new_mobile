@@ -346,6 +346,7 @@ class SupportConfig {
     required this.firstResponseSlaMinutes,
     this.hoursText,
     this.hours = const [],
+    this.timezone = '',
   });
 
   final bool operatorsOnline;
@@ -359,6 +360,11 @@ class SupportConfig {
 
   /// `support_hours` stored as JSON: a list of `{day, hours}` rows.
   final List<SupportHours> hours;
+
+  /// The zone those hours are quoted in, as the desk set it — `Africa/Lagos`,
+  /// `Africa/Nairobi`, whatever. Empty when the setting does not name one, and the
+  /// card then quotes no zone rather than assuming the reader shares ours.
+  final String timezone;
 
   static const SupportConfig fallback = SupportConfig(
     operatorsOnline: false,
@@ -382,8 +388,40 @@ class SupportConfig {
               .whereType<Map>()
               .map((e) => SupportHours.fromJson(Map<String, dynamic>.from(e)))
               .toList()
-          : const [],
+          : raw is Map
+              ? _spans(Map<String, dynamic>.from(raw))
+              : const [],
+      timezone: raw is Map ? _str(raw['timezone']) : '',
     );
+  }
+
+  /// The shape the admin console writes: `{timezone, weekday|saturday|sunday:
+  /// {open, close} | null}`. Only the list shape was read before, so every desk that
+  /// set its hours from the console got none of them on this screen — the card fell
+  /// back to the hours that were hardcoded in it, which is what the setting exists to
+  /// stop. A day set to null is a closed day and is shown as one.
+  static List<SupportHours> _spans(Map<String, dynamic> raw) {
+    const days = <String, String>{
+      'weekday': 'Monday - Friday',
+      'saturday': 'Saturday',
+      'sunday': 'Sunday',
+    };
+
+    final out = <SupportHours>[];
+    days.forEach((key, label) {
+      if (!raw.containsKey(key)) return;
+      final span = raw[key];
+      if (span is Map) {
+        final open = _str(span['open']);
+        final close = _str(span['close']);
+        if (open.isNotEmpty && close.isNotEmpty) {
+          out.add(SupportHours(day: label, hours: '$open - $close'));
+          return;
+        }
+      }
+      out.add(SupportHours(day: label, hours: 'Closed'));
+    });
+    return out;
   }
 }
 

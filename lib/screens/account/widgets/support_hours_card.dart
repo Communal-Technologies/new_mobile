@@ -16,9 +16,12 @@ class SupportHoursCard extends StatelessWidget {
 
   final SupportConfig? config;
 
+  // No zone on the fallback rows: they are what shows when the desk has published
+  // nothing, and this app is not only used where WAT is the local time. The zone is
+  // quoted under the rows, and only when the setting names one.
   static const List<SupportHours> _fallback = [
-    SupportHours(day: 'Monday - Friday', hours: '8:00 AM - 8:00 PM WAT'),
-    SupportHours(day: 'Saturday', hours: '9:00 AM - 5:00 PM WAT'),
+    SupportHours(day: 'Monday - Friday', hours: '8:00 AM - 8:00 PM'),
+    SupportHours(day: 'Saturday', hours: '9:00 AM - 5:00 PM'),
     SupportHours(day: 'Sunday', hours: 'Closed'),
   ];
 
@@ -27,6 +30,7 @@ class SupportHoursCard extends StatelessWidget {
     final hours = config?.hours.isNotEmpty == true ? config!.hours : _fallback;
     final freeText = config?.hoursText;
     final sla = config?.firstResponseSlaMinutes ?? 0;
+    final zone = config?.timezone ?? '';
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w),
@@ -92,6 +96,16 @@ class SupportHoursCard extends StatelessWidget {
               if (i > 0) vSpace(12),
               _buildHoursRow(hours[i].day, hours[i].hours),
             ],
+          if (freeText == null && zone.isNotEmpty) ...[
+            vSpace(10),
+            Text(
+              'Times shown in $zone',
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: Colors.white.withValues(alpha: 0.8),
+              ),
+            ),
+          ],
           vSpace(16),
           Container(
             padding: EdgeInsets.all(12.w),

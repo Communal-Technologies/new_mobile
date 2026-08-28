@@ -91,11 +91,14 @@ class _FineConfirmPaymentScreenState extends State<FineConfirmPaymentScreen> {
         setState(() => _authMode = _AuthMode.pin);
         return;
       }
-      final enrolled = await _biometricSigner.isEnrolled();
+      // Not isEnrolled(): a sign-in-only enrollment and an account with no
+      // transaction PIN both fail at the marker, and the PIN is what biometrics
+      // stands in for, so neither may skip the keypad.
+      final canAuthorize = await _biometricSigner.canAuthorizePayments();
       if (!mounted) return;
       setState(
         () => _authMode =
-            enrolled ? _AuthMode.biometric : _AuthMode.pin,
+            canAuthorize ? _AuthMode.biometric : _AuthMode.pin,
       );
     } catch (e) {
       if (!mounted) return;

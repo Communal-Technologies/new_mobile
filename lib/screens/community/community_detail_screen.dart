@@ -403,9 +403,40 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
               ],
             ],
           ),
+          if (_isMember) ...[
+            vSpace(4),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => _handleLeave(location),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFD32F2F),
+                  padding: EdgeInsets.symmetric(horizontal: 4.w),
+                  visualDensity: VisualDensity.compact,
+                ),
+                icon: Icon(Icons.logout, size: 18.sp),
+                label: Text(
+                  'Leave this community',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  // Membership is only dropped once an administrator approves the closure, so
+  // returning from the flow can't flip _isMember — it's re-read anyway in case
+  // the member was removed while they were in there.
+  Future<void> _handleLeave(CommunityLocation location) async {
+    await context.pushNamed('leave-cooperative', extra: location);
+    if (!mounted) return;
+    await _resolveMembership();
   }
 
   Widget _buildHeaderMeta({required IconData icon, required String label}) {

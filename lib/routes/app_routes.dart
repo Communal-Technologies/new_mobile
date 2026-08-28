@@ -43,6 +43,9 @@ import 'package:communal_mobile/screens/community/community_screen.dart';
 import 'package:communal_mobile/screens/community/community_map_screen.dart';
 import 'package:communal_mobile/screens/community/community_detail_screen.dart';
 import 'package:communal_mobile/screens/community/community_application_status_screen.dart';
+import 'package:communal_mobile/screens/community/leave_cooperative_screen.dart';
+import 'package:communal_mobile/screens/community/leave_cooperative_pin_screen.dart';
+import 'package:communal_mobile/screens/community/leave_cooperative_submitted_screen.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_details.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_locations.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
@@ -446,6 +449,51 @@ final GoRouter appRouter = GoRouter(
         }
         final detail = SampleCommunityDetails.forLocation(extra);
         return CommunityApplicationStatusScreen(detail: detail);
+      },
+    ),
+    GoRoute(
+      path: '/leave-cooperative',
+      name: 'leave-cooperative',
+      redirect: (context, state) {
+        if (state.extra is CommunityLocation) return null;
+        return '/community';
+      },
+      builder: (context, state) {
+        final extra = state.extra;
+        if (extra is! CommunityLocation) {
+          return _MissingExtraRedirect(target: '/community');
+        }
+        return LeaveCooperativeScreen(location: extra);
+      },
+    ),
+    GoRoute(
+      path: '/leave-cooperative/pin',
+      name: 'leave-cooperative-pin',
+      redirect: (context, state) {
+        if (state.extra is LeaveCooperativeRequest) return null;
+        return '/community';
+      },
+      builder: (context, state) {
+        final extra = state.extra;
+        if (extra is! LeaveCooperativeRequest) {
+          return _MissingExtraRedirect(target: '/community');
+        }
+        return LeaveCooperativePinScreen(request: extra);
+      },
+    ),
+    GoRoute(
+      path: '/leave-cooperative/submitted',
+      name: 'leave-cooperative-submitted',
+      redirect: (context, state) {
+        if (state.extra is CommunityLocation) return null;
+        return '/community';
+      },
+      builder: (context, state) {
+        final extra = state.extra;
+        if (extra is! CommunityLocation) {
+          return _MissingExtraRedirect(target: '/community');
+        }
+        return LeaveCooperativeSubmittedScreen(location: extra);
       },
     ),
     GoRoute(

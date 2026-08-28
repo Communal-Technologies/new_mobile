@@ -110,9 +110,12 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
         setState(() => _authMode = _AuthMode.pin);
         return;
       }
-      final enrolled = await _biometricSigner.isEnrolled();
+      // Enrolled is not enough — a sign-in-only enrollment, or an account with no
+      // transaction PIN, cannot mint the marker loans-svc spends, so those members
+      // get the PIN prompt they would have been bounced to anyway.
+      final canAuthorize = await _biometricSigner.canAuthorizePayments();
       if (!mounted) return;
-      if (enrolled) {
+      if (canAuthorize) {
         setState(() => _authMode = _AuthMode.biometric);
       } else {
         setState(() => _authMode = _AuthMode.pin);

@@ -130,6 +130,10 @@ class ApiEndpoints {
       '$_v1/members/account/freeze-status';
   static const String membersAccountClosureSubmit =
       '$_coopV2/members/account-closure/submit';
+  // Read before the submit above: the position the cooperative will settle, plus
+  // whatever stops the member asking at all. Takes ?cooperative=.
+  static const String membersAccountClosurePreview =
+      '$_coopV2/members/account-closure/preview';
   static const String membersTransactionStatementExport =
       '$_txnV2/members/statement/export';
 

@@ -57,7 +57,11 @@ class _BiometricActionButtonState extends State<BiometricActionButton> {
       final shared = await SharedPreferences.getInstance();
       if (!BiometricPrefs(shared).transactionsEnabled) return;
       if (!await BiometricService.isBiometricAvailable()) return;
-      if (!await _signer.isEnrolled()) return;
+      // Enrolled is not enough: a login-only enrollment, or an account with no
+      // transaction PIN, cannot authorise this action, and the server would refuse
+      // the challenge. Drawing nothing leaves the PIN field as the only path, which
+      // is the right one in both cases.
+      if (!await _signer.canAuthorizePayments()) return;
       final method = await BiometricService.getBiometricName();
       if (!mounted) return;
       setState(() {

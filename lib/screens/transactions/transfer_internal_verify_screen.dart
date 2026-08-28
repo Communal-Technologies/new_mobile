@@ -77,9 +77,12 @@ class _TransferInternalVerifyScreenState
   bool _submitting = false;
 
   /// Whether the biometric shortcut key should be shown — true only when
-  /// transactions-biometric is enabled, the device has hardware enrolled, and
-  /// this account has a registered signing key. Resolved once on mount so the
-  /// keypad doesn't show a fingerprint that just errors when tapped.
+  /// transactions-biometric is enabled, the device has hardware enrolled, and the
+  /// backend says this device's key may authorise a payment (which requires both a
+  /// factor-verified enrollment and a transaction PIN on the account, since
+  /// biometrics is the alternative to that PIN, not a replacement for it). Resolved
+  /// once on mount so the keypad doesn't show a fingerprint that just errors when
+  /// tapped.
   bool _biometricAvailable = false;
 
   @override
@@ -93,7 +96,7 @@ class _TransferInternalVerifyScreenState
       final shared = await shared_prefs.SharedPreferences.getInstance();
       final enabled = BiometricPrefs(shared).transactionsEnabled;
       final hw = enabled && await BiometricService.isBiometricAvailable();
-      final available = hw && await _biometricSigner.isEnrolled();
+      final available = hw && await _biometricSigner.canAuthorizePayments();
       if (mounted && available != _biometricAvailable) {
         setState(() => _biometricAvailable = available);
       }
@@ -162,11 +165,14 @@ class _TransferInternalVerifyScreenState
         );
         return;
       }
-      final enrolled = await _biometricSigner.isEnrolled();
-      if (!enrolled) {
+      final status = await _biometricSigner.fetchStatus();
+      if (status?.canAuthorize != true) {
         AppToast.error(
-          'Biometric authentication is not enabled for this account. '
-          'Set it up in Settings → Biometric Authentication.',
+          status?.hasSecurityPin == false
+              ? 'Set your transaction PIN first — biometrics stands in for it, '
+                    'so it cannot authorise a transfer on its own.'
+              : 'Biometric authentication is not enabled for this account. '
+                    'Set it up in Settings → Biometric Authentication.',
         );
         return;
       }

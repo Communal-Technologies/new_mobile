@@ -5,4 +5,7 @@
          so Android paints the small notification icon's accent in our brand colour
          in the expanded notification card. -->
     <color name="colorPrimary">#742CE7</color>
+    <!-- The Android 12+ launch window's ground. Black, which is what the platform
+         picked for this app before values-v31/styles.xml said so out loud. -->
+    <color name="launch_ground">#000000</color>
 </resources>

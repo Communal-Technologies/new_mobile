@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The mark Android 12+ centres on the launch window: the purple mark straight onto
+     black, with no plate behind it, so no icon mask is applied.
+     The transparent canvas is the padding. The platform crops to the middle 192 of
+     the 288dp canvas and scales that back up, so what lands on screen is a little
+     over three times the dp declared here — 55dp measures 174px on a 2x phone.
+     The collector and Meet declare the same 55dp, which is the point of declaring
+     it at all: before this the platform sized the launch mark from the launcher
+     icon, so refitting the icon moved the launch screen with it. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <size android:width="288dp" android:height="288dp" />
+            <solid android:color="@android:color/transparent" />
+        </shape>
+    </item>
+    <item
+        android:width="55dp"
+        android:height="55dp"
+        android:drawable="@drawable/brand_mark_purple"
+        android:gravity="center" />
+</layer-list>

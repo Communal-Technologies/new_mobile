@@ -19,10 +19,15 @@ from PIL import Image
 
 FILE = "assets/images/launcher_icon_foreground.png"
 
-# The mark's larger dimension as a share of the canvas. 0.58 of 108dp is 87% of
+# The mark's larger dimension as a share of the canvas. 0.52 of 108dp is 78% of
 # the 72dp the mask leaves visible, which fills the icon without pushing the
 # mark's own bulk into the corners a round mask cuts off.
-TARGET = 0.58
+#
+# This is the whole size, which is only true because all three pubspecs set
+# adaptive_icon_foreground_inset: 0. The generator's default inset is 16%, and it
+# is applied on top of whatever this file produces — so with the default, a mark
+# measured here at 78% of the icon lands at 53% on the phone.
+TARGET = 0.52
 
 
 def refit(path, target):

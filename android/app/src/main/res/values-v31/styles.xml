@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12 took the launch window away from windowBackground and gave it to the
+     platform splash screen. Left undeclared, as this app was, the platform picks both
+     the ground and the icon for you: it draws the adaptive launcher foreground at a
+     size of its own, so refitting the launcher icon moved the launch screen with it.
+     These pin what the app already showed — black, purple mark — at a size stated in
+     dp, which the collector and Meet declare too. No plate behind the mark: a plate is
+     filled to the launcher's icon mask, which is the device's shape to choose. -->
+<resources>
+    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:windowSplashScreenBackground">@color/launch_ground</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_mark</item>
+    </style>
+    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">?android:colorBackground</item>
+    </style>
+</resources>

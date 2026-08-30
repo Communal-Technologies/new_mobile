@@ -41,7 +41,8 @@ enum AppUpdateOutcome {
 class AppUpdateService {
   const AppUpdateService._();
 
-  /// Play's own priority scale is 0-5; the Play Console sets it per release.
+  /// Play's own priority scale is 0-5, carried on the release itself and only
+  /// settable through the Play Developer API — the Console has no field for it.
   /// At or above this we stop asking and let Play take the screen, which is
   /// how a security fix reaches a device that keeps declining.
   static const int _forceFromPriority = 4;

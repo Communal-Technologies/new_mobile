@@ -103,13 +103,22 @@ class Money {
   /// Localized display string with thousands separators and the currency symbol.
   ///   Money(2500000, 'NGN').format()  // "₦25,000.00"
   ///   Money(1500, 'JPY').format()     // "¥1,500"
-  String format({bool symbol = true, String locale = 'en_US'}) {
+  ///
+  /// Pass [display] to write it the way the cooperative asked — its own symbol,
+  /// on the side it chose ("25,000.00 CHF"). Without one the symbol goes in
+  /// front, which is what most currencies and every legacy call site want.
+  String format({
+    bool symbol = true,
+    String locale = 'en_US',
+    CurrencyDisplay? display,
+  }) {
     final decimals = decimalsFor(currency);
     final pattern = decimals == 0 ? '#,##0' : '#,##0.${'0' * decimals}';
     final factor = factorFor(currency);
     final value = amountMinor / factor;
     final formatted = NumberFormat(pattern, locale).format(value);
     if (!symbol) return formatted;
+    if (display != null) return display.forCurrency(currency).adorn(formatted);
     final sym = currencySymbolForCode(currency);
     final needsSpace = RegExp(r'^[A-Za-z]+').hasMatch(sym);
     return '$sym${needsSpace ? ' ' : ''}$formatted';

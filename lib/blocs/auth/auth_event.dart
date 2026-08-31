@@ -53,16 +53,33 @@ class AuthCooperativeSwitched extends AuthEvent {
   final String? cooperativeName;
   final String? cooperativeLogoUrl;
 
+  /// How the cooperative being switched TO writes money, off its membership row.
+  /// Empty means it never chose, which falls back to the wallet's currency —
+  /// carrying it here is what changes the symbol on the figures on a switch.
+  final String currency;
+  final String currencySymbol;
+  final String currencySymbolPosition;
+
   const AuthCooperativeSwitched({
     required this.cooperativeId,
     required this.ledgerNumber,
     this.cooperativeName,
     this.cooperativeLogoUrl,
+    this.currency = '',
+    this.currencySymbol = '',
+    this.currencySymbolPosition = '',
   });
 
   @override
-  List<Object?> get props =>
-      [cooperativeId, ledgerNumber, cooperativeName, cooperativeLogoUrl];
+  List<Object?> get props => [
+        cooperativeId,
+        ledgerNumber,
+        cooperativeName,
+        cooperativeLogoUrl,
+        currency,
+        currencySymbol,
+        currencySymbolPosition,
+      ];
 }
 
 class CheckAuthStatus extends AuthEvent {}

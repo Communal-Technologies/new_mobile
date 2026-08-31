@@ -59,10 +59,11 @@ void main() async {
   );
 
   // Lock to portrait only — fire-and-forget; the `.then` chains the
-  // runApp call so we don't await this at top level.
+  // runApp call so we don't await this at top level. Upright alone:
+  // portraitUp + portraitDown maps to SCREEN_ORIENTATION_USER_PORTRAIT on
+  // Android, which hands the 180° flip back to the device's auto-rotate.
   unawaited(SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
   ]).then((_) {
     // Defer push-notification setup until after the first frame
     // paints so Firebase.initializeApp doesn't sit on the critical

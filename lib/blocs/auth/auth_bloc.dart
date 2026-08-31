@@ -414,11 +414,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       ledgerNumber: ledger,
       cooperativeName: event.cooperativeName?.trim(),
       cooperativeLogoUrl: event.cooperativeLogoUrl?.trim(),
+      currency: event.currency.trim(),
+      currencySymbol: event.currencySymbol.trim(),
+      currencySymbolPosition: event.currencySymbolPosition.trim(),
     );
 
     // Persist so the choice survives a cold start (the full user is
     // re-fetched, not restored, so this is re-applied in _onAppStarted).
-    await tokenManager.setActiveCooperative(coopId, ledger);
+    await tokenManager.setActiveCooperative(
+      coopId,
+      ledger,
+      currency: event.currency.trim(),
+      currencySymbol: event.currencySymbol.trim(),
+      currencySymbolPosition: event.currencySymbolPosition.trim(),
+    );
 
     emit(AuthAuthenticated(
       userId: s.userId,
@@ -443,6 +452,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     return user.setActiveCooperative(
       cooperativeId: saved.cooperativeId,
       ledgerNumber: saved.ledgerNumber,
+      currency: saved.currency,
+      currencySymbol: saved.currencySymbol,
+      currencySymbolPosition: saved.currencySymbolPosition,
     );
   }
 

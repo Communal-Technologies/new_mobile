@@ -296,6 +296,9 @@ class _CommunityScreenState extends State<CommunityScreen>
       ledgerNumber: m.ledgerNumber,
       cooperativeName: m.cooperativeName,
       cooperativeLogoUrl: m.logoUrl,
+      currency: m.currency,
+      currencySymbol: m.currencySymbol,
+      currencySymbolPosition: m.currencySymbolPosition,
     ));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Switched to ${m.cooperativeName}.')),

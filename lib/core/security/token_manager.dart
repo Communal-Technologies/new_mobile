@@ -33,6 +33,11 @@ class TokenManager {
   static const String _kExpKey = 'access_token_exp';
   static const String _kActiveCoopKey = 'active_cooperative_id';
   static const String _kActiveLedgerKey = 'active_ledger_number';
+  static const String _kActiveCurrencyKey = 'active_cooperative_currency';
+  static const String _kActiveCurrencySymbolKey =
+      'active_cooperative_currency_symbol';
+  static const String _kActiveCurrencyPositionKey =
+      'active_cooperative_currency_symbol_position';
 
   /// Window before [_accessExpEpochSeconds] expires within which we treat
   /// the token as "about to expire" and refresh proactively. Tuned to be
@@ -127,28 +132,57 @@ class TokenManager {
     await _storage.delete(key: _kExpKey);
     await _storage.delete(key: _kActiveCoopKey);
     await _storage.delete(key: _kActiveLedgerKey);
+    await _storage.delete(key: _kActiveCurrencyKey);
+    await _storage.delete(key: _kActiveCurrencySymbolKey);
+    await _storage.delete(key: _kActiveCurrencyPositionKey);
   }
 
   /// Persists the client-side active-cooperative selection so a cooperative
   /// switch survives a cold start (the full [UserModel] is re-fetched, not
   /// restored, so without this the app reverts to the backend's default coop).
+  ///
+  /// The currency trio rides along for the same reason: the re-fetched session
+  /// carries the BACKEND's default cooperative's currency, so without it a cold
+  /// start would print the wrong cooperative's symbol on the right figures.
   Future<void> setActiveCooperative(
-      String cooperativeId, String ledgerNumber) async {
+    String cooperativeId,
+    String ledgerNumber, {
+    String currency = '',
+    String currencySymbol = '',
+    String currencySymbolPosition = '',
+  }) async {
     if (cooperativeId.isEmpty || ledgerNumber.isEmpty) return;
     await _storage.write(key: _kActiveCoopKey, value: cooperativeId);
     await _storage.write(key: _kActiveLedgerKey, value: ledgerNumber);
+    await _storage.write(key: _kActiveCurrencyKey, value: currency);
+    await _storage.write(key: _kActiveCurrencySymbolKey, value: currencySymbol);
+    await _storage.write(
+        key: _kActiveCurrencyPositionKey, value: currencySymbolPosition);
   }
 
   /// Returns the persisted active-cooperative selection, or null when none was
   /// set (fresh install / never switched).
-  Future<({String cooperativeId, String ledgerNumber})?>
-      readActiveCooperative() async {
+  Future<
+      ({
+        String cooperativeId,
+        String ledgerNumber,
+        String currency,
+        String currencySymbol,
+        String currencySymbolPosition,
+      })?> readActiveCooperative() async {
     final coop = await _storage.read(key: _kActiveCoopKey);
     final ledger = await _storage.read(key: _kActiveLedgerKey);
     if (coop == null || coop.isEmpty || ledger == null || ledger.isEmpty) {
       return null;
     }
-    return (cooperativeId: coop, ledgerNumber: ledger);
+    return (
+      cooperativeId: coop,
+      ledgerNumber: ledger,
+      currency: await _storage.read(key: _kActiveCurrencyKey) ?? '',
+      currencySymbol: await _storage.read(key: _kActiveCurrencySymbolKey) ?? '',
+      currencySymbolPosition:
+          await _storage.read(key: _kActiveCurrencyPositionKey) ?? '',
+    );
   }
 
   /// Clears only the active-cooperative selection (e.g. the member left that
@@ -156,6 +190,9 @@ class TokenManager {
   Future<void> clearActiveCooperative() async {
     await _storage.delete(key: _kActiveCoopKey);
     await _storage.delete(key: _kActiveLedgerKey);
+    await _storage.delete(key: _kActiveCurrencyKey);
+    await _storage.delete(key: _kActiveCurrencySymbolKey);
+    await _storage.delete(key: _kActiveCurrencyPositionKey);
   }
 
   /// `true` when the current access token will expire within

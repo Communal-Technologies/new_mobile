@@ -96,6 +96,9 @@ class _CooperativeSidebarState extends State<CooperativeSidebar> {
       ledgerNumber: m.ledgerNumber,
       cooperativeName: m.cooperativeName,
       cooperativeLogoUrl: m.logoUrl,
+      currency: m.currency,
+      currencySymbol: m.currencySymbol,
+      currencySymbolPosition: m.currencySymbolPosition,
     ));
     Navigator.of(context).pop();
     WidgetsBinding.instance.addPostFrameCallback((_) {

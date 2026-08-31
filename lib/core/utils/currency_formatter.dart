@@ -1,12 +1,20 @@
+import 'app_currency.dart';
 import 'money.dart';
 
 /// Currency-aware money formatter. Prefer this over the deprecated
 /// `formatNairaFromKobo*` helpers below, which hardcode NGN.
 class CurrencyFormatter {
-  /// Format an integer-minor amount for [currency] with the symbol prefix.
+  /// Format an integer-minor amount for [currency] with its symbol.
   /// Always shows the canonical number of decimals (₦25,000.00, ¥1,500, …).
-  static String formatFromMinor(int amountMinor, String currency) =>
-      Money(amountMinor, currency).format();
+  ///
+  /// Pass the active cooperative's [display] so the symbol is the one it chose
+  /// and sits on the side it chose.
+  static String formatFromMinor(
+    int amountMinor,
+    String currency, {
+    CurrencyDisplay? display,
+  }) =>
+      Money(amountMinor, currency).format(display: display);
 
   /// Same as [formatFromMinor] but without the currency symbol.
   static String formatFromMinorNoSymbol(int amountMinor, String currency) =>

@@ -40,10 +40,10 @@ String? checkTransferAgainstTierLimits({
 
   final cap = current.dailyTransactionLimitKobo;
   if (cap > 0 && amountMinor > cap) {
-    final symbol = currencySymbolForCode(currency);
-    final formatted = formatMinor(cap, currency);
-    return 'Amount exceeds your ${current.label} daily limit of '
-        '$symbol$formatted.';
+    final limit = activeCurrency.display
+        .forCurrency(currency)
+        .adorn(formatMinor(cap, currency));
+    return 'Amount exceeds your ${current.label} daily limit of $limit.';
   }
 
   return null;

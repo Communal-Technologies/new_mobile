@@ -116,6 +116,12 @@ class ApiEndpoints {
   static String membersFetchUserDetails(String id) =>
       '$_v1/members/fetch-user-details/$id';
   static const String membersUpdateProfile = '$_v1/members/update-profile';
+  // The sign-in email and phone are NOT part of update-profile — that endpoint
+  // refuses a changed one. They move in two steps: the PIN authorises the change
+  // and a code sent to the new value confirms it before anything is written.
+  static const String membersContactChange = '$_v1/members/contact/change';
+  static const String membersContactChangeVerify =
+      '$_v1/members/contact/change/verify';
   static const String membersUploadAvatar = '$_v1/members/profile/avatar';
   // Wallet freeze is authsvc's: it owns `wallets` and the Anchor freeze call,
   // and freezing one has nothing to do with any cooperative. Account closure

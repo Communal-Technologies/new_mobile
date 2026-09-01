@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 
+/// The name, date of birth and occupation.
+///
+/// The email address and phone number are deliberately not here. They are the
+/// account's credentials rather than details about the member, so `update-profile`
+/// refuses a changed one and they move through SignInDetailsSection instead — with
+/// the transaction PIN and a code sent to the new value.
 class PersonalInfoFormSection extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController firstNameController;
   final TextEditingController middleNameController;
   final TextEditingController lastNameController;
-  final TextEditingController emailController;
-  final TextEditingController phoneController;
   final TextEditingController dobController;
   final TextEditingController occupationController;
   final VoidCallback onSave;
@@ -20,8 +24,6 @@ class PersonalInfoFormSection extends StatelessWidget {
     required this.firstNameController,
     required this.middleNameController,
     required this.lastNameController,
-    required this.emailController,
-    required this.phoneController,
     required this.dobController,
     required this.occupationController,
     required this.onSave,
@@ -97,35 +99,6 @@ class PersonalInfoFormSection extends StatelessWidget {
             _FormTextField(
               controller: middleNameController,
               label: 'Middle Name (optional)',
-            ),
-            vSpace(16),
-            _FormTextFieldWithIcon(
-              controller: emailController,
-              label: 'Email Address',
-              icon: Icons.email_outlined,
-              keyboardType: TextInputType.emailAddress,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Email is required';
-                }
-                if (!value.contains('@')) {
-                  return 'Please enter a valid email';
-                }
-                return null;
-              },
-            ),
-            vSpace(16),
-            _FormTextFieldWithIcon(
-              controller: phoneController,
-              label: 'Phone Number',
-              icon: Icons.phone_outlined,
-              keyboardType: TextInputType.phone,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Phone number is required';
-                }
-                return null;
-              },
             ),
             vSpace(16),
             _DateOfBirthField(
@@ -224,21 +197,18 @@ class _FormTextFieldWithIcon extends StatelessWidget {
   final String label;
   final IconData icon;
   final String? Function(String?)? validator;
-  final TextInputType? keyboardType;
 
   const _FormTextFieldWithIcon({
     required this.controller,
     required this.label,
     required this.icon,
     this.validator,
-    this.keyboardType,
   });
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
       controller: controller,
-      keyboardType: keyboardType,
       validator: validator,
       decoration: InputDecoration(
         labelText: label,

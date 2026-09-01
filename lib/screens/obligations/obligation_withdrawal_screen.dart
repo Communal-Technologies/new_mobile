@@ -9,9 +9,10 @@ import 'package:communal_mobile/data/repositories/member_obligations_repository.
 import 'package:communal_mobile/injection.dart';
 import 'package:flutter/material.dart';
 import 'package:communal_mobile/core/utils/amount_input_formatter.dart';
+import 'package:communal_mobile/core/utils/app_currency.dart';
+import 'package:communal_mobile/core/utils/money.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:intl/intl.dart';
 
 class ObligationWithdrawalScreen extends StatefulWidget {
   const ObligationWithdrawalScreen({super.key, required this.obligation});
@@ -203,12 +204,8 @@ class _ObligationWithdrawalScreenState
     return result ?? false;
   }
 
-  String _formatMinor(int minor, String currency) {
-    final major = minor / 100;
-    final fmt = NumberFormat('#,##0.##', 'en_US');
-    final symbol = currency == 'NGN' ? '₦' : currency;
-    return '$symbol${fmt.format(major)}';
-  }
+  String _formatMinor(int minor, String currency) =>
+      Money(minor, currency).format();
 
   @override
   Widget build(BuildContext context) {
@@ -355,7 +352,8 @@ class _AmountForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final symbol = obligation.currency == 'NGN' ? '₦' : obligation.currency;
+    final display = activeCurrency.display.forCurrency(obligation.currency);
+    final onLeft = display.position == CurrencySymbolPosition.left;
 
     return Container(
       padding: EdgeInsets.all(16.w),
@@ -388,7 +386,8 @@ class _AmountForm extends StatelessWidget {
               color: theme.colorScheme.onSurface,
             ),
             decoration: InputDecoration(
-              prefixText: '$symbol ',
+              prefixText: onLeft ? '${display.symbol} ' : null,
+              suffixText: onLeft ? null : ' ${display.symbol}',
               prefixStyle: TextStyle(
                 fontSize: 22.sp,
                 fontWeight: FontWeight.w600,

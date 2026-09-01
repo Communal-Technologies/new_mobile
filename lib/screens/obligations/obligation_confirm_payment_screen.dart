@@ -601,7 +601,8 @@ class _ObligationConfirmPaymentScreenState
       currency: widget.obligation.currency,
     );
 
-    final currencySymbol = currencySymbolForUser(authState.user);
+    final currencySymbol =
+        activeCurrency.display.forCurrency(widget.obligation.currency).symbol;
     final currencyCode = resolveCurrencyCode(authState.user);
     final narration = 'Obligation: ${widget.obligation.title}';
 
@@ -641,6 +642,7 @@ class _ObligationConfirmPaymentScreenState
           counterpartyAccount: cash.accountNumber,
           amount: amountMajor,
           currencySymbol: currencySymbol,
+          currencyCode: widget.obligation.currency,
           transactionType: route.isBook ? 'Transfer' : 'NIP Transfer',
           dateTime: DateTime.now(),
           sessionId: result.transferId,
@@ -690,7 +692,8 @@ class _ObligationConfirmPaymentScreenState
     );
 
     if (!mounted) return;
-    final currencySymbol = currencySymbolForUser(authState.user);
+    final currencySymbol =
+        activeCurrency.display.forCurrency(widget.obligation.currency).symbol;
     final receiptReference = _idempotencyKey.length > 12
         ? _idempotencyKey.substring(0, 12)
         : _idempotencyKey;
@@ -711,6 +714,7 @@ class _ObligationConfirmPaymentScreenState
           counterpartyAccount: widget.obligation.accountCode,
           amount: amountMajor,
           currencySymbol: currencySymbol,
+          currencyCode: widget.obligation.currency,
           transactionType: 'Obligation transfer',
           dateTime: DateTime.now(),
           sessionId: receiptReference,

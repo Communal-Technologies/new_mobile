@@ -226,7 +226,7 @@ class MemberObligationsRepository {
         }
       }
 
-      final fallbackCurrency = resolveCurrencyCode(user);
+      final fallbackCurrency = cooperativeCurrencyCode(user);
 
       return rawObligations
           .whereType<Map>()
@@ -260,7 +260,7 @@ class MemberObligationsRepository {
       final data = response.data;
       final raw = data is Map ? data['fines'] : null;
       if (raw is! List) return const [];
-      final fallbackCurrency = resolveCurrencyCode(user);
+      final fallbackCurrency = cooperativeCurrencyCode(user);
       return Obligation.parseFines(raw, fallbackCurrency);
     } on DioException catch (e) {
       final data = e.response?.data;

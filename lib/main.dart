@@ -19,6 +19,7 @@ import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
 import 'package:communal_mobile/cubits/security/security_cubit.dart';
 import 'package:communal_mobile/core/services/push_notification_service.dart';
 import 'package:communal_mobile/core/services/screenshot_service.dart';
+import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/update/app_update_watcher.dart';
 import 'package:communal_mobile/core/widgets/connectivity_listener.dart';
 import 'package:communal_mobile/core/widgets/security_wrapper.dart';
@@ -162,6 +163,11 @@ class MyApp extends StatelessWidget {
                       final resolved = state is AuthAuthenticated ||
                           state is AuthUnauthenticated;
                       final user = state is AuthAuthenticated ? state.user : null;
+                      // The active cooperative's currency, for the money labels
+                      // the data models build with no member in scope. Bridged
+                      // here so a cooperative switch changes the symbol at the
+                      // same moment it changes the figures.
+                      activeCurrency.update(user);
                       appAuthStatusNotifier.update(
                         isAuthenticated: state is AuthAuthenticated,
                         isResolved: resolved,

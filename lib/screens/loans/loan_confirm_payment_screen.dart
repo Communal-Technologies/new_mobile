@@ -554,7 +554,8 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
       currency: widget.loan.currency,
     );
 
-    final currencySymbol = currencySymbolForUser(authState.user);
+    final currencySymbol =
+        activeCurrency.display.forCurrency(widget.loan.currency).symbol;
     final currencyCode = resolveCurrencyCode(authState.user);
     final narration = 'Loan re-payment: ${widget.loan.displayLabel}';
 
@@ -589,6 +590,7 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
           counterpartyAccount: cash.accountNumber,
           amount: amountMajor,
           currencySymbol: currencySymbol,
+          currencyCode: widget.loan.currency,
           transactionType: 'Loan re-payment',
           dateTime: DateTime.now(),
           sessionId: result.transferId,
@@ -636,7 +638,8 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
     );
 
     if (!mounted) return;
-    final currencySymbol = currencySymbolForUser(authState.user);
+    final currencySymbol =
+        activeCurrency.display.forCurrency(widget.loan.currency).symbol;
     final receiptReference = _idempotencyKey.length > 12
         ? _idempotencyKey.substring(0, 12)
         : _idempotencyKey;
@@ -664,6 +667,7 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
           counterpartyAccount: widget.loan.referenceId,
           amount: amountMajor,
           currencySymbol: currencySymbol,
+          currencyCode: widget.loan.currency,
           transactionType: 'Loan re-payment',
           dateTime: DateTime.now(),
           sessionId: receiptReference,

@@ -74,7 +74,7 @@ class LoanRepository {
       final data = _unwrap(response.data);
       final raw = data is Map ? data['loans'] : null;
       if (raw is! List) return const [];
-      final fallback = resolveCurrencyCode(user);
+      final fallback = cooperativeCurrencyCode(user);
       return raw
           .whereType<Map>()
           .map(
@@ -281,7 +281,7 @@ class LoanRepository {
       // monolith used `requests`. Accept either.
       final raw = data is Map ? (data['approvals'] ?? data['requests']) : null;
       if (raw is! List) return const [];
-      final fallback = resolveCurrencyCode(user);
+      final fallback = cooperativeCurrencyCode(user);
       return raw
           .whereType<Map>()
           .map(

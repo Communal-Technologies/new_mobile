@@ -529,7 +529,8 @@ class _FineConfirmPaymentScreenState extends State<FineConfirmPaymentScreen> {
       currency: widget.fine.currency,
     );
 
-    final currencySymbol = currencySymbolForUser(authState.user);
+    final currencySymbol =
+        activeCurrency.display.forCurrency(widget.fine.currency).symbol;
     final currencyCode = resolveCurrencyCode(authState.user);
     final narration = 'Fine: ${widget.fine.description}';
 
@@ -565,6 +566,7 @@ class _FineConfirmPaymentScreenState extends State<FineConfirmPaymentScreen> {
           counterpartyAccount: cash.accountNumber,
           amount: amountMajor,
           currencySymbol: currencySymbol,
+          currencyCode: widget.fine.currency,
           transactionType: route.isBook ? 'Transfer' : 'NIP Transfer',
           dateTime: DateTime.now(),
           sessionId: result.transferId,
@@ -606,7 +608,8 @@ class _FineConfirmPaymentScreenState extends State<FineConfirmPaymentScreen> {
     );
 
     if (!mounted) return;
-    final currencySymbol = currencySymbolForUser(authState.user);
+    final currencySymbol =
+        activeCurrency.display.forCurrency(widget.fine.currency).symbol;
     final receiptReference = _idempotencyKey.length > 12
         ? _idempotencyKey.substring(0, 12)
         : _idempotencyKey;
@@ -628,6 +631,7 @@ class _FineConfirmPaymentScreenState extends State<FineConfirmPaymentScreen> {
           counterpartyAccount: widget.fine.id,
           amount: amountMajor,
           currencySymbol: currencySymbol,
+          currencyCode: widget.fine.currency,
           transactionType: 'Fine payment',
           dateTime: DateTime.now(),
           sessionId: receiptReference,

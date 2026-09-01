@@ -131,6 +131,34 @@ CurrencyDisplay cooperativeCurrencyDisplay(UserModel user) => CurrencyDisplay(
 CurrencyDisplay walletCurrencyDisplay(UserModel user) =>
     cooperativeCurrencyDisplay(user).forCurrency(resolveCurrencyCode(user));
 
+/// The active cooperative's money display, for code that formats an amount with
+/// no [UserModel] in scope.
+///
+/// Most money labels are built inside the data models (`obligation.amountLabel`,
+/// `installment.amountLabel`), which are parsed from JSON and never see a user —
+/// so the cooperative's choice has to reach them some other way. `main.dart`
+/// writes this from the auth state on every transition, the same bridge
+/// `appAuthStatusNotifier` uses for the router; a cooperative switch emits a new
+/// state, so the symbol changes together with the figures.
+///
+/// Screens that do have the user should prefer [cooperativeCurrencyDisplay] —
+/// this is the fallback for everything else, and defaults to naira until a
+/// member is signed in.
+class ActiveCurrency {
+  CurrencyDisplay _display = const CurrencyDisplay(code: 'NGN', symbol: '₦');
+
+  CurrencyDisplay get display => _display;
+
+  /// Pass the signed-in member, or null on sign-out to fall back to naira.
+  void update(UserModel? user) {
+    _display = user == null
+        ? const CurrencyDisplay(code: 'NGN', symbol: '₦')
+        : cooperativeCurrencyDisplay(user);
+  }
+}
+
+final ActiveCurrency activeCurrency = ActiveCurrency();
+
 /// Localized currency symbol for [code] (e.g. NGN → ₦).
 String currencySymbolForCode(String currencyCode) {
   final code = currencyCode.trim().toUpperCase();

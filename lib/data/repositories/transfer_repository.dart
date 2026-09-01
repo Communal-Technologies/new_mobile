@@ -13,6 +13,7 @@ class TransferSuggestion {
     required this.accountNumber,
     required this.accountName,
     this.nipCode,
+    this.logoUrl,
   });
 
   final String source; // internal | external
@@ -22,6 +23,10 @@ class TransferSuggestion {
   final String accountNumber;
   final String accountName;
   final String? nipCode;
+
+  /// Absolute URL to the bank's mark, or null when we hold none — see
+  /// [BrandLogo], which draws initials rather than expecting a placeholder.
+  final String? logoUrl;
 
   bool get isInternal => source.trim().toLowerCase() == 'internal';
   bool get isExternal => source.trim().toLowerCase() == 'external';
@@ -35,15 +40,24 @@ class TransferSuggestion {
       accountNumber: json['accountNumber']?.toString() ?? '',
       accountName: json['accountName']?.toString() ?? '',
       nipCode: json['nipCode']?.toString(),
+      logoUrl: json['logo_url']?.toString(),
     );
   }
 }
 
 class TransferBank {
-  const TransferBank({required this.name, required this.nipCode});
+  const TransferBank({
+    required this.name,
+    required this.nipCode,
+    this.logoUrl,
+  });
 
   final String name;
   final String nipCode;
+
+  /// Absolute URL to the bank's mark. Absent for most of the 618 banks Anchor
+  /// lists, which is why [BrandLogo] treats the monogram as a normal rendering.
+  final String? logoUrl;
 
   factory TransferBank.fromJson(Map<String, dynamic> json) {
     // Two shapes in the wild:
@@ -70,7 +84,11 @@ class TransferBank {
           code ??
           meta['cbnCode']?.toString() ??
           '';
-      return TransferBank(name: label, nipCode: nip);
+      return TransferBank(
+        name: label,
+        nipCode: nip,
+        logoUrl: json['logo_url']?.toString(),
+      );
     }
 
     final attr = (json['attributes'] is Map)
@@ -79,6 +97,7 @@ class TransferBank {
     return TransferBank(
       name: attr['name']?.toString() ?? '',
       nipCode: attr['nipCode']?.toString() ?? attr['cbnCode']?.toString() ?? '',
+      logoUrl: json['logo_url']?.toString(),
     );
   }
 }
@@ -209,6 +228,7 @@ class TransferBeneficiary {
     required this.bankName,
     required this.type,
     this.nipCode,
+    this.logoUrl,
   });
 
   final String accountId;
@@ -217,6 +237,10 @@ class TransferBeneficiary {
   final String bankName;
   final String type; // internal | external
   final String? nipCode;
+
+  /// Absolute URL to the bank's mark, or null when we hold none — see
+  /// [BrandLogo], which draws initials rather than expecting a placeholder.
+  final String? logoUrl;
 
   bool get isInternal => type.trim().toLowerCase() == 'internal';
 
@@ -228,6 +252,7 @@ class TransferBeneficiary {
       bankName: json['bank_name']?.toString() ?? '',
       type: json['type']?.toString() ?? '',
       nipCode: json['nip_code']?.toString(),
+      logoUrl: json['logo_url']?.toString(),
     );
   }
 }

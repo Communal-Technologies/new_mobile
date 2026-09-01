@@ -291,6 +291,7 @@ class _DataPurchaseScreenState extends State<DataPurchaseScreen> {
             for (final p in _providers)
               BillBrandChip(
                 label: p.name,
+                logoUrl: p.logoUrl,
                 selected: _selectedProvider?.id == p.id,
                 accent: const Color(0xFF2BA6FF),
                 onTap: () => _onProviderChanged(p),

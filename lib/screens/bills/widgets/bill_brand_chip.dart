@@ -1,3 +1,4 @@
+import 'package:communal_mobile/core/widgets/brand_logo.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -8,6 +9,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 /// Selected state pops in the brand purple; unselected sits flat
 /// against the card background. Falls back gracefully on dark mode
 /// because all colours are theme-aware.
+///
+/// Pass [logoUrl] for a provider chip and the brand's mark leads the label.
+/// Product chips ("Prepaid", "2 GB — 30 days") pass nothing and stay text-only:
+/// a plan is not a brand, and repeating the provider's logo on every plan turns
+/// a list of choices into a wall of the same picture.
 class BillBrandChip extends StatelessWidget {
   const BillBrandChip({
     super.key,
@@ -15,12 +21,18 @@ class BillBrandChip extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.accent = const Color(0xFF7434FF),
+    this.logoUrl,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
   final Color accent;
+
+  /// `logo_url` from the biller catalogue. Null draws no mark at all rather than
+  /// a monogram: the label is right there beside it, so initials next to the word
+  /// they were taken from are noise.
+  final String? logoUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -42,13 +54,22 @@ class BillBrandChip extends StatelessWidget {
               width: selected ? 1.5 : 1,
             ),
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 14.sp,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              color: selected ? accent : theme.colorScheme.onSurface,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if ((logoUrl ?? '').isNotEmpty) ...[
+                BrandLogo(name: label, logoUrl: logoUrl, size: 22),
+                SizedBox(width: 8.w),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  color: selected ? accent : theme.colorScheme.onSurface,
+                ),
+              ),
+            ],
           ),
         ),
       ),

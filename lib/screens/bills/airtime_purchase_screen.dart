@@ -253,6 +253,7 @@ class _AirtimePurchaseScreenState extends State<AirtimePurchaseScreen> {
             for (final p in _providers)
               BillBrandChip(
                 label: p.name,
+                logoUrl: p.logoUrl,
                 selected: _selectedProvider?.id == p.id,
                 accent: const Color(0xFFFF7B3D),
                 onTap: () => setState(() => _selectedProvider = p),

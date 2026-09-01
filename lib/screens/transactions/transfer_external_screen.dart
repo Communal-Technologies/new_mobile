@@ -8,6 +8,7 @@ import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/utils/tier_limit_check.dart';
 import 'package:communal_mobile/core/constants/images.dart';
+import 'package:communal_mobile/core/widgets/brand_logo.dart';
 import 'package:communal_mobile/core/widgets/custom_text_field.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
@@ -360,13 +361,8 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     );
   }
 
-  Widget _bankLeadingIcon() {
-    return CircleAvatar(
-      radius: 24.r,
-      backgroundColor:
-          Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: Icon(Icons.account_balance, size: 24.sp, color: Theme.of(context).colorScheme.onSurface),
-    );
+  Widget _bankLeadingIcon({required String name, String? logoUrl}) {
+    return BrandLogo(name: name, logoUrl: logoUrl, size: 48);
   }
 
   Widget _whiteCard({required Widget child}) {
@@ -504,7 +500,10 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                             vertical: 2.h,
                                           ),
                                           minLeadingWidth: 52.w,
-                                          leading: _bankLeadingIcon(),
+                                          leading: _bankLeadingIcon(
+                                            name: suggestion.bank,
+                                            logoUrl: suggestion.logoUrl,
+                                          ),
                                           title: Text(
                                             suggestion.bank,
                                             style: TextStyle(
@@ -531,7 +530,10 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                             vertical: 2.h,
                                           ),
                                           minLeadingWidth: 52.w,
-                                          leading: _bankLeadingIcon(),
+                                          leading: _bankLeadingIcon(
+                                            name: bank.name,
+                                            logoUrl: bank.logoUrl,
+                                          ),
                                           title: Text(
                                             bank.name,
                                             style: TextStyle(

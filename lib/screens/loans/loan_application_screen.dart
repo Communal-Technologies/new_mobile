@@ -205,8 +205,8 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     // member's wallet currency — money limits are coop-side decisions.
     final currency =
         _eligibility?.currency ??
-        (user != null ? resolveCurrencyCode(user) : 'NGN');
-    final symbol = currencySymbolForCode(currency);
+        (user != null ? cooperativeCurrencyCode(user) : 'NGN');
+    final display = activeCurrency.display.forCurrency(currency);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemOverlayForTheme(Theme.of(context)),
@@ -246,7 +246,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                     else
                       _buildSchemeSummary(_selectedScheme!),
                     vSpace(24),
-                    _buildLoanAmountSection(symbol, currency),
+                    _buildLoanAmountSection(display, currency),
                     vSpace(24),
                     // Interest treatment first — the member's pick (or
                     // the cooperative's default) drives the math
@@ -500,7 +500,8 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     );
   }
 
-  Widget _buildLoanAmountSection(String symbol, String currency) {
+  Widget _buildLoanAmountSection(CurrencyDisplay display, String currency) {
+    final onLeft = display.position == CurrencySymbolPosition.left;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -539,7 +540,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           Row(
             children: [
               Text(
-                '$symbol${_formatNoDecimals(_minAmount)}',
+                display.adorn(_formatNoDecimals(_minAmount)),
                 style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
               ),
               Expanded(
@@ -561,7 +562,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                 ),
               ),
               Text(
-                '$symbol${_formatNoDecimals(_maxAmount)}',
+                display.adorn(_formatNoDecimals(_maxAmount)),
                 style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
               ),
             ],
@@ -580,8 +581,14 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
               FilteringTextInputFormatter.allow(RegExp(r'[\d,]')),
             ],
             decoration: InputDecoration(
-              prefixText: '$symbol ',
+              prefixText: onLeft ? '${display.symbol} ' : null,
+              suffixText: onLeft ? null : ' ${display.symbol}',
               prefixStyle: TextStyle(
+                fontSize: 24.sp,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFFE67E22),
+              ),
+              suffixStyle: TextStyle(
                 fontSize: 24.sp,
                 fontWeight: FontWeight.w700,
                 color: const Color(0xFFE67E22),
@@ -629,7 +636,8 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           ),
           vSpace(8),
           Text(
-            'Minimum: $symbol${_formatNoDecimals(_minAmount)} | Maximum: $symbol${_formatNoDecimals(_maxAmount)}',
+            'Minimum: ${display.adorn(_formatNoDecimals(_minAmount))} | '
+            'Maximum: ${display.adorn(_formatNoDecimals(_maxAmount))}',
             style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade600),
           ),
           vSpace(4),

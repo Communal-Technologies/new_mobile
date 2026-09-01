@@ -1,5 +1,7 @@
 import 'package:intl/intl.dart';
 
+import 'package:communal_mobile/core/utils/money.dart';
+
 /// A member's request to redeem a portion of their patronage or custom
 /// obligation balance.  Status lifecycle: pending → approved | declined,
 /// or revoked by the member before the admin acts.
@@ -56,12 +58,7 @@ class ObligationWithdrawalRequest {
     }
   }
 
-  String get amountLabel {
-    final major = amountMinor / 100;
-    final fmt = NumberFormat('#,##0.##', 'en_US');
-    final symbol = currency == 'NGN' ? '₦' : currency;
-    return '$symbol${fmt.format(major)}';
-  }
+  String get amountLabel => Money(amountMinor, currency).format();
 
   String get createdAtLabel =>
       DateFormat('dd MMM yyyy').format(createdAt.toLocal());

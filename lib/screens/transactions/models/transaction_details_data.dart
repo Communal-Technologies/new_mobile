@@ -86,10 +86,19 @@ class TransactionDetailsData {
   final int? balanceBeforeMinor;
   final int? balanceAfterMinor;
 
+  /// The figure with [currencySymbol] on the side the active cooperative asked
+  /// for. The symbol itself stays the caller's: a receipt records the currency
+  /// the transaction actually settled in, which need not be the cooperative's.
+  String _adorned(int minor, String code) => CurrencyDisplay(
+        code: code,
+        symbol: currencySymbol,
+        position: activeCurrency.display.position,
+      ).adorn(Money(minor, code).format(symbol: false));
+
   String? _balanceLabel(int? minor) {
     if (minor == null) return null;
     final code = (currencyCode ?? 'NGN').toUpperCase();
-    return '$currencySymbol${Money(minor, code).format(symbol: false)}';
+    return _adorned(minor, code);
   }
 
   String? get balanceBeforeLabel => _balanceLabel(balanceBeforeMinor);
@@ -104,15 +113,13 @@ class TransactionDetailsData {
   String get amountLabel {
     final code = (currencyCode ?? 'NGN').toUpperCase();
     final factor = factorFor(code);
-    final minor = (amount * factor).round();
-    return '$currencySymbol${Money(minor, code).format(symbol: false)}';
+    return _adorned((amount * factor).round(), code);
   }
 
   String get feesLabel {
     final code = (currencyCode ?? 'NGN').toUpperCase();
     final factor = factorFor(code);
-    final minor = (fees * factor).round();
-    return '$currencySymbol${Money(minor, code).format(symbol: false)}';
+    return _adorned((fees * factor).round(), code);
   }
 
   String get counterpartLabel => isIncoming ? 'Received from' : 'Sent to';

@@ -532,6 +532,8 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
     final currency = widget.obligation.currency;
     final decimals = decimalsFor(currency);
     final allowDecimal = decimals > 0;
+    final display = activeCurrency.display.forCurrency(currency);
+    final onLeft = display.position == CurrencySymbolPosition.left;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -553,7 +555,8 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
             AmountInputFormatter(decimals: decimals),
           ],
           decoration: InputDecoration(
-            prefixText: '${currencySymbolForCode(currency)} ',
+            prefixText: onLeft ? '${display.symbol} ' : null,
+            suffixText: onLeft ? null : ' ${display.symbol}',
             hintText: widget.obligation.perInstallmentMinor > 0
                 ? Money(
                     widget.obligation.perInstallmentMinor,

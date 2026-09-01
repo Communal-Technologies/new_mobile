@@ -245,7 +245,8 @@ class _TransferInternalVerifyScreenState
     required String? pin,
     required Map<String, String>? biometricHeaders,
   }) async {
-    final currencySymbol = currencySymbolForCode(widget.currency);
+    final currencySymbol =
+        activeCurrency.display.forCurrency(widget.currency).symbol;
     final currencyCode = widget.currency;
 
     final TransferInitiationResult result;
@@ -440,7 +441,7 @@ class _TransferInternalVerifyScreenState
   }
 
   Widget _buildAmountBanner() {
-    final symbol = currencySymbolForCode(widget.currency);
+    final display = activeCurrency.display.forCurrency(widget.currency);
     final amountMajor = widget.amountMinor / factorFor(widget.currency);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
@@ -460,7 +461,7 @@ class _TransferInternalVerifyScreenState
           ),
           vSpace(2),
           Text(
-            '$symbol${formatMoney(amountMajor)}',
+            display.adorn(formatMoney(amountMajor)),
             style: TextStyle(
               fontSize: 24.sp,
               fontWeight: FontWeight.w800,

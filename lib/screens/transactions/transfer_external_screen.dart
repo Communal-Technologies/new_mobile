@@ -388,9 +388,9 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     final isOnline = context.watch<ConnectivityCubit>().isConnected;
     final currencyCode =
         authState is AuthAuthenticated ? resolveCurrencyCode(authState.user) : 'NGN';
-    final currencySymbol = authState is AuthAuthenticated
-        ? currencySymbolForUser(authState.user)
-        : currencySymbolForCode('NGN');
+    final display = authState is AuthAuthenticated
+        ? walletCurrencyDisplay(authState.user)
+        : activeCurrency.display;
     final theme = Theme.of(context);
     final suggestBg = theme.primaryColor.withValues(alpha: 0.10);
 
@@ -834,7 +834,9 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                   ),
                                 ),
                                 child: Text(
-                                  '$currencySymbol${v >= 1000 ? '${v ~/ 1000}k' : v}',
+                                  display.adorn(
+                                    v >= 1000 ? '${v ~/ 1000}k' : '$v',
+                                  ),
                                   style: TextStyle(
                                     fontSize: 17.sp,
                                     fontWeight: FontWeight.w600,

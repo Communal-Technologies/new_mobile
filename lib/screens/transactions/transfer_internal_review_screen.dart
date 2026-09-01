@@ -82,10 +82,8 @@ class _TransferInternalReviewScreenState
     }
   }
 
-  String _amountText(String currencySymbol) {
-    final formatted = formatMinor(widget.amountMinor, widget.currency);
-    return '$currencySymbol$formatted';
-  }
+  String _amountText(CurrencyDisplay display) =>
+      display.adorn(formatMinor(widget.amountMinor, widget.currency));
 
   String _amountInWords(String currencyCode) {
     // Whole-major part for the words form; fractional minor units (kobo,
@@ -98,13 +96,13 @@ class _TransferInternalReviewScreenState
 
   String _balanceAfterTransferText(
     int currentBalanceMinor,
-    String currencySymbol,
+    CurrencyDisplay display,
   ) {
     final totalDebit = widget.amountMinor +
         (widget.useExternalNipFlow ? _nipFeeKobo : 0);
     final after = currentBalanceMinor - totalDebit;
     final safeAfter = after < 0 ? 0 : after;
-    return '$currencySymbol${formatMinor(safeAfter, widget.currency)}';
+    return display.adorn(formatMinor(safeAfter, widget.currency));
   }
 
   String _toWords(int value) {
@@ -217,7 +215,7 @@ class _TransferInternalReviewScreenState
     final currencyCode = authState is AuthAuthenticated
         ? resolveCurrencyCode(authState.user)
         : 'NGN';
-    final currencySymbol = currencySymbolForCode(currencyCode);
+    final display = activeCurrency.display.forCurrency(currencyCode);
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -255,7 +253,7 @@ class _TransferInternalReviewScreenState
                   ),
                   vSpace(6),
                   Text(
-                    _amountText(currencySymbol),
+                    _amountText(display),
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 30.sp,
@@ -368,14 +366,21 @@ class _TransferInternalReviewScreenState
                       'Transfer fee',
                       _feeLoading
                           ? '...'
-                          : '$currencySymbol${formatMinor(_nipFeeKobo, widget.currency)}',
+                          : display.adorn(
+                              formatMinor(_nipFeeKobo, widget.currency),
+                            ),
                     ),
                   if (widget.useExternalNipFlow)
                     _kv(
                       'Total Debit',
                       _feeLoading
                           ? '...'
-                          : '$currencySymbol${formatMinor(widget.amountMinor + _nipFeeKobo, widget.currency)}',
+                          : display.adorn(
+                              formatMinor(
+                                widget.amountMinor + _nipFeeKobo,
+                                widget.currency,
+                              ),
+                            ),
                     ),
                   _kv(
                     'Naration',
@@ -405,7 +410,7 @@ class _TransferInternalReviewScreenState
                     ),
                   ),
                   Text(
-                    _balanceAfterTransferText(walletBalanceKobo, currencySymbol),
+                    _balanceAfterTransferText(walletBalanceKobo, display),
                     style: TextStyle(
                       fontSize: 19.sp,
                       fontWeight: FontWeight.w800,

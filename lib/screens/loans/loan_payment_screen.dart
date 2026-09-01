@@ -418,6 +418,8 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
   Widget _buildAmountInput() {
     final currency = widget.loan.currency;
     final decimals = decimalsFor(currency);
+    final display = activeCurrency.display.forCurrency(currency);
+    final onLeft = display.position == CurrencySymbolPosition.left;
     final allowDecimal = decimals > 0;
     final decimalSeparators = allowDecimal ? r'\.,' : '';
     return Column(
@@ -441,7 +443,8 @@ class _LoanPaymentScreenState extends State<LoanPaymentScreen> {
             ),
           ],
           decoration: InputDecoration(
-            prefixText: '${currencySymbolForCode(currency)} ',
+            prefixText: onLeft ? '${display.symbol} ' : null,
+            suffixText: onLeft ? null : ' ${display.symbol}',
             hintText: Money(
               widget.loan.monthlyRepaymentMinor,
               currency,

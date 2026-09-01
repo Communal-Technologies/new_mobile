@@ -331,7 +331,7 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
         )
         .toList();
     final currency = auth is AuthAuthenticated
-        ? resolveCurrencyCode(auth.user)
+        ? cooperativeCurrencyCode(auth.user)
         : (scoped.isNotEmpty
               ? scoped.first.currency
               : (_obligations.isNotEmpty

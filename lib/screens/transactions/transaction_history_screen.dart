@@ -571,8 +571,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                   _activeMonthly[index].key,
                                   _activeMonthly[index].value,
                                   user != null
-                                      ? currencySymbolForUser(user)
-                                      : currencySymbolForCode('NGN'),
+                                      ? walletCurrencyDisplay(user)
+                                      : activeCurrency.display,
                                 ),
                                 separatorBuilder: (_, __) => vSpace(16),
                                 itemCount: _activeMonthly.length,
@@ -783,7 +783,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   Widget _buildMonthSection(
     String month,
     List<TransactionListItem> transactions,
-    String currencySymbol,
+    CurrencyDisplay display,
   ) {
     final expanded = _activeExpanded;
     final isExpanded = expanded[month] ?? false;
@@ -841,7 +841,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 ),
                 const Spacer(),
                 Text(
-                  'In: $currencySymbol${formatMoney(incoming)}',
+                  'In: ${display.adorn(formatMoney(incoming))}',
                   style: TextStyle(
                     fontSize: 19.sp,
                     fontWeight: FontWeight.w600,
@@ -850,7 +850,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 ),
                 hSpace(12),
                 Text(
-                  'Out: $currencySymbol${formatMoney(outgoing)}',
+                  'Out: ${display.adorn(formatMoney(outgoing))}',
                   style: TextStyle(
                     fontSize: 19.sp,
                     fontWeight: FontWeight.w600,

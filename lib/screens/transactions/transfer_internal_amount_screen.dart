@@ -112,9 +112,9 @@ class _TransferInternalAmountScreenState
   Widget build(BuildContext context) {
     final auth = context.watch<AuthBloc>().state;
     final isOnline = context.watch<ConnectivityCubit>().isConnected;
-    final currencySymbol = auth is AuthAuthenticated
-        ? currencySymbolForUser(auth.user)
-        : currencySymbolForCode('NGN');
+    final display = auth is AuthAuthenticated
+        ? walletCurrencyDisplay(auth.user)
+        : activeCurrency.display;
     final currencyCode =
         auth is AuthAuthenticated ? resolveCurrencyCode(auth.user) : 'NGN';
 
@@ -290,7 +290,9 @@ class _TransferInternalAmountScreenState
                                   ),
                                 ),
                                 child: Text(
-                                  '$currencySymbol${v >= 1000 ? '${(v ~/ 1000)}k' : v}',
+                                  display.adorn(
+                                    v >= 1000 ? '${v ~/ 1000}k' : '$v',
+                                  ),
                                   style: TextStyle(
                                     fontSize: 17.sp,
                                     fontWeight: FontWeight.w600,

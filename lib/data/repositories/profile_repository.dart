@@ -14,6 +14,14 @@ class ProfileUpdateResult {
   final String? anchorWarning;
 }
 
+class ContactChangeStarted {
+  ContactChangeStarted({required this.sentTo, required this.expiresInMinutes});
+
+  /// Masked by the server — the app is told where the code went, not the value.
+  final String sentTo;
+  final int expiresInMinutes;
+}
+
 class ProfileRepository {
   ProfileRepository(this._dioClient);
 
@@ -54,6 +62,56 @@ class ProfileRepository {
         if (w is String && w.isNotEmpty) anchorWarning = w;
       }
       return ProfileUpdateResult(anchorWarning: anchorWarning);
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  /// Ask to change the sign-in email or phone. `field` is 'email' or 'phone'.
+  /// Nothing is written yet: this proves the member is present with their PIN and
+  /// sends a code to the value they nominated, which [verifyContactChange] spends.
+  Future<ContactChangeStarted> requestContactChange({
+    required String field,
+    required String value,
+    required String securityPin,
+  }) async {
+    try {
+      final response = await _dioClient.post(
+        ApiEndpoints.membersContactChange,
+        data: {
+          'field': field,
+          'value': value,
+          'security_pin': securityPin,
+        },
+      );
+      final body = response.data;
+      final data = (body is Map && body['data'] is Map)
+          ? Map<String, dynamic>.from(body['data'] as Map)
+          : const <String, dynamic>{};
+      return ContactChangeStarted(
+        sentTo: (data['sent_to'] as String?) ?? '',
+        expiresInMinutes: (data['expires_in_minutes'] as num?)?.toInt() ?? 10,
+      );
+    } on DioException catch (e) {
+      throw Exception(_messageFromDio(e));
+    }
+  }
+
+  /// Finish the change with the code sent to the new email or phone. Returns the
+  /// value as stored, which for a phone is the server's normalised form rather
+  /// than whatever shape it was typed in.
+  Future<String> verifyContactChange(String code) async {
+    try {
+      final response = await _dioClient.post(
+        ApiEndpoints.membersContactChangeVerify,
+        data: {'code': code},
+      );
+      final body = response.data;
+      if (body is Map && body['data'] is Map) {
+        final value = (body['data'] as Map)['value'];
+        if (value is String) return value;
+      }
+      return '';
     } on DioException catch (e) {
       throw Exception(_messageFromDio(e));
     }

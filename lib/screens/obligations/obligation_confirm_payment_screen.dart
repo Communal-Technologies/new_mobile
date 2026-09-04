@@ -115,14 +115,16 @@ class _ObligationConfirmPaymentScreenState
         setState(() => _authMode = _AuthMode.pin);
         return;
       }
-      final enrolled = await _biometricSigner.isEnrolled();
+      final canAuthorize = await _biometricSigner.canAuthorizePayments();
       if (!mounted) return;
-      if (enrolled) {
+      if (canAuthorize) {
         setState(() => _authMode = _AuthMode.biometric);
       } else {
-        // No biometric enrolled on this device — drop to the PIN
-        // prompt instead of marching the user off to the enrollment
-        // screen for what is just a confirmation step.
+        // No biometric on this device, a sign-in-only enrollment, or no
+        // transaction PIN on the account — drop to the PIN prompt instead of
+        // marching the user off to the enrollment screen for what is just a
+        // confirmation step. Biometrics is the alternative to that PIN, so where
+        // there is no PIN the keypad is the only honest path.
         setState(() => _authMode = _AuthMode.pin);
       }
     } catch (e) {
@@ -505,19 +507,30 @@ class _ObligationConfirmPaymentScreenState
       // validating the PIN inline (it can't — security_pin lives on
       // tbl_users, owned exclusively by the monolith), so that call has
       // to happen before initiateTransfer below.
-      await _transferRepo.verifySecurityPin(pin);
+      await _transferRepo.verifySecurityPin(pin, intent: 'pay-obligation');
       return {'X-Security-Pin': pin};
     }
-    final result = transfer
-        ? await _biometricSigner.signTransferIntent(
-            promptTitle: 'Authorize payment',
-            promptSubtitle: promptSubtitle,
-          )
-        : await _biometricSigner.signObligationIntent(
-            promptTitle: 'Authorize payment',
-            promptSubtitle: promptSubtitle,
-          );
-    return result.toHeaders();
+    try {
+      final result = transfer
+          ? await _biometricSigner.signTransferIntent(
+              promptTitle: 'Authorize payment',
+              promptSubtitle: promptSubtitle,
+            )
+          : await _biometricSigner.signObligationIntent(
+              promptTitle: 'Authorize payment',
+              promptSubtitle: promptSubtitle,
+            );
+      return result.toHeaders();
+    } catch (e) {
+      // Biometrics is the shortcut and the PIN is the fallback, so a cancelled
+      // scan or a refused signature has to land the member on the keypad rather
+      // than on a retry of the thing that just failed.
+      if (mounted) setState(() => _authMode = _AuthMode.pin);
+      throw Exception(
+        '${e.toString().replaceFirst('Exception: ', '')} '
+        'Enter your transaction PIN to continue.',
+      );
+    }
   }
 
   Future<void> _onConfirm() async {
@@ -588,7 +601,8 @@ class _ObligationConfirmPaymentScreenState
       currency: widget.obligation.currency,
     );
 
-    final currencySymbol = currencySymbolForUser(authState.user);
+    final currencySymbol =
+        activeCurrency.display.forCurrency(widget.obligation.currency).symbol;
     final currencyCode = resolveCurrencyCode(authState.user);
     final narration = 'Obligation: ${widget.obligation.title}';
 
@@ -628,6 +642,7 @@ class _ObligationConfirmPaymentScreenState
           counterpartyAccount: cash.accountNumber,
           amount: amountMajor,
           currencySymbol: currencySymbol,
+          currencyCode: widget.obligation.currency,
           transactionType: route.isBook ? 'Transfer' : 'NIP Transfer',
           dateTime: DateTime.now(),
           sessionId: result.transferId,
@@ -677,7 +692,8 @@ class _ObligationConfirmPaymentScreenState
     );
 
     if (!mounted) return;
-    final currencySymbol = currencySymbolForUser(authState.user);
+    final currencySymbol =
+        activeCurrency.display.forCurrency(widget.obligation.currency).symbol;
     final receiptReference = _idempotencyKey.length > 12
         ? _idempotencyKey.substring(0, 12)
         : _idempotencyKey;
@@ -698,6 +714,7 @@ class _ObligationConfirmPaymentScreenState
           counterpartyAccount: widget.obligation.accountCode,
           amount: amountMajor,
           currencySymbol: currencySymbol,
+          currencyCode: widget.obligation.currency,
           transactionType: 'Obligation transfer',
           dateTime: DateTime.now(),
           sessionId: receiptReference,

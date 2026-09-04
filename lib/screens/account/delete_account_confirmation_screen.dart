@@ -8,13 +8,16 @@ import 'package:go_router/go_router.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/screens/account/delete_account_request.dart';
 import 'package:communal_mobile/screens/account/widgets/account_to_delete_card.dart';
 import 'package:communal_mobile/screens/account/widgets/balance_card.dart';
 import 'package:communal_mobile/screens/account/widgets/outstanding_balance_warning.dart';
 import 'package:communal_mobile/screens/account/widgets/delete_agreement_item.dart';
 
 class DeleteAccountConfirmationScreen extends StatefulWidget {
-  const DeleteAccountConfirmationScreen({super.key});
+  const DeleteAccountConfirmationScreen({super.key, required this.request});
+
+  final DeleteAccountRequest request;
 
   @override
   State<DeleteAccountConfirmationScreen> createState() =>
@@ -56,7 +59,10 @@ class _DeleteAccountConfirmationScreenState
     final accountNumber = user?.walletAccountNumber?.trim().isNotEmpty == true
         ? user!.walletAccountNumber!.trim()
         : (user?.phone?.trim() ?? '—');
-    final balanceMinor = user?.walletBalanceKobo ?? 0;
+    // The server's figure, not the cached one on the auth payload: the balance
+    // is a checkpoint, and the deletion will be refused against this number
+    // rather than whatever the app last saw.
+    final balanceMinor = widget.request.preview.walletBalance;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemOverlayForTheme(Theme.of(context)),
       child: Scaffold(
@@ -166,23 +172,28 @@ class _DeleteAccountConfirmationScreenState
             onChanged: (value) => setState(() => _agreement1 = value),
           ),
           vSpace(12),
+          // These are acknowledgements, not the gate — every one of them is
+          // enforced by the server and re-checked when the deletion is sent.
+          // The wording says what actually happens: Communal is a financial
+          // institution and cannot delete records of money that moved, so the
+          // personal data goes and the ledger entries stay.
           DeleteAgreementItem(
             text:
-                'Your transaction history, loan records, cooperative memberships, and all personal data will be permanently deleted within 30 days.',
+                'Your personal data will be erased within 30 days. The records of money that has moved through your account are kept for as long as the law requires.',
             value: _agreement2,
             onChanged: (value) => setState(() => _agreement2 = value),
           ),
           vSpace(12),
           DeleteAgreementItem(
             text:
-                'You\'ll be removed from every cooperative you belong to and lose access to shared funds, contributions, and benefits.',
+                'You have already left every community you belonged to. Deleting your account does not remove you from one, and it cannot be used to walk away from a community.',
             value: _agreement3,
             onChanged: (value) => setState(() => _agreement3 = value),
           ),
           vSpace(12),
           DeleteAgreementItem(
             text:
-                'Any pending obligations, loans, or cooperative commitments must be settled before deletion. No refunds will be issued.',
+                'Nothing is owed and nothing is owed to you. No refunds will be issued after deletion.',
             value: _agreement4,
             onChanged: (value) => setState(() => _agreement4 = value),
           ),
@@ -237,6 +248,6 @@ class _DeleteAccountConfirmationScreenState
   }
 
   void _showFinalConfirmationDialog(BuildContext context) {
-    context.pushNamed('delete-account-feedback');
+    context.pushNamed('delete-account-feedback', extra: widget.request);
   }
 }

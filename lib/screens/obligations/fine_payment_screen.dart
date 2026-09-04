@@ -302,11 +302,7 @@ class _FinePaymentScreenState extends State<FinePaymentScreen> {
                                 .map((e) => DropdownMenuItem(
                                       value: e,
                                       child: Text(
-                                        [
-                                          if (e.bankLabel.isNotEmpty) e.bankLabel,
-                                          e.accountName,
-                                          e.accountNumber,
-                                        ].join(' • '),
+                                        e.displayLabel,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ))
@@ -318,11 +314,7 @@ class _FinePaymentScreenState extends State<FinePaymentScreen> {
                     ] else if (_cashRepos.length == 1) ...[
                       vSpace(10),
                       Text(
-                        'Paying into: ${[
-                          if (_cashRepos.first.bankLabel.isNotEmpty) _cashRepos.first.bankLabel,
-                          _cashRepos.first.accountName,
-                          _cashRepos.first.accountNumber,
-                        ].join(' • ')}',
+                        'Paying into: ${_cashRepos.first.displayLabel}',
                         style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade700),
                       ),
                     ],
@@ -450,7 +442,16 @@ class _FinePaymentScreenState extends State<FinePaymentScreen> {
   }
 
   Widget _buildAmountInput() {
-    final symbol = currencySymbolForCode(widget.fine.currency);
+    final display = activeCurrency.display.forCurrency(widget.fine.currency);
+    final onLeft = display.position == CurrencySymbolPosition.left;
+    final symbolText = Text(
+      display.symbol,
+      style: TextStyle(
+        fontSize: 22.sp,
+        fontWeight: FontWeight.w700,
+        color: Theme.of(context).colorScheme.onSurface,
+      ),
+    );
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
       decoration: BoxDecoration(
@@ -460,15 +461,7 @@ class _FinePaymentScreenState extends State<FinePaymentScreen> {
       ),
       child: Row(
         children: [
-          Text(
-            symbol,
-            style: TextStyle(
-              fontSize: 22.sp,
-              fontWeight: FontWeight.w700,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          hSpace(8),
+          if (onLeft) ...[symbolText, hSpace(8)],
           Expanded(
             child: TextField(
               controller: _amountController,
@@ -487,6 +480,7 @@ class _FinePaymentScreenState extends State<FinePaymentScreen> {
               ),
             ),
           ),
+          if (!onLeft) ...[hSpace(8), symbolText],
         ],
       ),
     );
@@ -717,21 +711,5 @@ class _FinePaymentScreenState extends State<FinePaymentScreen> {
         ],
       ),
     );
-  }
-}
-
-/// Returns the currency symbol for a given ISO code.
-String currencySymbolForCode(String code) {
-  switch (code.toUpperCase()) {
-    case 'NGN':
-      return '₦';
-    case 'USD':
-      return '\$';
-    case 'GBP':
-      return '£';
-    case 'EUR':
-      return '€';
-    default:
-      return code;
   }
 }

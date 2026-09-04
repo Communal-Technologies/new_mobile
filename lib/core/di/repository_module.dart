@@ -1,3 +1,4 @@
+import 'package:communal_mobile/core/security/token_manager.dart';
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/data/repositories/community_repository.dart';
@@ -9,6 +10,7 @@ import 'package:communal_mobile/data/repositories/profile_repository.dart';
 import 'package:communal_mobile/data/repositories/kyc_repository.dart';
 import 'package:communal_mobile/data/repositories/locations_repository.dart';
 import 'package:communal_mobile/data/repositories/regions_repository.dart';
+import 'package:communal_mobile/data/repositories/support_repository.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:injectable/injectable.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
@@ -42,8 +44,10 @@ abstract class RepositoryModule {
       CommunityRepository(dioClient);
 
   @lazySingleton
-  NotificationsRepository provideNotificationsRepository(DioClient dioClient) =>
-      NotificationsRepository(dioClient);
+  NotificationsRepository provideNotificationsRepository(
+    DioClient dioClient,
+    TokenManager tokenManager,
+  ) => NotificationsRepository(dioClient, tokenManager);
 
   @lazySingleton
   ProfileRepository provideProfileRepository(DioClient dioClient) =>
@@ -61,6 +65,10 @@ abstract class RepositoryModule {
   @lazySingleton
   TransferRepository provideTransferRepository(DioClient dioClient) =>
       TransferRepository(dioClient);
+
+  @lazySingleton
+  SupportRepository provideSupportRepository(DioClient dioClient) =>
+      SupportRepository(dioClient);
 
   @lazySingleton
   KycProgressStorage provideKycProgressStorage(SharedPreferences prefs) =>

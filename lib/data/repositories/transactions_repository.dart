@@ -179,7 +179,7 @@ class TransactionsRepository {
     String cooperativeLabel,
   ) async {
     final rows = await fetchLedgerTransactionsRaw(ledgerNumber);
-    final sym = currencySymbolForUser(user);
+    final sym = cooperativeCurrencySymbol(user);
     return rows
         .map(
           (e) => mapLedgerRowToListItem(
@@ -215,7 +215,7 @@ class TransactionsRepository {
     final ln = user.ledgerNumber?.trim() ?? '';
     if (ln.isEmpty) return const [];
     final raw = _readRawCache(_ledgerCacheKey(ln));
-    final sym = currencySymbolForUser(user);
+    final sym = cooperativeCurrencySymbol(user);
     return raw
         .map(
           (e) => mapLedgerRowToListItem(

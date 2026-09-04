@@ -102,6 +102,13 @@ class CooperativeCashBankAccount {
     return name.isNotEmpty ? name : bank.trim();
   }
 
+  /// How a cooperative account is named to a member: the account name and the
+  /// bank, never the account number.
+  String get displayLabel => [
+    if (accountName.isNotEmpty) accountName,
+    if (bankLabel.isNotEmpty) bankLabel,
+  ].join(' • ');
+
   factory CooperativeCashBankAccount.fromJson(Map<String, dynamic> m) {
     return CooperativeCashBankAccount(
       id: m['id']?.toString() ?? '',
@@ -219,7 +226,7 @@ class MemberObligationsRepository {
         }
       }
 
-      final fallbackCurrency = resolveCurrencyCode(user);
+      final fallbackCurrency = cooperativeCurrencyCode(user);
 
       return rawObligations
           .whereType<Map>()
@@ -253,7 +260,7 @@ class MemberObligationsRepository {
       final data = response.data;
       final raw = data is Map ? data['fines'] : null;
       if (raw is! List) return const [];
-      final fallbackCurrency = resolveCurrencyCode(user);
+      final fallbackCurrency = cooperativeCurrencyCode(user);
       return Obligation.parseFines(raw, fallbackCurrency);
     } on DioException catch (e) {
       final data = e.response?.data;
@@ -458,11 +465,11 @@ class MemberObligationsRepository {
     }
   }
 
-  Future<void> verifySecurityPin(String pin) async {
+  Future<void> verifySecurityPin(String pin, {required String intent}) async {
     try {
       final response = await _dioClient.post(
         ApiEndpoints.membersVerifySecurityPin,
-        data: {'security_pin': pin},
+        data: {'security_pin': pin, 'intent': intent},
       );
       final data = response.data;
       if (data is Map && data['status'] == true) return;

@@ -5,11 +5,14 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/screens/account/delete_account_request.dart';
 import 'package:communal_mobile/screens/account/widgets/delete_reason_item.dart';
 import 'package:communal_mobile/screens/account/widgets/feedback_info_box.dart';
 
 class DeleteAccountFeedbackScreen extends StatefulWidget {
-  const DeleteAccountFeedbackScreen({super.key});
+  const DeleteAccountFeedbackScreen({super.key, required this.request});
+
+  final DeleteAccountRequest request;
 
   @override
   State<DeleteAccountFeedbackScreen> createState() =>
@@ -160,6 +163,9 @@ class _DeleteAccountFeedbackScreenState
           child: TextField(
             controller: _feedbackController,
             maxLines: 5,
+            // The server takes 500 characters for the whole reason, and the
+            // chosen option is prefixed onto this.
+            maxLength: 400,
             decoration: InputDecoration(
               hintText: 'Tell us more about your experience...',
               hintStyle: TextStyle(
@@ -180,12 +186,7 @@ class _DeleteAccountFeedbackScreenState
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: isEnabled
-            ? () {
-                // TODO: Submit feedback and proceed with deletion
-                _submitFeedback(context);
-              }
-            : null,
+        onPressed: isEnabled ? () => _continue(context) : null,
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.resolveWith<Color>(
             (Set<WidgetState> states) {
@@ -214,7 +215,7 @@ class _DeleteAccountFeedbackScreenState
           elevation: WidgetStateProperty.all(0),
         ),
         child: Text(
-          'Verify and Continue',
+          'Continue',
           style: TextStyle(
             fontSize: 19.sp,
             fontWeight: FontWeight.w600,
@@ -224,10 +225,17 @@ class _DeleteAccountFeedbackScreenState
     );
   }
 
-  void _submitFeedback(BuildContext context) {
-    // TODO: Submit feedback to backend
-    // Navigate to PIN verification screen
-    context.pushNamed('delete-account-pin');
+  /// The reason travels with the request and is stored by the delete call
+  /// itself, so there is no separate feedback endpoint to fail on its own.
+  void _continue(BuildContext context) {
+    final extra = _feedbackController.text.trim();
+    final reason = extra.isEmpty
+        ? _selectedReason
+        : '${_selectedReason ?? ''} — $extra';
+    context.pushNamed(
+      'delete-account-final-confirmation',
+      extra: widget.request.copyWith(reason: reason),
+    );
   }
 }
 

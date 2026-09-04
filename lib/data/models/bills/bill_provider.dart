@@ -1,8 +1,8 @@
-/// One row from `GET /v1/bills/{airtime|data}/providers`.
+/// One row from `GET /api/bills/v2/billers`.
 ///
 /// `slug` is what we send back to the backend on purchase
 /// (e.g. `mtn`, `airtel`). `id` is Anchor's biller id, used to fetch
-/// products via `GET /v1/bills/billers/{id}/products`.
+/// products via `GET /api/bills/v2/billers/{id}/products`.
 class BillProvider {
   const BillProvider({
     required this.id,
@@ -10,6 +10,7 @@ class BillProvider {
     required this.slug,
     this.billerCode,
     this.category,
+    this.logoUrl,
   });
 
   final String id;
@@ -22,6 +23,10 @@ class BillProvider {
   final String? billerCode;
   final String? category;
 
+  /// Absolute URL to the provider's mark. Anchor sends no artwork at all; billsvc
+  /// appends this from its own pack and omits it for a slug it holds none for.
+  final String? logoUrl;
+
   factory BillProvider.fromJson(Map<String, dynamic> json) {
     return BillProvider(
       id: (json['id'] ?? '').toString(),
@@ -29,6 +34,7 @@ class BillProvider {
       slug: (json['slug'] ?? '').toString().toLowerCase(),
       billerCode: json['biller_code']?.toString(),
       category: json['category']?.toString(),
+      logoUrl: json['logo_url']?.toString(),
     );
   }
 }

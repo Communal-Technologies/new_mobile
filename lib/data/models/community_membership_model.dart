@@ -118,6 +118,9 @@ class CommunityMembership {
     required this.ledgerNumber,
     required this.isDefault,
     required this.settings,
+    this.currency = '',
+    this.currencySymbol = '',
+    this.currencySymbolPosition = '',
   });
 
   final String cooperativeId;
@@ -128,6 +131,14 @@ class CommunityMembership {
   final String ledgerNumber;
   final bool isDefault;
   final CommunityCooperativeSettings settings;
+
+  /// How THIS cooperative writes money — ISO 4217 code, the symbol it prints and
+  /// which side of the figure it goes on. Empty when the cooperative never chose,
+  /// which leaves the client on the wallet's currency. Carried on the membership
+  /// because switching cooperatives has to change the symbol on the figures.
+  final String currency;
+  final String currencySymbol;
+  final String currencySymbolPosition;
 
   factory CommunityMembership.fromJson(Map<String, dynamic> json) {
     final settingsRaw = json['settings'];
@@ -157,6 +168,10 @@ class CommunityMembership {
       ledgerNumber: json['ledger_number']?.toString() ?? '',
       isDefault: json['is_default'] == true || json['is_default'] == 1,
       settings: settings,
+      currency: json['currency']?.toString().trim().toUpperCase() ?? '',
+      currencySymbol: json['currency_symbol']?.toString().trim() ?? '',
+      currencySymbolPosition:
+          json['currency_symbol_position']?.toString().trim().toLowerCase() ?? '',
     );
   }
 
@@ -172,6 +187,9 @@ class CommunityMembership {
       ledgerNumber: ledgerNumber,
       isDefault: isDefault,
       settings: settings ?? this.settings,
+      currency: currency,
+      currencySymbol: currencySymbol,
+      currencySymbolPosition: currencySymbolPosition,
     );
   }
 }

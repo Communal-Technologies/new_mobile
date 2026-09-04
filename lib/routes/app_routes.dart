@@ -43,6 +43,9 @@ import 'package:communal_mobile/screens/community/community_screen.dart';
 import 'package:communal_mobile/screens/community/community_map_screen.dart';
 import 'package:communal_mobile/screens/community/community_detail_screen.dart';
 import 'package:communal_mobile/screens/community/community_application_status_screen.dart';
+import 'package:communal_mobile/screens/community/leave_cooperative_screen.dart';
+import 'package:communal_mobile/screens/community/leave_cooperative_pin_screen.dart';
+import 'package:communal_mobile/screens/community/leave_cooperative_submitted_screen.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_details.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_locations.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
@@ -94,11 +97,15 @@ import 'package:communal_mobile/screens/account/account_limits_screen.dart';
 import 'package:communal_mobile/screens/account/community_settings_screen.dart';
 import 'package:communal_mobile/screens/account/help_support_screen.dart';
 import 'package:communal_mobile/screens/account/faq_screen.dart';
+import 'package:communal_mobile/screens/support/my_tickets_screen.dart';
+import 'package:communal_mobile/screens/support/support_chat_screen.dart';
+import 'package:communal_mobile/data/models/support_models.dart';
 import 'package:communal_mobile/screens/account/notification_settings_screen.dart';
 import 'package:communal_mobile/screens/account/security_settings_screen.dart';
 import 'package:communal_mobile/screens/account/biometric_enrollment_screen.dart';
 import 'package:communal_mobile/screens/account/change_login_pin_screen.dart';
 import 'package:communal_mobile/screens/account/change_transaction_pin_screen.dart';
+import 'package:communal_mobile/screens/account/delete_account_request.dart';
 import 'package:communal_mobile/screens/account/delete_account_screen.dart';
 import 'package:communal_mobile/screens/account/delete_account_confirmation_screen.dart';
 import 'package:communal_mobile/screens/account/delete_account_feedback_screen.dart';
@@ -127,6 +134,10 @@ const Set<String> _publicPaths = <String>{
   '/verify-reset',
   '/reset-password',
   '/password-reset-success',
+  // The account this screen reports on is gone, and the flow signs the user out
+  // on the way in — treating it as protected would bounce it to /login before
+  // the user reads what happens next.
+  '/delete-account-success',
 };
 
 /// Routes the post-login KYC gate considers part of the KYC flow. While
@@ -446,6 +457,51 @@ final GoRouter appRouter = GoRouter(
       },
     ),
     GoRoute(
+      path: '/leave-cooperative',
+      name: 'leave-cooperative',
+      redirect: (context, state) {
+        if (state.extra is CommunityLocation) return null;
+        return '/community';
+      },
+      builder: (context, state) {
+        final extra = state.extra;
+        if (extra is! CommunityLocation) {
+          return _MissingExtraRedirect(target: '/community');
+        }
+        return LeaveCooperativeScreen(location: extra);
+      },
+    ),
+    GoRoute(
+      path: '/leave-cooperative/pin',
+      name: 'leave-cooperative-pin',
+      redirect: (context, state) {
+        if (state.extra is LeaveCooperativeRequest) return null;
+        return '/community';
+      },
+      builder: (context, state) {
+        final extra = state.extra;
+        if (extra is! LeaveCooperativeRequest) {
+          return _MissingExtraRedirect(target: '/community');
+        }
+        return LeaveCooperativePinScreen(request: extra);
+      },
+    ),
+    GoRoute(
+      path: '/leave-cooperative/submitted',
+      name: 'leave-cooperative-submitted',
+      redirect: (context, state) {
+        if (state.extra is CommunityLocation) return null;
+        return '/community';
+      },
+      builder: (context, state) {
+        final extra = state.extra;
+        if (extra is! CommunityLocation) {
+          return _MissingExtraRedirect(target: '/community');
+        }
+        return LeaveCooperativeSubmittedScreen(location: extra);
+      },
+    ),
+    GoRoute(
       path: '/obligations',
       name: 'obligations',
       builder: (context, state) => const FinancialObligationsScreen(),
@@ -712,7 +768,39 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/faq',
       name: 'faq',
-      builder: (context, state) => const FaqScreen(),
+      builder: (context, state) => FaqScreen(
+        initialQuery: state.uri.queryParameters['q'] ?? '',
+      ),
+    ),
+    GoRoute(
+      path: '/support/requests',
+      name: 'support-tickets',
+      builder: (context, state) => const MyTicketsScreen(),
+    ),
+    // One screen for both entry points: an existing thread carries `ticketId`,
+    // a tapped help card carries the `category` it should open on. No ticket is
+    // created until the member actually writes something.
+    GoRoute(
+      path: '/support/chat',
+      name: 'support-chat',
+      builder: (context, state) {
+        final extra = state.extra is Map<String, dynamic>
+            ? state.extra as Map<String, dynamic>
+            : const <String, dynamic>{};
+        final ticketId = extra['ticketId'];
+        final category = extra['category'];
+        final title = extra['categoryTitle'];
+        final opening = extra['openingMessage'];
+        return SupportChatScreen(
+          ticketId: ticketId is String && ticketId.isNotEmpty ? ticketId : null,
+          category: category is String && category.isNotEmpty
+              ? category
+              : SupportCategory.other,
+          categoryTitle: title is String && title.isNotEmpty ? title : null,
+          openingMessage:
+              opening is String && opening.isNotEmpty ? opening : null,
+        );
+      },
     ),
     GoRoute(
       path: '/notification-settings',
@@ -744,25 +832,53 @@ final GoRouter appRouter = GoRouter(
       name: 'delete-account',
       builder: (context, state) => const DeleteAccountScreen(),
     ),
+    // Every step after /delete-account carries the server's eligibility
+    // decision, so none of them can be entered directly — landing on one
+    // without it would mean a screen that never asked whether the account can
+    // be deleted at all.
     GoRoute(
       path: '/delete-account-confirmation',
       name: 'delete-account-confirmation',
-      builder: (context, state) => const DeleteAccountConfirmationScreen(),
+      redirect: (context, state) =>
+          state.extra is DeleteAccountRequest ? null : '/delete-account',
+      builder: (context, state) => state.extra is DeleteAccountRequest
+          ? DeleteAccountConfirmationScreen(
+              request: state.extra as DeleteAccountRequest,
+            )
+          : const _MissingExtraRedirect(target: '/delete-account'),
     ),
     GoRoute(
       path: '/delete-account-feedback',
       name: 'delete-account-feedback',
-      builder: (context, state) => const DeleteAccountFeedbackScreen(),
-    ),
-    GoRoute(
-      path: '/delete-account-pin',
-      name: 'delete-account-pin',
-      builder: (context, state) => const DeleteAccountPinScreen(),
+      redirect: (context, state) =>
+          state.extra is DeleteAccountRequest ? null : '/delete-account',
+      builder: (context, state) => state.extra is DeleteAccountRequest
+          ? DeleteAccountFeedbackScreen(
+              request: state.extra as DeleteAccountRequest,
+            )
+          : const _MissingExtraRedirect(target: '/delete-account'),
     ),
     GoRoute(
       path: '/delete-account-final-confirmation',
       name: 'delete-account-final-confirmation',
-      builder: (context, state) => const DeleteAccountFinalConfirmationScreen(),
+      redirect: (context, state) =>
+          state.extra is DeleteAccountRequest ? null : '/delete-account',
+      builder: (context, state) => state.extra is DeleteAccountRequest
+          ? DeleteAccountFinalConfirmationScreen(
+              request: state.extra as DeleteAccountRequest,
+            )
+          : const _MissingExtraRedirect(target: '/delete-account'),
+    ),
+    GoRoute(
+      path: '/delete-account-pin',
+      name: 'delete-account-pin',
+      redirect: (context, state) =>
+          state.extra is DeleteAccountRequest ? null : '/delete-account',
+      builder: (context, state) => state.extra is DeleteAccountRequest
+          ? DeleteAccountPinScreen(
+              request: state.extra as DeleteAccountRequest,
+            )
+          : const _MissingExtraRedirect(target: '/delete-account'),
     ),
     GoRoute(
       path: '/delete-account-success',

@@ -390,6 +390,7 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
             for (final p in _providers)
               BillBrandChip(
                 label: p.name,
+                logoUrl: p.logoUrl,
                 selected: _selectedProvider?.id == p.id,
                 accent: const Color(0xFFFFB627),
                 onTap: () => _onProviderChanged(p),

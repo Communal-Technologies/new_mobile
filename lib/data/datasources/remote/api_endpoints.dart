@@ -38,6 +38,12 @@ class ApiEndpoints {
   /// loans-svc). Responses use the `{status:"success", data:{…}}` envelope.
   static const String _loansV2 = '/api/loans/v2';
 
+  /// Support micro-service prefix. Tickets, the first-line bot and the one
+  /// knowledge base behind every FAQ surface are served from
+  /// `/api/support/v1/…`. Bare JSON bodies, not the `{status, data}` envelope
+  /// the Laravel routes use.
+  static const String _supportV1 = '/api/support/v1';
+
   /// Cooperative micro-service prefix. Membership, join requests, member
   /// settings, notifications, the member ledger and per-cooperative account
   /// closure were migrated off the monolith to `/api/cooperative/v2/…`.
@@ -110,6 +116,12 @@ class ApiEndpoints {
   static String membersFetchUserDetails(String id) =>
       '$_v1/members/fetch-user-details/$id';
   static const String membersUpdateProfile = '$_v1/members/update-profile';
+  // The sign-in email and phone are NOT part of update-profile — that endpoint
+  // refuses a changed one. They move in two steps: the PIN authorises the change
+  // and a code sent to the new value confirms it before anything is written.
+  static const String membersContactChange = '$_v1/members/contact/change';
+  static const String membersContactChangeVerify =
+      '$_v1/members/contact/change/verify';
   static const String membersUploadAvatar = '$_v1/members/profile/avatar';
   // Wallet freeze is authsvc's: it owns `wallets` and the Anchor freeze call,
   // and freezing one has nothing to do with any cooperative. Account closure
@@ -124,6 +136,19 @@ class ApiEndpoints {
       '$_v1/members/account/freeze-status';
   static const String membersAccountClosureSubmit =
       '$_coopV2/members/account-closure/submit';
+  // Read before the submit above: the position the cooperative will settle, plus
+  // whatever stops the member asking at all. Takes ?cooperative=.
+  static const String membersAccountClosurePreview =
+      '$_coopV2/members/account-closure/preview';
+  // Deleting the whole Communal account, which is a different act from the
+  // closure above: that one leaves a single cooperative and its administrators
+  // settle the member's position, this one closes the identity and answers to
+  // nobody. Both endpoints are authsvc's — it owns `users`, the wallet and the
+  // Anchor customer. The preview is the only source of the checkpoints; the
+  // delete re-checks every one of them.
+  static const String membersAccountDeletionPreview =
+      '$_v1/members/account/deletion/preview';
+  static const String membersAccountDeletion = '$_v1/members/account/deletion';
   static const String membersTransactionStatementExport =
       '$_txnV2/members/statement/export';
 
@@ -286,6 +311,33 @@ class ApiEndpoints {
   static String kycUpgradeTier2(String anchorCustomerId) =>
       '/api/kyc/v2/$anchorCustomerId/tier2';
 
+  // --- Support / help desk (support-svc) ----------------------------------
+
+  /// Contact details, support hours, whether the bot is on and whether an
+  /// operator is at the desk. Readable without a token.
+  static const String supportConfig = '$_supportV1/config';
+
+  /// The knowledge base. `?q=` searches, `?category=` filters; the audience is
+  /// resolved from the token, never from a query parameter.
+  static const String supportKb = '$_supportV1/kb';
+  static const String supportKbCategories = '$_supportV1/kb/categories';
+  static String supportKbArticle(String slug) => '$_supportV1/kb/$slug';
+  static String supportKbVote(String slug) => '$_supportV1/kb/$slug/vote';
+
+  /// GET lists this member's tickets; POST opens one and returns the thread
+  /// with the bot's first answer already in it.
+  static const String supportTickets = '$_supportV1/tickets';
+  static String supportTicket(String id) => '$_supportV1/tickets/$id';
+
+  /// GET with `?after=<seq>` is the four-second thread poll; POST writes a
+  /// message and runs the bot turn when the bot still owns the ticket.
+  static String supportTicketMessages(String id) =>
+      '$_supportV1/tickets/$id/messages';
+  static String supportTicketEscalate(String id) =>
+      '$_supportV1/tickets/$id/escalate';
+  static String supportTicketClose(String id) => '$_supportV1/tickets/$id/close';
+  static String supportTicketCsat(String id) => '$_supportV1/tickets/$id/csat';
+
   // --- Regions / locations ------------------------------------------------
   static const String fetchRegions = '$_v1/fetch-regions';
   static const String fetchStates = '$_v1/fetch-states';
@@ -301,4 +353,12 @@ class ApiEndpoints {
   static const String biometricChallenge = '$_v1/security/biometric/challenge';
   static const String biometricRevoke = '$_v1/security/biometric/revoke';
   static const String biometricStatus = '$_v1/security/biometric/status';
+
+  /// Exchanges a signature for the marker the Go services read. They gate every
+  /// money-moving route on `pin_verified:{id}` in shared Redis and none of them
+  /// can verify a biometric signature, so the PIN path's
+  /// `membersVerifySecurityPin` had an authsvc counterpart and the biometric
+  /// path had none. [intent] must be the one the nonce was minted for.
+  static String biometricPaymentAuthorization(String intent) =>
+      '$_v1/security/payment-authorization/$intent';
 }

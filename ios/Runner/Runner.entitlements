@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+	Debug and Profile entitlements.
+
+	`aps-environment` names which APNs environment the app's push token is
+	issued for, and it has to match the provisioning profile signing the build:
+	a development profile only carries `development`. Release has its own file
+	with `production` — see RunnerRelease.entitlements — because Xcode does not
+	rewrite this value when the export is signed manually, which is how CI signs
+	it. One shared file would mean either a debug build that cannot be signed or
+	an App Store build whose tokens are sandbox tokens that production APNs
+	refuses.
+-->
+<plist version="1.0">
+<dict>
+	<key>aps-environment</key>
+	<string>development</string>
+</dict>
+</plist>

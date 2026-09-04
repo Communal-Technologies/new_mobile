@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
@@ -5,10 +7,25 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/models/support_models.dart';
+import 'package:communal_mobile/data/repositories/support_repository.dart';
+import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/account/widgets/faq_category_section.dart';
 
+/// The FAQ catalogue, read from the support knowledge base.
+///
+/// It used to be four hardcoded lists in this file. They are now rows in
+/// `sup_kb_articles` — the same rows the assistant answers from and the website
+/// FAQ shows — so an answer edited in the admin console changes here on the next
+/// open, and the app can no longer tell a member something the bot contradicts.
+/// The audience is resolved from the token, so a signed-in member sees the
+/// member-only answers as well as the public ones.
 class FaqScreen extends StatefulWidget {
-  const FaqScreen({super.key});
+  const FaqScreen({super.key, this.initialQuery = ''});
+
+  /// Pre-filled search, used by the Help & Support search bar so typing there
+  /// lands on results rather than on an unfiltered catalogue.
+  final String initialQuery;
 
   @override
   State<FaqScreen> createState() => _FaqScreenState();
@@ -16,34 +33,107 @@ class FaqScreen extends StatefulWidget {
 
 class _FaqScreenState extends State<FaqScreen> {
   final TextEditingController _searchController = TextEditingController();
-  int _selectedTab = 0;
 
-  final List<String> _tabs = [
-    'Account',
-    'Payments',
-    'Loans',
-    'Cooperative',
-    'Security',
-  ];
+  Timer? _debounce;
+  List<String> _categories = const [];
+  List<KbArticle> _articles = const [];
+  String _selectedCategory = '';
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.text = widget.initialQuery;
+    unawaited(_load());
+  }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
+  SupportRepository get _repo => getIt<SupportRepository>();
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      // Only categories that actually have a published article for this reader,
+      // so a tab never opens onto nothing.
+      final categories = _categories.isEmpty
+          ? await _repo.knowledgeBaseCategories()
+          : _categories;
+      final articles = await _repo.knowledgeBase(
+        query: _searchController.text,
+        // A search runs across the whole base: narrowing it to the open tab
+        // hides the answer the member is looking for.
+        category: _searchController.text.trim().isEmpty ? _selectedCategory : '',
+      );
+      if (!mounted) return;
+      setState(() {
+        _categories = categories;
+        _articles = articles;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  void _onSearchChanged(String _) {
+    // Rebuild now so the clear button appears with the first keystroke; the
+    // query itself waits for the debounce.
+    setState(() {});
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () => unawaited(_load()));
+  }
+
+  void _selectCategory(String category) {
+    if (_selectedCategory == category) return;
+    setState(() => _selectedCategory = category);
+    unawaited(_load());
+  }
+
+  /// Opens a conversation instead. Reachable from the empty state and from the
+  /// bottom of the list: a catalogue with no answer in it is exactly when a
+  /// member needs the assistant, and making them navigate back to find it is how
+  /// the question goes unasked.
+  void _askInstead() {
+    context.pushNamed(
+      'support-chat',
+      extra: <String, dynamic>{
+        'category': _selectedCategory.isEmpty
+            ? SupportCategory.general
+            : _selectedCategory,
+        'categoryTitle': 'Help',
+        if (_searchController.text.trim().isNotEmpty)
+          'openingMessage': _searchController.text.trim(),
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: systemOverlayForTheme(Theme.of(context)),
+      value: systemOverlayForTheme(theme),
       child: Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: Theme.of(context).cardColor,
+          backgroundColor: theme.cardColor,
           elevation: 0,
           // Status-bar overlay must follow the active theme, otherwise
           // dark icons render invisibly on the dark scaffold.
-          systemOverlayStyle: systemOverlayForTheme(Theme.of(context)),
+          systemOverlayStyle: systemOverlayForTheme(theme),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
@@ -53,154 +143,145 @@ class _FaqScreenState extends State<FaqScreen> {
             style: TextStyle(
               fontSize: 19.sp,
               fontWeight: FontWeight.w700,
-              color: Theme.of(context).colorScheme.onSurface,
+              color: theme.colorScheme.onSurface,
             ),
           ),
           centerTitle: true,
         ),
         body: Column(
           children: [
-            _buildCategoryTabs(),
+            if (_categories.isNotEmpty) _buildCategoryTabs(),
             vSpace(16),
             _buildSearchBar(),
             vSpace(16),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    FaqCategorySection(
-                      title: 'Account & Profile',
-                      questions: [
-                        FaqQuestion(
-                          question: 'How do I upgrade my account tier?',
-                          answer:
-                              'To upgrade your account tier, go to Account Settings > Account Limits. Complete the required verifications for the tier you want to upgrade to.',
-                        ),
-                        FaqQuestion(
-                          question: 'How do I update my profile information?',
-                          answer:
-                              'Navigate to Account Settings > My Profile and tap on Edit Profile. You can update your personal information, address, and other details.',
-                        ),
-                        FaqQuestion(
-                          question: 'What documents do I need for verification?',
-                          answer:
-                              'For Tier 2, you need BVN and NIN. For Tier 3, you need to complete Tier 2, upload a valid ID, and provide address verification.',
-                        ),
-                        FaqQuestion(
-                          question: 'Can I have multiple cooperatives?',
-                          answer:
-                              'Yes, you can join multiple cooperatives. Each cooperative has its own settings and contributions that you can manage separately.',
-                        ),
-                      ],
-                    ),
-                    vSpace(12),
-                    FaqCategorySection(
-                      title: 'Loans & Borrowing',
-                      questions: [
-                        FaqQuestion(
-                          question: 'What loan amounts can I access?',
-                          answer:
-                              'Loan amounts depend on your account tier, creditworthiness, and the cooperative\'s policies. Check the Loans section for available offers.',
-                        ),
-                        FaqQuestion(
-                          question: 'How long does loan approval take?',
-                          answer:
-                              'Loan approval typically takes 24-48 hours after submission of all required documents and guarantor information.',
-                        ),
-                        FaqQuestion(
-                          question: 'What are the interest rates?',
-                          answer:
-                              'Interest rates vary based on loan amount, duration, and your credit profile. Check individual loan offers for specific rates.',
-                        ),
-                        FaqQuestion(
-                          question: 'Can I repay my loan early?',
-                          answer:
-                              'Yes, you can repay your loan early. Early repayment may qualify you for reduced interest. Check your loan details for more information.',
-                        ),
-                      ],
-                    ),
-                    vSpace(12),
-                    FaqCategorySection(
-                      title: 'Communities & Cooperatives',
-                      questions: [
-                        FaqQuestion(
-                          question: 'How do I join a community?',
-                          answer:
-                              'Browse available communities in the Community section, select one that interests you, and submit a join request. Wait for approval from the community admin.',
-                        ),
-                        FaqQuestion(
-                          question: 'What is a cooperative wallet?',
-                          answer:
-                              'A cooperative wallet is a shared financial pool managed by the cooperative for contributions, loans, and other financial activities.',
-                        ),
-                        FaqQuestion(
-                          question: 'How do I switch between cooperatives?',
-                          answer:
-                              'You can switch between cooperatives from the Community section. Each cooperative maintains separate settings and financial records.',
-                        ),
-                        FaqQuestion(
-                          question: 'Can I create my own community?',
-                          answer:
-                              'Yes, you can create your own community. Navigate to the Community section and select "Create Community" to get started.',
-                        ),
-                      ],
-                    ),
-                    vSpace(12),
-                    FaqCategorySection(
-                      title: 'Payments & Transactions',
-                      questions: [
-                        FaqQuestion(
-                          question: 'How do I make a transfer?',
-                          answer:
-                              'Go to the Wallet or Transactions section, select Transfer, enter the recipient details and amount, then confirm the transaction.',
-                        ),
-                        FaqQuestion(
-                          question: 'What are the transaction limits?',
-                          answer:
-                              'Limits depend on your verification tier (Tier 1 after BVN and account number, Tier 2 after ID verification). Exact amounts are shown under Account > Account limits and may be updated by Communal.',
-                        ),
-                        FaqQuestion(
-                          question: 'Are there transaction fees?',
-                          answer:
-                              'Transaction fees vary by transaction type. Check the fee schedule in Account Settings > Account Limits for detailed information.',
-                        ),
-                        FaqQuestion(
-                          question: 'How do I track my obligations?',
-                          answer:
-                              'Navigate to the Obligations section to view all your financial obligations, payment schedules, and payment history.',
-                        ),
-                      ],
-                    ),
-                    vSpace(12),
-                    FaqCategorySection(
-                      title: 'Security & Privacy',
-                      questions: [
-                        FaqQuestion(
-                          question: 'How do I change my transaction PIN?',
-                          answer:
-                              'Go to Account Settings > Security Settings, select Change PIN, verify your identity, and set a new PIN.',
-                        ),
-                        FaqQuestion(
-                          question: 'What is biometric authentication?',
-                          answer:
-                              'Biometric authentication uses your fingerprint or face ID to securely access your account. Enable it in Security Settings.',
-                        ),
-                        FaqQuestion(
-                          question: 'How do I secure my account?',
-                          answer:
-                              'Use a strong PIN, enable biometric authentication, never share your credentials, and enable two-factor authentication if available.',
-                        ),
-                        FaqQuestion(
-                          question: 'What should I do if I suspect fraud?',
-                          answer:
-                              'Immediately freeze your account from Account Settings, change your PIN, and contact support at support@bullioncrib.com or use the Report Scam feature.',
-                        ),
-                      ],
-                    ),
-                    vSpace(32),
-                  ],
+            Expanded(child: _buildBody(theme)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody(ThemeData theme) {
+    if (_loading && _articles.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null && _articles.isEmpty) {
+      return _buildMessageState(
+        theme,
+        icon: Icons.cloud_off,
+        title: 'We could not load the answers',
+        body: _error!,
+        actionLabel: 'Try again',
+        onAction: () => unawaited(_load()),
+      );
+    }
+    if (_articles.isEmpty) {
+      return _buildMessageState(
+        theme,
+        icon: Icons.help_outline,
+        title: _searchController.text.trim().isEmpty
+            ? 'Nothing published here yet'
+            : 'No answer matches that',
+        body: 'Ask us directly — the assistant answers the common questions '
+            'straight away and passes anything else to a person.',
+        actionLabel: 'Ask us',
+        onAction: _askInstead,
+      );
+    }
+
+    final grouped = <String, List<KbArticle>>{};
+    for (final article in _articles) {
+      grouped.putIfAbsent(article.category, () => []).add(article);
+    }
+
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          children: [
+            for (final entry in grouped.entries) ...[
+              FaqCategorySection(
+                title: supportCategoryLabel(entry.key),
+                questions: entry.value
+                    .map((a) => FaqQuestion(question: a.question, answer: a.answer))
+                    .toList(),
+              ),
+              vSpace(12),
+            ],
+            vSpace(4),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: TextButton.icon(
+                onPressed: _askInstead,
+                icon: Icon(Icons.support_agent, size: 18.sp),
+                label: Text(
+                  'Still stuck? Ask us',
+                  style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w600),
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF7434FF),
                 ),
               ),
+            ),
+            vSpace(32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMessageState(
+    ThemeData theme, {
+    required IconData icon,
+    required String title,
+    required String body,
+    required String actionLabel,
+    required VoidCallback onAction,
+  }) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 32.w),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 44.sp,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+            ),
+            vSpace(12),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 19.sp,
+                fontWeight: FontWeight.w700,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            vSpace(8),
+            Text(
+              body,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 17.sp,
+                height: 1.5,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            vSpace(16),
+            ElevatedButton(
+              onPressed: onAction,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF7434FF),
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+              ),
+              child: Text(actionLabel, style: TextStyle(fontSize: 17.sp)),
             ),
           ],
         ),
@@ -220,20 +301,21 @@ class _FaqScreenState extends State<FaqScreen> {
         scrollDirection: Axis.horizontal,
         padding: EdgeInsets.symmetric(horizontal: 16.w),
         child: Row(
-          children: List.generate(
-            _tabs.length,
-            (index) => _buildTab(index),
-          ),
+          children: [
+            _buildTab('', 'All'),
+            for (final category in _categories)
+              _buildTab(category, supportCategoryLabel(category)),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildTab(int index) {
+  Widget _buildTab(String category, String label) {
     final theme = Theme.of(context);
-    final isSelected = _selectedTab == index;
+    final isSelected = _selectedCategory == category;
     return GestureDetector(
-      onTap: () => setState(() => _selectedTab = index),
+      onTap: () => _selectCategory(category),
       child: Container(
         margin: EdgeInsets.only(right: 12.w),
         padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
@@ -246,7 +328,7 @@ class _FaqScreenState extends State<FaqScreen> {
           ),
         ),
         child: Text(
-          _tabs[index],
+          label,
           style: TextStyle(
             fontSize: 19.sp,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
@@ -276,6 +358,9 @@ class _FaqScreenState extends State<FaqScreen> {
         ),
         child: TextField(
           controller: _searchController,
+          onChanged: _onSearchChanged,
+          textInputAction: TextInputAction.search,
+          onSubmitted: (_) => unawaited(_load()),
           decoration: InputDecoration(
             hintText: 'Search for help...',
             hintStyle: TextStyle(
@@ -287,6 +372,15 @@ class _FaqScreenState extends State<FaqScreen> {
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
               size: 20.sp,
             ),
+            suffixIcon: _searchController.text.isEmpty
+                ? null
+                : IconButton(
+                    icon: Icon(Icons.close, size: 18.sp),
+                    onPressed: () {
+                      _searchController.clear();
+                      unawaited(_load());
+                    },
+                  ),
             border: InputBorder.none,
             contentPadding: EdgeInsets.symmetric(
               horizontal: 16.w,
@@ -305,4 +399,3 @@ class FaqQuestion {
 
   FaqQuestion({required this.question, required this.answer});
 }
-

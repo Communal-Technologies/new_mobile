@@ -397,6 +397,7 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
             for (final p in _providers)
               BillBrandChip(
                 label: p.name,
+                logoUrl: p.logoUrl,
                 selected: _selectedProvider?.id == p.id,
                 accent: const Color(0xFF22C55E),
                 onTap: () => _onProviderChanged(p),

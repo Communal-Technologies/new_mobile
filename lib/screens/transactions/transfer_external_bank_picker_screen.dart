@@ -1,3 +1,4 @@
+import 'package:communal_mobile/core/widgets/brand_logo.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:flutter/material.dart';
@@ -42,19 +43,6 @@ class _TransferExternalBankPickerScreenState
         .toList(growable: false);
   }
 
-  Widget _logoTile({double size = 40}) {
-    return CircleAvatar(
-      radius: (size / 2).r,
-      backgroundColor:
-          Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: Icon(
-        Icons.account_balance,
-        size: (size * 0.45).sp,
-        color: Theme.of(context).colorScheme.onSurface,
-      ),
-    );
-  }
-
   Widget _bankRow(TransferBank b, {bool compact = false}) {
     return InkWell(
       onTap: () => context.pop(b),
@@ -65,7 +53,11 @@ class _TransferExternalBankPickerScreenState
         ),
         child: Row(
           children: [
-            _logoTile(size: compact ? 40 : 44),
+            BrandLogo(
+              name: b.name,
+              logoUrl: b.logoUrl,
+              size: compact ? 40 : 44,
+            ),
             SizedBox(width: 12.w),
             Expanded(
                 child: Text(
@@ -202,7 +194,11 @@ class _TransferExternalBankPickerScreenState
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    _logoTile(size: 46),
+                                    BrandLogo(
+                                      name: b.name,
+                                      logoUrl: b.logoUrl,
+                                      size: 46,
+                                    ),
                                     vSpace(8),
                                     Text(
                                       b.name,

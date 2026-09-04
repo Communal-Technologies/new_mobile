@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/widgets/bottomsheet_handlebar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/community_repository.dart';
@@ -12,6 +15,12 @@ import 'package:communal_mobile/screens/community/data/sample_community_location
 /// to /members/join-requests and pops the resulting [CommunityJoinRequest]
 /// so callers can route to the application-status screen. Pops `null` on
 /// cancel/dismiss.
+///
+/// An account with no name on it anywhere gets the profile-information prompt
+/// instead of the form: cooperative-svc refuses the request, because an admin has
+/// nothing to review it by. The router's KYC gate normally keeps anyone in that
+/// state out of the app entirely, so this is the case it does not cover — a member
+/// whose tier was raised without a name ever landing on their profile.
 class JoinCommunityBottomSheet extends StatefulWidget {
   const JoinCommunityBottomSheet({super.key, required this.community});
 
@@ -85,6 +94,110 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
         _errorMessage = e.toString().replaceFirst('Exception: ', '');
       });
     }
+  }
+
+  /// Whether anything on file names the member. Unknown counts as present — the
+  /// service is the authority, and holding a member back on a state we could not
+  /// read is worse than letting them see its answer.
+  bool get _named {
+    final auth = context.read<AuthBloc>().state;
+    return auth is! AuthAuthenticated || auth.user.hasProfileInformation;
+  }
+
+  List<Widget> _noNameBody() {
+    return [
+      Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(14.w),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3E9FF),
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: const Color(0xFFE2D2FF)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.badge_outlined, color: Color(0xFF7434FF)),
+            hSpace(12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Complete your profile information first',
+                    style: TextStyle(
+                      fontSize: 19.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF41129A),
+                    ),
+                  ),
+                  vSpace(4),
+                  Text(
+                    'Your application goes to ${widget.community.name} under '
+                    'your name, and your profile does not have one yet. Fill '
+                    'in your profile information and apply again.',
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      color: const Color(0xFF41129A),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      vSpace(20),
+      Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: OutlinedButton.styleFrom(
+                minimumSize: Size(double.infinity, 52.h),
+                side: BorderSide(color: Theme.of(context).dividerColor),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+              ),
+              child: Text(
+                'Not now',
+                style: TextStyle(
+                  fontSize: 19.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ),
+          ),
+          hSpace(12),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                context.pushNamed('kyc-profile-info');
+              },
+              style: ElevatedButton.styleFrom(
+                minimumSize: Size(double.infinity, 52.h),
+                backgroundColor: const Color(0xFF7434FF),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+              ),
+              child: Text(
+                'Complete profile',
+                style: TextStyle(
+                  fontSize: 19.sp,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ];
   }
 
   List<Widget> _submitBody() {
@@ -252,6 +365,7 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
                         child: const Center(child: CircularProgressIndicator()),
                       )
                     else if (_existingPending != null) ..._pendingBody()
+                    else if (!_named) ..._noNameBody()
                     else ..._submitBody(),
                   ],
                 ),

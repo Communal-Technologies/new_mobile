@@ -72,23 +72,53 @@ class BiometricSignerService {
 
   /// Returns true if a Keystore / Secure-Enclave key exists for this
   /// install AND the backend has the matching public key recorded.
+  ///
+  /// This is the *sign-in* question. An enrollment can be real and still be
+  /// unable to authorise anything — see [canAuthorizePayments].
   Future<bool> isEnrolled() async {
+    final status = await fetchStatus();
+    return status?.enrolled ?? false;
+  }
+
+  /// Whether biometrics may stand in for the transaction PIN on this device,
+  /// right now, for this account.
+  ///
+  /// Three separate things have to be true and only the server knows all of them:
+  /// the device key is enrolled, it was verified with a factor the server itself
+  /// checked (an unverified key proves possession of the bearer token and nothing
+  /// more), and the account actually has a transaction PIN. Biometrics is the quick
+  /// alternative to that PIN — until one is set, an enrollment is for signing in,
+  /// and the confirm screens must offer the keypad and nothing else.
+  ///
+  /// Every gate in the app asks this one method rather than assembling the
+  /// condition itself, because the condition it has to match is the one the server
+  /// enforces — see `BiometricController::status()`'s `can_authorize`.
+  Future<bool> canAuthorizePayments() async {
+    final status = await fetchStatus();
+    return status?.canAuthorize ?? false;
+  }
+
+  /// Reads the backend's view of this device's enrollment, or null when the local
+  /// key is missing or the call fails. Callers treat null as "not available".
+  Future<BiometricEnrollmentStatus?> fetchStatus() async {
     try {
       final id = await deviceId();
       final localPem = await _keys.getPublicKeyPem(id);
-      if (localPem == null) return false;
+      if (localPem == null) return null;
       final response = await _dio.get(
         ApiEndpoints.biometricStatus,
         queryParameters: <String, dynamic>{'device_id': id},
       );
       final data = response.data;
       if (data is Map && data['data'] is Map) {
-        return (data['data']['enrolled'] == true);
+        return BiometricEnrollmentStatus.fromJson(
+          Map<String, dynamic>.from(data['data'] as Map),
+        );
       }
-      return false;
+      return null;
     } catch (e) {
-      AppLogger.warn(_tag, 'isEnrolled check failed: $e');
-      return false;
+      AppLogger.warn(_tag, 'biometric status check failed: $e');
+      return null;
     }
   }
 
@@ -97,7 +127,13 @@ class BiometricSignerService {
   ///
   /// Idempotent on re-run: the native side replaces the existing key,
   /// the backend's `enroll` endpoint replaces the row in place.
-  Future<void> enroll({String? deviceLabel}) async {
+  ///
+  /// [currentSecurityPin] is what decides whether the resulting key may authorise
+  /// payments. The device-local biometric prompt is not something the server can
+  /// verify, so without a factor it *can* check, the key is enrolled but untrusted:
+  /// good for signing in, refused by `payment-authorization/*`. Passing the PIN once
+  /// here is what promotes it — and returns whether that worked.
+  Future<bool> enroll({String? deviceLabel, String? currentSecurityPin}) async {
     final id = await deviceId();
     final pem = await _keys.generateKeyPair(id);
     final response = await _dio.post(
@@ -107,13 +143,17 @@ class BiometricSignerService {
         'public_key_pem': pem,
         'key_alg': 'ES256',
         if (deviceLabel != null) 'device_label': deviceLabel,
+        if (currentSecurityPin != null && currentSecurityPin.isNotEmpty)
+          'current_security_pin': currentSecurityPin,
       },
     );
     final data = response.data;
     if (data is! Map || data['status'] != true) {
       throw Exception('Could not enroll device for biometric.');
     }
-    AppLogger.debug(_tag, 'enroll OK device_id=$id');
+    final verified = data['data'] is Map && data['data']['verified'] == true;
+    AppLogger.debug(_tag, 'enroll OK device_id=$id verified=$verified');
+    return verified;
   }
 
   /// Revokes the local key and tells the backend to mark its public-key
@@ -142,7 +182,7 @@ class BiometricSignerService {
     String promptTitle = 'Authorize transfer',
     String promptSubtitle = 'Use biometrics to confirm this transfer',
   }) async {
-    return _signIntent(
+    return _signAndAuthorize(
       'transfer',
       promptTitle: promptTitle,
       promptSubtitle: promptSubtitle,
@@ -154,8 +194,28 @@ class BiometricSignerService {
     String promptTitle = 'Authorize payment',
     String promptSubtitle = 'Use biometrics to confirm this payment',
   }) async {
-    return _signIntent(
+    return _signAndAuthorize(
       'pay-obligation',
+      promptTitle: promptTitle,
+      promptSubtitle: promptSubtitle,
+    );
+  }
+
+  /// Authorises an account action — leaving a cooperative, freezing the wallet,
+  /// deleting the account.
+  ///
+  /// Those screens gate on the same `pin_verified` marker a payment does, so this
+  /// goes through [_signAndAuthorize] like the payment intents: the signature
+  /// alone buys nothing, the marker is what the action spends.
+  ///
+  /// Changing the transaction PIN is the one account action with no biometric
+  /// path, on purpose — a new PIN has to be set with the old one.
+  Future<BiometricSignedHeaders> signAccountActionIntent({
+    String promptTitle = 'Authorize this action',
+    String promptSubtitle = 'Use biometrics to confirm',
+  }) async {
+    return _signAndAuthorize(
+      'account-action',
       promptTitle: promptTitle,
       promptSubtitle: promptSubtitle,
     );
@@ -173,6 +233,47 @@ class BiometricSignerService {
       promptTitle: promptTitle,
       promptSubtitle: promptSubtitle,
     );
+  }
+
+  /// Signs [intent], then spends the signature on the authsvc route that writes
+  /// the `pin_verified:{id}` marker.
+  ///
+  /// The services that own these routes — transactions-svc `/transfer/initiate`,
+  /// obligations-svc `/payments` and `/fines/payments`, loans-svc `/pay` — gate on
+  /// that marker and cannot verify a signature themselves, so the headers alone
+  /// bought nothing and every biometric-mode payment came back 403. The PIN mode
+  /// of these same screens has always called `verifySecurityPin` for exactly this
+  /// reason; this is its biometric counterpart, and it lives here so a screen
+  /// cannot sign without it.
+  ///
+  /// The headers are still returned and still attached to the payment request:
+  /// authsvc's own `/transfer/initiate` verifies them, and `X-Biometric-Device-Id`
+  /// is what transactions-svc records as the acting device.
+  Future<BiometricSignedHeaders> _signAndAuthorize(
+    String intent, {
+    required String promptTitle,
+    required String promptSubtitle,
+  }) async {
+    final headers = await _signIntent(
+      intent,
+      promptTitle: promptTitle,
+      promptSubtitle: promptSubtitle,
+    );
+    try {
+      await _dio.post(
+        ApiEndpoints.biometricPaymentAuthorization(intent),
+        extraHeaders: headers.toHeaders(),
+      );
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      final message = data is Map ? data['message']?.toString() : null;
+      throw Exception(
+        message?.isNotEmpty == true
+            ? message
+            : 'Could not authorise this payment. Please try again.',
+      );
+    }
+    return headers;
   }
 
   Future<BiometricSignedHeaders> _signIntent(
@@ -221,6 +322,39 @@ class BiometricSignerService {
       return code == 'device_not_enrolled';
     }
     return false;
+  }
+}
+
+/// The backend's answer about this device, from `GET security/biometric/status`.
+///
+/// [enrolled] is what sign-in cares about; [canAuthorize] is what the payment and
+/// account-action gates care about, and the server computes it rather than the
+/// client, so the button is drawn on exactly the condition the server will accept.
+class BiometricEnrollmentStatus {
+  const BiometricEnrollmentStatus({
+    required this.enrolled,
+    required this.verified,
+    required this.hasSecurityPin,
+    required this.canAuthorize,
+  });
+
+  final bool enrolled;
+  final bool verified;
+  final bool hasSecurityPin;
+  final bool canAuthorize;
+
+  factory BiometricEnrollmentStatus.fromJson(Map<String, dynamic> json) {
+    final enrolled = json['enrolled'] == true;
+    final verified = json['verified'] == true;
+    final hasPin = json['has_security_pin'] == true;
+    return BiometricEnrollmentStatus(
+      enrolled: enrolled,
+      verified: verified,
+      hasSecurityPin: hasPin,
+      // Older builds of authsvc answer only `enrolled`. Absent the explicit
+      // permission, treat it as absent rather than granted.
+      canAuthorize: json['can_authorize'] == true,
+    );
   }
 }
 

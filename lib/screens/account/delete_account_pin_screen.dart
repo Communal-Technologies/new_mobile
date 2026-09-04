@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
+import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
+import 'package:communal_mobile/core/widgets/biometric_action_button.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/account_actions_repository.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/screens/account/delete_account_request.dart';
 import 'package:communal_mobile/screens/account/widgets/pin_input_field.dart';
 
 class DeleteAccountPinScreen extends StatefulWidget {
-  const DeleteAccountPinScreen({super.key});
+  const DeleteAccountPinScreen({super.key, required this.request});
+
+  final DeleteAccountRequest request;
 
   @override
   State<DeleteAccountPinScreen> createState() =>
@@ -23,6 +30,9 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
   bool _submitting = false;
   String? _errorMessage;
 
+  /// Verifying and deleting live in the same handler on purpose. The PIN mints a
+  /// short-lived marker in shared Redis that the delete endpoint consumes, so
+  /// there is no step in between where a verified PIN sits around unspent.
   Future<void> _handlePinCompleted(String pin) async {
     if (_submitting) return;
     setState(() {
@@ -31,18 +41,45 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
       _errorMessage = null;
     });
     try {
-      await getIt<AccountActionsRepository>().verifySecurityPin(pin);
-      if (!mounted) return;
-      // ignore: unawaited_futures
-      context.pushNamed('delete-account-final-confirmation');
+      await getIt<AccountActionsRepository>()
+          .verifySecurityPin(pin, intent: 'account-action');
+      await _delete();
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _submitting = false;
-        _showError = true;
-        _errorMessage = e.toString().replaceFirst('Exception: ', '');
-      });
+      _fail(e.toString().replaceFirst('Exception: ', ''));
     }
+  }
+
+  /// Runs once the account action is authorised, by PIN or by biometrics — the
+  /// server takes the same marker either way.
+  ///
+  /// Every checkpoint is re-run here, against the state of the account at this
+  /// moment rather than the preview the flow started from: a 409 means something
+  /// changed while the user was reading the warnings.
+  Future<void> _delete() async {
+    final auth = context.read<AuthBloc>();
+    try {
+      await getIt<AccountActionsRepository>().deleteAccount(
+        confirmation: widget.request.confirmation,
+        reason: widget.request.reason,
+      );
+      if (!mounted) return;
+      // Leave the flow before signing out: the credentials are already dead
+      // server-side, and the success screen is the one place the app can still
+      // stand without a session.
+      context.goNamed('delete-account-success');
+      auth.add(LogoutRequested());
+    } catch (e) {
+      _fail(e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  void _fail(String message) {
+    if (!mounted) return;
+    setState(() {
+      _submitting = false;
+      _showError = true;
+      _errorMessage = message;
+    });
   }
 
   void _handlePinChanged(String pin) {
@@ -110,7 +147,8 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
                 ),
                 vSpace(12),
                 Text(
-                  'Enter your transaction PIN to confirm deleting of your account.',
+                  'Enter your transaction PIN. Your account is deleted as soon '
+                  'as the PIN is accepted.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 17.sp,
@@ -124,6 +162,45 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen> {
                   onCompleted: _handlePinCompleted,
                   onChanged: _handlePinChanged,
                 ),
+                BiometricActionButton(
+                  label: 'Delete your account',
+                  promptSubtitle:
+                      'Use biometrics to confirm deleting your account',
+                  enabled: !_submitting,
+                  onAuthorized: () {
+                    setState(() {
+                      _submitting = true;
+                      _showError = false;
+                      _errorMessage = null;
+                    });
+                    return _delete();
+                  },
+                  onFailed: _fail,
+                ),
+                if (_submitting) ...[
+                  vSpace(24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        height: 16.sp,
+                        width: 16.sp,
+                        child: const CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      hSpace(12),
+                      Text(
+                        'Deleting your account…',
+                        style: TextStyle(
+                          fontSize: 17.sp,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 vSpace(24),
                 GestureDetector(
                   onTap: () {

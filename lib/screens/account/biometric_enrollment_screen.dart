@@ -15,6 +15,7 @@ import 'package:communal_mobile/core/utils/biometric_service.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/local/biometric_prefs.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/screens/account/widgets/pin_input_field.dart';
 
 /// Audit M38 Phase D: user-facing enrollment + management screen for the
 /// biometric-bound nonce signing flow.
@@ -35,10 +36,18 @@ import 'package:communal_mobile/injection.dart';
 /// When master is ON, two further sections appear:
 ///   - "Use Biometric For" — granular per-feature toggles backed by
 ///     [BiometricPrefs]. App login is purely client-side (controls the
-///     welcome-back auto-prompt). Transaction Authorization gates the
-///     transfer / obligation flows; turning it off blocks transactions
-///     until the user re-enables, since the audit M38 backend gate
-///     enforces a valid signature on those endpoints.
+///     welcome-back auto-prompt). Payment & Account Authorization decides
+///     whether the payment and account-action gates offer the biometric
+///     shortcut; turning it off means typing the PIN on those screens,
+///     which is always available.
+///
+/// The transaction PIN is what separates the two. Biometrics is the quick
+/// alternative to that PIN, so a member who has not set one enrolls for
+/// sign-in only: the authorization toggle is locked and links to `/set-pin`,
+/// and the server refuses the biometric path on every gate regardless. Once
+/// a PIN exists, confirming it here once is what promotes the device key from
+/// "proves possession of a token" to "may authorise a payment" — the device's
+/// own biometric prompt is not something the backend can verify.
 ///   - "Registered Biometrics" — informational read-only list of the
 ///     biometric methods the OS knows about (Face ID and / or
 ///     Fingerprint), each with an Active / Inactive badge.
@@ -58,6 +67,11 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
   bool _busy = false; // master toggle in progress
   bool _hardwareAvailable = false;
   bool _masterEnabled = false;
+
+  /// Whether the enrolled key was proved with the transaction PIN, and may
+  /// therefore authorise payments and account actions. An enrollment without it is
+  /// real and signs the user in; it just cannot stand in for the PIN.
+  bool _keyVerified = false;
   List<BiometricType> _availableTypes = const <BiometricType>[];
 
   @override
@@ -71,12 +85,13 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
     _prefs = BiometricPrefs(shared);
     final hw = await _signer.isHardwareAvailable();
     final types = await BiometricService.getAvailableBiometrics();
-    final enrolled = await _signer.isEnrolled();
+    final status = await _signer.fetchStatus();
     if (!mounted) return;
     setState(() {
       _hardwareAvailable = hw;
       _availableTypes = types;
-      _masterEnabled = enrolled;
+      _masterEnabled = status?.enrolled ?? false;
+      _keyVerified = status?.canAuthorize ?? false;
       _loading = false;
     });
   }
@@ -89,7 +104,10 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
     // context.read after an await is flagged by the analyzer and the
     // bloc state could change in between.
     final authSnapshot = context.read<AuthBloc>().state;
-    final result = await _showConfirmModal(enabling: nextValue);
+    final result = await _showConfirmModal(
+      enabling: nextValue,
+      hasSecurityPin: _hasSecurityPin(authSnapshot),
+    );
     if (result != true) return;
 
     // When ENABLING: require an actual successful biometric scan
@@ -121,12 +139,30 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
       }
     }
 
+    // The transaction PIN is the factor the *server* can check, and it is the one
+    // biometrics stands in for. Without it the key is enrolled but untrusted: good
+    // for signing in, refused by every payment and account-action gate. A member who
+    // has not set a PIN yet is not asked for one — they enrol for login only, which
+    // is all biometrics can honestly be until they have a PIN to fall back on.
+    String? pin;
+    if (nextValue && _hasSecurityPin(authSnapshot)) {
+      pin = await _promptForPin(
+        subtitle: 'Confirming with your PIN once lets biometrics authorize '
+            'payments and account actions. Skip it and biometrics will sign you in '
+            'only.',
+      );
+    }
+
     setState(() => _busy = true);
     try {
       if (nextValue) {
-        await _signer.enroll(deviceLabel: _deviceLabel());
+        final verified = await _signer.enroll(
+          deviceLabel: _deviceLabel(),
+          currentSecurityPin: pin,
+        );
         await _prefs.setAppLoginEnabled(true);
-        await _prefs.setTransactionsEnabled(true);
+        await _prefs.setTransactionsEnabled(verified);
+        _keyVerified = verified;
         // Stamp the enrolled user so welcome-back can refuse to surface
         // this enrollment to a different user who later signs in on the
         // same device. Without this, biometric availability bleeds
@@ -137,6 +173,7 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
       } else {
         await _signer.unenroll();
         await _prefs.resetAll();
+        _keyVerified = false;
       }
       if (!mounted) return;
       setState(() => _masterEnabled = nextValue);
@@ -153,13 +190,17 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
     }
   }
 
-  Future<bool?> _showConfirmModal({required bool enabling}) {
+  Future<bool?> _showConfirmModal({
+    required bool enabling,
+    required bool hasSecurityPin,
+  }) {
     return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _BiometricConfirmModal(
         enabling: enabling,
+        hasSecurityPin: hasSecurityPin,
         primaryMethodLabel: _primaryMethodLabel(),
       ),
     );
@@ -182,12 +223,59 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
       final confirm = await _showTransactionsDisableWarning();
       if (confirm != true) return;
     }
+
+    // Turning it on when the key has never been proved with the PIN would set a
+    // pref the server does not honour — every gate would still show the keypad,
+    // because `can_authorize` is false. Prove it here instead, by re-enrolling the
+    // key with the PIN as its factor.
+    if (value && !_keyVerified) {
+      final pin = await _promptForPin(
+        subtitle: 'Confirm your transaction PIN once so biometrics can authorize '
+            'payments and account actions on this device.',
+      );
+      if (pin == null) return;
+      setState(() => _busy = true);
+      try {
+        final verified = await _signer.enroll(
+          deviceLabel: _deviceLabel(),
+          currentSecurityPin: pin,
+        );
+        if (!mounted) return;
+        setState(() => _keyVerified = verified);
+        if (!verified) {
+          _showSnack('Could not confirm this device. Try again.');
+          return;
+        }
+      } catch (e) {
+        if (!mounted) return;
+        _showSnack(e.toString().replaceFirst('Exception: ', ''));
+        return;
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+    }
+
     await _prefs.setTransactionsEnabled(value);
     setState(() {});
     if (!value && !_prefs.appLoginEnabled) {
       await _autoDisableMaster();
     }
   }
+
+  /// Reads the PIN the server checks the enrollment against. Returns null when the
+  /// member backs out, which is a supported outcome: they keep biometric sign-in and
+  /// type the PIN on the gates.
+  Future<String?> _promptForPin({required String subtitle}) {
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _EnrollmentPinSheet(subtitle: subtitle),
+    );
+  }
+
+  bool _hasSecurityPin(AuthState state) =>
+      state is AuthAuthenticated && state.user.hasSecurityPin;
 
   /// Turn the master switch off when both use-case toggles are off.
   /// Biometric with no use case is dead state — the keypair stays on
@@ -219,10 +307,11 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
     return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Disable for transactions?'),
+        title: const Text('Disable for payments and account actions?'),
         content: const Text(
-          'Transfers and bill payments will be blocked until biometric '
-          'authorization is re-enabled. App login can stay biometric.',
+          'You will type your transaction PIN to authorize transfers, bill '
+          'payments, and account actions like leaving a community or deleting '
+          'your account. App login can stay biometric.',
         ),
         actions: [
           TextButton(
@@ -306,7 +395,10 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
           ? const Center(child: CircularProgressIndicator())
           : !_hardwareAvailable
               ? _buildHardwareUnavailable(primary)
-              : _buildContent(primary),
+              : BlocBuilder<AuthBloc, AuthState>(
+                  builder: (context, state) =>
+                      _buildContent(primary, _hasSecurityPin(state)),
+                ),
     );
   }
 
@@ -338,7 +430,7 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
     );
   }
 
-  Widget _buildContent(Color primary) {
+  Widget _buildContent(Color primary, bool hasSecurityPin) {
     final method = _primaryMethodLabel();
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 24.h),
@@ -393,11 +485,19 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
               icon: Icons.check_circle_outline,
               iconColor: const Color(0xFF16A34A),
               backgroundTint: const Color(0xFF16A34A).withValues(alpha: 0.10),
-              title: 'Transaction Authorization',
-              subtitle:
-                  'Authorize payments and transfers with $method or fingerprint',
-              value: _prefs.transactionsEnabled,
-              onChanged: _onTransactionsToggle,
+              title: 'Payment & Account Authorization',
+              subtitle: hasSecurityPin
+                  ? 'Authorize payments, transfers and account actions — leaving '
+                      'a community, freezing or deleting your account — with '
+                      '$method or fingerprint. Your PIN still works everywhere.'
+                  : 'Set a transaction PIN first. $method authorizes payments as '
+                      'a quicker alternative to that PIN — it cannot replace one '
+                      'you have not set. Tap to set it up.',
+              value: hasSecurityPin && _prefs.transactionsEnabled,
+              onChanged: hasSecurityPin ? _onTransactionsToggle : null,
+              onTapWhenLocked: hasSecurityPin
+                  ? null
+                  : () => context.pushNamed('set-pin'),
             ),
             vSpace(28),
             _SectionTitle('Registered Biometrics'),
@@ -624,6 +724,9 @@ class _MasterEnableCard extends StatelessWidget {
   }
 }
 
+/// One use-case switch. A null [onChanged] locks it — used for payment
+/// authorization until the member has a transaction PIN — and [onTapWhenLocked]
+/// gives the locked card somewhere useful to send them.
 class _GranularToggleCard extends StatelessWidget {
   const _GranularToggleCard({
     required this.icon,
@@ -633,6 +736,7 @@ class _GranularToggleCard extends StatelessWidget {
     required this.subtitle,
     required this.value,
     required this.onChanged,
+    this.onTapWhenLocked,
   });
 
   final IconData icon;
@@ -641,11 +745,12 @@ class _GranularToggleCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool value;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool>? onChanged;
+  final VoidCallback? onTapWhenLocked;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final card = Container(
       padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
@@ -697,6 +802,13 @@ class _GranularToggleCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+
+    if (onChanged != null || onTapWhenLocked == null) return card;
+    return InkWell(
+      onTap: onTapWhenLocked,
+      borderRadius: BorderRadius.circular(14.r),
+      child: card,
     );
   }
 }
@@ -901,15 +1013,121 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
+/// Collects the transaction PIN that proves the enrollment to the server.
+///
+/// The device-local biometric prompt is unverifiable server-side, so the PIN is what
+/// promotes the key from "can sign you in" to "can authorise a payment". Backing out
+/// pops null and is a supported outcome — biometric sign-in still works, and the
+/// gates fall back to the keypad.
+class _EnrollmentPinSheet extends StatefulWidget {
+  const _EnrollmentPinSheet({required this.subtitle});
+
+  final String subtitle;
+
+  @override
+  State<_EnrollmentPinSheet> createState() => _EnrollmentPinSheetState();
+}
+
+class _EnrollmentPinSheetState extends State<_EnrollmentPinSheet> {
+  bool _obscure = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+      ),
+      padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 20.h),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36.w,
+              height: 4.h,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE0E0E0),
+                borderRadius: BorderRadius.circular(2.r),
+              ),
+            ),
+            vSpace(20),
+            Text(
+              'Confirm your transaction PIN',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 19.sp, fontWeight: FontWeight.w700),
+            ),
+            vSpace(8),
+            Text(
+              widget.subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 17.sp,
+                height: 1.4,
+                color:
+                    Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            vSpace(24),
+            PinInputField(
+              obscureText: _obscure,
+              onCompleted: (pin) => Navigator.of(context).pop(pin),
+            ),
+            vSpace(16),
+            TextButton.icon(
+              onPressed: () => setState(() => _obscure = !_obscure),
+              icon: Icon(
+                _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                size: 18.sp,
+              ),
+              label: Text(
+                'Show PIN',
+                style: TextStyle(fontSize: 17.sp),
+              ),
+            ),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: Theme.of(context).dividerColor),
+                  padding: EdgeInsets.symmetric(vertical: 14.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
+                  foregroundColor: Theme.of(context).colorScheme.onSurface,
+                  surfaceTintColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                ),
+                child: Text(
+                  'Skip — use biometrics for sign-in only',
+                  style: TextStyle(
+                    fontSize: 17.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Bottom sheet shown when the user toggles the master switch. Different
 /// icon, copy, and CTA based on whether the switch is going on or off.
 class _BiometricConfirmModal extends StatelessWidget {
   const _BiometricConfirmModal({
     required this.enabling,
+    required this.hasSecurityPin,
     required this.primaryMethodLabel,
   });
 
   final bool enabling;
+  final bool hasSecurityPin;
   final String primaryMethodLabel;
 
   @override
@@ -923,8 +1141,14 @@ class _BiometricConfirmModal extends StatelessWidget {
         ? 'Enable Biometric Authentication?'
         : 'Disable Biometric Authentication?';
     final body = enabling
-        ? "You'll be able to use $primaryMethodLabel or fingerprint to sign in "
-            'and authorize transactions.\n\nYour biometric data stays on your device.'
+        ? (hasSecurityPin
+            ? "You'll be able to use $primaryMethodLabel or fingerprint to sign in "
+                'and authorize transactions, with your transaction PIN as the '
+                'fallback.\n\nYour biometric data stays on your device.'
+            : "You'll be able to use $primaryMethodLabel or fingerprint to sign "
+                'in. Authorizing payments needs a transaction PIN first — '
+                'biometrics is the quicker alternative to it, not a replacement.'
+                '\n\nYour biometric data stays on your device.')
         : "You'll need to use your password or PIN to sign in and authorize "
             'transactions.\n\nYou can re-enable this anytime.';
     final primaryLabel = enabling ? 'Enable Biometric' : 'Disable';

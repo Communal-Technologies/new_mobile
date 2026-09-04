@@ -110,9 +110,12 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
         setState(() => _authMode = _AuthMode.pin);
         return;
       }
-      final enrolled = await _biometricSigner.isEnrolled();
+      // Enrolled is not enough — a sign-in-only enrollment, or an account with no
+      // transaction PIN, cannot mint the marker loans-svc spends, so those members
+      // get the PIN prompt they would have been bounced to anyway.
+      final canAuthorize = await _biometricSigner.canAuthorizePayments();
       if (!mounted) return;
-      if (enrolled) {
+      if (canAuthorize) {
         setState(() => _authMode = _AuthMode.biometric);
       } else {
         setState(() => _authMode = _AuthMode.pin);
@@ -460,19 +463,30 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
       // validating the PIN inline (it can't — security_pin lives on
       // tbl_users, owned exclusively by the monolith), so that call has
       // to happen before initiateTransfer below.
-      await _transferRepo.verifySecurityPin(pin);
+      await _transferRepo.verifySecurityPin(pin, intent: 'pay-obligation');
       return {'X-Security-Pin': pin};
     }
-    final result = transfer
-        ? await _biometricSigner.signTransferIntent(
-            promptTitle: 'Authorize repayment',
-            promptSubtitle: promptSubtitle,
-          )
-        : await _biometricSigner.signObligationIntent(
-            promptTitle: 'Authorize repayment',
-            promptSubtitle: promptSubtitle,
-          );
-    return result.toHeaders();
+    try {
+      final result = transfer
+          ? await _biometricSigner.signTransferIntent(
+              promptTitle: 'Authorize repayment',
+              promptSubtitle: promptSubtitle,
+            )
+          : await _biometricSigner.signObligationIntent(
+              promptTitle: 'Authorize repayment',
+              promptSubtitle: promptSubtitle,
+            );
+      return result.toHeaders();
+    } catch (e) {
+      // Biometrics is the shortcut and the PIN is the fallback, so a cancelled
+      // scan or a refused signature has to land the member on the keypad rather
+      // than on a retry of the thing that just failed.
+      if (mounted) setState(() => _authMode = _AuthMode.pin);
+      throw Exception(
+        '${e.toString().replaceFirst('Exception: ', '')} '
+        'Enter your transaction PIN to continue.',
+      );
+    }
   }
 
   Future<void> _onConfirm() async {
@@ -540,7 +554,8 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
       currency: widget.loan.currency,
     );
 
-    final currencySymbol = currencySymbolForUser(authState.user);
+    final currencySymbol =
+        activeCurrency.display.forCurrency(widget.loan.currency).symbol;
     final currencyCode = resolveCurrencyCode(authState.user);
     final narration = 'Loan re-payment: ${widget.loan.displayLabel}';
 
@@ -575,6 +590,7 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
           counterpartyAccount: cash.accountNumber,
           amount: amountMajor,
           currencySymbol: currencySymbol,
+          currencyCode: widget.loan.currency,
           transactionType: 'Loan re-payment',
           dateTime: DateTime.now(),
           sessionId: result.transferId,
@@ -622,7 +638,8 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
     );
 
     if (!mounted) return;
-    final currencySymbol = currencySymbolForUser(authState.user);
+    final currencySymbol =
+        activeCurrency.display.forCurrency(widget.loan.currency).symbol;
     final receiptReference = _idempotencyKey.length > 12
         ? _idempotencyKey.substring(0, 12)
         : _idempotencyKey;
@@ -650,6 +667,7 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
           counterpartyAccount: widget.loan.referenceId,
           amount: amountMajor,
           currencySymbol: currencySymbol,
+          currencyCode: widget.loan.currency,
           transactionType: 'Loan re-payment',
           dateTime: DateTime.now(),
           sessionId: receiptReference,

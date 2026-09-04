@@ -225,7 +225,7 @@ class _LoansScreenState extends State<LoansScreen> {
   Widget _buildSummaryCard() {
     final auth = context.watch<AuthBloc>().state;
     final user = auth is AuthAuthenticated ? auth.user : null;
-    final currency = user != null ? resolveCurrencyCode(user) : 'NGN';
+    final currency = user != null ? cooperativeCurrencyCode(user) : 'NGN';
     final activeCount = _loans
         .where((l) => l.status == LoanStatus.approved)
         .length;
@@ -569,7 +569,7 @@ class _LoansScreenState extends State<LoansScreen> {
         ..._schemes.map((scheme) {
           final auth = context.read<AuthBloc>().state;
           final currency = auth is AuthAuthenticated
-              ? resolveCurrencyCode(auth.user)
+              ? cooperativeCurrencyCode(auth.user)
               : 'NGN';
           return Padding(
             padding: EdgeInsets.only(bottom: 16.h),

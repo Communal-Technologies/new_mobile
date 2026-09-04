@@ -19,6 +19,7 @@ import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/account/widgets/edit_profile_header.dart';
 import 'package:communal_mobile/screens/account/widgets/personal_info_form_section.dart';
 import 'package:communal_mobile/screens/account/widgets/address_info_form_section.dart';
+import 'package:communal_mobile/screens/account/widgets/sign_in_details_section.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({
@@ -41,8 +42,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final TextEditingController _firstNameController;
   late final TextEditingController _middleNameController;
   late final TextEditingController _lastNameController;
-  late final TextEditingController _emailController;
-  late final TextEditingController _phoneController;
   late final TextEditingController _dobController;
   late final TextEditingController _occupationController;
 
@@ -54,15 +53,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   bool _saving = false;
 
+  /// The sign-in credentials are not part of either form — they are changed in
+  /// their own flow, which returns the stored value so the card can show it
+  /// without refetching the whole profile.
+  late String _email;
+  late String _phone;
+
   @override
   void initState() {
     super.initState();
     final p = widget.profile;
+    _email = p.email ?? '';
+    _phone = p.phone ?? '';
     _firstNameController = TextEditingController(text: p.firstName ?? '');
     _middleNameController = TextEditingController(text: p.middleName ?? '');
     _lastNameController = TextEditingController(text: p.lastName ?? '');
-    _emailController = TextEditingController(text: p.email ?? '');
-    _phoneController = TextEditingController(text: p.phone ?? '');
     _dobController = TextEditingController(text: _formatDob(p.dateOfBirth));
     _occupationController = TextEditingController(text: p.occupation ?? '');
     // Concatenate addressLine1 + addressLine2 into the single street
@@ -91,8 +96,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _firstNameController.dispose();
     _middleNameController.dispose();
     _lastNameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
     _dobController.dispose();
     _occupationController.dispose();
     _streetAddressController.dispose();
@@ -117,10 +120,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (mn != (p.middleName ?? '').trim()) delta['middle_name'] = mn;
     final ln = _lastNameController.text.trim();
     if (ln != (p.lastName ?? '').trim()) delta['last_name'] = ln;
-    final em = _emailController.text.trim();
-    if (em != (p.email ?? '').trim()) delta['email'] = em;
-    final ph = _phoneController.text.trim();
-    if (ph != (p.phone ?? '').trim()) delta['phone'] = ph;
     final dobIso = _parseDobToIso(_dobController.text);
     if (dobIso != (p.dateOfBirth ?? '')) delta['date_of_birth'] = dobIso;
     final occ = _occupationController.text.trim();
@@ -249,6 +248,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  void _onContactChanged(String field, String value) {
+    setState(() {
+      if (field == 'email') {
+        _email = value;
+      } else {
+        _phone = value;
+      }
+    });
+    // The shell and the sidebar render the signed-in user, not this screen's
+    // copy of the profile.
+    context.read<AuthBloc>().add(AuthRefreshUserRequested());
+  }
+
   void _handleSavePersonalInfo() {
     if (_personalInfoFormKey.currentState!.validate()) {
       _save(_personalDelta());
@@ -294,12 +306,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   firstNameController: _firstNameController,
                   middleNameController: _middleNameController,
                   lastNameController: _lastNameController,
-                  emailController: _emailController,
-                  phoneController: _phoneController,
                   dobController: _dobController,
                   occupationController: _occupationController,
                   onSave: _handleSavePersonalInfo,
                   saving: _saving,
+                ),
+                vSpace(24),
+                SignInDetailsSection(
+                  email: _email,
+                  phone: _phone,
+                  onChanged: _onContactChanged,
                 ),
               ],
               if (widget.isAddressOnly) ...[

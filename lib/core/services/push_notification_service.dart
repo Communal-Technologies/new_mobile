@@ -410,6 +410,22 @@ class PushNotificationService {
       return const DeepLinkIntent(routeName: 'transaction-history');
     }
 
+    // Support pushes carry the numeric UserNotification codes support-svc
+    // publishes: '12' is an operator's reply, '13' a lifecycle change
+    // (escalated, resolved, closed). Both carry `ticket_id`, so the tap opens
+    // the thread the reply is in — a reply that lands the member on a list they
+    // then have to search is the reason they wrote in twice.
+    if (type == '12' || type == '13') {
+      final ticketId = (data['ticket_id']?.toString() ?? '').trim();
+      if (ticketId.isNotEmpty) {
+        return DeepLinkIntent(
+          routeName: 'support-chat',
+          extra: <String, dynamic>{'ticketId': ticketId},
+        );
+      }
+      return const DeepLinkIntent(routeName: 'support-tickets');
+    }
+
     // Unknown / generic push: drop the user on the in-app list so
     // they can read the message and follow up if needed.
     return const DeepLinkIntent(routeName: 'notifications');

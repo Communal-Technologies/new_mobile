@@ -12,8 +12,22 @@
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
-    <application android:label="Communal" android:name="${applicationName}" android:icon="@mipmap/ic_launcher" android:enableOnBackInvokedCallback="true">
-        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:taskAffinity="" android:theme="@style/LaunchTheme" android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode" android:hardwareAccelerated="true" android:windowSoftInputMode="adjustResize">
+    <!-- allowBackup defaults to true, so the app's private directory was going
+         into Google's auto-backup and could be pulled with `adb backup` on
+         API 30 and below. The access token is Keystore-wrapped and does not
+         survive the copy, but SharedPreferences is plaintext: the saved
+         beneficiary list (transfer_favorites_v1 — names, account numbers,
+         banks), the member's account id, the Anchor customer id and the cached
+         wallet balance all did.
+
+         dataExtractionRules is not redundant: allowBackup="false" stops cloud
+         backup, but on API 31+ device-to-device transfer ignores it and is
+         governed only by that file. -->
+    <application android:label="Wallet" android:name="${applicationName}" android:icon="@mipmap/ic_launcher" android:enableOnBackInvokedCallback="true" android:allowBackup="false" android:dataExtractionRules="@xml/data_extraction_rules">
+        <!-- The Dart lock only applies once the engine is up: the launch theme
+             and the first native window are drawn before it, so a phone held
+             sideways opens the app sideways without this. -->
+        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:taskAffinity="" android:theme="@style/LaunchTheme" android:screenOrientation="portrait" android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode" android:hardwareAccelerated="true" android:windowSoftInputMode="adjustResize">
             <!-- Specifies an Android theme to apply to this Activity as soon as
                  the Android process has started. This theme is visible to the user
                  while the Flutter UI initializes. After that, this theme continues

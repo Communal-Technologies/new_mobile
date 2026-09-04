@@ -69,7 +69,7 @@ Future<void> configureDependencies() async {
   }
   if (!getIt.isRegistered<NotificationsRepository>()) {
     getIt.registerLazySingleton<NotificationsRepository>(
-      () => NotificationsRepository(getIt()),
+      () => NotificationsRepository(getIt(), getIt()),
     );
   }
   if (!getIt.isRegistered<UnreadNotificationsService>()) {

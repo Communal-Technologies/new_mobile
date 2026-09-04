@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
+import 'package:communal_mobile/core/widgets/biometric_action_button.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/account_actions_repository.dart';
 import 'package:communal_mobile/injection.dart';
@@ -37,26 +38,40 @@ class _FreezeAccountPinScreenState extends State<FreezeAccountPinScreen> {
       _showError = false;
       _errorMessage = null;
     });
-    final repo = getIt<AccountActionsRepository>();
     try {
-      await repo.verifySecurityPin(pin);
+      await getIt<AccountActionsRepository>()
+          .verifySecurityPin(pin, intent: 'account-action');
+      await _freeze();
+    } catch (e) {
+      _fail(e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  /// Runs once the action is authorised, by PIN or by biometrics — the server
+  /// takes the same marker either way.
+  Future<void> _freeze() async {
+    try {
       final reason = (widget.reason?.trim().isNotEmpty == true)
           ? widget.reason!.trim()
           : 'Self-frozen via mobile app';
-      await repo.freezeAccount(reason);
+      await getIt<AccountActionsRepository>().freezeAccount(reason);
       if (!mounted) return;
       // Auth state needs to learn about the freeze — auth_status_notifier
       // gates protected routes off the user's wallet status.
       context.read<AuthBloc>().add(AuthRefreshUserRequested());
       context.pushReplacementNamed('freeze-account-success');
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _submitting = false;
-        _showError = true;
-        _errorMessage = e.toString().replaceFirst('Exception: ', '');
-      });
+      _fail(e.toString().replaceFirst('Exception: ', ''));
     }
+  }
+
+  void _fail(String message) {
+    if (!mounted) return;
+    setState(() {
+      _submitting = false;
+      _showError = true;
+      _errorMessage = message;
+    });
   }
 
   void _handlePinChanged(String pin) {
@@ -165,6 +180,21 @@ class _FreezeAccountPinScreenState extends State<FreezeAccountPinScreen> {
                       ),
                     ],
                   ),
+                ),
+                BiometricActionButton(
+                  label: 'Freeze your account',
+                  promptSubtitle:
+                      'Use biometrics to confirm freezing your account',
+                  enabled: !_submitting,
+                  onAuthorized: () {
+                    setState(() {
+                      _submitting = true;
+                      _showError = false;
+                      _errorMessage = null;
+                    });
+                    return _freeze();
+                  },
+                  onFailed: _fail,
                 ),
                 if (_showError) ...[
                   vSpace(24),

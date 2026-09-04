@@ -31,7 +31,9 @@ class FinalWarningBox extends StatelessWidget {
           ),
           vSpace(8),
           Text(
-            'Once you click "Delete My Account permanently", your account and all data will be permanently deleted. This action cannot be reversed.',
+            'The next step asks for your PIN, and your account is closed the '
+            'moment it is accepted. Your personal data is then erased within 30 '
+            'days. This cannot be reversed.',
             style: TextStyle(
               fontSize: 17.sp,
               color: Theme.of(context).colorScheme.onSurface,

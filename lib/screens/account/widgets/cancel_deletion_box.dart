@@ -68,17 +68,10 @@ class CancelDeletionBox extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
-              onPressed: () {
-                // Navigate back to home/account settings
-                // Pop all delete account screens
-                while (context.canPop()) {
-                  context.pop();
-                }
-                // If we're at root, navigate to account settings or home
-                if (!context.canPop()) {
-                  context.go('/');
-                }
-              },
+              // Straight back to the settings the flow was entered from —
+              // popping the stack one screen at a time flashed every warning
+              // screen on the way out, and landed on the splash route.
+              onPressed: () => context.go('/account-settings'),
               style: OutlinedButton.styleFrom(
                 backgroundColor: Theme.of(context).cardColor,
                 side: const BorderSide(

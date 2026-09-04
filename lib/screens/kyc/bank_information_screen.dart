@@ -84,7 +84,6 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
   String? _selectedGender;
 
   bool _isSubmitting = false;
-  bool _consentGiven = false;
 
   /// Audit M23: minted once per screen mount; reused across user retries so
   /// a transient 5xx + retry doesn't trigger duplicate Anchor BVN submissions.
@@ -99,15 +98,16 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
     });
   }
 
+  // Step 2 is where the data-sharing consent is asked for, because the BVN typed
+  // on this screen is the first thing it names. Step 1 deliberately does not ask:
+  // it only sends the details given at sign-up, and it has to go through so the
+  // member's name reaches their profile for cooperative membership applications.
   void _checkAndShowConsentModal() {
     final auth = context.read<AuthBloc>().state;
     if (auth is! AuthAuthenticated) return;
     final alreadyGiven =
         getIt<KycProgressStorage>().hasConsentGiven(auth.userId);
-    if (alreadyGiven) {
-      if (mounted) setState(() => _consentGiven = true);
-      return;
-    }
+    if (alreadyGiven) return;
     _showConsentModal();
   }
 
@@ -120,7 +120,6 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
         onAgree: () async {
           Navigator.of(ctx).pop();
           await _recordConsent('agreed');
-          if (mounted) setState(() => _consentGiven = true);
         },
         onDecline: () async {
           Navigator.of(ctx).pop();
@@ -131,9 +130,12 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
     );
   }
 
+  // The consent is sent even when the anchor id has not resolved yet: this is the
+  // first point consent is collected, so skipping the call would leave kycsvc with
+  // nothing on file and 403 the BVN submission below. kycsvc accepts the field
+  // empty and keys the row to the user from the JWT.
   Future<void> _recordConsent(String decision) async {
-    final id = _effectiveAnchor();
-    if (id == null || id.isEmpty) return;
+    final id = _effectiveAnchor() ?? '';
     final auth = context.read<AuthBloc>().state;
     try {
       await getIt<KycRepository>().recordConsent(
@@ -144,12 +146,10 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
         await getIt<KycProgressStorage>().markConsentGiven(auth.userId);
       }
     } catch (_) {
-      // Best-effort: local flag is still saved so the user isn't re-prompted
-      // on retry. The backend call will be retried on the next app launch if
-      // the anchor id becomes available.
-      if (decision == 'agreed' && auth is AuthAuthenticated) {
-        await getIt<KycProgressStorage>().markConsentGiven(auth.userId);
-      }
+      // The local flag is NOT set on failure. kycsvc has nothing on file, so it
+      // would 403 the BVN submission, and a flag saying otherwise would stop the
+      // modal ever offering the user a way to fix it. Leaving it unset means they
+      // are asked again the next time they open this step.
     }
   }
 
@@ -649,47 +649,47 @@ class _BankInformationScreenState extends State<BankInformationScreen> {
         context: context,
         showDragHandle: true,
         isScrollControlled: true,
-        builder: (ctx) => DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.72,
-          minChildSize: 0.45,
-          maxChildSize: 0.92,
-          builder: (sheetCtx, scrollController) => SafeArea(
-            child: CustomScrollView(
-              controller: scrollController,
-              physics: const ClampingScrollPhysics(),
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.only(top: 4.h, bottom: 6.h),
-                    child: Center(
-                      child: Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 19.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+        // Sized by its contents: a two-option account type is a short sheet,
+        // while the bank list fills the cap and scrolls from there.
+        builder: (ctx) => SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(top: 4.h, bottom: 6.h),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 19.sp,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-                SliverList.builder(
-                  itemCount: items.length,
-                  itemBuilder: (_, index) {
-                    final item = items[index];
-                    return ListTile(
-                      title: Text(item, style: TextStyle(fontSize: 19.sp)),
-                      trailing: value == item
-                          ? Icon(
-                              Icons.check_circle,
-                              color: Theme.of(context).primaryColor,
-                            )
-                          : null,
-                      onTap: () => Navigator.of(ctx).pop(item),
-                    );
-                  },
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    physics: const ClampingScrollPhysics(),
+                    padding: EdgeInsets.only(bottom: 8.h),
+                    itemCount: items.length,
+                    itemBuilder: (_, index) {
+                      final item = items[index];
+                      return ListTile(
+                        title: Text(item, style: TextStyle(fontSize: 19.sp)),
+                        trailing: value == item
+                            ? Icon(
+                                Icons.check_circle,
+                                color: Theme.of(context).primaryColor,
+                              )
+                            : null,
+                        onTap: () => Navigator.of(ctx).pop(item),
+                      );
+                    },
+                  ),
                 ),
-                SliverToBoxAdapter(child: vSpace(8)),
               ],
             ),
           ),

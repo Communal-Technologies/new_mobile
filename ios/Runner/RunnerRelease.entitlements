@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+	Release entitlements: the ones that ship.
+
+	`production` is required for a TestFlight or App Store build. It also means
+	the App ID must have Push Notifications enabled and the distribution profile
+	must carry the entitlement — if it does not, the archive fails to sign, which
+	is the outcome to want. Without any entitlements file at all the build
+	succeeded and the app simply never received a push.
+-->
+<plist version="1.0">
+<dict>
+	<key>aps-environment</key>
+	<string>production</string>
+</dict>
+</plist>

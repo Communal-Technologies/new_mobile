@@ -15,6 +15,15 @@ class UserModel extends Equatable {
   final String? cooperativeName;
   /// From `profile.cooperative.logo_url` when present (absolute URL).
   final String? cooperativeLogoUrl;
+
+  /// How the ACTIVE cooperative writes money: its ISO 4217 code, the symbol it
+  /// chose to print and which side of the figure that symbol goes on
+  /// (`left`/`right`). Sent with the session and re-sent by the membership list,
+  /// because a member switching cooperatives has to see the new one's symbol on
+  /// the same figures. Null when the cooperative never chose.
+  final String? cooperativeCurrency;
+  final String? cooperativeCurrencySymbol;
+  final String? cooperativeCurrencySymbolPosition;
   final String? ledgerNumber;
 
   /// Profile / account fields for KYC prefill (when present on `get-loggedin-user`).
@@ -102,6 +111,9 @@ class UserModel extends Equatable {
     this.cooperativeId,
     this.cooperativeName,
     this.cooperativeLogoUrl,
+    this.cooperativeCurrency,
+    this.cooperativeCurrencySymbol,
+    this.cooperativeCurrencySymbolPosition,
     this.ledgerNumber,
     this.firstName,
     this.middleName,
@@ -170,6 +182,24 @@ class UserModel extends Equatable {
     final tier = communalTier?.trim().toLowerCase();
     if (tier != null && tier.isNotEmpty && tier != 'tier_0') return true;
     return kycStep1Submitted;
+  }
+
+  /// Whether anything on file names this member.
+  ///
+  /// cooperative-svc will not take a join request or an invite code from an
+  /// account with no name — an admin reviews an application by the applicant's,
+  /// and a phone-and-password sign-up need never have given one. Either source
+  /// counts: the profile, written by KYC step 1 or by a cooperative admin, or the
+  /// name a website sign-up types before its first OTP, which authsvc keeps on the
+  /// user row and which [name] falls back to. Deliberately not [kycStep1Submitted]
+  /// — step 1 opens an Anchor customer record and asks nothing sensitive, so an
+  /// applicant who named themselves elsewhere owes a cooperative nothing further.
+  bool get hasProfileInformation {
+    final fn = firstName?.trim();
+    final ln = lastName?.trim();
+    if (fn != null && fn.isNotEmpty && ln != null && ln.isNotEmpty) return true;
+    final display = name.trim();
+    return display.isNotEmpty && display != 'Member';
   }
 
   /// Whether this member can perform cooperative actions (pay obligations,
@@ -245,6 +275,9 @@ class UserModel extends Equatable {
     String? cooperativeId,
     String? cooperativeName,
     String? cooperativeLogoUrl,
+    String? cooperativeCurrency,
+    String? cooperativeCurrencySymbol,
+    String? cooperativeCurrencySymbolPosition,
     String? ledgerNumber,
     String? firstName,
     String? middleName,
@@ -289,6 +322,11 @@ class UserModel extends Equatable {
       cooperativeId: cooperativeId ?? this.cooperativeId,
       cooperativeName: cooperativeName ?? this.cooperativeName,
       cooperativeLogoUrl: cooperativeLogoUrl ?? this.cooperativeLogoUrl,
+      cooperativeCurrency: cooperativeCurrency ?? this.cooperativeCurrency,
+      cooperativeCurrencySymbol:
+          cooperativeCurrencySymbol ?? this.cooperativeCurrencySymbol,
+      cooperativeCurrencySymbolPosition: cooperativeCurrencySymbolPosition ??
+          this.cooperativeCurrencySymbolPosition,
       ledgerNumber: ledgerNumber ?? this.ledgerNumber,
       firstName: firstName ?? this.firstName,
       middleName: middleName ?? this.middleName,
@@ -328,18 +366,29 @@ class UserModel extends Equatable {
   /// Re-keys the user to a different cooperative membership (client-side
   /// cooperative switch). The cooperative_id + ledger_number are the only keys
   /// requests are keyed by, so switching is purely a matter of swapping them
-  /// (plus the display name/logo) and re-emitting the auth state.
+  /// (plus the display name/logo and how that cooperative writes money) and
+  /// re-emitting the auth state.
+  ///
+  /// The currency trio is REPLACED, never merged: the cooperative being left
+  /// chose it, so a cooperative that set none must fall back to the wallet
+  /// rather than inherit the previous symbol. Pass empty strings for "not set".
   UserModel setActiveCooperative({
     required String cooperativeId,
     required String ledgerNumber,
     String? cooperativeName,
     String? cooperativeLogoUrl,
+    String currency = '',
+    String currencySymbol = '',
+    String currencySymbolPosition = '',
   }) {
     return copyWith(
       cooperativeId: cooperativeId,
       ledgerNumber: ledgerNumber,
       cooperativeName: cooperativeName,
       cooperativeLogoUrl: cooperativeLogoUrl,
+      cooperativeCurrency: currency,
+      cooperativeCurrencySymbol: currencySymbol,
+      cooperativeCurrencySymbolPosition: currencySymbolPosition,
     );
   }
 
@@ -462,6 +511,9 @@ class UserModel extends Equatable {
 
     String? coopName;
     String? coopLogo;
+    String? coopCurrency;
+    String? coopCurrencySymbol;
+    String? coopCurrencySymbolPosition;
     final coopRaw = profile?['cooperative'];
     if (coopRaw is Map) {
       final c = Map<String, dynamic>.from(coopRaw);
@@ -469,6 +521,12 @@ class UserModel extends Equatable {
       if (cn != null && cn.isNotEmpty) coopName = cn;
       final lu = c['logo_url']?.toString().trim();
       if (lu != null && lu.isNotEmpty) coopLogo = lu;
+      final cur = c['currency']?.toString().trim().toUpperCase();
+      if (cur != null && cur.length == 3) coopCurrency = cur;
+      final sym = c['currency_symbol']?.toString().trim();
+      if (sym != null && sym.isNotEmpty) coopCurrencySymbol = sym;
+      final pos = c['currency_symbol_position']?.toString().trim().toLowerCase();
+      if (pos == 'left' || pos == 'right') coopCurrencySymbolPosition = pos;
     }
 
     String? pickFirstCsv(String? primary, String? fallback) {
@@ -561,6 +619,9 @@ class UserModel extends Equatable {
       ),
       cooperativeName: coopName,
       cooperativeLogoUrl: coopLogo,
+      cooperativeCurrency: coopCurrency,
+      cooperativeCurrencySymbol: coopCurrencySymbol,
+      cooperativeCurrencySymbolPosition: coopCurrencySymbolPosition,
       ledgerNumber: pickFirstCsv(
         profile?['active_ledger_number']?.toString(),
         profile?['ledger_number']?.toString(),
@@ -611,6 +672,9 @@ class UserModel extends Equatable {
       'cooperative_id': cooperativeId,
       'cooperative_name': cooperativeName,
       'cooperative_logo_url': cooperativeLogoUrl,
+      'cooperative_currency': cooperativeCurrency,
+      'cooperative_currency_symbol': cooperativeCurrencySymbol,
+      'cooperative_currency_symbol_position': cooperativeCurrencySymbolPosition,
       'ledger_number': ledgerNumber,
       'first_name': firstName,
       'middle_name': middleName,
@@ -657,6 +721,9 @@ class UserModel extends Equatable {
         cooperativeId,
         cooperativeName,
         cooperativeLogoUrl,
+        cooperativeCurrency,
+        cooperativeCurrencySymbol,
+        cooperativeCurrencySymbolPosition,
         ledgerNumber,
         firstName,
         middleName,

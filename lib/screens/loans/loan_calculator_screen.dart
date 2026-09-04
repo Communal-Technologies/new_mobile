@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:communal_mobile/core/widgets/loader_overlay.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
@@ -182,7 +183,7 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
 
   String _formatCurrency(double amount) {
     final formatter = NumberFormat('#,##0', 'en_NG');
-    return '₦${formatter.format(amount.round())}';
+    return activeCurrency.display.adorn(formatter.format(amount.round()));
   }
 
   @override

@@ -41,11 +41,123 @@ String currencyCodeFromCountryIso(String? countryIso) {
 }
 
 /// ISO 4217 code for display/formatting: prefer wallet when API provides it.
+///
+/// This is the WALLET's denomination — right for transfers and transaction
+/// history, where the provider settled in its own currency. Cooperative money
+/// (obligations, fines, loans, contributions) uses
+/// [cooperativeCurrencyCode] instead.
 String resolveCurrencyCode(UserModel user) {
   final w = user.walletCurrencyCode?.trim().toUpperCase();
   if (w != null && w.length == 3) return w;
   return currencyCodeFromCountryIso(user.countryIso);
 }
+
+/// Which side of the figure a currency symbol sits on.
+enum CurrencySymbolPosition { left, right }
+
+/// Reads the cooperative's `currency_symbol_position` setting. Anything other
+/// than an explicit `right` is left, which is what most currencies want.
+CurrencySymbolPosition currencySymbolPositionFrom(String? raw) =>
+    (raw ?? '').trim().toLowerCase() == 'right'
+        ? CurrencySymbolPosition.right
+        : CurrencySymbolPosition.left;
+
+/// How one cooperative writes its money: the currency, the symbol it prints and
+/// the side that symbol goes on.
+///
+/// It belongs to the membership, not to the app. A member in two cooperatives
+/// that chose different currencies must see each one's figures in its own, and
+/// switching cooperatives has to change it — so nothing caches this beyond the
+/// active [UserModel].
+class CurrencyDisplay {
+  const CurrencyDisplay({
+    required this.code,
+    required this.symbol,
+    this.position = CurrencySymbolPosition.left,
+  });
+
+  final String code;
+  final String symbol;
+  final CurrencySymbolPosition position;
+
+  /// Same cooperative preference, applied to a different currency — a wallet
+  /// amount the provider settled in its own denomination.
+  CurrencyDisplay forCurrency(String? currencyCode) {
+    final other = (currencyCode ?? '').trim().toUpperCase();
+    if (other.length != 3 || other == code) return this;
+    return CurrencyDisplay(
+      code: other,
+      symbol: currencySymbolForCode(other),
+      position: position,
+    );
+  }
+
+  /// Puts the symbol on the chosen side. A symbol spelt in letters ("KSh",
+  /// "CHF") gets a space so it does not read as part of the number; a glyph
+  /// does not.
+  String adorn(String figure) {
+    final sym = symbol.trim().isEmpty ? currencySymbolForCode(code) : symbol.trim();
+    final gap = RegExp(r'^[A-Za-z]+$').hasMatch(sym) ? ' ' : '';
+    return position == CurrencySymbolPosition.right
+        ? '$figure$gap$sym'
+        : '$sym$gap$figure';
+  }
+}
+
+/// ISO 4217 code the ACTIVE COOPERATIVE keeps its books in. Falls back to the
+/// wallet and then the member's country for cooperatives that never set one.
+String cooperativeCurrencyCode(UserModel user) {
+  final c = user.cooperativeCurrency?.trim().toUpperCase();
+  if (c != null && c.length == 3) return c;
+  return resolveCurrencyCode(user);
+}
+
+/// The active cooperative's symbol — its own setting when it has one, so a
+/// cooperative that writes "N" or "GH¢" gets what it asked for.
+String cooperativeCurrencySymbol(UserModel user) {
+  final s = user.cooperativeCurrencySymbol?.trim();
+  if (s != null && s.isNotEmpty) return s;
+  return currencySymbolForCode(cooperativeCurrencyCode(user));
+}
+
+/// Everything a screen needs to write the active cooperative's money.
+CurrencyDisplay cooperativeCurrencyDisplay(UserModel user) => CurrencyDisplay(
+      code: cooperativeCurrencyCode(user),
+      symbol: cooperativeCurrencySymbol(user),
+      position: currencySymbolPositionFrom(user.cooperativeCurrencySymbolPosition),
+    );
+
+/// The wallet's own denomination, written on the side the cooperative chose.
+CurrencyDisplay walletCurrencyDisplay(UserModel user) =>
+    cooperativeCurrencyDisplay(user).forCurrency(resolveCurrencyCode(user));
+
+/// The active cooperative's money display, for code that formats an amount with
+/// no [UserModel] in scope.
+///
+/// Most money labels are built inside the data models (`obligation.amountLabel`,
+/// `installment.amountLabel`), which are parsed from JSON and never see a user —
+/// so the cooperative's choice has to reach them some other way. `main.dart`
+/// writes this from the auth state on every transition, the same bridge
+/// `appAuthStatusNotifier` uses for the router; a cooperative switch emits a new
+/// state, so the symbol changes together with the figures.
+///
+/// Screens that do have the user should prefer [cooperativeCurrencyDisplay] —
+/// this is the fallback for everything else, and defaults to naira until a
+/// member is signed in.
+class ActiveCurrency {
+  CurrencyDisplay _display = const CurrencyDisplay(code: 'NGN', symbol: '₦');
+
+  CurrencyDisplay get display => _display;
+
+  /// Pass the signed-in member, or null on sign-out to fall back to naira.
+  void update(UserModel? user) {
+    _display = user == null
+        ? const CurrencyDisplay(code: 'NGN', symbol: '₦')
+        : cooperativeCurrencyDisplay(user);
+  }
+}
+
+final ActiveCurrency activeCurrency = ActiveCurrency();
 
 /// Localized currency symbol for [code] (e.g. NGN → ₦).
 String currencySymbolForCode(String currencyCode) {

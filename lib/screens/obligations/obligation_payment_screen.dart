@@ -381,11 +381,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                               (e) => DropdownMenuItem(
                                 value: e,
                                 child: Text(
-                                  [
-                                    if (e.bankLabel.isNotEmpty) e.bankLabel,
-                                    e.accountName,
-                                    e.accountNumber,
-                                  ].join(' • '),
+                                  e.displayLabel,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -398,11 +394,7 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
                 ] else if (_cashRepos.length == 1) ...[
                   vSpace(10),
                   Text(
-                    'Paying into: ${[
-                      if (_cashRepos.first.bankLabel.isNotEmpty) _cashRepos.first.bankLabel,
-                      _cashRepos.first.accountName,
-                      _cashRepos.first.accountNumber,
-                    ].join(' • ')}',
+                    'Paying into: ${_cashRepos.first.displayLabel}',
                     style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade700),
                   ),
                 ],
@@ -540,6 +532,8 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
     final currency = widget.obligation.currency;
     final decimals = decimalsFor(currency);
     final allowDecimal = decimals > 0;
+    final display = activeCurrency.display.forCurrency(currency);
+    final onLeft = display.position == CurrencySymbolPosition.left;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -561,7 +555,8 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
             AmountInputFormatter(decimals: decimals),
           ],
           decoration: InputDecoration(
-            prefixText: '${currencySymbolForCode(currency)} ',
+            prefixText: onLeft ? '${display.symbol} ' : null,
+            suffixText: onLeft ? null : ' ${display.symbol}',
             hintText: widget.obligation.perInstallmentMinor > 0
                 ? Money(
                     widget.obligation.perInstallmentMinor,

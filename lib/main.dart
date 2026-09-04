@@ -19,11 +19,13 @@ import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
 import 'package:communal_mobile/cubits/security/security_cubit.dart';
 import 'package:communal_mobile/core/services/push_notification_service.dart';
 import 'package:communal_mobile/core/services/screenshot_service.dart';
+import 'package:communal_mobile/core/utils/app_currency.dart';
+import 'package:communal_mobile/core/update/app_update_watcher.dart';
 import 'package:communal_mobile/core/widgets/connectivity_listener.dart';
 import 'package:communal_mobile/core/widgets/security_wrapper.dart';
 import 'package:communal_mobile/data/local/theme_mode_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:communal_mobile/core/security/secure_storage.dart';
 import 'package:toastification/toastification.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
@@ -58,10 +60,11 @@ void main() async {
   );
 
   // Lock to portrait only — fire-and-forget; the `.then` chains the
-  // runApp call so we don't await this at top level.
+  // runApp call so we don't await this at top level. Upright alone:
+  // portraitUp + portraitDown maps to SCREEN_ORIENTATION_USER_PORTRAIT on
+  // Android, which hands the 180° flip back to the device's auto-rotate.
   unawaited(SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
   ]).then((_) {
     // Defer push-notification setup until after the first frame
     // paints so Firebase.initializeApp doesn't sit on the critical
@@ -139,7 +142,7 @@ class MyApp extends StatelessWidget {
                   create: (_) => getIt<AuthBloc>()..add(AppStarted()),
                 ),
                 BlocProvider<SecurityCubit>(
-                  create: (_) => SecurityCubit(snapshot.data!, const FlutterSecureStorage()),
+                  create: (_) => SecurityCubit(snapshot.data!, appSecureStorage),
                 ),
               ],
               child: MultiBlocListener(
@@ -160,6 +163,11 @@ class MyApp extends StatelessWidget {
                       final resolved = state is AuthAuthenticated ||
                           state is AuthUnauthenticated;
                       final user = state is AuthAuthenticated ? state.user : null;
+                      // The active cooperative's currency, for the money labels
+                      // the data models build with no member in scope. Bridged
+                      // here so a cooperative switch changes the symbol at the
+                      // same moment it changes the figures.
+                      activeCurrency.update(user);
                       appAuthStatusNotifier.update(
                         isAuthenticated: state is AuthAuthenticated,
                         isResolved: resolved,
@@ -199,8 +207,10 @@ class MyApp extends StatelessWidget {
                       themeMode: mode,
                       routerConfig: appRouter,
                       builder: (context, child) {
-                        return ConnectivityListener(
-                          child: child ?? const SizedBox.shrink(),
+                        return AppUpdateWatcher(
+                          child: ConnectivityListener(
+                            child: child ?? const SizedBox.shrink(),
+                          ),
                         );
                       },
                     );

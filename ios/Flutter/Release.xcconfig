@@ -1,1 +1,12 @@
 #include "Generated.xcconfig"
+
+// Written by CI immediately before the archive: the distribution identity, the
+// team and the provisioning profile's name. It is deliberately not in the repo —
+// the profile name is only known once the profile has been decoded, and none of
+// these values should be committed. The include is optional so a local build and
+// the unsigned CI verify both work without it.
+//
+// It has to be here rather than in project.pbxproj because the project pins
+// CODE_SIGN_IDENTITY to "iPhone Developer", and a target's xcconfig is the level
+// that overrides a project-level setting.
+#include? "Signing.xcconfig"

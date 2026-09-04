@@ -21,6 +21,8 @@ import 'package:communal_mobile/core/security/biometric_signer_service.dart'
 import 'package:communal_mobile/core/security/token_manager.dart' as _i94;
 import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart'
     as _i751;
+import 'package:communal_mobile/cubits/obligation_categories/obligation_categories_cubit.dart'
+    as _i244;
 import 'package:communal_mobile/cubits/security/security_cubit.dart' as _i723;
 import 'package:communal_mobile/cubits/settings/settings_cubit.dart' as _i587;
 import 'package:communal_mobile/cubits/splash/splash_cubit.dart' as _i739;
@@ -33,15 +35,27 @@ import 'package:communal_mobile/data/datasources/remote/dio/network_interceptor.
 import 'package:communal_mobile/data/datasources/remote/dio/refresh_token_interceptor.dart'
     as _i241;
 import 'package:communal_mobile/data/local/kyc_progress_storage.dart' as _i798;
+import 'package:communal_mobile/data/repositories/account_actions_repository.dart'
+    as _i934;
 import 'package:communal_mobile/data/repositories/auth_repository.dart'
     as _i493;
+import 'package:communal_mobile/data/repositories/community_repository.dart'
+    as _i872;
 import 'package:communal_mobile/data/repositories/community_settings_repository.dart'
     as _i662;
 import 'package:communal_mobile/data/repositories/kyc_repository.dart' as _i419;
 import 'package:communal_mobile/data/repositories/locations_repository.dart'
     as _i210;
+import 'package:communal_mobile/data/repositories/notifications_repository.dart'
+    as _i586;
+import 'package:communal_mobile/data/repositories/obligation_categories_repository.dart'
+    as _i565;
+import 'package:communal_mobile/data/repositories/profile_repository.dart'
+    as _i1013;
 import 'package:communal_mobile/data/repositories/regions_repository.dart'
     as _i835;
+import 'package:communal_mobile/data/repositories/support_repository.dart'
+    as _i107;
 import 'package:communal_mobile/data/repositories/transfer_repository.dart'
     as _i218;
 import 'package:dio/dio.dart' as _i361;
@@ -127,8 +141,27 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i750.DioClient>(),
       ),
     );
+    gh.lazySingleton<_i872.CommunityRepository>(
+      () => repositoryModule.provideCommunityRepository(gh<_i750.DioClient>()),
+    );
+    gh.lazySingleton<_i1013.ProfileRepository>(
+      () => repositoryModule.provideProfileRepository(gh<_i750.DioClient>()),
+    );
+    gh.lazySingleton<_i934.AccountActionsRepository>(
+      () => repositoryModule.provideAccountActionsRepository(
+        gh<_i750.DioClient>(),
+      ),
+    );
+    gh.lazySingleton<_i565.ObligationCategoriesRepository>(
+      () => repositoryModule.provideObligationCategoriesRepository(
+        gh<_i750.DioClient>(),
+      ),
+    );
     gh.lazySingleton<_i218.TransferRepository>(
       () => repositoryModule.provideTransferRepository(gh<_i750.DioClient>()),
+    );
+    gh.lazySingleton<_i107.SupportRepository>(
+      () => repositoryModule.provideSupportRepository(gh<_i750.DioClient>()),
     );
     gh.factory<_i789.AuthBloc>(
       () => _i789.AuthBloc(
@@ -142,6 +175,17 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i213.BiometricKeyService>(),
         gh<_i558.FlutterSecureStorage>(),
         gh<_i750.DioClient>(),
+      ),
+    );
+    gh.lazySingleton<_i244.ObligationCategoriesCubit>(
+      () => cubitModule.provideObligationCategoriesCubit(
+        gh<_i565.ObligationCategoriesRepository>(),
+      ),
+    );
+    gh.lazySingleton<_i586.NotificationsRepository>(
+      () => repositoryModule.provideNotificationsRepository(
+        gh<_i750.DioClient>(),
+        gh<_i94.TokenManager>(),
       ),
     );
     gh.lazySingleton<_i739.SplashCubit>(

@@ -706,17 +706,56 @@ class _ActivityTile extends StatelessWidget {
     }
   }
 
+  /// Every action the server records for a member, named as a sentence.
+  ///
+  /// Exact names are matched before any keyword, because the keywords overlap:
+  /// `login_pin_changed` contains "login" and used to read "Signed in", which is
+  /// the opposite of what happened. The keyword pass below is only the fallback
+  /// for an action added on the server before this list catches up; the last
+  /// resort turns the raw snake_case name into words rather than showing it.
+  static const Map<String, String> _actionLabels = {
+    'login_success': 'Signed in',
+    'login_failed': 'Failed sign-in attempt',
+    'logout': 'Signed out',
+    'password_created': 'PIN set',
+    'session_takeover_otp_sent': 'Sign-in code sent',
+    'session_takeover_completed': 'Signed in on a new device',
+    'member_to_dashboard_crossing': 'Opened the cooperative dashboard',
+    'login_pin_changed': 'Sign-in PIN changed',
+    'login_pin_change_failed': 'Sign-in PIN change failed',
+    'transaction_pin_created': 'Transaction PIN set',
+    'transaction_pin_changed': 'Transaction PIN changed',
+    'transaction_pin_change_failed': 'Transaction PIN change failed',
+    'profile_updated': 'Profile details updated',
+    'email_changed': 'Email address changed',
+    'phone_changed': 'Phone number changed',
+    'biometric_enrolled': 'Biometric sign-in enabled',
+    'biometric_revoked': 'Biometric sign-in removed',
+    'account_frozen': 'Account frozen',
+    'account_unfrozen': 'Account unfrozen',
+    'unfreeze_requested': 'Unfreeze requested',
+    'account_deleted': 'Account closure requested',
+  };
+
   String _actionLabel(String? action, String? status) {
     final a = (action ?? '').toLowerCase();
     final s = (status ?? '').toLowerCase();
-    if (a.contains('login') || a.contains('sign_in')) {
-      return (s == 'failed' || a.contains('failed')) ? 'Failed login attempt' : 'Signed in';
+
+    final exact = _actionLabels[a];
+    if (exact != null) return exact;
+
+    if (a.contains('pin') || a.contains('password')) {
+      return s == 'failed' ? 'PIN change failed' : 'PIN changed';
     }
     if (a.contains('logout') || a.contains('sign_out')) return 'Signed out';
     if (a.contains('session_takeover')) return 'Session takeover confirmed';
-    if (a.contains('password')) return 'Password changed';
-    if (a.contains('pin')) return 'PIN changed';
-    return action ?? 'Security event';
+    if (a.contains('login') || a.contains('sign_in')) {
+      return (s == 'failed' || a.contains('failed')) ? 'Failed sign-in attempt' : 'Signed in';
+    }
+    if (a.isEmpty) return 'Security event';
+
+    final words = a.split('_').where((w) => w.isNotEmpty).join(' ');
+    return words[0].toUpperCase() + words.substring(1);
   }
 
   String _deviceLabel(String? ua) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import 'package:communal_mobile/core/utils/server_time.dart';
 import 'package:communal_mobile/screens/transactions/models/sample_transactions.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 
@@ -36,11 +37,7 @@ TransactionStatus _mapRecordStatus(String? raw) {
   }
 }
 
-DateTime? _parseDate(dynamic raw) {
-  if (raw == null) return null;
-  if (raw is DateTime) return raw;
-  return DateTime.tryParse(raw.toString());
-}
+DateTime? _parseDate(dynamic raw) => parseServerTime(raw);
 
 // Shared icon palette so a given kind of transaction looks the same whether it
 // came from the communal wallet feed or the cooperative ledger. (icon, fg, bg).

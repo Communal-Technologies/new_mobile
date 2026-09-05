@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/utils/server_time.dart';
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -883,7 +884,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
     final amountMinor = (num.tryParse(row['amount']?.toString() ?? '0') ?? 0)
         .round();
     final date =
-        DateTime.tryParse(row['created_at']?.toString() ?? '') ??
+        parseServerTime(row['created_at']) ??
         DateTime.now();
     final mode = row['payment_mode']?.toString().trim() ?? '';
     return Padding(

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:communal_mobile/core/utils/server_time.dart';
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -86,7 +87,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   String _formatDob(String? raw) {
     if (raw == null || raw.trim().isEmpty) return '';
-    final parsed = DateTime.tryParse(raw);
+    final parsed = parseServerDate(raw);
     if (parsed == null) return raw;
     return DateFormat('d MMM y').format(parsed);
   }

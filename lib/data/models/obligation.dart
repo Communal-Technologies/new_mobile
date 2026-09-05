@@ -1,6 +1,7 @@
 import 'package:intl/intl.dart';
 
 import 'package:communal_mobile/core/utils/money.dart';
+import 'package:communal_mobile/core/utils/server_time.dart';
 import 'package:communal_mobile/data/models/obligation_category.dart';
 
 /// One row in an obligation's payment history. Amounts are integer minor
@@ -257,7 +258,7 @@ class Obligation {
     // "Next Due" prefers the server-computed next-due date; when absent it
     // derives from the period and rolls forward past today so a stale period
     // row never shows a date in the past.
-    final serverNextDue = _parseDate(obligation['next_due_date']);
+    final serverNextDue = parseServerDate(obligation['next_due_date']);
     DateTime nextCycle;
     if (serverNextDue != null) {
       nextCycle = serverNextDue;
@@ -426,9 +427,5 @@ class Obligation {
     return 'Active';
   }
 
-  static DateTime? _parseDate(dynamic raw) {
-    if (raw == null) return null;
-    if (raw is DateTime) return raw;
-    return DateTime.tryParse(raw.toString());
-  }
+  static DateTime? _parseDate(dynamic raw) => parseServerTime(raw);
 }

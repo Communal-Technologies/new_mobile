@@ -1,3 +1,5 @@
+import 'package:communal_mobile/core/utils/server_time.dart';
+
 /// One bill purchase (airtime or data) from the backend's perspective.
 ///
 /// Returned by `POST /v1/bills/{airtime|data}/purchase` and by
@@ -98,8 +100,8 @@ class BillTransaction {
       senderAccount: json['sender_account']?.toString(),
       receiverAccount:
           (json['receiver_account'] ?? json['recipient'])?.toString(),
-      createdAt: DateTime.tryParse('${json['created_at'] ?? ''}'),
-      updatedAt: DateTime.tryParse('${json['updated_at'] ?? ''}'),
+      createdAt: parseServerTime(json['created_at']),
+      updatedAt: parseServerTime(json['updated_at']),
     );
   }
 }

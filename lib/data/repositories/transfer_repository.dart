@@ -1,3 +1,4 @@
+import 'package:communal_mobile/core/utils/server_time.dart';
 import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/mappers/transaction_history_mapper.dart';
@@ -167,19 +168,6 @@ class TransferInitiationResult {
   }
 }
 
-DateTime? _parseProviderDateTime(String? raw) {
-  if (raw == null || raw.trim().isEmpty) return null;
-  var s = raw.trim();
-  final direct = DateTime.tryParse(s);
-  if (direct != null) return direct;
-
-  final m = RegExp(r'^(.*?)(\.\d{7,})(Z|[\+\-]\d{2}:?\d{2})$').firstMatch(s);
-  if (m != null) {
-    s = '${m[1]}${m[2]!.substring(0, 7)}${m[3]}';
-  }
-  return DateTime.tryParse(s);
-}
-
 /// Normalized transfer row from `GET /members/transfer/transactions/{id}/status`.
 class RemoteTransferStatus {
   const RemoteTransferStatus({
@@ -209,7 +197,7 @@ class RemoteTransferStatus {
     final updated = json['updated_at']?.toString();
     final created = json['created_at']?.toString();
     final when =
-        _parseProviderDateTime(updated) ?? _parseProviderDateTime(created);
+        parseServerTime(updated) ?? parseServerTime(created);
     return RemoteTransferStatus(
       statusRaw: json['status']?.toString() ?? '',
       reference: json['reference']?.toString() ?? '',

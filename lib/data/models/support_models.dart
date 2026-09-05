@@ -7,6 +7,8 @@
 /// and a visitor-era row may have no requester id at all.
 library;
 
+import 'package:communal_mobile/core/utils/server_time.dart';
+
 /// Ticket lifecycle. `bot` means the first-line responder still owns the thread;
 /// from `open` onwards a person does.
 class SupportTicketStatus {
@@ -71,7 +73,7 @@ String supportCategoryLabel(String category) {
 }
 
 DateTime? _date(dynamic v) {
-  if (v is String && v.isNotEmpty) return DateTime.tryParse(v)?.toLocal();
+  if (v is String && v.isNotEmpty) return parseServerTime(v);
   return null;
 }
 

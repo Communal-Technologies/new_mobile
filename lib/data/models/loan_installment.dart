@@ -1,4 +1,5 @@
 import 'package:communal_mobile/core/utils/money.dart';
+import 'package:communal_mobile/core/utils/server_time.dart';
 
 /// One scheduled monthly payment row from
 /// `GET /v1/loans/{loanId}/installments`.
@@ -56,13 +57,13 @@ class LoanInstallment {
     return LoanInstallment(
       id: (m['id'] ?? '').toString(),
       sequence: _asInt(m['sequence']),
-      dueDate: DateTime.tryParse((m['due_date'] ?? '').toString()) ?? DateTime.now(),
+      dueDate: parseServerDate(m['due_date']) ?? DateTime.now(),
       principalMinor: _asInt(m['principal_minor']),
       interestMinor: _asInt(m['interest_minor']),
       totalDueMinor: _asInt(m['total_due_minor']),
       paidMinor: _asInt(m['paid_minor']),
       status: (m['status'] ?? 'pending').toString(),
-      paidAt: DateTime.tryParse((m['paid_at'] ?? '').toString()),
+      paidAt: parseServerTime(m['paid_at']),
       fineObligationId: m['fine_obligation_id']?.toString().isNotEmpty == true
           ? m['fine_obligation_id'].toString()
           : null,

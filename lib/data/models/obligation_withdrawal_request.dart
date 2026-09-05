@@ -1,6 +1,7 @@
 import 'package:intl/intl.dart';
 
 import 'package:communal_mobile/core/utils/money.dart';
+import 'package:communal_mobile/core/utils/server_time.dart';
 
 /// A member's request to redeem a portion of their patronage or custom
 /// obligation balance.  Status lifecycle: pending → approved | declined,
@@ -76,13 +77,13 @@ class ObligationWithdrawalRequest {
       status:        m['status']?.toString() ?? '0',
       note:          m['note']?.toString(),
       declineReason: m['decline_reason']?.toString(),
-      createdAt: DateTime.tryParse(m['created_at']?.toString() ?? '') ??
+      createdAt: parseServerTime(m['created_at']) ??
           DateTime.now(),
       approvedAt: m['approved_at'] != null
-          ? DateTime.tryParse(m['approved_at'].toString())
+          ? parseServerTime(m['approved_at'])
           : null,
       declinedAt: m['declined_at'] != null
-          ? DateTime.tryParse(m['declined_at'].toString())
+          ? parseServerTime(m['declined_at'])
           : null,
     );
   }

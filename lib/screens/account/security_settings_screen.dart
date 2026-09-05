@@ -1,6 +1,7 @@
 import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/core/services/screenshot_service.dart';
 import 'package:communal_mobile/core/utils/biometric_service.dart';
+import 'package:communal_mobile/core/utils/server_time.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/data/repositories/notifications_repository.dart';
@@ -692,16 +693,8 @@ class _ActivityTile extends StatelessWidget {
   String _formatTime(String? raw) {
     if (raw == null || raw.isEmpty) return '';
     try {
-      // Backend stores timestamps in UTC. Laravel serialises them as ISO 8601,
-      // usually with a trailing 'Z', but some payloads omit any timezone
-      // designator (e.g. "2024-01-15 10:30:00"). Without one, Dart parses the
-      // string as device-local time, which shows the wrong clock time on any
-      // device not in UTC. Append 'Z' to force UTC interpretation only when no
-      // designator (Z or a ±hh:mm offset) is already present.
-      final trimmed = raw.trim();
-      final hasTz = RegExp(r'(Z|[+-]\d{2}:?\d{2})$').hasMatch(trimmed);
-      final normalized = hasTz ? trimmed : '${trimmed}Z';
-      final dt = DateTime.parse(normalized).toLocal();
+      final dt = parseServerTime(raw);
+      if (dt == null) return raw;
       // Guard against zero/epoch dates from legacy rows that were written
       // without a created_at (rendered as year 1, e.g. "30 Nov 0001").
       if (dt.year < 2000) return '';

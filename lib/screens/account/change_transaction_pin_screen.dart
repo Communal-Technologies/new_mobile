@@ -5,6 +5,7 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -102,9 +103,19 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
     super.dispose();
   }
 
+  /// The PIN boxes are a painted row; the real editable is the offscreen field
+  /// below them. Dismissing the keyboard (back gesture, or the OS hiding it)
+  /// does not take focus off that field, so `requestFocus` on the node that
+  /// already holds focus is a no-op and the keyboard never comes back — the
+  /// member had to leave the screen and return to type. Ask the platform to
+  /// show it directly in that case.
   void _requestPinFocus() {
     if (!mounted || _isSuccess) return;
-    FocusScope.of(context).requestFocus(_pinFocus);
+    if (_pinFocus.hasFocus) {
+      SystemChannels.textInput.invokeMethod<void>('TextInput.show');
+      return;
+    }
+    _pinFocus.requestFocus();
   }
 
   bool _canContinue() => !_submitting && _pinCtrl.text.trim().length == 4;
@@ -204,8 +215,6 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).primaryColor;
-    final secondFilled = !_isSuccess && (_phase >= 2 || _pinCtrl.text.length == 4);
-    final thirdFilled = _isSuccess;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -225,16 +234,6 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
         padding: EdgeInsets.all(16.w),
         child: Column(
           children: [
-            Row(
-              children: [
-                _bar(true, primary),
-                hSpace(6),
-                _bar(secondFilled, primary),
-                hSpace(6),
-                _bar(thirdFilled, primary),
-              ],
-            ),
-            vSpace(22),
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
@@ -557,18 +556,6 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _bar(bool filled, Color primary) {
-    return Expanded(
-      child: Container(
-        height: 6.h,
-        decoration: BoxDecoration(
-          color: filled ? primary : const Color(0xFFE1E1E1),
-          borderRadius: BorderRadius.circular(10.r),
-        ),
       ),
     );
   }

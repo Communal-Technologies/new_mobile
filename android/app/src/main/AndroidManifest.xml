@@ -12,6 +12,28 @@
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
+
+    <!-- Google Play filters its device catalogue on hardware features, and two of ours are
+         required implicitly rather than because anything asked for them. Left alone, Play
+         shows the app as unavailable on devices that do not advertise them — which is what
+         put the tablet warning on the listing.
+
+         screen.portrait: an activity declaring android:screenOrientation="portrait" implies
+         android.hardware.screen.portrait is required, so any device that reports only
+         landscape is excluded. The portrait lock below is a preference about how we lay the
+         app out, not a hardware need, so the requirement is wrong and the declaration is
+         dropped here rather than by unlocking the orientation.
+
+         location: ACCESS_FINE_LOCATION and ACCESS_COARSE_LOCATION each imply
+         android.hardware.location. It is only ever used to centre the cooperative map, and
+         every other screen works without it. (The narrower gps/network implications apply
+         only below API 21; minSdk is 24, so they never arise and are not declared.)
+
+         Nothing else needs declaring: `aapt2 dump badging` reports the only other implied
+         feature as android.hardware.faketouch ("default feature for all apps"), which any
+         real touchscreen satisfies. -->
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
+    <uses-feature android:name="android.hardware.location" android:required="false" />
     <!-- allowBackup defaults to true, so the app's private directory was going
          into Google's auto-backup and could be pulled with `adb backup` on
          API 30 and below. The access token is Keystore-wrapped and does not

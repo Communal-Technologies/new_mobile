@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:communal_mobile/core/utils/server_time.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/member_profile_details.dart';
 
@@ -27,7 +28,7 @@ class PersonalInformationCard extends StatelessWidget {
   String get _dobLabel {
     final raw = profile.dateOfBirth;
     if (raw == null || raw.trim().isEmpty) return '—';
-    final parsed = DateTime.tryParse(raw);
+    final parsed = parseServerDate(raw);
     if (parsed == null) return raw;
     return DateFormat('d MMM y').format(parsed);
   }

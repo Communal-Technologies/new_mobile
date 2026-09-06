@@ -1,3 +1,5 @@
+import 'package:communal_mobile/core/utils/server_time.dart';
+
 enum NotificationStatus { unread, read }
 
 enum NotificationType { guarantorLoanApproval, message, unknown }
@@ -52,7 +54,7 @@ class NotificationModel {
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     DateTime? parse(dynamic v) {
-      if (v is String && v.isNotEmpty) return DateTime.tryParse(v);
+      if (v is String && v.isNotEmpty) return parseServerTime(v);
       return null;
     }
 

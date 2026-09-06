@@ -1,6 +1,7 @@
 import 'package:intl/intl.dart';
 
 import 'package:communal_mobile/core/utils/money.dart';
+import 'package:communal_mobile/core/utils/server_time.dart';
 
 /// One incoming "please stand as my guarantor" request shown in the
 /// guarantor inbox. Backed by `guarantors_loan_approvals` joined with
@@ -118,11 +119,5 @@ class GuarantorRequest {
         0;
   }
 
-  static DateTime? _parseDate(dynamic v) {
-    if (v == null) return null;
-    if (v is DateTime) return v;
-    final s = v.toString().trim();
-    if (s.isEmpty) return null;
-    return DateTime.tryParse(s);
-  }
+  static DateTime? _parseDate(dynamic v) => parseServerTime(v);
 }

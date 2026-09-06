@@ -1,4 +1,5 @@
 import 'package:communal_mobile/core/utils/app_currency.dart';
+import 'package:communal_mobile/core/utils/server_time.dart';
 import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/models/obligation.dart';
@@ -308,10 +309,10 @@ class MemberObligationsRepository {
             return _ledgerRowMatchesObligation(row, obligation);
           }).toList()..sort((a, b) {
             final ad =
-                DateTime.tryParse(a['created_at']?.toString() ?? '') ??
+                parseServerTime(a['created_at']) ??
                 DateTime(1970);
             final bd =
-                DateTime.tryParse(b['created_at']?.toString() ?? '') ??
+                parseServerTime(b['created_at']) ??
                 DateTime(1970);
             return bd.compareTo(ad);
           });
@@ -320,7 +321,7 @@ class MemberObligationsRepository {
           .map((row) {
             final amountMinor = _parseInt(row['amount']);
             final date =
-                DateTime.tryParse(row['created_at']?.toString() ?? '') ??
+                parseServerTime(row['created_at']) ??
                 DateTime.now();
             final mode = row['payment_mode']?.toString().trim();
             final isBf = row['brought_forward']?.toString().trim() == '1';

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import 'package:communal_mobile/core/utils/app_currency.dart';
+import 'package:communal_mobile/core/utils/server_time.dart';
 import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/models/guarantor_request.dart';
@@ -231,10 +232,10 @@ class LoanRepository {
           .toList()
         ..sort((a, b) {
           final ad =
-              DateTime.tryParse(a['created_at']?.toString() ?? '') ??
+              parseServerTime(a['created_at']) ??
               DateTime(1970);
           final bd =
-              DateTime.tryParse(b['created_at']?.toString() ?? '') ??
+              parseServerTime(b['created_at']) ??
               DateTime(1970);
           return bd.compareTo(ad);
         });

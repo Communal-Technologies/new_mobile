@@ -1,3 +1,4 @@
+import 'package:communal_mobile/core/utils/server_time.dart';
 import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/models/public_cooperative.dart';
@@ -83,7 +84,7 @@ class CommunityJoinRequest {
 
   factory CommunityJoinRequest.fromJson(Map<String, dynamic> json) {
     DateTime? parse(dynamic v) {
-      if (v is String && v.isNotEmpty) return DateTime.tryParse(v);
+      if (v is String && v.isNotEmpty) return parseServerTime(v);
       return null;
     }
 

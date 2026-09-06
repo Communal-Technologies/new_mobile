@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:communal_mobile/core/utils/server_time.dart';
 
 /// User-facing strings for transport-layer failures (aligned with splash cold start).
 abstract final class DioTransportUserMessages {
@@ -135,7 +136,7 @@ int? _retryAfterSeconds(Map<String, List<String>>? headers) {
   final value = raw.first.trim();
   final asInt = int.tryParse(value);
   if (asInt != null) return asInt;
-  final asDate = DateTime.tryParse(value);
+  final asDate = parseServerTime(value);
   if (asDate != null) {
     final delta = asDate.difference(DateTime.now()).inSeconds;
     return delta > 0 ? delta : null;

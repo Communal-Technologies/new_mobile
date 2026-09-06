@@ -1,3 +1,5 @@
+import 'package:communal_mobile/core/utils/server_time.dart';
+
 /// One row from `GET /members/loan/guarantors/for-loan/{loanRef}`.
 /// Drives the per-guarantor card on the applicant's loan-detail
 /// screen — name, current approval status, expiry countdown, and
@@ -52,13 +54,7 @@ class LoanGuarantor {
     );
   }
 
-  static DateTime? _parse(dynamic v) {
-    if (v == null) return null;
-    if (v is DateTime) return v;
-    final s = v.toString().trim();
-    if (s.isEmpty) return null;
-    return DateTime.tryParse(s);
-  }
+  static DateTime? _parse(dynamic v) => parseServerTime(v);
 }
 
 class LoanGuarantorList {

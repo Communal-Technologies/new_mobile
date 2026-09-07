@@ -22,6 +22,12 @@ enum AppUpdateOutcome {
   /// A newer version exists but we cannot install it ourselves — the user has
   /// to be sent to the store.
   storeUpdateAvailable,
+
+  /// A newer version exists and the user turned down the store's own prompt.
+  /// Distinct from [none] on purpose: telling somebody who just dismissed
+  /// Play's consent sheet that they are on the latest version contradicts what
+  /// Play told them a second earlier.
+  declined,
 }
 
 /// Bridges the two stores' very different answers to "is there a newer build".
@@ -121,7 +127,9 @@ class AppUpdateService {
 
     if (mandatory && info.immediateUpdateAllowed) {
       // Play owns the screen from here and relaunches the app itself, so a
-      // userDeniedUpdate is the only branch that ever comes back.
+      // userDeniedUpdate is the only branch that ever comes back. This update
+      // is not optional, so a refusal escalates to the listing rather than
+      // being recorded as a decline.
       final result = await InAppUpdate.performImmediateUpdate();
       return result == AppUpdateResult.success
           ? AppUpdateOutcome.none
@@ -142,9 +150,13 @@ class AppUpdateService {
       return AppUpdateOutcome.none;
     }
 
+    // `startFlexibleUpdate` only completes once the build is on the device, so
+    // success here really is "downloaded" and not merely "consented".
     final started = await InAppUpdate.startFlexibleUpdate();
-    if (started != AppUpdateResult.success) return AppUpdateOutcome.none;
-    return AppUpdateOutcome.readyToInstall;
+    if (started == AppUpdateResult.success) return AppUpdateOutcome.readyToInstall;
+    return started == AppUpdateResult.userDeniedUpdate
+        ? AppUpdateOutcome.declined
+        : AppUpdateOutcome.storeUpdateAvailable;
   }
 
   static Future<AppUpdateOutcome> _checkAppStore({required bool userInitiated}) async {

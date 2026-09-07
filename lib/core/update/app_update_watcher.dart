@@ -70,6 +70,7 @@ class _AppUpdateWatcherState extends State<AppUpdateWatcher>
           _showRelaunchPrompt();
         case AppUpdateOutcome.storeUpdateAvailable:
           await _showStorePrompt();
+        case AppUpdateOutcome.declined:
         case AppUpdateOutcome.downloading:
         case AppUpdateOutcome.none:
           break;

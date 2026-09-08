@@ -19,10 +19,12 @@ class RecentTransactionsSection extends StatefulWidget {
 
   @override
   State<RecentTransactionsSection> createState() =>
-      _RecentTransactionsSectionState();
+      RecentTransactionsSectionState();
 }
 
-class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
+/// Public so the dashboard can hold a [GlobalKey] to it and await [reload] as
+/// part of a pull-to-refresh.
+class RecentTransactionsSectionState extends State<RecentTransactionsSection> {
   late final TransactionsRepository _repo =
       TransactionsRepository(getIt<DioClient>());
   late final HomeWalletPrefs _walletPrefs = getIt<HomeWalletPrefs>();
@@ -33,8 +35,10 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
   String? _error;
 
   /// A movement ping and the balance change it causes both ask for a reload.
-  /// One fetch is enough, so a second request while one is in flight is dropped.
-  bool _inFlight = false;
+  /// One fetch is enough, so a request arriving while one is in flight joins it
+  /// instead of firing a second — and joins rather than being dropped because a
+  /// pull-to-refresh awaits this to decide when to close.
+  Future<void>? _pending;
 
   @override
   void initState() {
@@ -62,11 +66,22 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
     super.dispose();
   }
 
+  /// Re-fetch in place for a pull-to-refresh, leaving the current rows up while
+  /// it runs. Completes when the fetch does, so the caller can hold its
+  /// indicator open for exactly as long as the work takes.
+  Future<void> reload() => _load(showLoader: false);
+
+  Future<void> _load({bool showLoader = true}) {
+    return _pending ??= _fetch(
+      showLoader: showLoader,
+    ).whenComplete(() => _pending = null);
+  }
+
   /// [showLoader] false refreshes in place, leaving the current rows on screen.
   /// A background refresh triggered by a push must not blank a list the member
   /// is already reading, and must not replace it with an error if the network
   /// blips — the rows shown are still the last known good ones.
-  Future<void> _load({bool showLoader = true}) async {
+  Future<void> _fetch({bool showLoader = true}) async {
     final auth = context.read<AuthBloc>().state;
     if (auth is! AuthAuthenticated) {
       if (mounted) {
@@ -77,8 +92,6 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
       }
       return;
     }
-    if (_inFlight) return;
-    _inFlight = true;
     if (showLoader) {
       setState(() {
         _loading = true;
@@ -100,8 +113,6 @@ class _RecentTransactionsSectionState extends State<RecentTransactionsSection> {
         _loading = false;
         _error = e.toString().replaceFirst('Exception: ', '');
       });
-    } finally {
-      _inFlight = false;
     }
   }
 

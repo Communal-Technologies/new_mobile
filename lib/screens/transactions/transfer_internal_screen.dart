@@ -271,13 +271,41 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
     setState(() {
       _showTopSuggestionPanel = true;
       _topAccountSuggestions = _localMatches(query);
-      _isSearchingAccount = query.length == 10 && _resolvedFor != query;
+      _isSearchingAccount = query.length >= 6 && _resolvedFor != query;
     });
-    if (query.length != 10 || _resolvedFor == query) return;
+    if (query.length < 6 || _resolvedFor == query) return;
     _accountDebounce = Timer(
       const Duration(milliseconds: 380),
-      () => _resolveWallet(query),
+      () => query.length == 10
+          ? _resolveWallet(query)
+          : _searchCommunalAccounts(query),
     );
+  }
+
+  /// Asks which Communal wallets start with the digits typed so far, across the
+  /// whole platform. The loaded list only holds the member's own cooperatives, so
+  /// without this a wallet belonging to anyone else stays invisible until all ten
+  /// digits are in — and a member who gave up before then went to the other-banks
+  /// screen and paid NIP to reach an account in this same database.
+  Future<void> _searchCommunalAccounts(String query) async {
+    if (!mounted) return;
+    setState(() => _isSearchingAccount = true);
+    try {
+      final rows = await _repo.fetchBankSuggestions(query: query);
+      if (!mounted || _accountNumberCtrl.text.trim() != query) return;
+      _resolvedFor = query;
+      final seen = _internalMembers.map((e) => e.accountNumber).toSet();
+      final added = rows
+          .where((e) => e.isInternal && seen.add(e.accountNumber))
+          .toList(growable: false);
+      if (added.isEmpty) return;
+      _internalMembers = [..._internalMembers, ...added];
+      setState(() => _topAccountSuggestions = _localMatches(query));
+    } catch (_) {
+      // Nothing matching is the ordinary answer; the panel stays as it is.
+    } finally {
+      if (mounted) setState(() => _isSearchingAccount = false);
+    }
   }
 
   List<_InternalRow> _localMatches(String query) {

@@ -172,15 +172,24 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     _debounce = Timer(const Duration(milliseconds: 380), _probeAccount);
   }
 
-  /// Fills the panel from what this device already knows: the member's own
-  /// recipients whose number starts with what they have typed, and — once all
-  /// ten digits are in — the banks whose code could have produced that number's
-  /// check digit, best-used first.
+  /// Fills the panel from what this device already knows: the recipients whose
+  /// number starts with what they have typed, and — once all ten digits are in —
+  /// the banks whose code could have produced that number's check digit,
+  /// best-used first.
+  ///
+  /// Communal wallets are matched here too, not only external recipients. This
+  /// is the screen for paying another bank, but the number being typed decides
+  /// that, not the screen: an account on our own books belongs at the top of the
+  /// panel so it is paid as a book transfer rather than over NIP.
   void _applyLocalMatches() {
     final q = _accountCtrl.text.trim();
     final matches = _knownRecipients
-        .where((e) => e.isExternal && e.accountNumber.startsWith(q))
-        .toList(growable: false);
+        .where((e) => e.accountNumber.startsWith(q))
+        .toList(growable: false)
+      ..sort((a, b) {
+        if (a.isInternal == b.isInternal) return 0;
+        return a.isInternal ? -1 : 1;
+      });
     setState(() {
       _rawSuggestions = matches;
       _candidateBanks = _narrowedBanks(q, exclude: matches);
@@ -222,9 +231,13 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
   Future<void> _probeAccount() async {
     if (!mounted) return;
     final q = _accountCtrl.text.trim();
-    if (q.length != 10 || _resolvedFor == q) return;
+    if (q.length < 6 || _resolvedFor == q) return;
     setState(() => _loadingSuggestions = true);
     try {
+      if (q.length < 10) {
+        await _searchCommunalAccounts(q);
+        return;
+      }
       final match = await _repo.resolveAccount(q);
       if (!mounted || _accountCtrl.text.trim() != q) return;
       _resolvedFor = q;
@@ -255,6 +268,26 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     } finally {
       if (mounted) setState(() => _loadingSuggestions = false);
     }
+  }
+
+  /// Asks the server which Communal accounts begin with the digits typed so far.
+  ///
+  /// This is what the debounce buys before the tenth digit: a wallet on our books
+  /// is recognised — from anywhere on the platform, not only the member's own
+  /// cooperative — while the number is still being typed, so the member never
+  /// gets sent down the NIP route for money that never leaves Communal. Rows join
+  /// the local pool, which is what the next keystroke is matched against.
+  Future<void> _searchCommunalAccounts(String q) async {
+    final rows = await _repo.fetchBankSuggestions(query: q);
+    if (!mounted || _accountCtrl.text.trim() != q) return;
+    _resolvedFor = q;
+    final seen = _knownRecipients.map((e) => e.accountNumber).toSet();
+    final added = rows
+        .where((e) => e.isInternal && seen.add(e.accountNumber))
+        .toList(growable: false);
+    if (added.isEmpty) return;
+    _knownRecipients = [..._knownRecipients, ...added];
+    _applyLocalMatches();
   }
 
   bool get _showSuggestionPanel {
@@ -347,6 +380,26 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     if (bank == null || acct.length != 10) return;
     setState(() => _verifying = true);
     try {
+      // Our own books first, whatever bank the member picked. Asking the bank
+      // before asking ourselves is how a number that is a Communal wallet ends up
+      // with a counterparty minted for it and a NIP fee attached — for money that
+      // never leaves the platform.
+      final local = await _repo.resolveAccount(acct);
+      if (!mounted) return;
+      if (local != null && local.isInternal) {
+        setState(() {
+          _resolvedFor = acct;
+          _verifiedRecipient = TransferFavorite(
+            source: 'internal',
+            accountId: local.accountId,
+            bank: local.bank.trim().isNotEmpty ? local.bank.trim() : bank.name,
+            accountNumber: local.accountNumber,
+            accountName: local.accountName,
+          );
+        });
+        return;
+      }
+
       final verified = await _repo.verifyAccount(
         bankCode: bank.nipCode,
         accountNumber: acct,
@@ -405,20 +458,35 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
       _candidateBanks = const [];
       _suggestionsDismissed = true;
       _resolvedFor = s.accountNumber;
-      // The row already carries the counterparty a NIP transfer is addressed to.
-      // Verifying it again would ask the bank a question we know the answer to.
-      _verifiedRecipient = counterPartyId.isEmpty
-          ? null
-          : TransferFavorite(
-              source: 'external',
-              accountId: counterPartyId,
-              bank: s.bank.trim().isNotEmpty
-                  ? s.bank.trim()
-                  : (_selectedBank?.name ?? ''),
-              accountNumber: s.accountNumber,
-              accountName: s.accountName,
-              nipCode: nip,
-            );
+      if (s.isInternal) {
+        // A Communal wallet is addressed by its deposit account id and needs no
+        // bank, no counterparty and no name enquiry. Falling through to the
+        // external branch here would mint a counterparty for it and charge the
+        // member NIP to reach an account on our own books.
+        _verifiedRecipient = TransferFavorite(
+          source: 'internal',
+          accountId: s.accountId,
+          bank: s.bank.trim(),
+          accountNumber: s.accountNumber,
+          accountName: s.accountName,
+        );
+      } else {
+        // The row already carries the counterparty a NIP transfer is addressed
+        // to. Verifying it again would ask the bank a question we know the
+        // answer to.
+        _verifiedRecipient = counterPartyId.isEmpty
+            ? null
+            : TransferFavorite(
+                source: 'external',
+                accountId: counterPartyId,
+                bank: s.bank.trim().isNotEmpty
+                    ? s.bank.trim()
+                    : (_selectedBank?.name ?? ''),
+                accountNumber: s.accountNumber,
+                accountName: s.accountName,
+                nipCode: nip,
+              );
+      }
     });
     if (_verifiedRecipient == null &&
         _selectedBank != null &&

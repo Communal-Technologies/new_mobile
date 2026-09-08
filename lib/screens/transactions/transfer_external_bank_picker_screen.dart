@@ -11,10 +11,16 @@ class TransferExternalBankPickerScreen extends StatefulWidget {
     super.key,
     required this.banks,
     required this.featuredBanks,
+    this.featuredTitle = 'Featured Banks',
   });
 
   final List<TransferBank> banks;
   final List<TransferBank> featuredBanks;
+
+  /// Heading over the carousel. The caller names it for what it is holding —
+  /// the banks that could have issued the typed number, or the ones this member
+  /// uses — since "Featured" describes neither.
+  final String featuredTitle;
 
   @override
   State<TransferExternalBankPickerScreen> createState() =>
@@ -31,10 +37,19 @@ class _TransferExternalBankPickerScreenState
     super.dispose();
   }
 
+  /// The full list stays alphabetical however the caller ordered it: it arrives
+  /// usage-ranked, which is right for the carousel and wrong for a list someone
+  /// scrolls looking for a name.
+  List<TransferBank> get _alphabetical =>
+      widget.banks.toList()..sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      );
+
   List<TransferBank> get _filtered {
     final q = _searchCtrl.text.trim().toLowerCase();
-    if (q.isEmpty) return widget.banks;
-    return widget.banks
+    final all = _alphabetical;
+    if (q.isEmpty) return all;
+    return all
         .where(
           (b) =>
               b.name.toLowerCase().contains(q) ||
@@ -162,7 +177,7 @@ class _TransferExternalBankPickerScreenState
                 children: [
                   if (showFeatured) ...[
                     Text(
-                      'Featured Banks',
+                      widget.featuredTitle,
                       style: TextStyle(
                         fontSize: 19.sp,
                         fontWeight: FontWeight.w800,

@@ -11,6 +11,8 @@ import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/services/transaction_activity_service.dart';
+import 'package:communal_mobile/core/services/unread_notifications_service.dart';
+import 'package:communal_mobile/core/widgets/reveal_refresh.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
 import 'package:communal_mobile/screens/home/widgets/home_account_card_section.dart';
@@ -34,8 +36,12 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final GlobalKey<RecentTransactionsSectionState> _recentTransactionsKey =
+      GlobalKey<RecentTransactionsSectionState>();
   late final TransactionActivityService _activity =
       getIt<TransactionActivityService>();
+  late final UnreadNotificationsService _unread =
+      getIt<UnreadNotificationsService>();
 
   @override
   void initState() {
@@ -57,6 +63,42 @@ class _HomeScreenState extends State<HomeScreen> {
     context.read<AuthBloc>().add(AuthRefreshUserRequested());
   }
 
+  /// Everything on this screen that comes from the network, refreshed together:
+  /// the member (which carries the balance, the tier and the KYC state driving
+  /// the cards), the recent-transactions list and the bell's unread count.
+  Future<void> _refreshDashboard() async {
+    await Future.wait([
+      _refreshUser(),
+      _recentTransactionsKey.currentState?.reload() ?? Future<void>.value(),
+      _unread.refresh(),
+      // A refresh that lands in 200ms reads as a glitch rather than as work
+      // done, so the strip stays open long enough to be seen either way.
+      Future<void>.delayed(const Duration(milliseconds: 600)),
+    ]);
+  }
+
+  /// AuthRefreshUserRequested is fire-and-forget and emits nothing at all when
+  /// the call fails, so the only way to know it finished is to watch for the
+  /// state it emits on success — with a ceiling, or a dropped connection would
+  /// hold the refresh strip open indefinitely.
+  Future<void> _refreshUser() async {
+    final bloc = context.read<AuthBloc>();
+    final state = bloc.state;
+    if (state is! AuthAuthenticated) return;
+    final generation = state.sessionGeneration;
+    bloc.add(AuthRefreshUserRequested());
+    try {
+      await bloc.stream
+          .firstWhere(
+            (s) => s is! AuthAuthenticated || s.sessionGeneration > generation,
+          )
+          .timeout(const Duration(seconds: 12));
+    } catch (_) {
+      // Timed out, or the session ended while we waited. Either way there is
+      // nothing to report here — the cards keep the values they had.
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BackToExitWrapper(child: _buildRootBody(context));
@@ -74,7 +116,8 @@ class _HomeScreenState extends State<HomeScreen> {
         drawerEdgeDragWidth: 50.w,
         drawerScrimColor: Colors.black.withValues(alpha: 0.4),
         body: SafeArea(
-          child: SingleChildScrollView(
+          child: RevealRefresh(
+            onRefresh: _refreshDashboard,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -179,7 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 vSpace(24),
 
                 // Recent Transactions
-                const RecentTransactionsSection(),
+                RecentTransactionsSection(key: _recentTransactionsKey),
 
                 vSpace(20),
 

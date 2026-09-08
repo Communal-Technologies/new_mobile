@@ -6,6 +6,7 @@ import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
 import 'package:communal_mobile/core/utils/amount_input_formatter.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
+import 'package:communal_mobile/core/utils/nuban.dart';
 import 'package:communal_mobile/core/utils/tier_limit_check.dart';
 import 'package:communal_mobile/core/constants/images.dart';
 import 'package:communal_mobile/core/widgets/brand_logo.dart';
@@ -56,7 +57,9 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
   final _narrationCtrl = TextEditingController();
 
   List<TransferBank> _banks = const [];
+  List<TransferSuggestion> _knownRecipients = const [];
   List<TransferSuggestion> _rawSuggestions = const [];
+  List<TransferBank> _candidateBanks = const [];
   TransferBank? _selectedBank;
   TransferFavorite? _verifiedRecipient;
   bool _loadingBanks = false;
@@ -65,6 +68,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
   bool _verifying = false;
   bool _suggestionsDismissed = false;
   Timer? _debounce;
+  String _resolvedFor = '';
 
   @override
   void initState() {
@@ -78,6 +82,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     _amountCtrl.addListener(() => setState(() {}));
     _narrationCtrl.addListener(() => setState(() {}));
     _loadBanks();
+    _loadKnownRecipients();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_banks.isEmpty) return;
@@ -120,6 +125,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
           _selectedBank ??= _matchBankByNip(widget.initialRecipient!.nipCode);
         }
       });
+      if (_accountCtrl.text.trim().length >= 4) _applyLocalMatches();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -127,6 +133,20 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
       });
     } finally {
       if (mounted) setState(() => _loadingBanks = false);
+    }
+  }
+
+  /// The member's own recipients, held locally so a keystroke can be matched
+  /// without a round-trip. The repository serves its cache immediately and
+  /// revalidates behind us.
+  Future<void> _loadKnownRecipients() async {
+    try {
+      final list = await _repo.cachedBankSuggestions();
+      if (!mounted) return;
+      setState(() => _knownRecipients = list);
+      if (_accountCtrl.text.trim().length >= 4) _applyLocalMatches();
+    } catch (_) {
+      // A recipient list we could not load only costs the shortcut.
     }
   }
 
@@ -138,26 +158,100 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     _debounce?.cancel();
     final q = _accountCtrl.text.trim();
     if (q.length < 4) {
-      setState(() => _rawSuggestions = const []);
+      setState(() {
+        _rawSuggestions = const [];
+        _candidateBanks = const [];
+        _resolvedFor = '';
+      });
       return;
     }
-    _debounce = Timer(const Duration(milliseconds: 380), _fetchSuggestions);
+    // Local matching is free, so it happens on the keystroke itself and the
+    // panel is never empty while the debounce runs. The debounce now guards the
+    // one thing that costs something: the exact-number lookup.
+    _applyLocalMatches();
+    _debounce = Timer(const Duration(milliseconds: 380), _probeAccount);
   }
 
-  Future<void> _fetchSuggestions() async {
+  /// Fills the panel from what this device already knows: the member's own
+  /// recipients whose number starts with what they have typed, and — once all
+  /// ten digits are in — the banks whose code could have produced that number's
+  /// check digit, best-used first.
+  void _applyLocalMatches() {
+    final q = _accountCtrl.text.trim();
+    final matches = _knownRecipients
+        .where((e) => e.isExternal && e.accountNumber.startsWith(q))
+        .toList(growable: false);
+    setState(() {
+      _rawSuggestions = matches;
+      _candidateBanks = _narrowedBanks(q, exclude: matches);
+    });
+  }
+
+  /// Banks worth offering for the number as typed.
+  ///
+  /// A NUBAN's check digit is computed from the bank's own code, so a complete
+  /// ten digits rule out about nine banks in ten — that shortlist is the whole
+  /// point of waiting for the member to finish typing. Before the tenth digit
+  /// nothing can be ruled out, so the offer is the banks they actually use.
+  List<TransferBank> _narrowedBanks(
+    String accountNumber, {
+    required List<TransferSuggestion> exclude,
+  }) {
+    if (_banks.isEmpty) return const [];
+    final alreadyShown = exclude.map((e) => (e.nipCode ?? '').trim()).toSet();
+    Iterable<TransferBank> pool = _banks.where(
+      (b) => !alreadyShown.contains(b.nipCode),
+    );
+    if (isNubanShaped(accountNumber)) {
+      pool = pool.where((b) => nubanMatchesBank(accountNumber, b.nipCode));
+    } else {
+      pool = pool.where((b) => b.uses > 0);
+    }
+    // fetchBanks already returns the list usage-ranked, so order is preserved.
+    return pool.take(isNubanShaped(accountNumber) ? 5 : 3).toList(
+      growable: false,
+    );
+  }
+
+  /// Names the account outright when we can, off our own records.
+  ///
+  /// A wallet on our books makes this a book transfer — instant, free, and it
+  /// would otherwise have gone out through NIP and been charged for. A
+  /// recipient the member has paid before already has a counterparty id, so the
+  /// name enquiry is skipped entirely.
+  Future<void> _probeAccount() async {
     if (!mounted) return;
     final q = _accountCtrl.text.trim();
-    if (q.length < 4) return;
+    if (q.length != 10 || _resolvedFor == q) return;
     setState(() => _loadingSuggestions = true);
     try {
-      final list = await _repo.fetchBankSuggestions(query: q);
-      if (!mounted) return;
+      final match = await _repo.resolveAccount(q);
+      if (!mounted || _accountCtrl.text.trim() != q) return;
+      _resolvedFor = q;
+      if (match == null) return;
+      final nip = (match.nipCode ?? '').trim();
       setState(() {
-        _rawSuggestions =
-            list.where((e) => e.isExternal).toList(growable: false);
+        _rawSuggestions = const [];
+        _candidateBanks = const [];
+        _suggestionsDismissed = true;
+        if (match.isExternal && nip.isNotEmpty) {
+          _selectedBank = _matchBankByNip(nip) ?? _selectedBank;
+        }
+        _verifiedRecipient = TransferFavorite(
+          source: match.isInternal ? 'internal' : 'external',
+          accountId: match.isInternal
+              ? match.accountId
+              : (match.counterPartyId ?? ''),
+          bank: match.bank.trim().isNotEmpty
+              ? match.bank.trim()
+              : (_selectedBank?.name ?? ''),
+          accountNumber: match.accountNumber,
+          accountName: match.accountName,
+          nipCode: match.isInternal ? null : nip,
+        );
       });
     } catch (_) {
-      if (mounted) setState(() => _rawSuggestions = const []);
+      // Nothing to show is the ordinary answer here — the member picks a bank.
     } finally {
       if (mounted) setState(() => _loadingSuggestions = false);
     }
@@ -169,9 +263,9 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
   }
 
   List<_SuggestRow> get _suggestionRows {
-    // Suggestions are the user's previously-created counterparties that match
-    // the typed account number — NOT arbitrary banks from the bank list. When
-    // none match, the panel simply offers "Show all Banks" below. Dedupe by
+    // Recipients the member has paid before come first — those are answers, not
+    // guesses. Below them sit the banks that could have issued the number, which
+    // is what the panel offers once there is nothing left to recognise. Dedupe by
     // account number (already deduped server-side, belt-and-braces here).
     final rows = <_SuggestRow>[];
     final seenAcct = <String>{};
@@ -179,6 +273,10 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
       if (rows.length >= 6) break;
       if (!seenAcct.add(s.accountNumber)) continue;
       rows.add(_SuggestRecipient(s));
+    }
+    for (final b in _candidateBanks) {
+      if (rows.length >= 6) break;
+      rows.add(_SuggestBank(b));
     }
     return rows;
   }
@@ -197,6 +295,9 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
         builder: (ctx) => TransferExternalBankPickerScreen(
           banks: _banks,
           featuredBanks: featured,
+          featuredTitle: isNubanShaped(acct)
+              ? 'Likely for this account number'
+              : 'Banks you transfer to',
         ),
       ),
     );
@@ -209,15 +310,29 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     await _verifyRecipient();
   }
 
+  /// The banks to surface at the top of the picker.
+  ///
+  /// Narrowed by the typed number's check digit first — with ten digits in, a
+  /// bank that could not have issued it does not belong at the top of the list —
+  /// then in the server's usage order, which counts the member's own settled
+  /// transfers and so survives a reinstall. Locally saved recipients only fill
+  /// out the tail, since a recency list of people is not a count of banks.
   List<TransferBank> _featuredBanks() {
+    final acct = _accountCtrl.text.trim();
     final out = <TransferBank>[];
     final seen = <String>{};
-    for (final f in _favorites.getAll()) {
-      if (!f.isInternal) {
-        final b = _matchBankByNip(f.nipCode);
-        if (b != null && seen.add(b.nipCode)) out.add(b);
-      }
+    final plausible = _banks
+        .where((b) => nubanMatchesBank(acct, b.nipCode))
+        .where((b) => isNubanShaped(acct) || b.uses > 0);
+    for (final b in plausible) {
       if (out.length >= 10) break;
+      if (seen.add(b.nipCode)) out.add(b);
+    }
+    for (final f in _favorites.getAll()) {
+      if (out.length >= 10) break;
+      if (f.isInternal) continue;
+      final b = _matchBankByNip(f.nipCode);
+      if (b != null && seen.add(b.nipCode)) out.add(b);
     }
     for (final b in _banks) {
       if (out.length >= 10) break;
@@ -242,18 +357,33 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
         accountName: verified.accountName,
       );
       if (!mounted) return;
+      final bankName = verified.bankName?.trim().isNotEmpty == true
+          ? verified.bankName!.trim()
+          : bank.name;
       setState(() {
         _verifiedRecipient = TransferFavorite(
           source: 'external',
           accountId: cpId,
-          bank: verified.bankName?.trim().isNotEmpty == true
-              ? verified.bankName!.trim()
-              : bank.name,
+          bank: bankName,
           accountNumber: verified.accountNumber,
           accountName: verified.accountName,
           nipCode: bank.nipCode,
         );
       });
+      // The recipient list is what the next keystroke is matched against, so a
+      // recipient just minted belongs in it now rather than after a refresh.
+      _repo.rememberSuggestion(
+        TransferSuggestion(
+          source: 'external',
+          accountId: '',
+          bank: bankName,
+          cooperativeName: '',
+          accountNumber: verified.accountNumber,
+          accountName: verified.accountName,
+          nipCode: bank.nipCode,
+          counterPartyId: cpId,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() => _verifiedRecipient = null);
@@ -266,14 +396,33 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
   }
 
   void _onPickRecipient(TransferSuggestion s) {
+    final nip = (s.nipCode ?? '').trim();
+    final counterPartyId = (s.counterPartyId ?? '').trim();
     setState(() {
       _accountCtrl.text = s.accountNumber;
-      final nip = (s.nipCode ?? '').trim();
       _selectedBank = nip.isEmpty ? _selectedBank : _matchBankByNip(nip);
       _rawSuggestions = const [];
+      _candidateBanks = const [];
       _suggestionsDismissed = true;
+      _resolvedFor = s.accountNumber;
+      // The row already carries the counterparty a NIP transfer is addressed to.
+      // Verifying it again would ask the bank a question we know the answer to.
+      _verifiedRecipient = counterPartyId.isEmpty
+          ? null
+          : TransferFavorite(
+              source: 'external',
+              accountId: counterPartyId,
+              bank: s.bank.trim().isNotEmpty
+                  ? s.bank.trim()
+                  : (_selectedBank?.name ?? ''),
+              accountNumber: s.accountNumber,
+              accountName: s.accountName,
+              nipCode: nip,
+            );
     });
-    if (_selectedBank != null && _accountCtrl.text.trim().length == 10) {
+    if (_verifiedRecipient == null &&
+        _selectedBank != null &&
+        _accountCtrl.text.trim().length == 10) {
       _verifyRecipient();
     }
   }
@@ -282,6 +431,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     setState(() {
       _selectedBank = b;
       _rawSuggestions = const [];
+      _candidateBanks = const [];
       _suggestionsDismissed = true;
     });
     if (_accountCtrl.text.trim().length == 10) {
@@ -356,7 +506,10 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
         'currency': currency,
         'narration': _narrationCtrl.text.trim(),
         'saveAsBeneficiary': false,
-        'useExternalNipFlow': true,
+        // A number that turned out to be a Communal wallet goes out as a book
+        // transfer: it is instant, it carries no NIP fee, and sending it over
+        // NIP would charge the member to reach an account on our own books.
+        'useExternalNipFlow': !v.isInternal,
       },
     );
   }
@@ -539,6 +692,17 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                             style: TextStyle(
                                               fontWeight: FontWeight.w700,
                                               fontSize: 19.sp,
+                                            ),
+                                          ),
+                                          subtitle: Text(
+                                            bank.uses > 0
+                                                ? 'You transfer here often'
+                                                : 'Tap to check this number',
+                                            style: TextStyle(
+                                              fontSize: 17.sp,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface,
                                             ),
                                           ),
                                           onTap: () => _onPickBankRow(bank),

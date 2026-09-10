@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:communal_mobile/core/constants/constants.dart';
+import 'package:communal_mobile/core/services/otp_session_storage.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,6 +24,10 @@ class SplashCubit extends Cubit<SplashState> {
   final SettingsCubit settingsCubit;
   final AuthRepository authRepository;
   final RegionsRepository regionsRepository;
+
+  // No constructor dependency needed — OtpSessionStorage only wraps
+  // SharedPreferences internally, same as reading `prefs` directly would.
+  final OtpSessionStorage _otpSessionStorage = OtpSessionStorage();
 
   SplashCubit(
     this.prefs,
@@ -53,6 +58,19 @@ class SplashCubit extends Cubit<SplashState> {
 
       final regionsOk = await _loadRegionsOrEmitError();
       if (!regionsOk) return;
+
+      // A signup verification the user never finished (app closed with the
+      // OTP screen still up) outranks the normal first-time/logged-in/
+      // logged-out branches below — they don't have a completed account
+      // yet, so /onboarding or /welcome would be the wrong landing spot.
+      // The verification screen itself resumes (or expires) the resend
+      // countdown off the session's timestamp; splash only needs to know
+      // whether to route there.
+      final pendingOtpSession = await _otpSessionStorage.load();
+      if (pendingOtpSession != null) {
+        emit(SplashPendingOtpVerification(pendingOtpSession));
+        return;
+      }
 
       if (isFirstTime) {
         emit(SplashFirstTimeUser());

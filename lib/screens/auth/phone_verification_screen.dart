@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/constants/constants.dart';
 import 'package:communal_mobile/core/constants/images.dart';
+import 'package:communal_mobile/core/services/otp_session_storage.dart';
 import 'package:communal_mobile/core/widgets/otp_input_field.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
@@ -43,16 +44,20 @@ class PhoneVerificationScreen extends StatefulWidget {
 }
 
 class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
+  static const int _resendDurationSeconds = 600; // 10 minutes
+
   final AuthRepository _authRepository = getIt<AuthRepository>();
+  final OtpSessionStorage _sessionStorage = OtpSessionStorage();
   String _code = '';
-  int _resendTimer = 300;
+  int _resendTimer = _resendDurationSeconds;
   Timer? _timer;
   Timer? _deliveryPollTimer;
   int _deliveryPollAttempts = 0;
 
   /// Set on first successful OTP send and used in /create-account-password
   /// later in the chain. Hydrated from the route arg when the signup
-  /// screen pre-issued the OTP, or set after our own send.
+  /// screen pre-issued the OTP, from a persisted session on resume, or set
+  /// after our own send.
   String? _userId;
 
   /// True while an in-flight network request would make a tap a no-op
@@ -69,15 +74,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   void initState() {
     super.initState();
     _userId = widget.userId;
-    _startTimer();
-    // The signup screen now owns the first OTP send so the existence
-    // check (HTTP 409 -> account_exists) surfaces *there* instead of
-    // landing the user on this screen with an error. Only auto-send
-    // when no userId was passed in — keeps non-signup entry paths and
-    // deep links working without a duplicate send when there isn't.
-    if (_userId == null || _userId!.isEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _sendOtp());
-    }
+    _restoreOrStart();
   }
 
   @override
@@ -85,6 +82,82 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
     _timer?.cancel();
     _deliveryPollTimer?.cancel();
     super.dispose();
+  }
+
+  /// Session key for matching a persisted [PendingOtpSession] back to this
+  /// screen's args. Distinct from [_deliveryMethodForRequest], which is the
+  /// value sent to the backend.
+  String _deliveryMethodKey() {
+    if (widget.isEmail) return 'email';
+    switch (widget.method) {
+      case VerificationMethod.sms:
+        return 'sms';
+      case VerificationMethod.whatsapp:
+        return 'whatsapp';
+      case VerificationMethod.call:
+        return 'call';
+    }
+  }
+
+  /// Resumes the countdown from a persisted session for this exact
+  /// contact + method if one exists (app was closed and reopened mid-flow),
+  /// otherwise falls back to the normal fresh-screen behavior.
+  ///
+  /// - Session found, still within the resend window -> resume the timer
+  ///   from the remaining seconds. No re-send.
+  /// - Session found, window elapsed -> land on this screen with the timer
+  ///   at 0 (Resend enabled). No auto re-send.
+  /// - No session -> normal flow: send now if we weren't handed a userId,
+  ///   otherwise just persist the session that the caller already created.
+  Future<void> _restoreOrStart() async {
+    final session = await _sessionStorage.load();
+    final matches = session != null &&
+        session.contact == widget.contact &&
+        session.methodKey == _deliveryMethodKey();
+
+    if (matches) {
+      final elapsedSeconds =
+          ((DateTime.now().millisecondsSinceEpoch - session.sentAtMs) / 1000)
+              .floor();
+      final remaining = _resendDurationSeconds - elapsedSeconds;
+      if (!mounted) return;
+      setState(() {
+        _userId = session.userId ?? _userId;
+        _resendTimer = remaining > 0 ? remaining : 0;
+      });
+      if (_resendTimer > 0) {
+        _startTimer();
+      }
+      // Delivery status for the earlier send is no longer interesting to
+      // poll for; the code is either already delivered or the user can
+      // trigger a fresh send via Resend once the timer allows it.
+      return;
+    }
+
+    _startTimer();
+    if (_userId == null || _userId!.isEmpty) {
+      // The signup screen now owns the first OTP send so the existence
+      // check (HTTP 409 -> account_exists) surfaces *there* instead of
+      // landing the user on this screen with an error. Only auto-send
+      // when no userId was passed in — keeps non-signup entry paths and
+      // deep links working without a duplicate send when there isn't.
+      WidgetsBinding.instance.addPostFrameCallback((_) => _sendOtp());
+    } else {
+      // userId was pre-fetched by the signup screen just before this
+      // screen was pushed, so the OTP is already in flight. Persist a
+      // session now so a later app restart can resume this same window.
+      await _persistSession();
+    }
+  }
+
+  Future<void> _persistSession() {
+    return _sessionStorage.save(PendingOtpSession(
+      contact: widget.contact,
+      isEmail: widget.isEmail,
+      methodKey: _deliveryMethodKey(),
+      userId: _userId,
+      sentAtMs: DateTime.now().millisecondsSinceEpoch,
+    ));
   }
 
   String _deliveryMethodForRequest() {
@@ -133,6 +206,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   }
 
   void _startTimer() {
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_resendTimer > 0) {
         setState(() {
@@ -161,6 +235,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
         _busy = false;
         _deliveryInfo = null;
       });
+      await _persistSession();
       _startDeliveryStatusPolling();
     } catch (e) {
       if (!mounted) return;
@@ -173,12 +248,18 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
 
   Future<void> _resendCode() async {
     setState(() {
-      _resendTimer = 300;
+      _resendTimer = _resendDurationSeconds;
       _error = null;
       _deliveryInfo = null;
     });
     _startTimer();
     await _sendOtp();
+  }
+
+  /// Abandons the in-progress verification (user is navigating away on
+  /// purpose), so a later app relaunch doesn't resume a flow they left.
+  void _cancelSession() {
+    unawaited(_sessionStorage.clear());
   }
 
   String get _maskedContact {
@@ -264,6 +345,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
           icon: Icons.sms_outlined,
           label: 'SMS',
           onTap: () {
+            _cancelSession();
             context.pushReplacement('/verify-phone', extra: {
               'contact': widget.contact,
               'method': 'sms',
@@ -296,6 +378,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
           icon: Icons.phone_outlined,
           label: 'Voice Call',
           onTap: () {
+            _cancelSession();
             context.pushReplacement('/verify-phone', extra: {
               'contact': widget.contact,
               'method': 'call',
@@ -339,6 +422,8 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
         });
         return;
       }
+      // Verified — the pending session's job is done.
+      await _sessionStorage.clear();
       // GoRouter's `push` returns a Future for any value the destination
       // pops back; the signup chain doesn't pop, so we intentionally
       // discard it.
@@ -366,7 +451,10 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            _cancelSession();
+            context.pop();
+          },
         ),
       ),
       body: SafeArea(
@@ -767,4 +855,3 @@ class DashedBorderPainter extends CustomPainter {
   @override
   bool shouldRepaint(DashedBorderPainter oldDelegate) => false;
 }
-

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/core/constants/constants.dart';
 import 'package:communal_mobile/core/constants/images.dart';
+import 'package:communal_mobile/core/services/otp_session_storage.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/otp_input_field.dart';
 import 'package:communal_mobile/core/widgets/app_elevated_button.dart';
@@ -45,18 +46,30 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
   // Audit M25: single source of truth for the OTP length lives in
   // [AppConstants.otpLength].
   static int get _otpLength => AppConstants.otpLength;
+  static int get _resendWindow => AppConstants.otpResendWindowSeconds;
+
+  final OtpSessionStorage _sessionStorage = OtpSessionStorage();
 
   /// Bumps to rebuild [OtpInputField] and clear digits after a failed attempt.
   int _otpFieldKey = 0;
 
   String _code = '';
-  int _resendTimer = 300;
+  int _resendTimer = _resendWindow;
   Timer? _timer;
   Timer? _deliveryPollTimer;
   int _deliveryPollAttempts = 0;
   bool _isVerifying = false;
   bool _isResending = false;
   String? _deliveryInfo;
+
+  /// Which persisted slot this screen instance reads/writes. Forgot-password,
+  /// initial-setup and plain verification each get their own slot so an
+  /// abandoned flow never leaks its countdown into another.
+  OtpFlow get _flow {
+    if (widget.isForgotPassword) return OtpFlow.passwordReset;
+    if (widget.isInitialSetup) return OtpFlow.initialSetup;
+    return OtpFlow.verification;
+  }
 
   void _restartSplashColdStart() {
     if (!mounted) return;
@@ -67,34 +80,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
   @override
   void initState() {
     super.initState();
-    _startTimer();
-    if (!widget.isForgotPassword && !widget.skipInitialOtpRequest) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _sendInitialOtp());
-    }
-  }
-
-  Future<void> _sendInitialOtp() async {
-    try {
-      final ok = await getIt<AuthRepository>().requestOtp(widget.contact);
-      if (!mounted) {
-        return;
-      }
-      if (!ok) {
-        AppToast.error('Could not send verification code. Try again.');
-      }
-      _startDeliveryStatusPolling();
-    } catch (e) {
-      if (!mounted) {
-        return;
-      }
-      if (e is DioException && isDioTransportFailure(e)) {
-        _restartSplashColdStart();
-        return;
-      }
-      final message =
-          e is Exception ? e.toString().replaceFirst('Exception: ', '') : e.toString();
-      AppToast.error(message);
-    }
+    _restoreOrStart();
   }
 
   @override
@@ -104,11 +90,91 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
     super.dispose();
   }
 
+  /// Resumes the countdown from a persisted session for this exact
+  /// contact + flow if one exists (app was closed and reopened mid-flow),
+  /// otherwise falls back to the normal fresh-screen behavior.
+  ///
+  /// - Session found, still within the resend window -> resume the timer
+  ///   from the remaining seconds. No re-send.
+  /// - Session found, window elapsed -> land on this screen with the timer
+  ///   at 0 (Resend enabled). No auto re-send.
+  /// - No session -> normal flow: send now unless the caller already did
+  ///   (skipInitialOtpRequest or forgot-password), otherwise persist the
+  ///   session that the caller already created.
+  Future<void> _restoreOrStart() async {
+    final session = await _sessionStorage.load(_flow);
+    final matches = session != null &&
+        session.contact == widget.contact &&
+        session.flow == _flow;
+
+    if (matches) {
+      final remaining = session.remainingSeconds;
+      if (!mounted) return;
+      setState(() => _resendTimer = remaining);
+      if (remaining > 0) _startTimer();
+      return;
+    }
+
+    _startTimer();
+    if (!widget.isForgotPassword && !widget.skipInitialOtpRequest) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _sendInitialOtp());
+    } else {
+      // Caller already issued the OTP (login-checker or forgot-password
+      // request). Anchor the persisted window so a cold start resumes
+      // mid-countdown instead of restarting the full window.
+      await _persistSession();
+    }
+  }
+
+  Future<void> _persistSession() async {
+    await _sessionStorage.save(PendingOtpSession(
+      flow: _flow,
+      contact: widget.contact,
+      challengeId: null,
+      isEmail: widget.isEmail,
+      methodKey: widget.isEmail ? 'email' : 'sms',
+      userId: widget.userId,
+      sentAtMs: DateTime.now().millisecondsSinceEpoch,
+      resendWindowSeconds: _resendWindow,
+    ));
+  }
+
+  Future<void> _sendInitialOtp() async {
+    try {
+      final ok = await getIt<AuthRepository>().requestOtp(
+        widget.contact,
+        purpose: widget.isInitialSetup ? 'signup' : 'verification',
+      );
+      if (!mounted) {
+        return;
+      }
+      if (!ok) {
+        AppToast.error('Could not send verification code. Try again.');
+        return;
+      }
+      await _persistSession();
+      _startDeliveryStatusPolling();
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      if (e is DioException && isDioTransportFailure(e)) {
+        _restartSplashColdStart();
+        return;
+      }
+      final message = e is Exception
+          ? e.toString().replaceFirst('Exception: ', '')
+          : e.toString();
+      AppToast.error(message);
+    }
+  }
+
   void _startDeliveryStatusPolling() {
     if (widget.isEmail || widget.isForgotPassword) return;
     _deliveryPollTimer?.cancel();
     _deliveryPollAttempts = 0;
-    _deliveryPollTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+    _deliveryPollTimer =
+        Timer.periodic(const Duration(seconds: 3), (timer) async {
       _deliveryPollAttempts++;
       if (_deliveryPollAttempts > 20) {
         timer.cancel();
@@ -170,13 +236,17 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
             _restartSplashColdStart();
             return;
           }
-          final message =
-              e is Exception ? e.toString().replaceFirst('Exception: ', '') : e.toString();
+          final message = e is Exception
+              ? e.toString().replaceFirst('Exception: ', '')
+              : e.toString();
           AppToast.error(message);
         }
       } else {
         try {
-          final ok = await getIt<AuthRepository>().requestOtp(widget.contact);
+          final ok = await getIt<AuthRepository>().requestOtp(
+            widget.contact,
+            purpose: widget.isInitialSetup ? 'signup' : 'verification',
+          );
           if (!mounted) {
             return;
           }
@@ -195,8 +265,9 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
             _restartSplashColdStart();
             return;
           }
-          final message =
-              e is Exception ? e.toString().replaceFirst('Exception: ', '') : e.toString();
+          final message = e is Exception
+              ? e.toString().replaceFirst('Exception: ', '')
+              : e.toString();
           AppToast.error(message);
         }
       }
@@ -204,8 +275,11 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
       if (mounted) {
         setState(() {
           _isResending = false;
-          _resendTimer = 300;
+          _resendTimer = _resendWindow;
         });
+        // Re-anchor the persisted session to "now" so the next cold start
+        // resumes from this new send, not the original one.
+        await _persistSession();
         _startTimer();
       }
     }
@@ -248,8 +322,13 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
 
     if (widget.isForgotPassword) {
       try {
-        await getIt<AuthRepository>().verifyPasswordResetPin(widget.contact, _code);
+        await getIt<AuthRepository>().verifyPasswordResetPin(
+          widget.contact,
+          _code,
+        );
         if (!mounted) return;
+        // Flow done — no stale timer should survive.
+        await _sessionStorage.clear(_flow);
         // ignore: unawaited_futures
         context.push('/reset-password', extra: {
           'contact': widget.contact,
@@ -262,8 +341,9 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
           _restartSplashColdStart();
           return;
         }
-        final message =
-            e is Exception ? e.toString().replaceFirst('Exception: ', '') : e.toString();
+        final message = e is Exception
+            ? e.toString().replaceFirst('Exception: ', '')
+            : e.toString();
         AppToast.error(message);
         setState(() {
           _isVerifying = false;
@@ -332,28 +412,31 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                 child: Column(
                   children: [
                     RichText(
-                  textAlign: TextAlign.center,
-                  text: TextSpan(
-                    style: TextStyle(
-                      fontSize: 17.sp,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      height: 1.5,
-                    ),
-                    children: [
-                      TextSpan(
-                        text: widget.isEmail
-                            ? 'Enter the code we sent to your email'
-                            : 'Enter the code we sent to your phone on whatsapp',
-                      ),
-                      TextSpan(
-                        text: '\n$_maskedContact',
+                      textAlign: TextAlign.center,
+                      text: TextSpan(
                         style: TextStyle(
-                          color: theme.primaryColor,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 17.sp,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
+                          height: 1.5,
                         ),
+                        children: [
+                          TextSpan(
+                            text: widget.isEmail
+                                ? 'Enter the code we sent to your email'
+                                : 'Enter the code we sent to your phone on whatsapp',
+                          ),
+                          TextSpan(
+                            text: '\n$_maskedContact',
+                            style: TextStyle(
+                              color: theme.primaryColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
                     ),
                   ],
                 ),
@@ -381,7 +464,10 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                         'Resend code in ${_resendTimer ~/ 60}:${(_resendTimer % 60).toString().padLeft(2, '0')}',
                         style: TextStyle(
                           fontSize: 17.sp,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
                         ),
                       )
                     : _isResending
@@ -401,7 +487,10 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                                 'Sending code…',
                                 style: TextStyle(
                                   fontSize: 17.sp,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.6),
                                 ),
                               ),
                             ],
@@ -413,7 +502,10 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                                 'Didn\'t receive the code?',
                                 style: TextStyle(
                                   fontSize: 17.sp,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.6),
                                 ),
                               ),
                               hSpace(4),
@@ -422,7 +514,8 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                                 style: TextButton.styleFrom(
                                   padding: EdgeInsets.zero,
                                   minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
                                 ),
                                 child: Text(
                                   'Resend',
@@ -462,6 +555,8 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                     setState(() {
                       _isVerifying = false;
                     });
+                    // Flow done — no stale timer should survive.
+                    unawaited(_sessionStorage.clear(_flow));
                     // Navigate to reset password screen
                     context.push('/reset-password', extra: {
                       'userId': state.userId,
@@ -491,7 +586,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
                   // _isVerifying is set to true only when user clicks
                   final isLoading = _isVerifying;
                   return AppElevatedButton(
-                title: 'Continue',
+                    title: 'Continue',
                     onPressed: (_code.length == _otpLength && !isLoading)
                         ? () => _verifyCode()
                         : null,
@@ -507,6 +602,4 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
       ),
     );
   }
-
 }
-

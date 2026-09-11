@@ -44,7 +44,8 @@ class PhoneVerificationScreen extends StatefulWidget {
 }
 
 class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
-  static const int _resendDurationSeconds = 600; // 10 minutes
+  static int get _resendDurationSeconds =>
+      AppConstants.otpResendWindowSeconds;
 
   final AuthRepository _authRepository = getIt<AuthRepository>();
   final OtpSessionStorage _sessionStorage = OtpSessionStorage();
@@ -110,20 +111,17 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   /// - No session -> normal flow: send now if we weren't handed a userId,
   ///   otherwise just persist the session that the caller already created.
   Future<void> _restoreOrStart() async {
-    final session = await _sessionStorage.load();
+    final session = await _sessionStorage.load(OtpFlow.signup);
     final matches = session != null &&
         session.contact == widget.contact &&
         session.methodKey == _deliveryMethodKey();
 
     if (matches) {
-      final elapsedSeconds =
-          ((DateTime.now().millisecondsSinceEpoch - session.sentAtMs) / 1000)
-              .floor();
-      final remaining = _resendDurationSeconds - elapsedSeconds;
+      final remaining = session.remainingSeconds;
       if (!mounted) return;
       setState(() {
         _userId = session.userId ?? _userId;
-        _resendTimer = remaining > 0 ? remaining : 0;
+        _resendTimer = remaining;
       });
       if (_resendTimer > 0) {
         _startTimer();
@@ -152,11 +150,14 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
 
   Future<void> _persistSession() {
     return _sessionStorage.save(PendingOtpSession(
+      flow: OtpFlow.signup,
       contact: widget.contact,
+      challengeId: null,
       isEmail: widget.isEmail,
       methodKey: _deliveryMethodKey(),
       userId: _userId,
       sentAtMs: DateTime.now().millisecondsSinceEpoch,
+      resendWindowSeconds: _resendDurationSeconds,
     ));
   }
 
@@ -177,7 +178,8 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   void _startDeliveryStatusPolling() {
     _deliveryPollTimer?.cancel();
     _deliveryPollAttempts = 0;
-    _deliveryPollTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+    _deliveryPollTimer =
+        Timer.periodic(const Duration(seconds: 3), (timer) async {
       _deliveryPollAttempts++;
       if (_deliveryPollAttempts > 20) {
         timer.cancel();
@@ -259,7 +261,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   /// Abandons the in-progress verification (user is navigating away on
   /// purpose), so a later app relaunch doesn't resume a flow they left.
   void _cancelSession() {
-    unawaited(_sessionStorage.clear());
+    unawaited(_sessionStorage.clear(OtpFlow.signup));
   }
 
   String get _maskedContact {
@@ -423,7 +425,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
         return;
       }
       // Verified — the pending session's job is done.
-      await _sessionStorage.clear();
+      await _sessionStorage.clear(OtpFlow.signup);
       // GoRouter's `push` returns a Future for any value the destination
       // pops back; the signup chain doesn't pop, so we intentionally
       // discard it.
@@ -467,236 +469,262 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-              vSpace(20),
+                      vSpace(20),
 
-              // Logo
-              Center(
-                child: Image.asset(
-                  Images.coloredLogo,
-                  width: 180.w,
-                ),
-              ),
-
-              vSpace(40),
-
-              // Title
-              Center(
-                child: Text(
-                  _title,
-                  style: TextStyle(
-                    fontSize: 28.sp,
-                    fontWeight: FontWeight.w700,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-              ),
-
-              vSpace(12),
-
-              // Instruction
-              Center(
-                child: RichText(
-                  textAlign: TextAlign.center,
-                  text: TextSpan(
-                    style: TextStyle(
-                      fontSize: 17.sp,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      height: 1.5,
-                    ),
-                    children: [
-                      TextSpan(text: _instruction),
-                      TextSpan(
-                        text: '\n$_maskedContact',
-                        style: TextStyle(
-                          color: theme.primaryColor,
-                          fontWeight: FontWeight.w600,
+                      // Logo
+                      Center(
+                        child: Image.asset(
+                          Images.coloredLogo,
+                          width: 180.w,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
 
-              vSpace(32),
+                      vSpace(40),
 
-              // OTP Input
-              OtpInputField(
-                length: 6,
-                onChanged: (code) {
-                  setState(() {
-                    _code = code;
-                    if (_error != null) _error = null;
-                  });
-                },
-              ),
-
-              vSpace(16),
-
-              // Resend code
-              Center(
-                child: _resendTimer > 0
-                    ? Text(
-                        'Resend code in ${_resendTimer ~/ 60}:${(_resendTimer % 60).toString().padLeft(2, '0')}',
-                        style: TextStyle(
-                          fontSize: 17.sp,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      // Title
+                      Center(
+                        child: Text(
+                          _title,
+                          style: TextStyle(
+                            fontSize: 28.sp,
+                            fontWeight: FontWeight.w700,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                         ),
-                      )
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Didn\'t receive the code?',
+                      ),
+
+                      vSpace(12),
+
+                      // Instruction
+                      Center(
+                        child: RichText(
+                          textAlign: TextAlign.center,
+                          text: TextSpan(
                             style: TextStyle(
                               fontSize: 17.sp,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.6),
+                              height: 1.5,
                             ),
-                          ),
-                          hSpace(4),
-                          TextButton(
-                            onPressed: _resendCode,
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: Text(
-                              'Resend',
-                              style: TextStyle(
-                                fontSize: 17.sp,
-                                color: theme.brightness == Brightness.dark
-                                    ? Colors.white
-                                    : theme.primaryColor,
-                                fontWeight: FontWeight.w600,
+                            children: [
+                              TextSpan(text: _instruction),
+                              TextSpan(
+                                text: '\n$_maskedContact',
+                                style: TextStyle(
+                                  color: theme.primaryColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
+                            ],
                           ),
-                        ],
-                      ),
-              ),
-
-              if (_error != null) ...[
-                vSpace(12),
-                Text(
-                  _error!,
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    color: const Color(0xFFE74C3C),
-                  ),
-                ),
-              ],
-
-              if (_deliveryInfo != null) ...[
-                vSpace(10),
-                Text(
-                  _deliveryInfo!,
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    color: const Color(0xFF0F8B8D),
-                  ),
-                ),
-              ],
-
-              vSpace(24),
-
-              // Continue button
-              AppElevatedButton(
-                title: _busy ? 'Please wait...' : 'Continue',
-                onPressed: (!_busy && _code.length == AppConstants.otpLength)
-                    ? _verifyCode
-                    : null,
-              ),
-
-              vSpace(32),
-
-              // How to check code box
-              CustomPaint(
-                painter: DashedBorderPainter(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white.withValues(alpha: 0.4)
-                      : const Color(0xFF00BCD4),
-                  strokeWidth: 1.5,
-                  dashWidth: 5,
-                  dashSpace: 3,
-                  borderRadius: 12.r,
-                ),
-                child: Container(
-                  padding: EdgeInsets.all(16.w),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white.withValues(alpha: 0.07)
-                        : const Color(0xFFE0F7FA),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.method == VerificationMethod.call
-                            ? 'Check the Code'
-                            : 'How to check the Code',
-                        style: TextStyle(
-                          fontSize: 19.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
-                      vSpace(12),
-                      ..._howToCheckSteps.map((step) => Padding(
-                            padding: EdgeInsets.only(bottom: 8.h),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '• ',
-                                  style: TextStyle(
-                                    fontSize: 17.sp,
-                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                                  ),
+
+                      vSpace(32),
+
+                      // OTP Input
+                      OtpInputField(
+                        length: 6,
+                        onChanged: (code) {
+                          setState(() {
+                            _code = code;
+                            if (_error != null) _error = null;
+                          });
+                        },
+                      ),
+
+                      vSpace(16),
+
+                      // Resend code
+                      Center(
+                        child: _resendTimer > 0
+                            ? Text(
+                                'Resend code in ${_resendTimer ~/ 60}:${(_resendTimer % 60).toString().padLeft(2, '0')}',
+                                style: TextStyle(
+                                  fontSize: 17.sp,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.6),
                                 ),
-                                Expanded(
-                                  child: Text(
-                                    step,
+                              )
+                            : Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Didn\'t receive the code?',
                                     style: TextStyle(
                                       fontSize: 17.sp,
-                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                                      height: 1.4,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.6),
                                     ),
                                   ),
+                                  hSpace(4),
+                                  TextButton(
+                                    onPressed: _resendCode,
+                                    style: TextButton.styleFrom(
+                                      padding: EdgeInsets.zero,
+                                      minimumSize: Size.zero,
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                    child: Text(
+                                      'Resend',
+                                      style: TextStyle(
+                                        fontSize: 17.sp,
+                                        color: theme.brightness ==
+                                                Brightness.dark
+                                            ? Colors.white
+                                            : theme.primaryColor,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+
+                      if (_error != null) ...[
+                        vSpace(12),
+                        Text(
+                          _error!,
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            color: const Color(0xFFE74C3C),
+                          ),
+                        ),
+                      ],
+
+                      if (_deliveryInfo != null) ...[
+                        vSpace(10),
+                        Text(
+                          _deliveryInfo!,
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            color: const Color(0xFF0F8B8D),
+                          ),
+                        ),
+                      ],
+
+                      vSpace(24),
+
+                      // Continue button
+                      AppElevatedButton(
+                        title: _busy ? 'Please wait...' : 'Continue',
+                        onPressed:
+                            (!_busy && _code.length == AppConstants.otpLength)
+                                ? _verifyCode
+                                : null,
+                      ),
+
+                      vSpace(32),
+
+                      // How to check code box
+                      CustomPaint(
+                        painter: DashedBorderPainter(
+                          color: Theme.of(context).brightness ==
+                                  Brightness.dark
+                              ? Colors.white.withValues(alpha: 0.4)
+                              : const Color(0xFF00BCD4),
+                          strokeWidth: 1.5,
+                          dashWidth: 5,
+                          dashSpace: 3,
+                          borderRadius: 12.r,
+                        ),
+                        child: Container(
+                          padding: EdgeInsets.all(16.w),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).brightness ==
+                                    Brightness.dark
+                                ? Colors.white.withValues(alpha: 0.07)
+                                : const Color(0xFFE0F7FA),
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.method == VerificationMethod.call
+                                    ? 'Check the Code'
+                                    : 'How to check the Code',
+                                style: TextStyle(
+                                  fontSize: 19.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
                                 ),
-                              ],
+                              ),
+                              vSpace(12),
+                              ..._howToCheckSteps.map((step) => Padding(
+                                    padding: EdgeInsets.only(bottom: 8.h),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '• ',
+                                          style: TextStyle(
+                                            fontSize: 17.sp,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withValues(alpha: 0.7),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: Text(
+                                            step,
+                                            style: TextStyle(
+                                              fontSize: 17.sp,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withValues(alpha: 0.7),
+                                              height: 1.4,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      vSpace(24),
+
+                      // Alternative methods
+                      if (_alternativeMethods.isNotEmpty) ...[
+                        Center(
+                          child: Text(
+                            'Or Send Code via',
+                            style: TextStyle(
+                              fontSize: 17.sp,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.6),
                             ),
-                          )),
-                    ],
-                  ),
-                ),
-              ),
+                          ),
+                        ),
+                        vSpace(16),
+                        Row(
+                          children: _alternativeMethods
+                              .expand((widget) => [
+                                    Expanded(child: widget),
+                                    if (widget != _alternativeMethods.last)
+                                      hSpace(12),
+                                  ])
+                              .toList(),
+                        ),
+                      ],
 
-              vSpace(24),
-
-              // Alternative methods
-              if (_alternativeMethods.isNotEmpty) ...[
-                Center(
-                  child: Text(
-                    'Or Send Code via',
-                    style: TextStyle(
-                      fontSize: 17.sp,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ),
-                vSpace(16),
-                Row(
-                  children: _alternativeMethods
-                      .expand((widget) => [
-                            Expanded(child: widget),
-                            if (widget != _alternativeMethods.last) hSpace(12),
-                          ])
-                      .toList(),
-                ),
-              ],
-
-              vSpace(40),
+                      vSpace(40),
                     ],
                   ),
                 ),

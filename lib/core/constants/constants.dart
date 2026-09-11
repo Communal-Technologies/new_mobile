@@ -12,6 +12,7 @@ class AppConstants {
   AppConstants._();
 
   static const String defaultLanguage = 'en';
+  static const int otpResendWindowSeconds = 600;
   static const String configUri = '/api/v1/fetch-system-settings';
 
   /// Audit M25: OTP length used by the verify-reset, session-takeover, and

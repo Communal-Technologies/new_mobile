@@ -60,6 +60,20 @@ class _SplashScreenState extends State<SplashScreen>
         '/welcome-back',
         extra: {'phone': '', 'method': 'fingerprint', 'isAppLock': true},
       );
+    } else if (state is SplashPendingOtpVerification) {
+      // User closed the app mid-signup, before OTP verification completed.
+      // Route straight back to that screen instead of the normal
+      // first-time/logged-in/logged-out branches — they haven't finished
+      // creating the account yet, so /welcome or /onboarding would be
+      // wrong here. PhoneVerificationScreen's own initState resumes the
+      // resend countdown (or shows Resend enabled) from the session's
+      // timestamp, so we don't need to compute remaining time here.
+      context.go('/verify-phone', extra: {
+        'contact': state.session.contact,
+        'isEmail': state.session.isEmail,
+        'method': state.session.methodKey,
+        'userId': state.session.userId,
+      });
     }
   }
 
@@ -90,7 +104,8 @@ class _SplashScreenState extends State<SplashScreen>
                   listenWhen: (prev, next) =>
                       next is SplashFirstTimeUser ||
                       next is SplashLoggedOut ||
-                      next is SplashLoggedIn,
+                      next is SplashLoggedIn ||
+                      next is SplashPendingOtpVerification,
                   listener: _onSplashStateForNavigation,
                   builder: (context, state) {
                     final showBlockingError = state is SplashError;

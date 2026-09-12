@@ -33,6 +33,14 @@ class _AppInfoState extends State<AppInfo> {
           AppToast.success('An update is downloading in the background.');
         case AppUpdateOutcome.readyToInstall:
           AppToast.success('Update downloaded. Relaunch the app to finish.');
+        case AppUpdateOutcome.declined:
+          // The store already told them an update exists and they closed it.
+          // Saying "you are on the latest version" here is how this screen
+          // ended up contradicting Play a second after it spoke.
+          AppToast.success(
+            'An update is available. Tap Check for updates again when you are '
+            'ready to install it.',
+          );
         case AppUpdateOutcome.storeUpdateAvailable:
           final opened = await AppUpdateService.openStore();
           if (!opened && mounted) {

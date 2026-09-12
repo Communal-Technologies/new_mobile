@@ -35,6 +35,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
   bool _isSearchingAccount = false;
   bool _showTopSuggestionPanel = false;
   List<_InternalRow> _topAccountSuggestions = const [];
+  String _resolvedFor = '';
 
   List<TransferSuggestion> _internalMembers = const [];
   List<TransferBeneficiary> _beneficiaries = const [];
@@ -97,7 +98,7 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
         return false;
       }
 
-      final allSuggestions = await _repo.fetchBankSuggestions();
+      final allSuggestions = await _repo.cachedBankSuggestions();
       internalMembers = allSuggestions
           .where((e) => e.isInternal && !isSelf(e))
           .toList(growable: false)
@@ -261,41 +262,113 @@ class _TransferInternalScreenState extends State<TransferInternalScreen> {
         _isSearchingAccount = false;
         _showTopSuggestionPanel = false;
         _topAccountSuggestions = const [];
+        _resolvedFor = '';
       });
       return;
     }
+    // Matching the loaded list costs nothing, so it happens on the keystroke.
+    // The debounce is kept for the lookup that leaves the device.
     setState(() {
-      _isSearchingAccount = true;
       _showTopSuggestionPanel = true;
-      _topAccountSuggestions = const [];
+      _topAccountSuggestions = _localMatches(query);
+      _isSearchingAccount = query.length >= 6 && _resolvedFor != query;
     });
-    _accountDebounce = Timer(const Duration(milliseconds: 380), () {
-      if (!mounted) return;
-      final rows =
-          _internalMembers
-              .map(
-                (m) => _InternalRow(
-                  accountId: m.accountId,
-                  accountName: m.accountName,
-                  accountNumber: m.accountNumber,
-                  cooperativeName: m.cooperativeName.trim(),
-                  bankName: m.bank,
-                  nipCode: m.nipCode,
-                ),
-              )
-              .where((r) => r.accountNumber.contains(query))
-              .toList(growable: false)
-            ..sort(
-              (a, b) => a.accountName.toLowerCase().compareTo(
-                b.accountName.toLowerCase(),
+    if (query.length < 6 || _resolvedFor == query) return;
+    _accountDebounce = Timer(
+      const Duration(milliseconds: 380),
+      () => query.length == 10
+          ? _resolveWallet(query)
+          : _searchCommunalAccounts(query),
+    );
+  }
+
+  /// Asks which Communal wallets start with the digits typed so far, across the
+  /// whole platform. The loaded list only holds the member's own cooperatives, so
+  /// without this a wallet belonging to anyone else stays invisible until all ten
+  /// digits are in — and a member who gave up before then went to the other-banks
+  /// screen and paid NIP to reach an account in this same database.
+  Future<void> _searchCommunalAccounts(String query) async {
+    if (!mounted) return;
+    setState(() => _isSearchingAccount = true);
+    try {
+      final rows = await _repo.fetchBankSuggestions(query: query);
+      if (!mounted || _accountNumberCtrl.text.trim() != query) return;
+      _resolvedFor = query;
+      final seen = _internalMembers.map((e) => e.accountNumber).toSet();
+      final added = rows
+          .where((e) => e.isInternal && seen.add(e.accountNumber))
+          .toList(growable: false);
+      if (added.isEmpty) return;
+      _internalMembers = [..._internalMembers, ...added];
+      setState(() => _topAccountSuggestions = _localMatches(query));
+    } catch (_) {
+      // Nothing matching is the ordinary answer; the panel stays as it is.
+    } finally {
+      if (mounted) setState(() => _isSearchingAccount = false);
+    }
+  }
+
+  List<_InternalRow> _localMatches(String query) {
+    final rows =
+        _internalMembers
+            .map(
+              (m) => _InternalRow(
+                accountId: m.accountId,
+                accountName: m.accountName,
+                accountNumber: m.accountNumber,
+                cooperativeName: m.cooperativeName.trim(),
+                bankName: m.bank,
+                nipCode: m.nipCode,
               ),
-            );
+            )
+            .where((r) => r.accountNumber.contains(query))
+            .toList(growable: false)
+          ..sort(
+            (a, b) => a.accountName.toLowerCase().compareTo(
+              b.accountName.toLowerCase(),
+            ),
+          );
+    return rows.take(8).toList(growable: false);
+  }
+
+  /// Looks up the full ten digits against every Communal wallet, not just the
+  /// members of the cooperatives this member belongs to.
+  ///
+  /// The loaded list is deliberately scoped to their own cooperatives — it is a
+  /// picker, and it must not become a directory of every member on the platform.
+  /// But a member paying a Communal account outside their cooperative was left
+  /// with a number the screen could not name, and had to send it over NIP and
+  /// pay a fee to reach an account sitting in the same database.
+  Future<void> _resolveWallet(String query) async {
+    if (!mounted) return;
+    setState(() => _isSearchingAccount = true);
+    try {
+      final match = await _repo.resolveAccount(query);
+      if (!mounted || _accountNumberCtrl.text.trim() != query) return;
+      _resolvedFor = query;
+      if (match == null || !match.isInternal) return;
+      final already = _topAccountSuggestions.any(
+        (r) => r.accountNumber == match.accountNumber,
+      );
+      if (already) return;
       setState(() {
-        _isSearchingAccount = false;
-        _topAccountSuggestions = rows.take(8).toList(growable: false);
-        _showTopSuggestionPanel = true;
+        _topAccountSuggestions = [
+          _InternalRow(
+            accountId: match.accountId,
+            accountName: match.accountName,
+            accountNumber: match.accountNumber,
+            cooperativeName: match.cooperativeName.trim(),
+            bankName: match.bank,
+            nipCode: match.nipCode,
+          ),
+          ..._topAccountSuggestions,
+        ];
       });
-    });
+    } catch (_) {
+      // Not a Communal account is the ordinary answer; the panel stays as it is.
+    } finally {
+      if (mounted) setState(() => _isSearchingAccount = false);
+    }
   }
 
   @override

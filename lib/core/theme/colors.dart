@@ -48,6 +48,13 @@ class AppTheme {
     },
   );
 
+  /// `ThemeData.fontFamily` only reaches `textTheme` and `primaryTextTheme`.
+  /// Anything that sets a `TextStyle` of its own — `appBarTheme.titleTextStyle`
+  /// below — has to name the family itself, or it silently resolves to whatever
+  /// the device ships as its system font. That is why every screen's header used
+  /// to read in the device font while its body read in Sen.
+  static final String? _fontFamily = GoogleFonts.sen().fontFamily;
+
   static const Color _primary = Color(0xFF742CE7);
   static const Color _lightSurface = Color(0xFFF8F8FB);
   static const Color _darkBg = Color(0xFF0F0F14);
@@ -72,21 +79,26 @@ class AppTheme {
       bodyColor: const Color(0xFF0F1D40),
       displayColor: const Color(0xFF0F1D40),
     ),
-    appBarTheme: const AppBarTheme(
+    appBarTheme: AppBarTheme(
       backgroundColor: Colors.transparent,
-      foregroundColor: Color(0xFF0F1D40),
+      foregroundColor: const Color(0xFF0F1D40),
       elevation: 0,
       scrolledUnderElevation: 0,
-      systemOverlayStyle: SystemUiOverlayStyle(
+      systemOverlayStyle: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.dark,
         statusBarBrightness: Brightness.light,
       ),
-      iconTheme: IconThemeData(color: Color(0xFF0F1D40)),
+      iconTheme: const IconThemeData(color: Color(0xFF0F1D40)),
       titleTextStyle: TextStyle(
-        color: Color(0xFF0F1D40),
+        fontFamily: _fontFamily,
+        color: const Color(0xFF0F1D40),
         fontWeight: FontWeight.w700,
         fontSize: 19,
+      ),
+      toolbarTextStyle: TextStyle(
+        fontFamily: _fontFamily,
+        color: const Color(0xFF0F1D40),
       ),
     ),
     colorScheme: const ColorScheme.light(
@@ -117,21 +129,26 @@ class AppTheme {
       bodyColor: Colors.white,
       displayColor: Colors.white,
     ),
-    appBarTheme: const AppBarTheme(
+    appBarTheme: AppBarTheme(
       backgroundColor: Colors.transparent,
       foregroundColor: Colors.white,
       elevation: 0,
       scrolledUnderElevation: 0,
-      systemOverlayStyle: SystemUiOverlayStyle(
+      systemOverlayStyle: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
         statusBarBrightness: Brightness.dark,
       ),
-      iconTheme: IconThemeData(color: Colors.white),
+      iconTheme: const IconThemeData(color: Colors.white),
       titleTextStyle: TextStyle(
+        fontFamily: _fontFamily,
         color: Colors.white,
         fontWeight: FontWeight.w700,
         fontSize: 19,
+      ),
+      toolbarTextStyle: TextStyle(
+        fontFamily: _fontFamily,
+        color: Colors.white,
       ),
     ),
     colorScheme: const ColorScheme.dark(

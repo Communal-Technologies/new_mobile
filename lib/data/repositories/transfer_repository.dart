@@ -14,6 +14,7 @@ class TransferSuggestion {
     required this.accountNumber,
     required this.accountName,
     this.nipCode,
+    this.counterPartyId,
     this.logoUrl,
   });
 
@@ -25,12 +26,25 @@ class TransferSuggestion {
   final String accountName;
   final String? nipCode;
 
+  /// The Anchor counterparty id an external suggestion already has, which is
+  /// what a NIP transfer is actually addressed to. Its absence is why external
+  /// suggestions never reached the screen: the row carries `counter_party_id`
+  /// and no `account_id`, so filtering on a non-empty account id discarded
+  /// every one of them.
+  final String? counterPartyId;
+
   /// Absolute URL to the bank's mark, or null when we hold none — see
   /// [BrandLogo], which draws initials rather than expecting a placeholder.
   final String? logoUrl;
 
   bool get isInternal => source.trim().toLowerCase() == 'internal';
   bool get isExternal => source.trim().toLowerCase() == 'external';
+
+  /// Whether this row is enough to address a transfer without asking the bank
+  /// who owns the account again.
+  bool get isPayable => isInternal
+      ? accountId.trim().isNotEmpty
+      : (counterPartyId ?? '').trim().isNotEmpty;
 
   factory TransferSuggestion.fromJson(Map<String, dynamic> json) {
     return TransferSuggestion(
@@ -41,6 +55,7 @@ class TransferSuggestion {
       accountNumber: json['accountNumber']?.toString() ?? '',
       accountName: json['accountName']?.toString() ?? '',
       nipCode: json['nipCode']?.toString(),
+      counterPartyId: json['counter_party_id']?.toString(),
       logoUrl: json['logo_url']?.toString(),
     );
   }
@@ -50,11 +65,18 @@ class TransferBank {
   const TransferBank({
     required this.name,
     required this.nipCode,
+    this.uses = 0,
     this.logoUrl,
   });
 
   final String name;
   final String nipCode;
+
+  /// How many settled transfers this member has sent to the bank, counted
+  /// server-side off their own history. The list arrives already sorted by it;
+  /// the count is kept so a screen can tell a bank the member actually uses
+  /// from one that merely sorts near the top.
+  final int uses;
 
   /// Absolute URL to the bank's mark. Absent for most of the 618 banks Anchor
   /// lists, which is why [BrandLogo] treats the monogram as a normal rendering.
@@ -88,6 +110,7 @@ class TransferBank {
       return TransferBank(
         name: label,
         nipCode: nip,
+        uses: (json['uses'] as num?)?.toInt() ?? 0,
         logoUrl: json['logo_url']?.toString(),
       );
     }
@@ -98,6 +121,7 @@ class TransferBank {
     return TransferBank(
       name: attr['name']?.toString() ?? '',
       nipCode: attr['nipCode']?.toString() ?? attr['cbnCode']?.toString() ?? '',
+      uses: (json['uses'] as num?)?.toInt() ?? 0,
       logoUrl: json['logo_url']?.toString(),
     );
   }
@@ -277,17 +301,49 @@ class TransferRepository {
   // the lifetime of the singleton repository (which is app session)
   // and is invalidated by passing forceRefresh: true.
   static const Duration _bankCacheTtl = Duration(hours: 24);
+
+  /// The catalogue barely moves, but the per-member usage ranking on it does —
+  /// it changes with every transfer the member makes. So a cache this old is
+  /// still served immediately and refreshed behind the screen, rather than
+  /// leaving the ordering a day out of date or making the picker wait.
+  static const Duration _bankRevalidateAfter = Duration(minutes: 5);
   List<TransferBank>? _cachedBanks;
   DateTime? _cachedBanksAt;
+  Future<List<TransferBank>>? _banksInFlight;
 
   Future<List<TransferBank>> fetchBanks({bool forceRefresh = false}) async {
     if (!forceRefresh && _cachedBanks != null && _cachedBanksAt != null) {
       final age = DateTime.now().difference(_cachedBanksAt!);
       if (age < _bankCacheTtl) {
+        if (age >= _bankRevalidateAfter) {
+          _refreshBanksInBackground();
+        }
         return _cachedBanks!;
       }
     }
+    final inFlight = _banksInFlight;
+    if (inFlight != null && !forceRefresh) return inFlight;
+    final future = _fetchBanksFromServer();
+    _banksInFlight = future;
+    try {
+      return await future;
+    } finally {
+      if (identical(_banksInFlight, future)) _banksInFlight = null;
+    }
+  }
 
+  void _refreshBanksInBackground() {
+    if (_banksInFlight != null) return;
+    final future = _fetchBanksFromServer();
+    _banksInFlight = future;
+    future
+        .catchError((_) => _cachedBanks ?? const <TransferBank>[])
+        .whenComplete(() {
+          if (identical(_banksInFlight, future)) _banksInFlight = null;
+        });
+  }
+
+  Future<List<TransferBank>> _fetchBanksFromServer() async {
     try {
       final response = await _dioClient.get(ApiEndpoints.transferBanks);
       final data = response.data;
@@ -339,13 +395,118 @@ class TransferRepository {
           .map((e) => TransferSuggestion.fromJson(Map<String, dynamic>.from(e)))
           .where(
             (e) =>
-                e.accountId.trim().isNotEmpty &&
+                e.isPayable &&
                 e.accountName.trim().isNotEmpty &&
                 e.accountNumber.trim().isNotEmpty,
           )
           .toList(growable: false);
     } on DioException catch (e) {
       throw Exception(_messageFromDio(e));
+    }
+  }
+
+  // The recipient list a member can be shown while they type. It is small, it
+  // is theirs, and it is now served from our own tables, so it is held here and
+  // filtered locally: matching on the fourth digit typed has to be instant, and
+  // it cannot be if every keystroke is a round-trip.
+  static const Duration _suggestionCacheTtl = Duration(minutes: 15);
+  static const Duration _suggestionRevalidateAfter = Duration(minutes: 2);
+  List<TransferSuggestion>? _cachedSuggestions;
+  DateTime? _cachedSuggestionsAt;
+  Future<List<TransferSuggestion>>? _suggestionsInFlight;
+
+  /// The member's full recipient list, served from cache when there is one and
+  /// refreshed in the background once it is a couple of minutes old — a
+  /// recipient they paid on another device should turn up without a restart.
+  Future<List<TransferSuggestion>> cachedBankSuggestions({
+    bool forceRefresh = false,
+  }) async {
+    if (!forceRefresh && _cachedSuggestions != null && _cachedSuggestionsAt != null) {
+      final age = DateTime.now().difference(_cachedSuggestionsAt!);
+      if (age < _suggestionCacheTtl) {
+        if (age >= _suggestionRevalidateAfter) refreshSuggestionsInBackground();
+        return _cachedSuggestions!;
+      }
+    }
+    final inFlight = _suggestionsInFlight;
+    if (inFlight != null && !forceRefresh) return inFlight;
+    final future = _loadSuggestions();
+    _suggestionsInFlight = future;
+    try {
+      return await future;
+    } finally {
+      if (identical(_suggestionsInFlight, future)) _suggestionsInFlight = null;
+    }
+  }
+
+  /// Warms or revalidates the list without making anything wait on it, and
+  /// without letting a failure surface as an unhandled error — a stale list is
+  /// a better transfer screen than an empty one.
+  void refreshSuggestionsInBackground() {
+    if (_suggestionsInFlight != null) return;
+    final future = _loadSuggestions();
+    _suggestionsInFlight = future;
+    future
+        .catchError((_) => _cachedSuggestions ?? const <TransferSuggestion>[])
+        .whenComplete(() {
+          if (identical(_suggestionsInFlight, future)) {
+            _suggestionsInFlight = null;
+          }
+        });
+  }
+
+  Future<List<TransferSuggestion>> _loadSuggestions() async {
+    final fetched = await fetchBankSuggestions();
+    if (fetched.isNotEmpty || _cachedSuggestions == null) {
+      _cachedSuggestions = fetched;
+      _cachedSuggestionsAt = DateTime.now();
+    }
+    return fetched;
+  }
+
+  /// Adds a recipient the member has just paid to the cached list, so the next
+  /// screen that reads it recognises them without waiting for a refresh.
+  void rememberSuggestion(TransferSuggestion suggestion) {
+    if (!suggestion.isPayable) return;
+    final existing = _cachedSuggestions ?? const <TransferSuggestion>[];
+    final key = suggestion.accountNumber.trim();
+    _cachedSuggestions = [
+      suggestion,
+      ...existing.where((e) => e.accountNumber.trim() != key),
+    ];
+    _cachedSuggestionsAt ??= DateTime.now();
+  }
+
+  /// Names the owner of an exact account number without asking Anchor.
+  ///
+  /// Answers from a Communal wallet first — that makes it a book transfer,
+  /// which is instant and free — then from the recipients this member has paid
+  /// before. Returns null when we hold nothing, which is the ordinary case for
+  /// a new account at another bank and means "fall through to a name enquiry",
+  /// not "wrong number".
+  Future<TransferSuggestion?> resolveAccount(String accountNumber) async {
+    final digits = accountNumber.trim();
+    if (digits.isEmpty) return null;
+    try {
+      final response = await _dioClient.get(
+        ApiEndpoints.transferResolveAccount,
+        queryParameters: {'accountNumber': digits},
+      );
+      final data = response.data;
+      if (data is! Map || data['status'] != true) return null;
+      final raw = data['data'];
+      if (raw is! Map) return null;
+      final suggestion = TransferSuggestion.fromJson(
+        Map<String, dynamic>.from(raw),
+      );
+      if (!suggestion.isPayable || suggestion.accountName.trim().isEmpty) {
+        return null;
+      }
+      return suggestion;
+    } on DioException {
+      // A lookup that cannot reach the server must not block the transfer: the
+      // screen falls back to picking a bank and running the name enquiry.
+      return null;
     }
   }
 

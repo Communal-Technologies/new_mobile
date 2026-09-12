@@ -113,6 +113,11 @@ class HomeHeader extends StatelessWidget {
 
         final avatar = user?.avatar;
         final onSurface = theme.colorScheme.onSurface;
+
+        // A wallet-only member has joined no cooperative, and both of these
+        // said otherwise: the badge rendered an em-dash box where a logo goes,
+        // and the chip called them a Member of nothing.
+        final inCooperative = user?.hasCooperativeMembership == true;
         return Container(
           padding: EdgeInsets.only(
             right: 16.w,
@@ -147,11 +152,14 @@ class HomeHeader extends StatelessWidget {
                   ),
                 ),
               ),
-              ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: 110.w),
-                child: CooperativeHeaderBadge(user: user, theme: theme),
-              ),
-              hSpace(12),
+              if (inCooperative) ...[
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: 110.w),
+                  child: CooperativeHeaderBadge(user: user, theme: theme),
+                ),
+                hSpace(12),
+              ] else
+                hSpace(12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,25 +178,27 @@ class HomeHeader extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        hSpace(8),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 10.w,
-                            vertical: 4.h,
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.primaryColor.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          child: Text(
-                            roleLabel,
-                            style: TextStyle(
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.w600,
-                              color: theme.primaryColor,
+                        if (inCooperative) ...[
+                          hSpace(8),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 10.w,
+                              vertical: 4.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.primaryColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            child: Text(
+                              roleLabel,
+                              style: TextStyle(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w600,
+                                color: theme.primaryColor,
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                     vSpace(4),

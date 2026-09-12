@@ -159,6 +159,7 @@ class ApiEndpoints {
   static const String transferBanks = '$_txnV2/transfer/banks';
   static const String transferBankSuggestions =
       '$_txnV2/transfer/bank-suggestions';
+  static const String transferResolveAccount = '$_txnV2/transfer/resolve';
   static const String transferCreateCounterParties =
       '$_txnV2/transfer/create-counter-parties';
   static String transferVerifyAccount(String bankCode, String accountNumber) =>

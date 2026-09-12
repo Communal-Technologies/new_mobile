@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:communal_mobile/core/constants/constants.dart';
+import 'package:communal_mobile/core/services/otp_session_storage.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,6 +24,10 @@ class SplashCubit extends Cubit<SplashState> {
   final SettingsCubit settingsCubit;
   final AuthRepository authRepository;
   final RegionsRepository regionsRepository;
+
+  // No constructor dependency needed — OtpSessionStorage only wraps
+  // SharedPreferences internally, same as reading `prefs` directly would.
+  final OtpSessionStorage _otpSessionStorage = OtpSessionStorage();
 
   SplashCubit(
     this.prefs,
@@ -53,6 +58,33 @@ class SplashCubit extends Cubit<SplashState> {
 
       final regionsOk = await _loadRegionsOrEmitError();
       if (!regionsOk) return;
+
+      // A signup verification the user never finished (app closed with the
+      // OTP screen still up) outranks the normal first-time/logged-in/
+      // logged-out branches below — they don't have a completed account
+      // yet, so /onboarding or /welcome would be the wrong landing spot.
+      // The verification screen itself resumes (or expires) the resend
+      // countdown off the session's timestamp; splash only needs to know
+      // whether to route there.
+      //
+      // Only signup / initialSetup flows are resumable from a cold start:
+      // sessionTakeover requires an in-memory AuthSessionTakeoverPending
+      // (not persisted) and passwordReset / verification were mid-flow
+      // screens whose entry args aren't recoverable — for those, letting
+      // the normal routing below proceed is correct. The persisted session
+      // still gates its own screen's resend timer if the user re-enters
+      // the flow through the normal path.
+      final signupSession = await _otpSessionStorage.load(OtpFlow.signup);
+      if (signupSession != null) {
+        emit(SplashPendingOtpVerification(signupSession));
+        return;
+      }
+      final initialSetupSession =
+          await _otpSessionStorage.load(OtpFlow.initialSetup);
+      if (initialSetupSession != null) {
+        emit(SplashPendingOtpVerification(initialSetupSession));
+        return;
+      }
 
       if (isFirstTime) {
         emit(SplashFirstTimeUser());
@@ -110,7 +142,10 @@ class SplashCubit extends Cubit<SplashState> {
     }
 
     sub = Connectivity().onConnectivityChanged.listen((next) async {
-      if (isClosed) { complete(); return; }
+      if (isClosed) {
+        complete();
+        return;
+      }
       if (hasTransport(next)) {
         // Probe immediately when OS reports a transport — prevents captive-portal
         // connections from producing a false "reconnected" signal.
@@ -121,8 +156,13 @@ class SplashCubit extends Cubit<SplashState> {
     });
 
     probeTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
-      if (isClosed) { complete(); return; }
-      if (await _probeServer()) { complete(); }
+      if (isClosed) {
+        complete();
+        return;
+      }
+      if (await _probeServer()) {
+        complete();
+      }
     });
 
     await done.future;
@@ -145,7 +185,8 @@ class SplashCubit extends Cubit<SplashState> {
     try {
       final uri = Uri.tryParse(AppConstants.baseUrl);
       if (uri == null) {
-        AppLogger.warn('SplashCubit', 'Cannot parse baseUrl: ${AppConstants.baseUrl}');
+        AppLogger.warn(
+            'SplashCubit', 'Cannot parse baseUrl: ${AppConstants.baseUrl}');
         return false;
       }
       final port = uri.hasPort ? uri.port : (uri.scheme == 'https' ? 443 : 80);
@@ -158,7 +199,8 @@ class SplashCubit extends Cubit<SplashState> {
       AppLogger.debug('SplashCubit', 'TCP probe OK → ${uri.host}:$port');
       return true;
     } catch (e) {
-      AppLogger.warn('SplashCubit', 'TCP probe failed → ${AppConstants.baseUrl}', error: e);
+      AppLogger.warn('SplashCubit', 'TCP probe failed → ${AppConstants.baseUrl}',
+          error: e);
       return false;
     }
   }
@@ -197,7 +239,8 @@ class SplashCubit extends Cubit<SplashState> {
         final response = await dioClient.get(AppConstants.configUri);
         final raw = response.data;
         if (raw is! Map) {
-          AppLogger.warn('SplashCubit', 'Settings: unexpected response type ${raw.runtimeType}');
+          AppLogger.warn('SplashCubit',
+              'Settings: unexpected response type ${raw.runtimeType}');
           emit(SplashError('Invalid response from server. Please try again.'));
           return null;
         }
@@ -218,7 +261,8 @@ class SplashCubit extends Cubit<SplashState> {
         emit(SplashError(dioTransportUserMessage(e)));
         return null;
       } catch (e, st) {
-        AppLogger.error('SplashCubit', 'Settings: unexpected error', error: e, stackTrace: st);
+        AppLogger.error('SplashCubit', 'Settings: unexpected error',
+            error: e, stackTrace: st);
         settingsCubit.setSettings(const <String, dynamic>{});
         return const <String, dynamic>{};
       }
@@ -255,7 +299,8 @@ class SplashCubit extends Cubit<SplashState> {
         emit(SplashError(dioTransportUserMessage(e)));
         return false;
       } catch (e, st) {
-        AppLogger.error('SplashCubit', 'Regions: unexpected error', error: e, stackTrace: st);
+        AppLogger.error('SplashCubit', 'Regions: unexpected error',
+            error: e, stackTrace: st);
         emit(SplashError('Could not load regions. Please try again.'));
         return false;
       }

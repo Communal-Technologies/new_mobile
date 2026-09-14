@@ -13,9 +13,9 @@ import 'package:communal_mobile/core/security/biometric_key_service.dart';
 import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/core/utils/biometric_service.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/core/widgets/transaction_pin_pad.dart';
 import 'package:communal_mobile/data/local/biometric_prefs.dart';
 import 'package:communal_mobile/injection.dart';
-import 'package:communal_mobile/screens/account/widgets/pin_input_field.dart';
 
 /// Audit M38 Phase D: user-facing enrollment + management screen for the
 /// biometric-bound nonce signing flow.
@@ -1029,7 +1029,25 @@ class _EnrollmentPinSheet extends StatefulWidget {
 }
 
 class _EnrollmentPinSheetState extends State<_EnrollmentPinSheet> {
-  bool _obscure = true;
+  static const int _length = 4;
+  String _pin = '';
+
+  void _onDigit(String digit) {
+    if (_pin.length >= _length) return;
+    setState(() => _pin += digit);
+    if (_pin.length == _length) {
+      final pin = _pin;
+      // Let the last circle fill before the sheet closes.
+      Future.delayed(const Duration(milliseconds: 120), () {
+        if (mounted) Navigator.of(context).pop(pin);
+      });
+    }
+  }
+
+  void _onBackspace() {
+    if (_pin.isEmpty) return;
+    setState(() => _pin = _pin.substring(0, _pin.length - 1));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1070,22 +1088,13 @@ class _EnrollmentPinSheetState extends State<_EnrollmentPinSheet> {
               ),
             ),
             vSpace(24),
-            PinInputField(
-              obscureText: _obscure,
-              onCompleted: (pin) => Navigator.of(context).pop(pin),
+            TransactionPinPad(
+              pin: _pin,
+              length: _length,
+              onDigit: _onDigit,
+              onBackspace: _onBackspace,
             ),
             vSpace(16),
-            TextButton.icon(
-              onPressed: () => setState(() => _obscure = !_obscure),
-              icon: Icon(
-                _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                size: 18.sp,
-              ),
-              label: Text(
-                'Show PIN',
-                style: TextStyle(fontSize: 17.sp),
-              ),
-            ),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(

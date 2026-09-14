@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/money.dart';
+import 'package:communal_mobile/core/utils/ng_mobile_network.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/wallet_funding_required_banner.dart';
@@ -12,18 +13,17 @@ import 'package:communal_mobile/data/models/bills/bill_provider.dart';
 import 'package:communal_mobile/data/repositories/bills_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/bills/widgets/bill_brand_chip.dart';
-import 'package:communal_mobile/screens/bills/widgets/bill_inputs.dart';
+import 'package:communal_mobile/screens/bills/widgets/bill_phone_field.dart';
 import 'package:communal_mobile/screens/bills/widgets/bill_screen_hero.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
-/// Form for buying data. Picks a provider, then loads the provider's
-/// fixed-price products into a bottom sheet for selection. Phone number
-/// is the recipient MSISDN. Amount comes from the chosen product.
+/// Form for buying data. The phone number comes first and picks the network
+/// from its prefix; the network's fixed-price plans load into a bottom sheet.
+/// Amount comes from the chosen plan.
 class DataPurchaseScreen extends StatefulWidget {
   const DataPurchaseScreen({super.key});
 
@@ -45,6 +45,9 @@ class _DataPurchaseScreenState extends State<DataPurchaseScreen> {
   bool _loadingProducts = false;
   String? _productsError;
   BillProduct? _selectedProduct;
+
+  NgMobileNetwork? _detectedNetwork;
+  bool _networkPickedByHand = false;
 
   @override
   void initState() {
@@ -68,7 +71,9 @@ class _DataPurchaseScreenState extends State<DataPurchaseScreen> {
       if (!mounted) return;
       setState(() {
         _providers = list;
-        _selectedProvider = list.isNotEmpty ? list.first : null;
+        _selectedProvider =
+            (_networkPickedByHand ? null : _providerFor(_detectedNetwork, list)) ??
+            (list.isNotEmpty ? list.first : null);
         _loadingProviders = false;
       });
       if (_selectedProvider != null) {
@@ -92,7 +97,7 @@ class _DataPurchaseScreenState extends State<DataPurchaseScreen> {
     });
     try {
       final list = await _repo.fetchProductsForBiller(provider.id);
-      if (!mounted) return;
+      if (!mounted || _selectedProvider?.id != provider.id) return;
       setState(() {
         _products = list;
         _loadingProducts = false;
@@ -106,12 +111,33 @@ class _DataPurchaseScreenState extends State<DataPurchaseScreen> {
     }
   }
 
+  static BillProvider? _providerFor(
+    NgMobileNetwork? network,
+    List<BillProvider> providers,
+  ) {
+    if (network == null) return null;
+    for (final p in providers) {
+      if (network.matchesProvider(p.name)) return p;
+    }
+    return null;
+  }
+
+  void _onNetworkChanged(NgMobileNetwork? network) {
+    _detectedNetwork = network;
+    _networkPickedByHand = false;
+    final match = _providerFor(network, _providers);
+    if (match != null && match.id != _selectedProvider?.id) {
+      _onProviderChanged(match);
+    }
+  }
+
   void _onProviderChanged(BillProvider p) {
     setState(() => _selectedProvider = p);
     _loadProducts(p);
   }
 
   Future<void> _openProductSheet() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     if (_loadingProducts) return;
     if (_productsError != null) {
       // Retry inline if the previous load failed.
@@ -130,12 +156,17 @@ class _DataPurchaseScreenState extends State<DataPurchaseScreen> {
       isScrollControlled: true,
       builder: (ctx) => _ProductPickerSheet(products: _products),
     );
-    if (picked != null && mounted) {
+    if (!mounted) return;
+    // Closing the sheet hands focus back to the phone field, which reopens the
+    // keyboard over the Continue button.
+    FocusManager.instance.primaryFocus?.unfocus();
+    if (picked != null) {
       setState(() => _selectedProduct = picked);
     }
   }
 
   void _onContinue() {
+    FocusManager.instance.primaryFocus?.unfocus();
     final provider = _selectedProvider;
     final product = _selectedProduct;
     if (provider == null) {
@@ -146,12 +177,13 @@ class _DataPurchaseScreenState extends State<DataPurchaseScreen> {
       AppToast.error('Pick a data plan.');
       return;
     }
-    final phone = _phoneController.text.trim();
-    if (phone.length < 10) {
-      AppToast.error('Enter a valid phone number.');
+    final phone = ngLocalPhone(_phoneController.text);
+    if (phone.length != 11) {
+      AppToast.error('Enter a valid 11-digit phone number.');
       return;
     }
 
+    BillPhoneField.remember(context, phone);
     context.pushNamed(
       'bill-confirm',
       extra: {
@@ -184,7 +216,7 @@ class _DataPurchaseScreenState extends State<DataPurchaseScreen> {
               const BillScreenHero(
                 icon: Iconsax.global,
                 title: 'Buy data',
-                subtitle: 'Pick a network and a plan.',
+                subtitle: 'Enter a number and pick a plan.',
                 accent: Color(0xFF2BA6FF),
               ),
               vSpace(20),
@@ -195,19 +227,15 @@ class _DataPurchaseScreenState extends State<DataPurchaseScreen> {
                       'Fund your wallet to continue.',
                 ),
               ],
-              _buildProviderPicker(),
-              vSpace(20),
               _label('Phone number'),
               vSpace(8),
-              TextField(
+              BillPhoneField(
                 controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
-                  LengthLimitingTextInputFormatter(15),
-                ],
-                decoration: billInputDecoration(context, 'e.g. 08012345678'),
+                accent: const Color(0xFF2BA6FF),
+                onNetworkChanged: _onNetworkChanged,
               ),
+              vSpace(20),
+              _buildProviderPicker(),
               vSpace(20),
               _label('Data plan'),
               vSpace(8),
@@ -294,7 +322,11 @@ class _DataPurchaseScreenState extends State<DataPurchaseScreen> {
                 logoUrl: p.logoUrl,
                 selected: _selectedProvider?.id == p.id,
                 accent: const Color(0xFF2BA6FF),
-                onTap: () => _onProviderChanged(p),
+                onTap: () {
+                  FocusManager.instance.primaryFocus?.unfocus();
+                  _networkPickedByHand = true;
+                  if (_selectedProvider?.id != p.id) _onProviderChanged(p);
+                },
               ),
           ],
         ),

@@ -872,12 +872,27 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 item: transactions[i],
                 onTap: () => context.pushNamed(
                   'transaction-details',
-                  extra: transactions[i].details,
+                  extra: _receiptFor(transactions[i], transactions),
                 ),
               ),
             ),
         ],
       ],
     );
+  }
+
+  /// A charge has no receipt of its own: it opens the receipt of the transfer it
+  /// was taken for, which lists it under Fees. Falls back to the row itself when
+  /// that transfer is not among the rows loaded.
+  TransactionDetailsData _receiptFor(
+    TransactionListItem item,
+    List<TransactionListItem> loaded,
+  ) {
+    final parent = item.details.parentReference;
+    if (parent == null) return item.details;
+    for (final candidate in loaded) {
+      if (candidate.details.reference == parent) return candidate.details;
+    }
+    return item.details;
   }
 }

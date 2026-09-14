@@ -280,6 +280,8 @@ class TransactionDetailsScreen extends StatelessWidget {
     final isBill = details.extraDetails.isNotEmpty;
     final infoRows = <_InfoRowData>[
       _InfoRowData(label: 'Fees', value: details.feesLabel),
+      for (final charge in details.chargeLines)
+        _InfoRowData(label: charge.key, value: charge.value),
       if (!isBill)
         _InfoRowData(
           label: details.isIncoming ? 'Sender Details' : 'Recipient Details',

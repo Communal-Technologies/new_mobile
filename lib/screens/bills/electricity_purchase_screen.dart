@@ -2,6 +2,7 @@ import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/amount_input_formatter.dart';
 import 'package:communal_mobile/core/utils/money.dart';
+import 'package:communal_mobile/core/utils/ng_mobile_network.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/wallet_funding_required_banner.dart';
@@ -13,6 +14,7 @@ import 'package:communal_mobile/data/repositories/bills_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/bills/widgets/bill_brand_chip.dart';
 import 'package:communal_mobile/screens/bills/widgets/bill_inputs.dart';
+import 'package:communal_mobile/screens/bills/widgets/bill_phone_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -31,6 +33,9 @@ class ElectricityPurchaseScreen extends StatefulWidget {
 }
 
 class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
+  /// Every DISCO refuses less than ₦1,000; billsvc holds the same floor.
+  static const int _minAmountMinor = 100000;
+
   late final BillsRepository _repo = BillsRepository(getIt<DioClient>());
 
   final _meterController = TextEditingController();
@@ -115,6 +120,7 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
   }
 
   void _onProviderChanged(BillProvider p) {
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       _selectedProvider = p;
       _validatedCustomer = null;
@@ -124,6 +130,7 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
   }
 
   Future<void> _onValidate() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     final provider = _selectedProvider;
     final meter = _meterController.text.trim();
     if (provider == null) {
@@ -162,10 +169,11 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
   }
 
   void _onContinue() {
+    FocusManager.instance.primaryFocus?.unfocus();
     final provider = _selectedProvider;
     final product = _selectedProduct;
     final customer = _validatedCustomer;
-    final phone = _phoneController.text.trim();
+    final phone = ngLocalPhone(_phoneController.text);
     if (provider == null || product == null) {
       AppToast.error('Pick a provider and product.');
       return;
@@ -174,16 +182,17 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
       AppToast.error('Validate the meter number first.');
       return;
     }
-    if (phone.length < 10) {
-      AppToast.error('Enter a valid phone number.');
+    if (phone.length != 11) {
+      AppToast.error('Enter a valid 11-digit phone number.');
       return;
     }
     final money = Money.tryParseMajor(_amountController.text.trim(), 'NGN');
-    if (money == null || money.amountMinor < 10000) {
-      AppToast.error('Minimum amount is ₦100.');
+    if (money == null || money.amountMinor < _minAmountMinor) {
+      AppToast.error('The minimum electricity purchase is ₦1,000.');
       return;
     }
 
+    BillPhoneField.remember(context, phone);
     context.pushNamed(
       'bill-confirm',
       extra: {
@@ -295,14 +304,9 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
               vSpace(20),
               _label('Phone number (for receipt SMS)'),
               vSpace(8),
-              TextField(
+              BillPhoneField(
                 controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
-                  LengthLimitingTextInputFormatter(15),
-                ],
-                decoration: billInputDecoration(context, 'e.g. 08012345678'),
+                accent: const Color(0xFFFFB627),
               ),
               vSpace(20),
               _label('Amount (₦)'),
@@ -314,7 +318,7 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
                   FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                   AmountInputFormatter(),
                 ],
-                decoration: billInputDecoration(context, 'e.g. 5,000'),
+                decoration: billInputDecoration(context, 'Minimum ₦1,000'),
               ),
             ],
           ),
@@ -433,7 +437,10 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
             label: p.name,
             selected: _selectedProduct?.id == p.id,
             accent: const Color(0xFFFFB627),
-            onTap: () => setState(() => _selectedProduct = p),
+            onTap: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              setState(() => _selectedProduct = p);
+            },
           ),
       ],
     );

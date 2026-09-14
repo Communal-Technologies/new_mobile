@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/money.dart';
+import 'package:communal_mobile/core/utils/ng_mobile_network.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/wallet_funding_required_banner.dart';
@@ -14,6 +15,7 @@ import 'package:communal_mobile/data/repositories/bills_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/bills/widgets/bill_brand_chip.dart';
 import 'package:communal_mobile/screens/bills/widgets/bill_inputs.dart';
+import 'package:communal_mobile/screens/bills/widgets/bill_phone_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -111,6 +113,7 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
   }
 
   void _onProviderChanged(BillProvider p) {
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       _selectedProvider = p;
       _selectedProduct = null;
@@ -121,6 +124,7 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
   }
 
   Future<void> _openProductSheet() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     if (_loadingProducts) return;
     if (_productsError != null) {
       if (_selectedProvider != null) {
@@ -138,12 +142,17 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
       isScrollControlled: true,
       builder: (ctx) => _TvPlanSheet(products: _products),
     );
-    if (picked != null && mounted) {
+    if (!mounted) return;
+    // Closing the sheet hands focus back to the last field, which reopens the
+    // keyboard over the Continue button.
+    FocusManager.instance.primaryFocus?.unfocus();
+    if (picked != null) {
       setState(() => _selectedProduct = picked);
     }
   }
 
   Future<void> _onValidate() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     final provider = _selectedProvider;
     final card = _smartCardController.text.trim();
     if (provider == null) {
@@ -182,10 +191,11 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
   }
 
   void _onContinue() {
+    FocusManager.instance.primaryFocus?.unfocus();
     final provider = _selectedProvider;
     final product = _selectedProduct;
     final customer = _validatedCustomer;
-    final phone = _phoneController.text.trim();
+    final phone = ngLocalPhone(_phoneController.text);
     if (provider == null) {
       AppToast.error('Pick a TV provider.');
       return;
@@ -198,11 +208,12 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
       AppToast.error('Validate the smartcard first.');
       return;
     }
-    if (phone.length < 10) {
-      AppToast.error('Enter a valid phone number.');
+    if (phone.length != 11) {
+      AppToast.error('Enter a valid 11-digit phone number.');
       return;
     }
 
+    BillPhoneField.remember(context, phone);
     context.pushNamed(
       'bill-confirm',
       extra: {
@@ -314,14 +325,9 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
               vSpace(20),
               _label('Phone number (for receipt SMS)'),
               vSpace(8),
-              TextField(
+              BillPhoneField(
                 controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
-                  LengthLimitingTextInputFormatter(15),
-                ],
-                decoration: billInputDecoration(context, 'e.g. 08012345678'),
+                accent: const Color(0xFF22C55E),
               ),
             ],
           ),

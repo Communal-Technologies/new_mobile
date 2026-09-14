@@ -500,7 +500,9 @@ class _FineConfirmPaymentScreenState extends State<FineConfirmPaymentScreen> {
   Future<void> _confirmNipFundedPayment(AuthAuthenticated authState) async {
     CooperativeCashBankAccount? cash = widget.cashAccount;
     if (cash == null || cash.id.isEmpty) {
-      final accounts = await _repository.fetchCooperativeCashBankAccounts();
+      final accounts = await _repository.fetchCooperativeCashBankAccounts(
+        cooperativeId: widget.cooperativeId,
+      );
       final rid = widget.cashRepositoryId?.trim() ?? '';
       if (rid.isNotEmpty) {
         for (final a in accounts) {

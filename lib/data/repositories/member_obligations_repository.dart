@@ -412,11 +412,16 @@ class MemberObligationsRepository {
     }
   }
 
-  Future<List<CooperativeCashBankAccount>>
-  fetchCooperativeCashBankAccounts() async {
+  /// [cooperativeId] names the cooperative being paid, so a member of several
+  /// cooperatives is shown that one's accounts rather than their default's.
+  Future<List<CooperativeCashBankAccount>> fetchCooperativeCashBankAccounts({
+    String? cooperativeId,
+  }) async {
+    final coop = cooperativeId?.trim() ?? '';
     try {
       final response = await _dioClient.get(
         ApiEndpoints.membersCooperativeCashRepositories,
+        queryParameters: coop.isEmpty ? null : {'cooperative': coop},
       );
       final data = response.data;
       if (data is! Map || data['status'] != true) {

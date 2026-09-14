@@ -77,7 +77,9 @@ class _FinePaymentScreenState extends State<FinePaymentScreen> {
       _cashRepoError = null;
     });
     try {
-      final rows = await _repo.fetchCooperativeCashBankAccounts();
+      final rows = await _repo.fetchCooperativeCashBankAccounts(
+        cooperativeId: widget.cooperativeId,
+      );
       if (!mounted) return;
       setState(() {
         _cashRepos = rows;

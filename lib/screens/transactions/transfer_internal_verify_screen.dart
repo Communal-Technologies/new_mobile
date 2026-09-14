@@ -1,3 +1,4 @@
+import 'package:communal_mobile/core/security/biometric_key_service.dart';
 import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/biometric_service.dart';
@@ -9,6 +10,7 @@ import 'package:communal_mobile/core/utils/money_formatter.dart';
 import 'package:communal_mobile/core/utils/tap_debouncer.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/core/widgets/transaction_pin_pad.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
 import 'package:communal_mobile/injection.dart';
@@ -21,16 +23,11 @@ import 'package:go_router/go_router.dart';
 
 /// Transfer authorization screen.
 ///
-/// PIN is the default auth mechanism — the keypad below the recipient
-/// card collects a 4-digit transaction PIN and submits via the
-/// `X-Security-Pin` header that the backend's `RequireBiometricSignature`
-/// middleware accepts as a fallback to the biometric-signature headers.
-///
-/// The empty cell on the keypad (bottom-left, where most numeric pads
-/// are blank) is occupied by a fingerprint icon. Tapping it shortcuts
-/// to the biometric-signing flow when the device + user have biometric
-/// enrolled; otherwise it surfaces a [AppToast] explaining what's
-/// missing rather than a snackbar.
+/// Biometrics first when this device may authorise payments: the prompt opens
+/// with the screen. The PIN pad below the recipient card is the fallback — the
+/// only path when biometrics is not set up, and the only path once biometrics has
+/// failed [_maxBiometricFailures] times. A PIN is submitted through
+/// `verifySecurityPin`, which writes the marker transactions-svc checks.
 class TransferInternalVerifyScreen extends StatefulWidget {
   const TransferInternalVerifyScreen({
     super.key,
@@ -66,6 +63,7 @@ class TransferInternalVerifyScreen extends StatefulWidget {
 class _TransferInternalVerifyScreenState
     extends State<TransferInternalVerifyScreen> {
   static const int _pinLength = 4;
+  static const int _maxBiometricFailures = 3;
 
   final _repo = getIt<TransferRepository>();
   final _favorites = getIt<TransferFavoritesPrefs>();
@@ -76,14 +74,14 @@ class _TransferInternalVerifyScreenState
   String _pin = '';
   bool _submitting = false;
 
-  /// Whether the biometric shortcut key should be shown — true only when
-  /// transactions-biometric is enabled, the device has hardware enrolled, and the
-  /// backend says this device's key may authorise a payment (which requires both a
-  /// factor-verified enrollment and a transaction PIN on the account, since
-  /// biometrics is the alternative to that PIN, not a replacement for it). Resolved
-  /// once on mount so the keypad doesn't show a fingerprint that just errors when
-  /// tapped.
+  /// True only when transactions-biometric is enabled, the device has hardware
+  /// enrolled, and the backend says this device's key may authorise a payment
+  /// (a factor-verified enrollment and a transaction PIN on the account).
   bool _biometricAvailable = false;
+  int _biometricFailures = 0;
+
+  bool get _offerBiometric =>
+      _biometricAvailable && _biometricFailures < _maxBiometricFailures;
 
   @override
   void initState() {
@@ -97,9 +95,13 @@ class _TransferInternalVerifyScreenState
       final enabled = BiometricPrefs(shared).transactionsEnabled;
       final hw = enabled && await BiometricService.isBiometricAvailable();
       final available = hw && await _biometricSigner.canAuthorizePayments();
-      if (mounted && available != _biometricAvailable) {
-        setState(() => _biometricAvailable = available);
-      }
+      if (!mounted || !available) return;
+      setState(() => _biometricAvailable = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_submitting && _pin.isEmpty) {
+          _confirmDebouncer.run(_confirmWithBiometric);
+        }
+      });
     } catch (_) {
       // Leave the key hidden on any probe failure.
     }
@@ -128,10 +130,11 @@ class _TransferInternalVerifyScreenState
 
   void _onDigit(String d) {
     if (_submitting || _pin.length >= _pinLength) return;
+    HapticFeedback.selectionClick();
     setState(() => _pin += d);
     if (_pin.length == _pinLength) {
-      // Tiny delay so the user sees the last dot fill before the
-      // overlay flips to the submitting spinner.
+      // Tiny delay so the user sees the last circle fill before the pad greys
+      // out for submission.
       Future.delayed(const Duration(milliseconds: 80), () {
         if (mounted && !_submitting) _confirmDebouncer.run(_confirmWithPin);
       });
@@ -141,49 +144,6 @@ class _TransferInternalVerifyScreenState
   void _onBackspace() {
     if (_submitting || _pin.isEmpty) return;
     setState(() => _pin = _pin.substring(0, _pin.length - 1));
-  }
-
-  // ---- Biometric shortcut --------------------------------------------------
-
-  Future<void> _onBiometricTap() async {
-    if (_submitting) return;
-    try {
-      final shared = await shared_prefs.SharedPreferences.getInstance();
-      final prefs = BiometricPrefs(shared);
-      if (!prefs.transactionsEnabled) {
-        AppToast.error(
-          'Biometric for transactions is off. Enable it in '
-          'Settings → Biometric Authentication.',
-        );
-        return;
-      }
-      final hwAvailable = await BiometricService.isBiometricAvailable();
-      if (!hwAvailable) {
-        AppToast.error(
-          'Your device does not have biometrics set up. '
-          'Add a fingerprint or face in your device settings first.',
-        );
-        return;
-      }
-      final status = await _biometricSigner.fetchStatus();
-      if (status?.canAuthorize != true) {
-        AppToast.error(
-          status?.hasSecurityPin == false
-              ? 'Set your transaction PIN first — biometrics stands in for it, '
-                    'so it cannot authorise a transfer on its own.'
-              : 'Biometric authentication is not enabled for this account. '
-                    'Set it up in Settings → Biometric Authentication.',
-        );
-        return;
-      }
-      // ignore: unawaited_futures
-      _confirmDebouncer.run(_confirmWithBiometric);
-    } catch (e) {
-      AppToast.error(
-        'Could not check biometrics: '
-        '${e.toString().replaceFirst('Exception: ', '')}',
-      );
-    }
   }
 
   // ---- Submit paths --------------------------------------------------------
@@ -198,19 +158,14 @@ class _TransferInternalVerifyScreenState
       // inline (it can't — security_pin lives on tbl_users, which only the
       // monolith may touch). It instead checks a Redis flag the monolith's
       // verify-security-pin sets on success, so that call has to happen
-      // here first. The X-Security-Pin header still goes out on
-      // initiateTransfer below too — transactions-svc ignores it, but the
-      // header is harmless to send and this keeps the call shape
-      // unchanged for any other backend still reading it.
+      // here first.
       await _repo.verifySecurityPin(_pin, intent: 'transfer');
       await _runInitiate(pin: _pin, biometricHeaders: null);
     } catch (e) {
       if (!mounted) return;
       // Wipe on failure so user can re-enter; failure path includes
       // wrong PIN (which the backend tracks toward lockout).
-      setState(() {
-        _pin = '';
-      });
+      setState(() => _pin = '');
       AppToast.error(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -218,13 +173,12 @@ class _TransferInternalVerifyScreenState
   }
 
   Future<void> _confirmWithBiometric() async {
-    if (_submitting) return;
+    if (_submitting || !_offerBiometric) return;
     setState(() => _submitting = true);
     try {
       // Audit M38: backend mints a one-time nonce via /security/biometric/
       // challenge; we sign it with the Keystore-bound key; headers travel
-      // with the initiate call. RequireBiometricSignature verifies before
-      // letting the request through.
+      // with the initiate call.
       final biometricHeaders = await _biometricSigner.signTransferIntent(
         promptTitle: 'Authorize transfer',
         promptSubtitle: 'Use biometrics to confirm this transfer',
@@ -232,6 +186,18 @@ class _TransferInternalVerifyScreenState
       await _runInitiate(
         pin: null,
         biometricHeaders: biometricHeaders.toHeaders(),
+      );
+    } on BiometricKeyException catch (e) {
+      if (!mounted || e.code == 'USER_CANCELED') return;
+      setState(() {
+        _biometricFailures = e.code == 'LOCKOUT'
+            ? _maxBiometricFailures
+            : _biometricFailures + 1;
+      });
+      AppToast.error(
+        _offerBiometric
+            ? 'Biometrics did not work. Try again or enter your PIN.'
+            : 'Biometrics failed too many times. Enter your PIN instead.',
       );
     } catch (e) {
       if (!mounted) return;
@@ -321,6 +287,7 @@ class _TransferInternalVerifyScreenState
 
   @override
   Widget build(BuildContext context) {
+    final muted = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6);
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -332,55 +299,72 @@ class _TransferInternalVerifyScreenState
         title: const Text('Verify Transaction'),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Top block (header + recipient + amount). Fixed height
-              // — the rest of the screen flexes to it.
-              Text(
-                'Enter Transaction PIN',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.w700),
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight - 24.h,
               ),
-              vSpace(4),
-              Text(
-                'Enter your 4-digit PIN to authorise this transfer.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 15.sp,
-                  color: Theme.of(context).colorScheme.onSurface
-                      .withValues(alpha: 0.6),
-                  fontWeight: FontWeight.w500,
+              child: IntrinsicHeight(
+                child: Column(
+                  children: [
+                    Text(
+                      _offerBiometric
+                          ? 'Confirm Transfer'
+                          : 'Enter Transaction PIN',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 22.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    vSpace(4),
+                    Text(
+                      _offerBiometric
+                          ? 'Use biometrics, or enter your 4-digit PIN.'
+                          : 'Enter your 4-digit PIN to authorise this transfer.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15.sp,
+                        color: muted,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    vSpace(12),
+                    _buildRecipientCard(),
+                    vSpace(12),
+                    _buildAmountBanner(),
+                    const Spacer(),
+                    vSpace(20),
+                    TransactionPinPad(
+                      pin: _pin,
+                      length: _pinLength,
+                      onDigit: _onDigit,
+                      onBackspace: _onBackspace,
+                      busy: _submitting,
+                      onBiometric: _offerBiometric
+                          ? () => _confirmDebouncer.run(_confirmWithBiometric)
+                          : null,
+                    ),
+                    SizedBox(
+                      height: 34.h,
+                      child: _submitting
+                          ? Center(
+                              child: SizedBox(
+                                width: 22.w,
+                                height: 22.w,
+                                child: const CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            )
+                          : null,
+                    ),
+                  ],
                 ),
               ),
-              vSpace(12),
-              _buildRecipientCard(),
-              vSpace(12),
-              _buildAmountBanner(),
-              // Middle block (PIN squares) sits in its own flex slot
-              // with the keypad so the two share the vertical space
-              // remaining below the cards instead of all clumping at
-              // the top with empty space below.
-              Expanded(
-                flex: 1,
-                child: Center(child: _buildPinSquares()),
-              ),
-              Expanded(
-                flex: 4,
-                child: _buildKeypad(),
-              ),
-              if (_submitting)
-                Padding(
-                  padding: EdgeInsets.only(top: 6.h),
-                  child: SizedBox(
-                    width: 22.w,
-                    height: 22.w,
-                    child: const CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-            ],
+            ),
           ),
         ),
       ),
@@ -469,131 +453,6 @@ class _TransferInternalVerifyScreenState
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildPinSquares() {
-    final theme = Theme.of(context);
-    final activeColor = theme.primaryColor;
-    final inactiveColor = theme.dividerColor;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(_pinLength, (i) {
-        final filled = i < _pin.length;
-        return Container(
-          margin: EdgeInsets.symmetric(horizontal: 6.w),
-          width: 52.w,
-          height: 52.w,
-          decoration: BoxDecoration(
-            color: filled
-                ? activeColor.withValues(alpha: 0.08)
-                : Colors.transparent,
-            border: Border.all(
-              color: filled ? activeColor : inactiveColor,
-              width: filled ? 2.0 : 1.5,
-            ),
-            borderRadius: BorderRadius.circular(10.r),
-          ),
-          child: filled
-              ? Center(
-                  child: Container(
-                    width: 12.w,
-                    height: 12.w,
-                    decoration: BoxDecoration(
-                      color: activeColor,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                )
-              : null,
-        );
-      }),
-    );
-  }
-
-  Widget _buildKeypad() {
-    // Column of Expanded rows so the keypad fills whatever vertical
-    // slot the parent gives it (the previous GridView.count had a
-    // fixed childAspectRatio that left dead space below it on most
-    // device heights). Bottom-left cell is the biometric shortcut so
-    // the layout matches every other transaction PIN screen the user
-    // has seen (1-9 in the top three rows, [bio] [0] [back] across
-    // the bottom).
-    final rows = <List<Widget>>[
-      [_digit('1'), _digit('2'), _digit('3')],
-      [_digit('4'), _digit('5'), _digit('6')],
-      [_digit('7'), _digit('8'), _digit('9')],
-      // Hide the biometric shortcut when it isn't configured — show an empty
-      // cell so the 0 stays centered instead of a fingerprint that just errors.
-      [
-        _biometricAvailable ? _biometricKey() : const SizedBox.shrink(),
-        _digit('0'),
-        _backspaceKey(),
-      ],
-    ];
-    // Fixed-height rows centered in the slot — the previous Expanded rows
-    // stretched the digits across the whole screen ("too big / too spaced").
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        for (int i = 0; i < rows.length; i++) ...[
-          if (i > 0) SizedBox(height: 6.h),
-          SizedBox(
-            height: 56.h,
-            child: Row(
-              children: [
-                for (int j = 0; j < rows[i].length; j++) ...[
-                  if (j > 0) SizedBox(width: 6.w),
-                  Expanded(child: rows[i][j]),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _digit(String d) {
-    return InkWell(
-      onTap: () => _onDigit(d),
-      borderRadius: BorderRadius.circular(12.r),
-      child: Center(
-        child: Text(
-          d,
-          style: TextStyle(
-            fontSize: 22.sp,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _biometricKey() {
-    final color = Theme.of(context).primaryColor;
-    return InkWell(
-      onTap: _onBiometricTap,
-      borderRadius: BorderRadius.circular(12.r),
-      child: Center(
-        child: Icon(Icons.fingerprint, size: 30.sp, color: color),
-      ),
-    );
-  }
-
-  Widget _backspaceKey() {
-    return InkWell(
-      onTap: _onBackspace,
-      borderRadius: BorderRadius.circular(12.r),
-      child: Center(
-        child: Icon(
-          Icons.backspace_outlined,
-          size: 24.sp,
-          color: Theme.of(context).colorScheme.onSurface
-              .withValues(alpha: 0.7),
-        ),
       ),
     );
   }

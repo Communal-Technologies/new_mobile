@@ -374,6 +374,13 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
         : (found.isInternal
               ? 'Communal'
               : (_matchBankByNip(nip)?.name ?? _selectedBank?.name ?? ''));
+    // A saved counterparty with no bank recorded is a recipient we cannot name
+    // the bank of. Showing it as verified left the bank blank; treat it as a
+    // number we know nothing about and find the bank the normal way instead.
+    if (found.isExternal && bankName.isEmpty) {
+      if (autoDetect) await _autoDetectBank(q);
+      return;
+    }
     setState(() {
       _rawSuggestions = const [];
       _candidateBanks = const [];

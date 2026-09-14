@@ -237,7 +237,8 @@ class _WalletCardContent extends StatelessWidget {
                     letterSpacing: -0.5,
                   ),
                 ),
-                if (balanceVisible && user.walletLedgerKobo > 0) ...[
+                if (balanceVisible &&
+                    user.walletLedgerKobo != user.walletBalanceKobo) ...[
                   vSpace(6),
                   _BalanceSubLine(
                     icon: Icons.account_balance_wallet_outlined,

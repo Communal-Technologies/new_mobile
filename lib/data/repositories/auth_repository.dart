@@ -207,6 +207,7 @@ class AuthRepository {
       return OtpResendResult(
         otpExpiresIn: seconds('otp_expires_in'),
         resendAvailableIn: seconds('resend_available_in'),
+        challengeExpiresIn: seconds('challenge_expires_in'),
       );
     } on DioException catch (e) {
       final response = e.response;

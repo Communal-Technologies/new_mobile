@@ -34,6 +34,7 @@ class AuthSessionTakeoverPending extends AuthState {
   /// state. Null when the backend did not send them.
   final int? otpExpiresIn;
   final int? resendAvailableIn;
+  final int? challengeExpiresIn;
 
   const AuthSessionTakeoverPending({
     required this.takeoverChallengeId,
@@ -43,6 +44,7 @@ class AuthSessionTakeoverPending extends AuthState {
     this.message,
     this.otpExpiresIn,
     this.resendAvailableIn,
+    this.challengeExpiresIn,
   });
 
   @override
@@ -54,6 +56,7 @@ class AuthSessionTakeoverPending extends AuthState {
         message,
         otpExpiresIn,
         resendAvailableIn,
+        challengeExpiresIn,
       ];
 }
 

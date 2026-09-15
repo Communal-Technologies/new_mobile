@@ -336,6 +336,36 @@ class KbArticle {
       );
 }
 
+class SupportLink {
+  const SupportLink({
+    required this.key,
+    required this.label,
+    required this.url,
+    this.description = '',
+  });
+
+  final String key;
+  final String label;
+  final String url;
+  final String description;
+
+  factory SupportLink.fromJson(Map<String, dynamic> json) => SupportLink(
+        key: _str(json['key']),
+        label: _str(json['label']),
+        url: _str(json['url']).trim(),
+        description: _str(json['description']),
+      );
+
+  static List<SupportLink> listFrom(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((e) => SupportLink.fromJson(Map<String, dynamic>.from(e)))
+        .where((link) => link.url.isNotEmpty)
+        .toList();
+  }
+}
+
 /// The admin-set support settings: the contact details, whether the bot is on
 /// and whether anyone is at the desk right now. The help screen used to hardcode
 /// an address belonging to a different product; these values replace it.
@@ -349,7 +379,15 @@ class SupportConfig {
     this.hoursText,
     this.hours = const [],
     this.timezone = '',
+    this.socials = const [],
+    this.resources = const [],
   });
+
+  /// The platform's social accounts, only the ones that have been set.
+  final List<SupportLink> socials;
+
+  /// User guide, tutorials and the legal pages, each with somewhere to open.
+  final List<SupportLink> resources;
 
   final bool operatorsOnline;
   final bool botEnabled;
@@ -394,6 +432,8 @@ class SupportConfig {
               ? _spans(Map<String, dynamic>.from(raw))
               : const [],
       timezone: raw is Map ? _str(raw['timezone']) : '',
+      socials: SupportLink.listFrom(json['socials']),
+      resources: SupportLink.listFrom(json['resources']),
     );
   }
 

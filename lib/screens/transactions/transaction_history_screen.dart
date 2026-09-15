@@ -15,6 +15,7 @@ import 'package:communal_mobile/screens/transactions/models/transaction_details_
 import 'package:communal_mobile/screens/transactions/widgets/transaction_tile.dart';
 import 'package:communal_mobile/screens/transactions/widgets/filter_category_bottomsheet.dart';
 import 'package:communal_mobile/screens/transactions/widgets/filter_status_bottomsheet.dart';
+import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/screens/transactions/widgets/download_statement_bottomsheet.dart';
 import 'package:communal_mobile/screens/transactions/transaction_history_filters.dart';
 import 'package:flutter/material.dart';
@@ -136,9 +137,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     if ((delivery == 'email' || delivery == 'both') &&
         (email == null || email.isEmpty)) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your account email.')),
-      );
+      AppToast.error('Please enter your account email.');
       return;
     }
 
@@ -163,11 +162,12 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
       final status = result['status'] == true;
       if (!status) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${result['message'] ?? 'Export failed'}')),
-        );
+        AppToast.error('${result['message'] ?? 'Export failed'}');
         return;
       }
+      final hint = result['password_hint']?.toString().trim() ?? '';
+      final passwordNote =
+          hint.isEmpty ? '' : ' The PDF opens with $hint.';
 
       if (delivery == 'download' || delivery == 'both') {
         final fileB64 = result['file_base64']?.toString() ?? '';
@@ -185,6 +185,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
               name: filename,
             ),
           ], text: 'Communal transaction statement');
+          if (delivery == 'download' && passwordNote.isNotEmpty && mounted) {
+            AppToast.success('Your statement is password-protected.$passwordNote');
+          }
         }
       }
 
@@ -192,23 +195,21 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         if (!mounted) return;
         final sent = result['email_sent'] == true;
         final queued = result['email_queued'] == true;
-        final String msg;
         if (sent) {
-          msg = 'Statement sent to your email.';
+          AppToast.success('Statement sent to your email.$passwordNote');
         } else if (queued) {
-          msg = 'Statement queued — it will arrive in your email shortly.';
+          AppToast.success(
+            'Your statement is on its way to your email.$passwordNote',
+          );
         } else {
-          msg = 'Statement generated, but email delivery failed.';
+          AppToast.error('Statement generated, but email delivery failed.');
         }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(msg)));
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not export: $e')));
+      AppToast.error(
+        'Could not export: ${e.toString().replaceFirst('Exception: ', '')}',
+      );
     } finally {
       if (mounted) {
         setState(() => _exporting = false);

@@ -178,7 +178,10 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BackToExitWrapper(child: _buildRootBody(context));
+    return BackToExitWrapper(
+      fallbackRoute: 'community',
+      child: _buildRootBody(context),
+    );
   }
 
   Widget _buildRootBody(BuildContext context) {

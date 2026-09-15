@@ -9,6 +9,7 @@ import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/utils/money_formatter.dart';
 import 'package:communal_mobile/core/utils/tap_debouncer.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
+import 'package:communal_mobile/core/widgets/loader_overlay.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/transaction_pin_pad.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
@@ -73,6 +74,10 @@ class _TransferInternalVerifyScreenState
 
   String _pin = '';
   bool _submitting = false;
+
+  /// Separate from [_submitting], which is already set while the OS biometric
+  /// prompt is open: the overlay must not paint underneath that prompt.
+  bool _showLoader = false;
 
   /// True only when transactions-biometric is enabled, the device has hardware
   /// enrolled, and the backend says this device's key may authorise a payment
@@ -152,7 +157,10 @@ class _TransferInternalVerifyScreenState
     if (_submitting || _pin.length != _pinLength) return;
     // ignore: unawaited_futures
     HapticFeedback.lightImpact();
-    setState(() => _submitting = true);
+    setState(() {
+      _submitting = true;
+      _showLoader = true;
+    });
     try {
       // transactions-svc's /transfer/initiate no longer validates the PIN
       // inline (it can't — security_pin lives on tbl_users, which only the
@@ -168,7 +176,12 @@ class _TransferInternalVerifyScreenState
       setState(() => _pin = '');
       AppToast.error(e.toString().replaceFirst('Exception: ', ''));
     } finally {
-      if (mounted) setState(() => _submitting = false);
+      if (mounted) {
+        setState(() {
+          _submitting = false;
+          _showLoader = false;
+        });
+      }
     }
   }
 
@@ -183,6 +196,7 @@ class _TransferInternalVerifyScreenState
         promptTitle: 'Authorize transfer',
         promptSubtitle: 'Use biometrics to confirm this transfer',
       );
+      if (mounted) setState(() => _showLoader = true);
       await _runInitiate(
         pin: null,
         biometricHeaders: biometricHeaders.toHeaders(),
@@ -203,7 +217,12 @@ class _TransferInternalVerifyScreenState
       if (!mounted) return;
       AppToast.error(e.toString().replaceFirst('Exception: ', ''));
     } finally {
-      if (mounted) setState(() => _submitting = false);
+      if (mounted) {
+        setState(() {
+          _submitting = false;
+          _showLoader = false;
+        });
+      }
     }
   }
 
@@ -288,86 +307,68 @@ class _TransferInternalVerifyScreenState
   @override
   Widget build(BuildContext context) {
     final muted = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6);
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        titleSpacing: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, size: 22),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('Verify Transaction'),
-      ),
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: constraints.maxHeight - 24.h,
-              ),
-              child: IntrinsicHeight(
-                child: Column(
-                  children: [
-                    Text(
-                      _offerBiometric
-                          ? 'Confirm Transfer'
-                          : 'Enter Transaction PIN',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 22.sp,
-                        fontWeight: FontWeight.w700,
-                      ),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          appBar: AppBar(
+            titleSpacing: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios, size: 22),
+              onPressed: () => context.pop(),
+            ),
+            title: const Text('Verify Transaction'),
+          ),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+              child: Column(
+                children: [
+                  Text(
+                    _offerBiometric
+                        ? 'Confirm Transfer'
+                        : 'Enter Transaction PIN',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 22.sp,
+                      fontWeight: FontWeight.w700,
                     ),
-                    vSpace(4),
-                    Text(
-                      _offerBiometric
-                          ? 'Use biometrics, or enter your 4-digit PIN.'
-                          : 'Enter your 4-digit PIN to authorise this transfer.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 15.sp,
-                        color: muted,
-                        fontWeight: FontWeight.w500,
-                      ),
+                  ),
+                  vSpace(4),
+                  Text(
+                    _offerBiometric
+                        ? 'Use biometrics, or enter your 4-digit PIN.'
+                        : 'Enter your 4-digit PIN to authorise this transfer.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 15.sp,
+                      color: muted,
+                      fontWeight: FontWeight.w500,
                     ),
-                    vSpace(12),
-                    _buildRecipientCard(),
-                    vSpace(12),
-                    _buildAmountBanner(),
-                    const Spacer(),
-                    vSpace(20),
-                    TransactionPinPad(
-                      pin: _pin,
-                      length: _pinLength,
-                      onDigit: _onDigit,
-                      onBackspace: _onBackspace,
-                      busy: _submitting,
-                      onBiometric: _offerBiometric
-                          ? () => _confirmDebouncer.run(_confirmWithBiometric)
-                          : null,
-                    ),
-                    SizedBox(
-                      height: 34.h,
-                      child: _submitting
-                          ? Center(
-                              child: SizedBox(
-                                width: 22.w,
-                                height: 22.w,
-                                child: const CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                            )
-                          : null,
-                    ),
-                  ],
-                ),
+                  ),
+                  vSpace(12),
+                  _buildRecipientCard(),
+                  vSpace(12),
+                  _buildAmountBanner(),
+                  vSpace(20),
+                  TransactionPinPad(
+                    pin: _pin,
+                    length: _pinLength,
+                    onDigit: _onDigit,
+                    onBackspace: _onBackspace,
+                    busy: _submitting,
+                    onBiometric: _offerBiometric
+                        ? () => _confirmDebouncer.run(_confirmWithBiometric)
+                        : null,
+                  ),
+                ],
               ),
             ),
           ),
         ),
-      ),
+        if (_showLoader) const Positioned.fill(child: LoaderOverlay()),
+      ],
     );
   }
 

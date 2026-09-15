@@ -20,7 +20,13 @@ class LoginResponse extends Equatable {
   final String? otpChannel;
   final String? maskedDestination;
   final String? message;
+
+  /// Seconds left on the session-takeover code — what remains of it when login
+  /// found a challenge already in flight, not a fresh full window.
   final int? otpExpiresIn;
+
+  /// Seconds until authsvc will accept a resend of that code.
+  final int? resendAvailableIn;
 
   const LoginResponse({
     this.token,
@@ -33,6 +39,7 @@ class LoginResponse extends Equatable {
     this.maskedDestination,
     this.message,
     this.otpExpiresIn,
+    this.resendAvailableIn,
   });
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
@@ -49,6 +56,7 @@ class LoginResponse extends Equatable {
       maskedDestination: json['masked_destination'] as String?,
       message: json['message'] as String?,
       otpExpiresIn: (json['otp_expires_in'] as num?)?.toInt(),
+      resendAvailableIn: (json['resend_available_in'] as num?)?.toInt(),
     );
   }
 
@@ -64,6 +72,7 @@ class LoginResponse extends Equatable {
       'masked_destination': maskedDestination,
       'message': message,
       'otp_expires_in': otpExpiresIn,
+      'resend_available_in': resendAvailableIn,
     };
   }
 
@@ -79,5 +88,6 @@ class LoginResponse extends Equatable {
         maskedDestination,
         message,
         otpExpiresIn,
+        resendAvailableIn,
       ];
 }

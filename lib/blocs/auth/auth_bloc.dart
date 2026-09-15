@@ -223,6 +223,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             message: loginResponse.message,
             otpExpiresIn: loginResponse.otpExpiresIn,
             resendAvailableIn: loginResponse.resendAvailableIn,
+            challengeExpiresIn: loginResponse.challengeExpiresIn,
           ));
           return;
         }

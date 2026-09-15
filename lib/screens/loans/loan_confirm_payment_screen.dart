@@ -10,6 +10,7 @@ import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/idempotency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/widgets/payment_authorization.dart';
+import 'package:communal_mobile/core/widgets/pin_pad_body.dart';
 import 'package:communal_mobile/data/repositories/coop_payout_route.dart';
 import 'package:communal_mobile/data/models/loan_application.dart';
 import 'package:communal_mobile/data/repositories/loan_repository.dart';
@@ -143,41 +144,41 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen>
           centerTitle: true,
         ),
         body: SafeArea(
-          child: SingleChildScrollView(
+          child: PinPadBody(
             padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
-            child: Column(
-              children: [
-                Text(
-                  offerBiometric
-                      ? 'Confirm Repayment'
-                      : 'Enter Transaction PIN',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.w700),
+            header: [
+              Text(
+                offerBiometric
+                    ? 'Confirm Repayment'
+                    : 'Enter Transaction PIN',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.w700),
+              ),
+              vSpace(4),
+              Text(
+                offerBiometric
+                    ? 'Use biometrics, or enter your 4-digit PIN.'
+                    : 'Enter your 4-digit PIN to authorise this repayment.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15.sp,
+                  color: muted,
+                  fontWeight: FontWeight.w500,
                 ),
-                vSpace(4),
-                Text(
-                  offerBiometric
-                      ? 'Use biometrics, or enter your 4-digit PIN.'
-                      : 'Enter your 4-digit PIN to authorise this repayment.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 15.sp,
-                    color: muted,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                vSpace(12),
-                _buildAmountBanner(),
-                vSpace(20),
-                buildPaymentPinPad(),
-                vSpace(12),
-                Text(
-                  'Your transaction is encrypted and secure. Never share your PIN with anyone.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14.sp, color: muted),
-                ),
-              ],
-            ),
+              ),
+              vSpace(12),
+              _buildAmountBanner(),
+              vSpace(20),
+            ],
+            pad: buildPaymentPinPad(),
+            footer: [
+              vSpace(12),
+              Text(
+                'Your transaction is encrypted and secure. Never share your PIN with anyone.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14.sp, color: muted),
+              ),
+            ],
           ),
         ),
       ),

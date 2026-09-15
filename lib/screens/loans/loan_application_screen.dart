@@ -779,10 +779,11 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     // Repayment math reflects the *selected* treatment, not the
     // cooperative's default — when the cooperative enables both, the
     // member's pick changes the per-month / total figures live.
-    final interestType =
-        _selectedInterestType ??
-        _eligibility?.defaultInterestType?.value ??
-        '1';
+    final interestType = _schemeDefersInterest
+        ? '2'
+        : (_selectedInterestType ??
+            _eligibility?.defaultInterestType?.value ??
+            '1');
     final principalMinor = (_loanAmount * factorFor(currency)).round();
     final installments = scheme.memberCanPickDuration
         ? (_pickedDuration ?? scheme.effectiveMinDuration)
@@ -944,9 +945,77 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   /// only one option is enabled it stays read-only (lock icon, the
   /// original behaviour). When two or more are enabled, the member can
   /// pick between them — pre-selected to the cooperative's default.
+  /// A scheme that holds interest back collects it with the repayments, so
+  /// deducting it from the disbursement is not on offer.
+  bool get _schemeDefersInterest {
+    final scheme = _selectedScheme;
+    if (scheme == null) return false;
+    final months = scheme.memberCanPickDuration
+        ? (_pickedDuration ?? scheme.effectiveMinDuration)
+        : (_pickedDuration ?? scheme.effectiveMaxDuration);
+    return scheme.defersInterestFor(months);
+  }
+
   Widget _buildInterestTypeSection() {
     final theme = Theme.of(context);
     final enabled = _eligibility?.enabledInterestTypes ?? const [];
+
+    if (_schemeDefersInterest) {
+      final scheme = _selectedScheme!;
+      final d = scheme.interestDeferralMonths;
+      final payments = d == 1 ? 'first repayment' : 'first $d repayments';
+      final note = switch (scheme.interestDeferralMode) {
+        kDeferralInterestFree => 'No interest is charged on your $payments.',
+        kDeferralCollectLater =>
+          'Interest is not collected on your $payments; it is spread over the rest.',
+        _ =>
+          'Your $payments repay the loan itself; the interest is collected after.',
+      };
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Interest treatment',
+            style: TextStyle(
+              fontSize: 17.sp,
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          vSpace(8),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(14.w),
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(12.r),
+              border: Border.all(color: theme.dividerColor),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Collected with your repayments',
+                  style: TextStyle(
+                    fontSize: 17.sp,
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                vSpace(4),
+                Text(
+                  note,
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
 
     if (enabled.length > 1) {
       return Column(
@@ -1196,9 +1265,10 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                   scheme: _selectedScheme!,
                   amountMajor: _loanAmount,
                   currency: currency,
-                  interestType:
-                      _selectedInterestType ??
-                      _eligibility!.defaultInterestType!.value,
+                  interestType: _schemeDefersInterest
+                      ? '2'
+                      : (_selectedInterestType ??
+                          _eligibility!.defaultInterestType!.value),
                   reasonForLoan: _reasonController.text.trim(),
                   pickedDurationMonths: _pickedDuration,
                 );

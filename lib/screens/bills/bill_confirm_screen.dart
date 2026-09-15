@@ -12,6 +12,7 @@ import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/utils/tap_debouncer.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/core/widgets/pin_pad_body.dart';
 import 'package:communal_mobile/core/widgets/transaction_pin_pad.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/local/biometric_prefs.dart';
@@ -415,20 +416,19 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
             ),
           ),
           body: SafeArea(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 24.h),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSummaryCard(),
-                  vSpace(20),
-                  if (_isResultPhase)
-                    _buildResultBlock()
-                  else
-                    _buildAuthBlock(),
-                ],
-              ),
-            ),
+            child: _isResultPhase
+                ? SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 24.h),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSummaryCard(),
+                        vSpace(20),
+                        _buildResultBlock(),
+                      ],
+                    ),
+                  )
+                : _buildAuthBody(),
           ),
           bottomNavigationBar: SafeArea(
             child: Padding(
@@ -598,11 +598,14 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
 
   // ---- Auth block (pre-confirmation) ---------------------------------
 
-  Widget _buildAuthBlock() {
+  Widget _buildAuthBody() {
     final theme = Theme.of(context);
     final biometric = _offerBiometric;
-    return Column(
-      children: [
+    return PinPadBody(
+      padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 24.h),
+      header: [
+        _buildSummaryCard(),
+        vSpace(20),
         Center(
           child: Text(
             biometric
@@ -629,7 +632,8 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
           ),
         ),
         vSpace(20),
-        TransactionPinPad(
+      ],
+      pad: TransactionPinPad(
           pin: _pin,
           length: _pinLength,
           onDigit: _onDigit,
@@ -642,6 +646,7 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
               ? Icons.face_outlined
               : Icons.fingerprint,
         ),
+      footer: [
         vSpace(18),
         Text(
           'Your transaction is encrypted and secure. Never share your PIN with anyone.',

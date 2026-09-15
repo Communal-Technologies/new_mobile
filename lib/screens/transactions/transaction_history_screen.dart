@@ -302,7 +302,10 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BackToExitWrapper(child: _buildRootBody(context));
+    return BackToExitWrapper(
+      fallbackRoute: 'home',
+      child: _buildRootBody(context),
+    );
   }
 
   Widget _buildRootBody(BuildContext context) {
@@ -323,7 +326,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   color: Theme.of(context).colorScheme.onSurface,
                   size: 24.sp,
                 ),
-                onPressed: () => context.pop(),
+                onPressed: () =>
+                    context.canPop() ? context.pop() : context.goNamed('home'),
               ),
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

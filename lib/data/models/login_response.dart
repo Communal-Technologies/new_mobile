@@ -25,8 +25,11 @@ class LoginResponse extends Equatable {
   /// found a challenge already in flight, not a fresh full window.
   final int? otpExpiresIn;
 
-  /// Seconds until authsvc will accept a resend of that code.
+  /// Seconds until authsvc will accept a resend of that code — when it expires.
   final int? resendAvailableIn;
+
+  /// Seconds until the sign-in step closes and only a new login continues.
+  final int? challengeExpiresIn;
 
   const LoginResponse({
     this.token,
@@ -40,6 +43,7 @@ class LoginResponse extends Equatable {
     this.message,
     this.otpExpiresIn,
     this.resendAvailableIn,
+    this.challengeExpiresIn,
   });
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
@@ -57,6 +61,7 @@ class LoginResponse extends Equatable {
       message: json['message'] as String?,
       otpExpiresIn: (json['otp_expires_in'] as num?)?.toInt(),
       resendAvailableIn: (json['resend_available_in'] as num?)?.toInt(),
+      challengeExpiresIn: (json['challenge_expires_in'] as num?)?.toInt(),
     );
   }
 
@@ -73,6 +78,7 @@ class LoginResponse extends Equatable {
       'message': message,
       'otp_expires_in': otpExpiresIn,
       'resend_available_in': resendAvailableIn,
+      'challenge_expires_in': challengeExpiresIn,
     };
   }
 
@@ -89,5 +95,6 @@ class LoginResponse extends Equatable {
         message,
         otpExpiresIn,
         resendAvailableIn,
+        challengeExpiresIn,
       ];
 }

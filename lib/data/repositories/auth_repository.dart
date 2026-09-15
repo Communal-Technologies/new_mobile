@@ -3,6 +3,7 @@ import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
 import 'package:communal_mobile/data/models/login_response.dart';
+import 'package:communal_mobile/data/models/otp_resend.dart';
 import 'package:communal_mobile/core/utils/app_logger.dart';
 import 'package:dio/dio.dart';
 
@@ -183,7 +184,14 @@ class AuthRepository {
     return null;
   }
 
-  Future<void> resendSessionTakeoverOtp(String takeoverChallengeId) async {
+  /// Resends the session-takeover code and returns the server's new countdowns.
+  ///
+  /// Throws [OtpResendException] for a refusal the screen has to act on — a
+  /// cooldown (with how long to wait) or a sign-in step that has expired — and
+  /// rethrows a [DioException] that never reached the server.
+  Future<OtpResendResult> resendSessionTakeoverOtp(
+    String takeoverChallengeId,
+  ) async {
     try {
       final response = await dioClient.post(
         ApiEndpoints.sessionTakeoverResendOtp,
@@ -191,17 +199,31 @@ class AuthRepository {
         requireAuth: false,
       );
       if (response.statusCode != 200) {
-        throw Exception('Unable to resend code');
+        throw const OtpResendException('Unable to resend code');
       }
+      final data = response.data;
+      int? seconds(String key) =>
+          data is Map ? (data[key] as num?)?.toInt() : null;
+      return OtpResendResult(
+        otpExpiresIn: seconds('otp_expires_in'),
+        resendAvailableIn: seconds('resend_available_in'),
+      );
     } on DioException catch (e) {
-      if (e.response != null) {
-        final responseData = e.response?.data;
-        final msg = responseData is Map
-            ? (responseData['message']?.toString() ?? 'Unable to resend code')
-            : 'Unable to resend code';
-        throw Exception(msg);
-      }
-      rethrow;
+      final response = e.response;
+      if (response == null) rethrow;
+      final data = response.data;
+      final message = data is Map
+          ? (data['message']?.toString() ?? 'Unable to resend code')
+          : 'Unable to resend code';
+      final wait = data is Map
+          ? ((data['resend_available_in'] ?? data['retry_after_seconds']) as num?)
+              ?.toInt()
+          : null;
+      throw OtpResendException(
+        message,
+        retryAfterSeconds: response.statusCode == 429 ? wait : null,
+        challengeExpired: response.statusCode == 400,
+      );
     }
   }
 

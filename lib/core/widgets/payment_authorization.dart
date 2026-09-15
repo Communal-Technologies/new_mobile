@@ -14,7 +14,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart' as shared_prefs;
 
-/// Authorising a payment, identical on every screen that moves a member's money.
+/// Authorising a payment or an account action (leaving a cooperative, freezing
+/// or deleting the account), identical on every screen that asks for the
+/// transaction PIN.
 ///
 /// Biometrics first when this device may authorise payments: the prompt opens
 /// with the screen and the biometric key sits in the keypad's corner. The

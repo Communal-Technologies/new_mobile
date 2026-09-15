@@ -23,9 +23,9 @@ import 'package:go_router/go_router.dart';
 
 /// Completes login when another device was still signed in — OTP was sent during `/login`.
 ///
-/// Both countdowns come from authsvc: how long until it will accept a resend, and
-/// how long the code (and the sign-in step carrying it) stays valid. The screen
-/// only falls back to its own figures against a backend that does not send them.
+/// Resend stays locked while the code is valid and opens the moment it expires;
+/// a resend starts a fresh window. Both that countdown and the moment the sign-in
+/// step closes come from authsvc, which enforces the same rules.
 class SessionTakeoverScreen extends StatefulWidget {
   const SessionTakeoverScreen({super.key});
 
@@ -37,16 +37,15 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
   // Audit M25: single source of truth in [AppConstants.otpLength].
   static int get _otpLength => AppConstants.otpLength;
 
-  /// authsvc's default send cooldown and code TTL, for a server that sends neither.
-  static const int _fallbackResendSeconds = 60;
-  static const int _fallbackExpirySeconds = 600;
+  /// The code window, for a backend that does not report one.
+  static int get _fallbackCodeSeconds => AppConstants.otpResendWindowSeconds;
 
   final OtpSessionStorage _sessionStorage = OtpSessionStorage();
 
   int _otpFieldKey = 0;
   String _code = '';
-  int _resendTimer = 0;
-  DateTime? _codeExpiresAt;
+  int _resendTimer = _fallbackCodeSeconds;
+  DateTime? _stepExpiresAt;
   Timer? _timer;
   bool _isVerifying = false;
   bool _isResending = false;
@@ -55,7 +54,7 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
   String _maskedDestination = '';
   String _otpChannel = 'phone';
   int? _serverResendIn;
-  int? _serverExpiresIn;
+  int? _serverStepExpiresIn;
 
   void _restartSplashColdStart() {
     if (!mounted) return;
@@ -77,17 +76,17 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
   }
 
   /// Seeds the countdowns. The server's figures win: they are what it enforces,
-  /// and a login that found this challenge still live reports what is actually
+  /// and a login that found this challenge still open reports what is actually
   /// left of it. A persisted session for the same challenge is next, then the
-  /// fallbacks.
+  /// fallback window.
   Future<void> _restoreOrStartTimer() async {
     final challengeId = _takeoverChallengeId;
     if (challengeId == null) return;
 
-    if (_serverResendIn != null || _serverExpiresIn != null) {
+    if (_serverResendIn != null) {
       _applyCountdowns(
-        resendIn: _serverResendIn ?? _fallbackResendSeconds,
-        expiresIn: _serverExpiresIn,
+        resendIn: _serverResendIn!,
+        stepExpiresIn: _serverStepExpiresIn,
       );
       await _persistSession();
       return;
@@ -100,19 +99,16 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
       return;
     }
 
-    _applyCountdowns(
-      resendIn: _fallbackResendSeconds,
-      expiresIn: _fallbackExpirySeconds,
-    );
+    _applyCountdowns(resendIn: _fallbackCodeSeconds);
     await _persistSession();
   }
 
-  void _applyCountdowns({required int resendIn, int? expiresIn}) {
+  void _applyCountdowns({required int resendIn, int? stepExpiresIn}) {
     if (!mounted) return;
     setState(() {
       _resendTimer = resendIn < 0 ? 0 : resendIn;
-      if (expiresIn != null) {
-        _codeExpiresAt = DateTime.now().add(Duration(seconds: expiresIn));
+      if (stepExpiresIn != null) {
+        _stepExpiresAt = DateTime.now().add(Duration(seconds: stepExpiresIn));
       }
     });
     _startTimer();
@@ -140,16 +136,17 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
         timer.cancel();
         return;
       }
-      final expiresAt = _codeExpiresAt;
-      if (expiresAt != null && !DateTime.now().isBefore(expiresAt)) {
+      final stepExpiresAt = _stepExpiresAt;
+      if (stepExpiresAt != null && !DateTime.now().isBefore(stepExpiresAt)) {
         timer.cancel();
         _onChallengeExpired();
         return;
       }
-      setState(() {
-        if (_resendTimer > 0) _resendTimer--;
-      });
-      if (_resendTimer == 0 && expiresAt == null) timer.cancel();
+      if (_resendTimer > 0) {
+        setState(() => _resendTimer--);
+      } else if (stepExpiresAt == null) {
+        timer.cancel();
+      }
     });
   }
 
@@ -159,7 +156,7 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
     _expiredHandled = true;
     _timer?.cancel();
     unawaited(_sessionStorage.clear(OtpFlow.sessionTakeover));
-    AppToast.error(message ?? 'This sign-in code expired. Please log in again.');
+    AppToast.error(message ?? 'This sign-in expired. Please log in again.');
     _goToLogin();
   }
 
@@ -175,8 +172,8 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
     _maskedDestination = pending.maskedDestination;
     _otpChannel = pending.otpChannel;
     if (includeCountdowns) {
-      _serverResendIn = pending.resendAvailableIn;
-      _serverExpiresIn = pending.otpExpiresIn;
+      _serverResendIn = pending.resendAvailableIn ?? pending.otpExpiresIn;
+      _serverStepExpiresIn = pending.challengeExpiresIn;
     }
   }
 
@@ -216,8 +213,10 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
         _code = '';
       });
       _applyCountdowns(
-        resendIn: result.resendAvailableIn ?? _fallbackResendSeconds,
-        expiresIn: result.otpExpiresIn ?? _fallbackExpirySeconds,
+        resendIn: result.resendAvailableIn ??
+            result.otpExpiresIn ??
+            _fallbackCodeSeconds,
+        stepExpiresIn: result.challengeExpiresIn,
       );
       await _persistSession();
       AppToast.success('A new code was sent.');
@@ -256,9 +255,6 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
     }
 
     final channelLabel = _otpChannel == 'email' ? 'email' : 'phone number';
-    final expiresAt = _codeExpiresAt;
-    final expiresInSeconds =
-        expiresAt?.difference(DateTime.now()).inSeconds.clamp(0, 1 << 30);
 
     return BlocConsumer<AuthBloc, AuthState>(
       listenWhen: (p, c) =>
@@ -276,8 +272,10 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
           if (changed) {
             _expiredHandled = false;
             _applyCountdowns(
-              resendIn: state.resendAvailableIn ?? _fallbackResendSeconds,
-              expiresIn: state.otpExpiresIn ?? _fallbackExpirySeconds,
+              resendIn: state.resendAvailableIn ??
+                  state.otpExpiresIn ??
+                  _fallbackCodeSeconds,
+              stepExpiresIn: state.challengeExpiresIn,
             );
             _persistSession();
           }
@@ -320,6 +318,7 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
       },
       builder: (context, state) {
         final verifying = _isVerifying;
+        final codeExpired = _resendTimer == 0;
         return Scaffold(
           backgroundColor: Theme.of(context).cardColor,
           appBar: AppBar(
@@ -367,18 +366,15 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
                       height: 1.35,
                     ),
                   ),
-                  if (expiresInSeconds != null) ...[
+                  if (codeExpired && !_isResending) ...[
                     vSpace(8),
                     Text(
-                      'Code expires in ${_clock(expiresInSeconds)}',
+                      'This code has expired. Request a new one.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 15.sp,
                         fontWeight: FontWeight.w600,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.55),
+                        color: Colors.red.shade400,
                       ),
                     ),
                   ],
@@ -398,11 +394,11 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
                   ),
                   vSpace(20),
                   TextButton(
-                    onPressed: (_resendTimer > 0 || _isResending || verifying)
+                    onPressed: (!codeExpired || _isResending || verifying)
                         ? null
                         : _resend,
                     child: Text(
-                      _resendTimer > 0
+                      !codeExpired
                           ? 'Resend code in ${_clock(_resendTimer)}'
                           : (_isResending ? 'Sending…' : 'Resend code'),
                       style: TextStyle(

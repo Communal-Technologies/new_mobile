@@ -4,6 +4,7 @@ import 'package:communal_mobile/core/utils/idempotency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/utils/money_formatter.dart';
 import 'package:communal_mobile/core/widgets/payment_authorization.dart';
+import 'package:communal_mobile/core/widgets/pin_pad_body.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:communal_mobile/data/repositories/transfer_repository.dart';
@@ -182,38 +183,36 @@ class _TransferInternalVerifyScreenState
           title: const Text('Verify Transaction'),
         ),
         body: SafeArea(
-          child: SingleChildScrollView(
+          child: PinPadBody(
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-            child: Column(
-              children: [
-                Text(
-                  offerBiometric ? 'Confirm Transfer' : 'Enter Transaction PIN',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 22.sp,
-                    fontWeight: FontWeight.w700,
-                  ),
+            header: [
+              Text(
+                offerBiometric ? 'Confirm Transfer' : 'Enter Transaction PIN',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 22.sp,
+                  fontWeight: FontWeight.w700,
                 ),
-                vSpace(4),
-                Text(
-                  offerBiometric
-                      ? 'Use biometrics, or enter your 4-digit PIN.'
-                      : 'Enter your 4-digit PIN to authorise this transfer.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 15.sp,
-                    color: muted,
-                    fontWeight: FontWeight.w500,
-                  ),
+              ),
+              vSpace(4),
+              Text(
+                offerBiometric
+                    ? 'Use biometrics, or enter your 4-digit PIN.'
+                    : 'Enter your 4-digit PIN to authorise this transfer.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15.sp,
+                  color: muted,
+                  fontWeight: FontWeight.w500,
                 ),
-                vSpace(12),
-                _buildRecipientCard(),
-                vSpace(12),
-                _buildAmountBanner(),
-                vSpace(20),
-                buildPaymentPinPad(),
-              ],
-            ),
+              ),
+              vSpace(12),
+              _buildRecipientCard(),
+              vSpace(12),
+              _buildAmountBanner(),
+              vSpace(20),
+            ],
+            pad: buildPaymentPinPad(),
           ),
         ),
       ),

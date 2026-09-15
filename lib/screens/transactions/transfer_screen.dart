@@ -32,7 +32,6 @@ class _TransferScreenState extends State<TransferScreen> {
   List<TransactionListItem> _recentItems = const [];
   bool _recentLoading = true;
   String? _recentError;
-  int _currentNavIndex = 0;
 
   @override
   void initState() {
@@ -78,7 +77,10 @@ class _TransferScreenState extends State<TransferScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BackToExitWrapper(child: _buildRootBody(context));
+    return BackToExitWrapper(
+      fallbackRoute: 'home',
+      child: _buildRootBody(context),
+    );
   }
 
   Widget _buildRootBody(BuildContext context) {
@@ -103,7 +105,8 @@ class _TransferScreenState extends State<TransferScreen> {
           titleSpacing: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios, size: 22),
-            onPressed: () => context.pop(),
+            onPressed: () =>
+                context.canPop() ? context.pop() : context.goNamed('home'),
           ),
           title: const Text('Transfer Money'),
         ),
@@ -271,9 +274,8 @@ class _TransferScreenState extends State<TransferScreen> {
           ),
         ),
         bottomNavigationBar: BottomNavBar(
-          currentIndex: _currentNavIndex,
+          currentIndex: -1,
           onTap: (index) {
-            setState(() => _currentNavIndex = index);
             switch (index) {
               case 0:
                 context.goNamed('home');

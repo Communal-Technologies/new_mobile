@@ -12,6 +12,7 @@ import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/security/biometric_key_service.dart';
 import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/core/utils/biometric_service.dart';
+import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/transaction_pin_pad.dart';
 import 'package:communal_mobile/data/local/biometric_prefs.dart';
@@ -131,7 +132,7 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
         if (!didAuth) return; // user cancelled / failed scan
       } catch (e) {
         if (!mounted) return;
-        _showSnack(
+        _toast(
           'Could not verify biometrics: '
           '${e.toString().replaceFirst('Exception: ', '')}',
         );
@@ -177,12 +178,20 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
       }
       if (!mounted) return;
       setState(() => _masterEnabled = nextValue);
+      _toast(
+        !nextValue
+            ? '${_primaryMethodLabel()} turned off.'
+            : _keyVerified
+                ? '${_primaryMethodLabel()} is on for sign-in and payments.'
+                : '${_primaryMethodLabel()} is on for sign-in.',
+        success: true,
+      );
     } on BiometricKeyException catch (e) {
       if (!mounted) return;
-      _showSnack(_messageForBiometricError(e));
+      _toast(_messageForBiometricError(e));
     } catch (e) {
       if (!mounted) return;
-      _showSnack(
+      _toast(
         e.toString().replaceFirst('Exception: ', ''),
       );
     } finally {
@@ -243,12 +252,12 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
         if (!mounted) return;
         setState(() => _keyVerified = verified);
         if (!verified) {
-          _showSnack('Could not confirm this device. Try again.');
+          _toast('Could not confirm this device. Try again.');
           return;
         }
       } catch (e) {
         if (!mounted) return;
-        _showSnack(e.toString().replaceFirst('Exception: ', ''));
+        _toast(e.toString().replaceFirst('Exception: ', ''));
         return;
       } finally {
         if (mounted) setState(() => _busy = false);
@@ -257,6 +266,12 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
 
     await _prefs.setTransactionsEnabled(value);
     setState(() {});
+    _toast(
+      value
+          ? '${_primaryMethodLabel()} can now authorize payments on this device.'
+          : 'Payments will ask for your transaction PIN.',
+      success: true,
+    );
     if (!value && !_prefs.appLoginEnabled) {
       await _autoDisableMaster();
     }
@@ -289,15 +304,16 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
       await _prefs.resetAll();
       if (!mounted) return;
       setState(() => _masterEnabled = false);
-      _showSnack(
+      _toast(
         'Biometric authentication disabled — at least one use case is required.',
+        success: true,
       );
     } on BiometricKeyException catch (e) {
       if (!mounted) return;
-      _showSnack(_messageForBiometricError(e));
+      _toast(_messageForBiometricError(e));
     } catch (e) {
       if (!mounted) return;
-      _showSnack(e.toString().replaceFirst('Exception: ', ''));
+      _toast(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -361,8 +377,12 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
     }
   }
 
-  void _showSnack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  void _toast(String message, {bool success = false}) {
+    if (success) {
+      AppToast.success(message);
+    } else {
+      AppToast.error(message);
+    }
   }
 
   // ---- Build ---------------------------------------------------------------
@@ -487,12 +507,8 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
               backgroundTint: const Color(0xFF16A34A).withValues(alpha: 0.10),
               title: 'Payment & Account Authorization',
               subtitle: hasSecurityPin
-                  ? 'Authorize payments, transfers and account actions — leaving '
-                      'a community, freezing or deleting your account — with '
-                      '$method or fingerprint. Your PIN still works everywhere.'
-                  : 'Set a transaction PIN first. $method authorizes payments as '
-                      'a quicker alternative to that PIN — it cannot replace one '
-                      'you have not set. Tap to set it up.',
+                  ? null
+                  : 'Set a transaction PIN first. Tap to set it up.',
               value: hasSecurityPin && _prefs.transactionsEnabled,
               onChanged: hasSecurityPin ? _onTransactionsToggle : null,
               onTapWhenLocked: hasSecurityPin
@@ -733,7 +749,7 @@ class _GranularToggleCard extends StatelessWidget {
     required this.iconColor,
     required this.backgroundTint,
     required this.title,
-    required this.subtitle,
+    this.subtitle,
     required this.value,
     required this.onChanged,
     this.onTapWhenLocked,
@@ -743,7 +759,7 @@ class _GranularToggleCard extends StatelessWidget {
   final Color iconColor;
   final Color backgroundTint;
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final bool value;
   final ValueChanged<bool>? onChanged;
   final VoidCallback? onTapWhenLocked;
@@ -781,17 +797,19 @@ class _GranularToggleCard extends StatelessWidget {
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                vSpace(2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
+                if (subtitle != null) ...[
+                  vSpace(2),
+                  Text(
+                    subtitle!,
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),

@@ -9,6 +9,7 @@ import 'package:communal_mobile/blocs/auth/auth_event.dart';
 import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:communal_mobile/core/widgets/payment_authorization.dart';
+import 'package:communal_mobile/core/widgets/pin_pad_body.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/account_actions_repository.dart';
 import 'package:communal_mobile/injection.dart';
@@ -89,38 +90,36 @@ class _DeleteAccountPinScreenState extends State<DeleteAccountPinScreen>
             centerTitle: true,
           ),
           body: SafeArea(
-            child: SingleChildScrollView(
+            child: PinPadBody(
               padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
-              child: Column(
-                children: [
-                  Text(
-                    offerBiometric ? 'Confirm Deletion' : 'Enter Transaction PIN',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 22.sp,
-                      fontWeight: FontWeight.w700,
-                      color: theme.colorScheme.onSurface,
-                    ),
+              header: [
+                Text(
+                  offerBiometric ? 'Confirm Deletion' : 'Enter Transaction PIN',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 22.sp,
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onSurface,
                   ),
-                  vSpace(4),
-                  Text(
-                    offerBiometric
-                        ? 'Use biometrics, or enter your 4-digit PIN. Your '
-                            'account is deleted as soon as it is authorised.'
-                        : 'Enter your 4-digit PIN. Your account is deleted as '
-                            'soon as the PIN is accepted.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 15.sp,
-                      height: 1.4,
-                      color: muted,
-                      fontWeight: FontWeight.w500,
-                    ),
+                ),
+                vSpace(4),
+                Text(
+                  offerBiometric
+                      ? 'Use biometrics, or enter your 4-digit PIN. Your '
+                          'account is deleted as soon as it is authorised.'
+                      : 'Enter your 4-digit PIN. Your account is deleted as '
+                          'soon as the PIN is accepted.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    height: 1.4,
+                    color: muted,
+                    fontWeight: FontWeight.w500,
                   ),
-                  vSpace(24),
-                  buildPaymentPinPad(),
-                ],
-              ),
+                ),
+                vSpace(24),
+              ],
+              pad: buildPaymentPinPad(),
             ),
           ),
         ),

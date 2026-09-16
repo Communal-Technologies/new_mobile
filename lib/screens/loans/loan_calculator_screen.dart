@@ -152,33 +152,68 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
     }
   }
 
-  /// Standard amortizing-loan monthly payment for `_loanAmount` at
-  /// the active interest rate over `_loanDuration` months. Service
-  /// charge is treated as an up-front flat addition to total cost
-  /// (mirrors backend math), not amortized into the monthly figure.
+  /// The schedule the cooperative's scheme would give this loan: when the first
+  /// repayment falls due and whether interest is held back at the start. The
+  /// service charge is a one-off addition to the total, not spread over it.
+  List<PlannedInstalment> get _plan {
+    final scheme = _selectedScheme;
+    return planRepayments(
+      principalMinor: (_loanAmount * 100).round(),
+      months: _loanDuration,
+      annualRate: _interestRate,
+      firstDueAfterMonths: scheme?.firstRepaymentAfterMonths ?? 1,
+      deferralMode: scheme?.interestDeferralMode,
+      deferralMonths: scheme?.interestDeferralMonths ?? 0,
+    );
+  }
+
+  int get _deferredPayments {
+    final scheme = _selectedScheme;
+    if (scheme == null || !scheme.defersInterestFor(_loanDuration)) return 0;
+    return scheme.interestDeferralMonths;
+  }
+
   double get _monthlyPayment {
-    if (_loanDuration == 0) return 0;
-    final monthlyRate = _interestRate / 100 / 12;
-    if (monthlyRate == 0) return _loanAmount / _loanDuration;
-    final numerator =
-        _loanAmount * monthlyRate * math.pow(1 + monthlyRate, _loanDuration);
-    final denominator = math.pow(1 + monthlyRate, _loanDuration) - 1;
-    return numerator / denominator;
+    final plan = _plan;
+    return plan.isEmpty ? 0 : plan.first.totalMinor / 100;
+  }
+
+  double? get _laterPayment {
+    final plan = _plan;
+    final d = _deferredPayments;
+    if (d == 0 || d >= plan.length) return null;
+    return plan[d].totalMinor / 100;
   }
 
   double get _totalRepayment =>
-      _monthlyPayment * _loanDuration + _serviceChargeMajor;
+      _plan.fold<int>(0, (sum, i) => sum + i.totalMinor) / 100 +
+      _serviceChargeMajor;
   double get _totalInterest => _totalRepayment - _loanAmount;
   int get _numberOfInstallments => _loanDuration;
 
-  DateTime get _firstPaymentDate => DateTime.now().add(const Duration(days: 7));
+  DateTime get _firstPaymentDate {
+    final plan = _plan;
+    return plan.isEmpty ? DateTime.now() : plan.first.dueDate;
+  }
+
   DateTime get _finalPaymentDate {
-    final firstDate = _firstPaymentDate;
-    return DateTime(
-      firstDate.year,
-      firstDate.month + _loanDuration,
-      firstDate.day,
-    );
+    final plan = _plan;
+    return plan.isEmpty ? DateTime.now() : plan.last.dueDate;
+  }
+
+  String? get _interestCollectionLabel {
+    final d = _deferredPayments;
+    if (d == 0) return null;
+    final payments = d == 1 ? 'payment' : '$d payments';
+    switch (_selectedScheme?.interestDeferralMode) {
+      case kDeferralInterestFree:
+        return 'No interest on the first $payments';
+      case kDeferralCollectLater:
+        return 'Held back, then from payment ${d + 1}';
+      case kDeferralPrincipalFirst:
+        return 'After the loan is repaid, from payment ${d + 1}';
+    }
+    return null;
   }
 
   String _formatCurrency(double amount) {
@@ -722,7 +757,11 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
           ),
           vSpace(4),
           Text(
-            'in $_numberOfInstallments installments',
+            _laterPayment == null
+                ? 'in $_numberOfInstallments installments'
+                : 'for the first ${_deferredPayments == 1 ? 'installment' : '$_deferredPayments installments'}, '
+                    'then ${_formatCurrency(_laterPayment!)} for the remaining '
+                    '${_numberOfInstallments - _deferredPayments}',
             style: TextStyle(
               fontSize: 17.sp,
               color: Colors.white.withValues(alpha: 0.9),
@@ -816,13 +855,17 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
           'Final Payment Date',
           DateFormat('MMM dd, yyyy').format(_finalPaymentDate),
         ),
+        if (_interestCollectionLabel != null) ...[
+          vSpace(12),
+          _buildBreakdownRow('Interest Collection', _interestCollectionLabel!),
+        ],
       ],
     );
   }
 
   Widget _buildBreakdownRow(String label, String value) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
@@ -833,12 +876,16 @@ class _LoanCalculatorScreenState extends State<LoanCalculatorScreen> {
             ).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 17.sp,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onSurface,
+        hSpace(12),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: TextStyle(
+              fontSize: 17.sp,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
           ),
         ),
       ],

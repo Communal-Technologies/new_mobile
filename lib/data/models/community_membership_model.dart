@@ -8,9 +8,7 @@ class CommunityCooperativeSettings {
       loanNotifications: true,
       chatMessages: true,
       announcements: true,
-      showProfileToCommunity: true,
-      allowGroupAdditions: true,
-      showPhoneNumber: false,
+      showPhoneNumber: true,
       autoContribution: false,
       autoAcceptLoanOffers: false,
       setContributionLimit: false,
@@ -25,8 +23,6 @@ class CommunityCooperativeSettings {
     required this.loanNotifications,
     required this.chatMessages,
     required this.announcements,
-    required this.showProfileToCommunity,
-    required this.allowGroupAdditions,
     required this.showPhoneNumber,
     required this.autoContribution,
     required this.autoAcceptLoanOffers,
@@ -40,8 +36,6 @@ class CommunityCooperativeSettings {
   final bool loanNotifications;
   final bool chatMessages;
   final bool announcements;
-  final bool showProfileToCommunity;
-  final bool allowGroupAdditions;
   final bool showPhoneNumber;
   final bool autoContribution;
   final bool autoAcceptLoanOffers;
@@ -59,9 +53,9 @@ class CommunityCooperativeSettings {
       loanNotifications: _bool(json['loan_notifications']),
       chatMessages: _bool(json['chat_messages']),
       announcements: _bool(json['announcements']),
-      showProfileToCommunity: _bool(json['show_profile_to_community']),
-      allowGroupAdditions: _bool(json['allow_group_additions']),
-      showPhoneNumber: _bool(json['show_phone_number']),
+      showPhoneNumber: json.containsKey('show_phone_number')
+          ? _bool(json['show_phone_number'])
+          : true,
       autoContribution: _bool(json['auto_contribution']),
       autoAcceptLoanOffers: _bool(json['auto_accept_loan_offers']),
       setContributionLimit: _bool(json['set_contribution_limit']),
@@ -76,8 +70,6 @@ class CommunityCooperativeSettings {
     bool? loanNotifications,
     bool? chatMessages,
     bool? announcements,
-    bool? showProfileToCommunity,
-    bool? allowGroupAdditions,
     bool? showPhoneNumber,
     bool? autoContribution,
     bool? autoAcceptLoanOffers,
@@ -93,9 +85,6 @@ class CommunityCooperativeSettings {
       loanNotifications: loanNotifications ?? this.loanNotifications,
       chatMessages: chatMessages ?? this.chatMessages,
       announcements: announcements ?? this.announcements,
-      showProfileToCommunity:
-          showProfileToCommunity ?? this.showProfileToCommunity,
-      allowGroupAdditions: allowGroupAdditions ?? this.allowGroupAdditions,
       showPhoneNumber: showPhoneNumber ?? this.showPhoneNumber,
       autoContribution: autoContribution ?? this.autoContribution,
       autoAcceptLoanOffers:

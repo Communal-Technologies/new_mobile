@@ -390,6 +390,26 @@ TransactionListItem mapCommunalTransactionToListItem(
   final iconPack = bill?.icon ?? _iconStyleCommunal(typeRaw, incoming);
   final sessionFmt = DateFormat('hh:mm a');
 
+  // A transfer's charges are lines of its own receipt: Fees is what was actually
+  // paid, and each charge — a waived one reads "Free" — is listed beneath it.
+  final chargeLines = <MapEntry<String, String>>[];
+  var chargesNaira = 0.0;
+  final rawCharges = json['charges'];
+  if (rawCharges is List) {
+    final figure = NumberFormat('#,##0.00');
+    for (final raw in rawCharges.whereType<Map>()) {
+      final label = raw['label']?.toString().trim() ?? '';
+      if (label.isEmpty) continue;
+      final free = raw['free'] == true;
+      final naira = _amountNairaFromKoboField(raw['amount']);
+      if (!free) chargesNaira += naira;
+      chargeLines.add(
+        MapEntry(label, free ? 'Free' : '$currencySymbol${figure.format(naira)}'),
+      );
+    }
+  }
+  final parentReference = json['parent_reference']?.toString().trim() ?? '';
+
   final details = TransactionDetailsData(
     id: id.isNotEmpty ? id : trxRef,
     // For bills the "recipient" is the biller/provider and the consumer
@@ -415,7 +435,7 @@ TransactionListItem mapCommunalTransactionToListItem(
         ? (bill.recipient.isNotEmpty ? bill.recipient : null)
         : ((cpAcct != null && cpAcct.isNotEmpty) ? cpAcct : null),
     amount: amountNaira,
-    fees: 0,
+    fees: chargesNaira,
     currencySymbol: currencySymbol,
     transactionType: bill != null ? bill.type : titleBase,
     dateTime: dt,
@@ -441,6 +461,8 @@ TransactionListItem mapCommunalTransactionToListItem(
     status: status,
     isIncoming: incoming,
     extraDetails: bill?.extras ?? const [],
+    chargeLines: chargeLines,
+    parentReference: parentReference.isNotEmpty ? parentReference : null,
     balanceBeforeMinor: _intOrNull(json['balance_before']),
     balanceAfterMinor: _intOrNull(json['balance_after']),
   );

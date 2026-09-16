@@ -1311,7 +1311,13 @@ final GoRouter appRouter = GoRouter(
             Map<String, dynamic>.from(extra['favorite'] as Map),
           );
         }
-        return TransferExternalScreen(initialRecipient: fav);
+        final amount = extra is Map && extra['amount'] is num
+            ? (extra['amount'] as num).toDouble()
+            : null;
+        return TransferExternalScreen(
+          initialRecipient: fav,
+          initialAmount: amount,
+        );
       },
     ),
     GoRoute(

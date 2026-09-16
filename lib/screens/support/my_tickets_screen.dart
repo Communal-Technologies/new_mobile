@@ -219,7 +219,7 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
                     ),
                   ),
                   Text(
-                    _when(ticket.lastMessageAt ?? ticket.createdAt),
+                    _opened(ticket.createdAt ?? ticket.lastMessageAt),
                     style: TextStyle(
                       fontSize: 15.sp,
                       color:
@@ -337,13 +337,17 @@ Color _statusTone(String status) {
   }
 }
 
-String _when(DateTime? at) {
+/// When the request was raised. A reply or a status change moves the last
+/// activity, which made an old request read as opened hours ago.
+String _opened(DateTime? at) {
   if (at == null) return '';
   final now = DateTime.now();
   final diff = now.difference(at);
-  if (diff.inMinutes < 1) return 'just now';
-  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-  if (diff.inHours < 24) return '${diff.inHours}h ago';
-  if (diff.inDays < 7) return '${diff.inDays}d ago';
-  return DateFormat('d MMM').format(at);
+  if (diff.inMinutes < 1) return 'Opened just now';
+  if (diff.inMinutes < 60) return 'Opened ${diff.inMinutes}m ago';
+  if (diff.inHours < 24 && at.day == now.day) {
+    return 'Opened ${diff.inHours}h ago';
+  }
+  if (at.year == now.year) return 'Opened ${DateFormat('d MMM').format(at)}';
+  return 'Opened ${DateFormat('d MMM y').format(at)}';
 }

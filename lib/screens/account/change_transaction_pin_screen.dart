@@ -215,7 +215,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).primaryColor;
-
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       resizeToAvoidBottomInset: true,
@@ -280,7 +280,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
                           style: TextStyle(
                             fontSize: 17.sp,
                             fontWeight: FontWeight.w700,
-                            color: Theme.of(context).primaryColor,
+                            color: isDark ? Theme.of(context).colorScheme.onSurface : Theme.of(context).primaryColor,
                           ),
                         ),
                       ),

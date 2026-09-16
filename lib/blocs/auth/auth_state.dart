@@ -30,17 +30,34 @@ class AuthSessionTakeoverPending extends AuthState {
   final String login;
   final String? message;
 
+  /// The server's countdowns, in seconds, as of the login that produced this
+  /// state. Null when the backend did not send them.
+  final int? otpExpiresIn;
+  final int? resendAvailableIn;
+  final int? challengeExpiresIn;
+
   const AuthSessionTakeoverPending({
     required this.takeoverChallengeId,
     required this.maskedDestination,
     required this.otpChannel,
     required this.login,
     this.message,
+    this.otpExpiresIn,
+    this.resendAvailableIn,
+    this.challengeExpiresIn,
   });
 
   @override
-  List<Object?> get props =>
-      [takeoverChallengeId, maskedDestination, otpChannel, login, message];
+  List<Object?> get props => [
+        takeoverChallengeId,
+        maskedDestination,
+        otpChannel,
+        login,
+        message,
+        otpExpiresIn,
+        resendAvailableIn,
+        challengeExpiresIn,
+      ];
 }
 
 class AuthAuthenticated extends AuthState {

@@ -221,6 +221,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             otpChannel: loginResponse.otpChannel ?? 'phone',
             login: event.login.trim(),
             message: loginResponse.message,
+            otpExpiresIn: loginResponse.otpExpiresIn,
+            resendAvailableIn: loginResponse.resendAvailableIn,
+            challengeExpiresIn: loginResponse.challengeExpiresIn,
           ));
           return;
         }

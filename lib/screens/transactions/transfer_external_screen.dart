@@ -6,6 +6,7 @@ import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
 import 'package:communal_mobile/core/utils/amount_input_formatter.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
+import 'package:communal_mobile/core/utils/ng_mobile_network.dart';
 import 'package:communal_mobile/core/utils/nuban.dart';
 import 'package:communal_mobile/core/utils/tier_limit_check.dart';
 import 'package:communal_mobile/core/constants/images.dart';
@@ -35,9 +36,17 @@ class _SuggestBank extends _SuggestRow {
 }
 
 class TransferExternalScreen extends StatefulWidget {
-  const TransferExternalScreen({super.key, this.initialRecipient});
+  const TransferExternalScreen({
+    super.key,
+    this.initialRecipient,
+    this.initialAmount,
+  });
 
   final TransferFavorite? initialRecipient;
+
+  /// In major units. "Transfer again" carries the last amount here; it lands in
+  /// the field and stays editable.
+  final double? initialAmount;
 
   @override
   State<TransferExternalScreen> createState() => _TransferExternalScreenState();
@@ -48,6 +57,12 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     1000, 3000, 5000, 10000, 15000, 20000, 30000, 50000, 100000,
   ];
   static const Color _verifiedGreen = Color(0xFF0FAA50);
+
+  /// The fewest digits worth suggesting a bank for.
+  static const int _minSuggestDigits = 3;
+
+  /// The longest prefix sent for bank hints; the server caps it here too.
+  static const int _hintPrefixDigits = 7;
 
   final _repo = getIt<TransferRepository>();
   final _favorites = getIt<TransferFavoritesPrefs>();
@@ -60,13 +75,20 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
   List<TransferSuggestion> _knownRecipients = const [];
   List<TransferSuggestion> _rawSuggestions = const [];
   List<TransferBank> _candidateBanks = const [];
+  List<String> _hintCodes = const [];
+  String _hintsFor = '';
   TransferBank? _selectedBank;
+
+  /// True when the bank was picked for the member rather than by them, so a
+  /// change to the number clears it instead of carrying a guess forward.
+  bool _bankAutoDetected = false;
   TransferFavorite? _verifiedRecipient;
   bool _loadingBanks = false;
   String? _banksError;
   bool _loadingSuggestions = false;
   bool _verifying = false;
   bool _suggestionsDismissed = false;
+  bool _initialResolved = false;
   Timer? _debounce;
   String _resolvedFor = '';
 
@@ -76,20 +98,19 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     final initial = widget.initialRecipient;
     if (initial != null) {
       _accountCtrl.text = initial.accountNumber;
-      _selectedBank = _matchBankByNip(initial.nipCode);
+      _suggestionsDismissed = true;
+    }
+    final amount = widget.initialAmount;
+    if (amount != null && amount > 0) {
+      _amountCtrl.text = amount == amount.roundToDouble()
+          ? AmountInputFormatter.formatInt(amount.round())
+          : amount.toStringAsFixed(2);
     }
     _accountCtrl.addListener(_onAccountChanged);
     _amountCtrl.addListener(() => setState(() {}));
     _narrationCtrl.addListener(() => setState(() {}));
     _loadBanks();
     _loadKnownRecipients();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (_banks.isEmpty) return;
-      if (_accountCtrl.text.trim().length == 10 && _selectedBank != null) {
-        _verifyRecipient();
-      }
-    });
   }
 
   TransferBank? _matchBankByNip(String? nip) {
@@ -97,6 +118,15 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     if (n.isEmpty) return null;
     for (final b in _banks) {
       if (b.nipCode == n) return b;
+    }
+    return null;
+  }
+
+  TransferBank? _matchBankByName(String? name) {
+    final n = (name ?? '').trim().toLowerCase();
+    if (n.isEmpty) return null;
+    for (final b in _banks) {
+      if (b.name.trim().toLowerCase() == n) return b;
     }
     return null;
   }
@@ -119,13 +149,12 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     try {
       final rows = await _repo.fetchBanks(forceRefresh: forceRefresh);
       if (!mounted) return;
-      setState(() {
-        _banks = rows;
-        if (widget.initialRecipient != null) {
-          _selectedBank ??= _matchBankByNip(widget.initialRecipient!.nipCode);
-        }
-      });
-      if (_accountCtrl.text.trim().length >= 4) _applyLocalMatches();
+      setState(() => _banks = rows);
+      if (widget.initialRecipient != null && !_initialResolved) {
+        unawaited(_resolveInitialRecipient());
+      } else if (_accountCtrl.text.trim().length >= _minSuggestDigits) {
+        _applyLocalMatches();
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -144,9 +173,39 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
       final list = await _repo.cachedBankSuggestions();
       if (!mounted) return;
       setState(() => _knownRecipients = list);
-      if (_accountCtrl.text.trim().length >= 4) _applyLocalMatches();
+      if (_accountCtrl.text.trim().length >= _minSuggestDigits &&
+          !_suggestionsDismissed) {
+        _applyLocalMatches();
+      }
     } catch (_) {
       // A recipient list we could not load only costs the shortcut.
+    }
+  }
+
+  /// "Transfer again": the account, its bank and the amount arrive filled in.
+  /// Our own books are asked first, so a Communal wallet stays a book transfer;
+  /// otherwise the bank carried over is confirmed by name enquiry.
+  Future<void> _resolveInitialRecipient() async {
+    final initial = widget.initialRecipient;
+    if (initial == null || _initialResolved) return;
+    _initialResolved = true;
+    setState(() {
+      _selectedBank ??=
+          _matchBankByNip(initial.nipCode) ?? _matchBankByName(initial.bank);
+    });
+    final acct = _accountCtrl.text.trim();
+    if (acct.length != 10) {
+      setState(() => _suggestionsDismissed = false);
+      _applyLocalMatches();
+      return;
+    }
+    await _probeAccount(autoDetect: false);
+    if (!mounted || _verifiedRecipient != null) return;
+    if (_selectedBank != null) {
+      await _verifyRecipient();
+    } else {
+      setState(() => _suggestionsDismissed = false);
+      _applyLocalMatches();
     }
   }
 
@@ -154,10 +213,14 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     setState(() {
       _suggestionsDismissed = false;
       _verifiedRecipient = null;
+      if (_bankAutoDetected) {
+        _selectedBank = null;
+        _bankAutoDetected = false;
+      }
     });
     _debounce?.cancel();
     final q = _accountCtrl.text.trim();
-    if (q.length < 4) {
+    if (q.length < _minSuggestDigits) {
       setState(() {
         _rawSuggestions = const [];
         _candidateBanks = const [];
@@ -166,16 +229,15 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
       return;
     }
     // Local matching is free, so it happens on the keystroke itself and the
-    // panel is never empty while the debounce runs. The debounce now guards the
-    // one thing that costs something: the exact-number lookup.
+    // panel is never empty while the debounce runs. The debounce guards the
+    // lookups that cost a round trip.
     _applyLocalMatches();
-    _debounce = Timer(const Duration(milliseconds: 380), _probeAccount);
+    _debounce = Timer(const Duration(milliseconds: 300), _probeAccount);
   }
 
   /// Fills the panel from what this device already knows: the recipients whose
-  /// number starts with what they have typed, and — once all ten digits are in —
-  /// the banks whose code could have produced that number's check digit,
-  /// best-used first.
+  /// number starts with what they have typed, then the banks the number most
+  /// likely belongs to.
   ///
   /// Communal wallets are matched here too, not only external recipients. This
   /// is the screen for paying another bank, but the number being typed decides
@@ -196,78 +258,187 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     });
   }
 
-  /// Banks worth offering for the number as typed.
+  List<String> _activeHintCodes(String q) =>
+      _hintsFor.isNotEmpty && q.startsWith(_hintsFor) ? _hintCodes : const [];
+
+  /// OPay, PalmPay and Moniepoint number personal accounts after the holder's
+  /// phone number, so a number that starts like a mobile number is likely theirs.
+  bool _looksLikePhoneAccount(String q) =>
+      q.length >= _minSuggestDigits &&
+      '789'.contains(q[0]) &&
+      detectNgMobileNetwork(q) != null;
+
+  bool _isPhoneNumberBank(TransferBank b) {
+    final n = b.name.toLowerCase();
+    return n.contains('opay') ||
+        n.contains('paycom') ||
+        n.contains('palmpay') ||
+        n.contains('moniepoint');
+  }
+
+  /// Banks worth offering for the number as typed, likeliest first.
   ///
-  /// A NUBAN's check digit is computed from the bank's own code, so a complete
-  /// ten digits rule out about nine banks in ten — that shortlist is the whole
-  /// point of waiting for the member to finish typing. Before the tenth digit
-  /// nothing can be ruled out, so the offer is the banks they actually use.
+  /// A NUBAN does not contain its bank's code, so no digit of it names the bank.
+  /// What narrows it early is evidence: the banks the platform has seen accounts
+  /// with this prefix at, and whether the number reads like a phone-number
+  /// account. Once all ten digits are in, the check digit rules out about nine
+  /// banks in ten, and nothing that fails it is offered.
   List<TransferBank> _narrowedBanks(
     String accountNumber, {
     required List<TransferSuggestion> exclude,
   }) {
     if (_banks.isEmpty) return const [];
     final alreadyShown = exclude.map((e) => (e.nipCode ?? '').trim()).toSet();
-    Iterable<TransferBank> pool = _banks.where(
-      (b) => !alreadyShown.contains(b.nipCode),
-    );
-    if (isNubanShaped(accountNumber)) {
-      pool = pool.where((b) => nubanMatchesBank(accountNumber, b.nipCode));
-    } else {
-      pool = pool.where((b) => b.uses > 0);
+    final nuban = isNubanShaped(accountNumber);
+    final out = <TransferBank>[];
+    final seen = <String>{};
+    void add(TransferBank b) {
+      if (alreadyShown.contains(b.nipCode)) return;
+      if (nuban && !nubanMatchesBank(accountNumber, b.nipCode)) return;
+      if (seen.add(b.nipCode)) out.add(b);
+    }
+
+    for (final code in _activeHintCodes(accountNumber)) {
+      final b = _matchBankByNip(code);
+      if (b != null) add(b);
+    }
+    if (_looksLikePhoneAccount(accountNumber)) {
+      _banks.where(_isPhoneNumberBank).forEach(add);
     }
     // fetchBanks already returns the list usage-ranked, so order is preserved.
-    return pool.take(isNubanShaped(accountNumber) ? 5 : 3).toList(
-      growable: false,
-    );
+    _banks.where((b) => b.uses > 0).forEach(add);
+    if (nuban) {
+      for (final b in _banks) {
+        if (out.length >= 5) break;
+        add(b);
+      }
+    }
+    return out.take(5).toList(growable: false);
   }
 
-  /// Names the account outright when we can, off our own records.
+  Future<void> _loadBankHints(String q) async {
+    final prefix =
+        q.length > _hintPrefixDigits ? q.substring(0, _hintPrefixDigits) : q;
+    if (prefix.length < _minSuggestDigits || _hintsFor == prefix) return;
+    final codes = await _repo.fetchBankHints(prefix);
+    if (!mounted || !_accountCtrl.text.trim().startsWith(prefix)) return;
+    setState(() {
+      _hintsFor = prefix;
+      _hintCodes = codes;
+    });
+    if (!_suggestionsDismissed) _applyLocalMatches();
+  }
+
+  /// Names the account outright when we can, off our own records, and asks for
+  /// the likely banks on the way.
   ///
   /// A wallet on our books makes this a book transfer — instant, free, and it
   /// would otherwise have gone out through NIP and been charged for. A
   /// recipient the member has paid before already has a counterparty id, so the
   /// name enquiry is skipped entirely.
-  Future<void> _probeAccount() async {
+  Future<void> _probeAccount({bool autoDetect = true}) async {
     if (!mounted) return;
     final q = _accountCtrl.text.trim();
+    if (q.length < _minSuggestDigits) return;
+    unawaited(_loadBankHints(q));
     if (q.length < 6 || _resolvedFor == q) return;
-    setState(() => _loadingSuggestions = true);
-    try {
-      if (q.length < 10) {
+    if (q.length < 10) {
+      try {
         await _searchCommunalAccounts(q);
-        return;
+      } catch (_) {
+        // Nothing to show is the ordinary answer here — the member picks a bank.
       }
-      final match = await _repo.resolveAccount(q);
-      if (!mounted || _accountCtrl.text.trim() != q) return;
-      _resolvedFor = q;
-      if (match == null) return;
-      final nip = (match.nipCode ?? '').trim();
-      setState(() {
-        _rawSuggestions = const [];
-        _candidateBanks = const [];
-        _suggestionsDismissed = true;
-        if (match.isExternal && nip.isNotEmpty) {
-          _selectedBank = _matchBankByNip(nip) ?? _selectedBank;
-        }
-        _verifiedRecipient = TransferFavorite(
-          source: match.isInternal ? 'internal' : 'external',
-          accountId: match.isInternal
-              ? match.accountId
-              : (match.counterPartyId ?? ''),
-          bank: match.bank.trim().isNotEmpty
-              ? match.bank.trim()
-              : (_selectedBank?.name ?? ''),
-          accountNumber: match.accountNumber,
-          accountName: match.accountName,
-          nipCode: match.isInternal ? null : nip,
-        );
-      });
+      return;
+    }
+
+    setState(() => _loadingSuggestions = true);
+    TransferSuggestion? match;
+    try {
+      match = await _repo.resolveAccount(q);
     } catch (_) {
-      // Nothing to show is the ordinary answer here — the member picks a bank.
+      match = null;
     } finally {
       if (mounted) setState(() => _loadingSuggestions = false);
     }
+    if (!mounted || _accountCtrl.text.trim() != q) return;
+    _resolvedFor = q;
+    if (match == null) {
+      if (autoDetect) await _autoDetectBank(q);
+      return;
+    }
+
+    final found = match;
+    final nip = (found.nipCode ?? '').trim();
+    final bankName = found.bank.trim().isNotEmpty
+        ? found.bank.trim()
+        : (found.isInternal
+              ? 'Communal'
+              : (_matchBankByNip(nip)?.name ?? _selectedBank?.name ?? ''));
+    // A saved counterparty with no bank recorded is a recipient we cannot name
+    // the bank of. Showing it as verified left the bank blank; treat it as a
+    // number we know nothing about and find the bank the normal way instead.
+    if (found.isExternal && bankName.isEmpty) {
+      if (autoDetect) await _autoDetectBank(q);
+      return;
+    }
+    setState(() {
+      _rawSuggestions = const [];
+      _candidateBanks = const [];
+      _suggestionsDismissed = true;
+      if (found.isExternal) {
+        _selectedBank =
+            _matchBankByNip(nip) ?? _matchBankByName(bankName) ?? _selectedBank;
+        _bankAutoDetected = false;
+      }
+      _verifiedRecipient = TransferFavorite(
+        source: found.isInternal ? 'internal' : 'external',
+        accountId: found.isInternal
+            ? found.accountId
+            : (found.counterPartyId ?? ''),
+        bank: bankName,
+        accountNumber: found.accountNumber,
+        accountName: found.accountName,
+        nipCode: found.isInternal ? null : nip,
+      );
+    });
+  }
+
+  /// With all ten digits in and nothing on our books for the number, picks the
+  /// bank for the member when the evidence points at one: the likeliest bank for
+  /// the prefix that the number is valid at, or else the one bank they have paid
+  /// before that it is valid at. The name enquiry then confirms the guess, and a
+  /// wrong one quietly hands the choice back.
+  Future<void> _autoDetectBank(String q) async {
+    final chosen = _selectedBank;
+    if (chosen != null) {
+      if (nubanMatchesBank(q, chosen.nipCode)) await _verifyRecipient();
+      return;
+    }
+    await _loadBankHints(q);
+    if (!mounted || _accountCtrl.text.trim() != q) return;
+
+    TransferBank? pick;
+    for (final code in _activeHintCodes(q)) {
+      final b = _matchBankByNip(code);
+      if (b != null && nubanMatchesBank(q, b.nipCode)) {
+        pick = b;
+        break;
+      }
+    }
+    if (pick == null) {
+      final used = _banks
+          .where((b) => b.uses > 0 && nubanMatchesBank(q, b.nipCode))
+          .toList(growable: false);
+      if (used.length == 1) pick = used.first;
+    }
+    if (pick == null) return;
+
+    setState(() {
+      _selectedBank = pick;
+      _bankAutoDetected = true;
+      _suggestionsDismissed = true;
+    });
+    await _verifyRecipient(silent: true);
   }
 
   /// Asks the server which Communal accounts begin with the digits typed so far.
@@ -287,19 +458,17 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
         .toList(growable: false);
     if (added.isEmpty) return;
     _knownRecipients = [..._knownRecipients, ...added];
-    _applyLocalMatches();
+    if (!_suggestionsDismissed) _applyLocalMatches();
   }
 
   bool get _showSuggestionPanel {
     final q = _accountCtrl.text.trim();
-    return q.length >= 4 && !_suggestionsDismissed;
+    return q.length >= _minSuggestDigits && !_suggestionsDismissed;
   }
 
   List<_SuggestRow> get _suggestionRows {
     // Recipients the member has paid before come first — those are answers, not
-    // guesses. Below them sit the banks that could have issued the number, which
-    // is what the panel offers once there is nothing left to recognise. Dedupe by
-    // account number (already deduped server-side, belt-and-braces here).
+    // guesses. Below them sit the banks the number most likely belongs to.
     final rows = <_SuggestRow>[];
     final seenAcct = <String>{};
     for (final s in _rawSuggestions) {
@@ -314,6 +483,26 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     return rows;
   }
 
+  String _suggestionBankLabel(TransferSuggestion s) {
+    final bank = s.bank.trim();
+    if (bank.isNotEmpty) return bank;
+    if (s.isInternal) return 'Communal';
+    return _matchBankByNip(s.nipCode)?.name ?? 'Bank account';
+  }
+
+  String _bankRowSubtitle(TransferBank b) {
+    final q = _accountCtrl.text.trim();
+    if (_activeHintCodes(q).contains(b.nipCode)) {
+      return 'Likely bank for this number';
+    }
+    if (_isPhoneNumberBank(b) && _looksLikePhoneAccount(q)) {
+      return 'Uses phone numbers as account numbers';
+    }
+    if (isNubanShaped(q)) return 'This number is valid at this bank';
+    if (b.uses > 0) return "You've sent money here before";
+    return 'Tap to check this number';
+  }
+
   Future<void> _openBankPicker() async {
     final acct = _accountCtrl.text.trim();
     if (acct.length != 10) {
@@ -322,6 +511,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
       );
       return;
     }
+    FocusManager.instance.primaryFocus?.unfocus();
     final featured = _featuredBanks();
     final picked = await Navigator.of(context).push<TransferBank>(
       MaterialPageRoute(
@@ -337,6 +527,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     if (!mounted || picked == null) return;
     setState(() {
       _selectedBank = picked;
+      _bankAutoDetected = false;
       _rawSuggestions = const [];
       _suggestionsDismissed = true;
     });
@@ -345,15 +536,20 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
 
   /// The banks to surface at the top of the picker.
   ///
-  /// Narrowed by the typed number's check digit first — with ten digits in, a
-  /// bank that could not have issued it does not belong at the top of the list —
-  /// then in the server's usage order, which counts the member's own settled
+  /// The prefix's likely banks lead, then banks the typed number's check digit
+  /// allows in the server's usage order, which counts the member's own settled
   /// transfers and so survives a reinstall. Locally saved recipients only fill
   /// out the tail, since a recency list of people is not a count of banks.
   List<TransferBank> _featuredBanks() {
     final acct = _accountCtrl.text.trim();
     final out = <TransferBank>[];
     final seen = <String>{};
+    for (final code in _activeHintCodes(acct)) {
+      final b = _matchBankByNip(code);
+      if (b != null && nubanMatchesBank(acct, b.nipCode) && seen.add(b.nipCode)) {
+        out.add(b);
+      }
+    }
     final plausible = _banks
         .where((b) => nubanMatchesBank(acct, b.nipCode))
         .where((b) => isNubanShaped(acct) || b.uses > 0);
@@ -374,10 +570,14 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     return out.take(10).toList(growable: false);
   }
 
-  Future<void> _verifyRecipient() async {
+  /// Confirms the selected bank holds the typed number. [silent] is for a bank
+  /// the screen picked itself: a miss there is not the member's mistake, so it
+  /// clears the guess and reopens the suggestions instead of raising an error.
+  Future<void> _verifyRecipient({bool silent = false}) async {
     final bank = _selectedBank;
     final acct = _accountCtrl.text.trim();
     if (bank == null || acct.length != 10) return;
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _verifying = true);
     try {
       // Our own books first, whatever bank the member picked. Asking the bank
@@ -392,7 +592,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
           _verifiedRecipient = TransferFavorite(
             source: 'internal',
             accountId: local.accountId,
-            bank: local.bank.trim().isNotEmpty ? local.bank.trim() : bank.name,
+            bank: local.bank.trim().isNotEmpty ? local.bank.trim() : 'Communal',
             accountNumber: local.accountNumber,
             accountName: local.accountName,
           );
@@ -409,7 +609,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
         accountNumber: verified.accountNumber,
         accountName: verified.accountName,
       );
-      if (!mounted) return;
+      if (!mounted || _accountCtrl.text.trim() != acct) return;
       final bankName = verified.bankName?.trim().isNotEmpty == true
           ? verified.bankName!.trim()
           : bank.name;
@@ -439,21 +639,36 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      setState(() => _verifiedRecipient = null);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-      );
+      if (silent) {
+        setState(() {
+          _verifiedRecipient = null;
+          if (_bankAutoDetected) {
+            _selectedBank = null;
+            _bankAutoDetected = false;
+          }
+          _suggestionsDismissed = false;
+        });
+        _applyLocalMatches();
+      } else {
+        setState(() => _verifiedRecipient = null);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
     } finally {
       if (mounted) setState(() => _verifying = false);
     }
   }
 
   void _onPickRecipient(TransferSuggestion s) {
+    FocusManager.instance.primaryFocus?.unfocus();
     final nip = (s.nipCode ?? '').trim();
     final counterPartyId = (s.counterPartyId ?? '').trim();
+    final bankName = _suggestionBankLabel(s);
     setState(() {
       _accountCtrl.text = s.accountNumber;
       _selectedBank = nip.isEmpty ? _selectedBank : _matchBankByNip(nip);
+      _bankAutoDetected = false;
       _rawSuggestions = const [];
       _candidateBanks = const [];
       _suggestionsDismissed = true;
@@ -466,7 +681,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
         _verifiedRecipient = TransferFavorite(
           source: 'internal',
           accountId: s.accountId,
-          bank: s.bank.trim(),
+          bank: bankName,
           accountNumber: s.accountNumber,
           accountName: s.accountName,
         );
@@ -479,9 +694,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
             : TransferFavorite(
                 source: 'external',
                 accountId: counterPartyId,
-                bank: s.bank.trim().isNotEmpty
-                    ? s.bank.trim()
-                    : (_selectedBank?.name ?? ''),
+                bank: bankName,
                 accountNumber: s.accountNumber,
                 accountName: s.accountName,
                 nipCode: nip,
@@ -498,6 +711,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
   void _onPickBankRow(TransferBank b) {
     setState(() {
       _selectedBank = b;
+      _bankAutoDetected = false;
       _rawSuggestions = const [];
       _candidateBanks = const [];
       _suggestionsDismissed = true;
@@ -532,6 +746,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
   }
 
   void _applyQuickAmount(int v) {
+    FocusManager.instance.primaryFocus?.unfocus();
     final fmt = AmountInputFormatter.formatInt(v);
     _amountCtrl.value = TextEditingValue(
       text: fmt,
@@ -541,6 +756,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
   }
 
   void _continue() {
+    FocusManager.instance.primaryFocus?.unfocus();
     final v = _verifiedRecipient;
     if (v == null || !_continueEnabled) return;
     final currency = _resolvedCurrency();
@@ -610,9 +826,13 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
         : activeCurrency.display;
     final theme = Theme.of(context);
     final suggestBg = theme.primaryColor.withValues(alpha: 0.10);
+    final onSurface = theme.colorScheme.onSurface;
 
     final showPanel = _showSuggestionPanel;
     final rows = _suggestionRows;
+    final verifiedBank = _verifiedRecipient?.bank.trim() ?? '';
+    final bankLabel = _selectedBank?.name ??
+        (verifiedBank.isNotEmpty ? verifiedBank : null);
 
     return Stack(
       fit: StackFit.expand,
@@ -634,7 +854,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                   style: TextStyle(
                     fontSize: 19.sp,
                     fontWeight: FontWeight.w800,
-                    color: Theme.of(context).colorScheme.onSurface,
+                    color: onSurface,
                   ),
                 ),
               ],
@@ -722,23 +942,27 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                           ),
                                           minLeadingWidth: 52.w,
                                           leading: _bankLeadingIcon(
-                                            name: suggestion.bank,
-                                            logoUrl: suggestion.logoUrl,
+                                            name: _suggestionBankLabel(suggestion),
+                                            logoUrl: suggestion.logoUrl ??
+                                                _matchBankByNip(suggestion.nipCode)
+                                                    ?.logoUrl,
                                           ),
                                           title: Text(
-                                            suggestion.bank,
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 19.sp,
-                                            ),
-                                          ),
-                                          subtitle: Text(
-                                            '${suggestion.accountName} • ${suggestion.accountNumber}',
+                                            suggestion.accountName,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
-                                              fontSize: 17.sp,
-                                              color: Theme.of(context).colorScheme.onSurface,
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 18.sp,
+                                            ),
+                                          ),
+                                          subtitle: Text(
+                                            '${_suggestionBankLabel(suggestion)} • ${suggestion.accountNumber}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 15.sp,
+                                              color: onSurface.withValues(alpha: 0.7),
                                             ),
                                           ),
                                           onTap: () => _onPickRecipient(suggestion),
@@ -757,20 +981,18 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                           ),
                                           title: Text(
                                             bank.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
                                               fontWeight: FontWeight.w700,
-                                              fontSize: 19.sp,
+                                              fontSize: 18.sp,
                                             ),
                                           ),
                                           subtitle: Text(
-                                            bank.uses > 0
-                                                ? 'You transfer here often'
-                                                : 'Tap to check this number',
+                                            _bankRowSubtitle(bank),
                                             style: TextStyle(
-                                              fontSize: 17.sp,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface,
+                                              fontSize: 15.sp,
+                                              color: onSurface.withValues(alpha: 0.7),
                                             ),
                                           ),
                                           onTap: () => _onPickBankRow(bank),
@@ -779,11 +1001,8 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                   Padding(
                                     padding: EdgeInsets.fromLTRB(10.w, 6.h, 10.w, 10.h),
                                     child: Material(
-                                      // Was hard-coded white — read as a
-                                      // pure-white tile on dark mode.
-                                      // Use the card surface so it sits
-                                      // on the suggest panel cleanly in
-                                      // both themes.
+                                      // Card surface so the tile sits on the
+                                      // suggestion panel cleanly in both themes.
                                       color: Theme.of(context).cardColor,
                                       borderRadius: BorderRadius.circular(10.r),
                                       child: InkWell(
@@ -799,7 +1018,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                               Icon(
                                                 Icons.account_balance,
                                                 size: 22.sp,
-                                                color: Theme.of(context).colorScheme.onSurface,
+                                                color: onSurface,
                                               ),
                                               hSpace(8),
                                               Text(
@@ -807,7 +1026,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.w700,
                                                   fontSize: 17.sp,
-                                                  color: Theme.of(context).colorScheme.onSurface,
+                                                  color: onSurface,
                                                 ),
                                               ),
                                             ],
@@ -829,7 +1048,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                           style: TextStyle(
                             fontSize: 17.sp,
                             fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                         vSpace(6),
@@ -888,9 +1107,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                           child: InputDecorator(
                             decoration: InputDecoration(
                               filled: true,
-                              fillColor: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest,
+                              fillColor: theme.colorScheme.surfaceContainerHighest,
                               contentPadding: EdgeInsets.symmetric(
                                 horizontal: 14.w,
                                 vertical: 14.h,
@@ -908,30 +1125,32 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                             ),
                             child: Row(
                               children: [
+                                if (bankLabel != null) ...[
+                                  BrandLogo(
+                                    name: bankLabel,
+                                    logoUrl: _selectedBank?.logoUrl,
+                                    size: 28,
+                                  ),
+                                  hSpace(10),
+                                ],
                                 Expanded(
                                   child: Text(
-                                    _selectedBank?.name ??
-                                        (_loadingBanks ? 'Loading banks…' : "Select Recipient's Bank"),
+                                    bankLabel ??
+                                        (_loadingBanks
+                                            ? 'Loading banks…'
+                                            : "Select Recipient's Bank"),
                                     style: TextStyle(
                                       fontSize: 19.sp,
-                                      color: _selectedBank == null
-                                          ? Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.5)
-                                          : Theme.of(context)
-                                              .colorScheme
-                                              .onSurface,
+                                      color: bankLabel == null
+                                          ? onSurface.withValues(alpha: 0.5)
+                                          : onSurface,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ),
                                 Icon(
                                   Icons.keyboard_arrow_down,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.6),
+                                  color: onSurface.withValues(alpha: 0.6),
                                 ),
                               ],
                             ),
@@ -955,11 +1174,13 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      _verifiedRecipient!.bank,
+                                      verifiedBank.isNotEmpty
+                                          ? verifiedBank
+                                          : (_selectedBank?.name ?? ''),
                                       style: TextStyle(
                                         fontSize: 17.sp,
                                         fontWeight: FontWeight.w700,
-                                        color: Theme.of(context).colorScheme.onSurface,
+                                        color: onSurface,
                                       ),
                                     ),
                                   ),
@@ -981,7 +1202,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                 style: TextStyle(
                                   fontSize: 19.sp,
                                   fontWeight: FontWeight.w800,
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color: onSurface,
                                 ),
                               ),
                             ],
@@ -1000,7 +1221,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                         'Amount',
                         style: TextStyle(
                           fontSize: 17.sp,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: onSurface.withValues(alpha: 0.6),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -1009,9 +1230,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                         controller: _amountCtrl,
                         keyboardType:
                             const TextInputType.numberWithOptions(decimal: true),
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
+                        style: TextStyle(color: onSurface),
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
                           AmountInputFormatter(decimals: decimalsFor(currencyCode)),
@@ -1019,15 +1238,10 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                         decoration: InputDecoration(
                           hintText: '0 ($currencyCode)',
                           hintStyle: TextStyle(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.5),
+                            color: onSurface.withValues(alpha: 0.5),
                           ),
                           filled: true,
-                          fillColor: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest,
+                          fillColor: theme.colorScheme.surfaceContainerHighest,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8.r),
                           ),
@@ -1043,9 +1257,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                         width: double.infinity,
                         padding: EdgeInsets.all(10.w),
                         decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest,
+                          color: theme.colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(10.r),
                         ),
                         child: Wrap(
@@ -1074,9 +1286,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
                                   style: TextStyle(
                                     fontSize: 17.sp,
                                     fontWeight: FontWeight.w600,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface,
+                                    color: onSurface,
                                   ),
                                 ),
                               ),
@@ -1117,4 +1327,3 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     );
   }
 }
-

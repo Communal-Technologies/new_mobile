@@ -8,31 +8,54 @@ class NumericKeypad extends StatelessWidget {
     super.key,
     required this.onNumberTap,
     required this.onBackspace,
+    this.keySize = 70,
+    this.rowSpacing = 12,
+    this.bottomLeftIcon,
+    this.onBottomLeft,
+    this.bottomLeftColor,
   });
 
   final ValueChanged<String> onNumberTap;
   final VoidCallback onBackspace;
 
+  /// Diameter of each round key, in design pixels.
+  final double keySize;
+  final double rowSpacing;
+
+  /// An optional key in the otherwise empty bottom-left cell — a biometric
+  /// shortcut on the payment PIN screens.
+  final IconData? bottomLeftIcon;
+  final VoidCallback? onBottomLeft;
+  final Color? bottomLeftColor;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Column(
       children: [
         // Row 1: 1, 2, 3
         _buildKeypadRow(['1', '2', '3'], theme),
-        vSpace(12),
+        vSpace(rowSpacing),
         // Row 2: 4, 5, 6
         _buildKeypadRow(['4', '5', '6'], theme),
-        vSpace(12),
+        vSpace(rowSpacing),
         // Row 3: 7, 8, 9
         _buildKeypadRow(['7', '8', '9'], theme),
-        vSpace(12),
-        // Row 4: empty, 0, Backspace
+        vSpace(rowSpacing),
+        // Row 4: empty (or the bottom-left key), 0, Backspace
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            SizedBox(width: 70.w, height: 70.w), // Empty space
+            if (bottomLeftIcon != null && onBottomLeft != null)
+              _buildKeypadButton(
+                icon: bottomLeftIcon,
+                iconColor: bottomLeftColor,
+                onTap: onBottomLeft!,
+                theme: theme,
+              )
+            else
+              SizedBox(width: keySize.w, height: keySize.w),
             _buildKeypadButton(
               label: '0',
               onTap: () => onNumberTap('0'),
@@ -65,6 +88,7 @@ class NumericKeypad extends StatelessWidget {
   Widget _buildKeypadButton({
     String? label,
     IconData? icon,
+    Color? iconColor,
     required VoidCallback onTap,
     required ThemeData theme,
   }) {
@@ -72,8 +96,8 @@ class NumericKeypad extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(50.r),
       child: Container(
-        width: 70.w,
-        height: 70.w,
+        width: keySize.w,
+        height: keySize.w,
         decoration: BoxDecoration(
           // Read the live theme so the keypad keys flip with the
           // dark/light toggle. `surfaceContainerHighest` gives the
@@ -87,8 +111,8 @@ class NumericKeypad extends StatelessWidget {
           child: icon != null
               ? Icon(
                   icon,
-                  size: 24.sp,
-                  color: theme.colorScheme.onSurface,
+                  size: iconColor != null ? 28.sp : 24.sp,
+                  color: iconColor ?? theme.colorScheme.onSurface,
                 )
               : Text(
                   label!,
@@ -103,4 +127,3 @@ class NumericKeypad extends StatelessWidget {
     );
   }
 }
-

@@ -3,6 +3,7 @@ import 'package:communal_mobile/core/utils/system_ui_style.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/community_membership_model.dart';
@@ -11,7 +12,9 @@ import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/account/widgets/community_action_item.dart';
 import 'package:communal_mobile/screens/account/widgets/community_info_card.dart';
 import 'package:communal_mobile/screens/account/widgets/community_toggle_setting_item.dart';
+import 'package:communal_mobile/screens/account/widgets/report_community_sheet.dart';
 import 'package:communal_mobile/screens/account/widgets/settings_info_box.dart';
+import 'package:communal_mobile/screens/community/data/sample_community_locations.dart';
 
 class CommunitySettingsScreen extends StatefulWidget {
   const CommunitySettingsScreen({super.key});
@@ -314,21 +317,6 @@ class _CommunitySettingsScreenState extends State<CommunitySettingsScreen> {
           _buildSectionHeader('Privacy & Security'),
           vSpace(12),
           CommunityToggleSettingItem(
-            icon: Icons.visibility,
-            title: 'Show Profile to Community',
-            description: 'Allow members to view your profile',
-            value: s.showProfileToCommunity,
-            onChanged: (value) =>
-                _patch({'show_profile_to_community': value}),
-          ),
-          CommunityToggleSettingItem(
-            icon: Icons.person_add,
-            title: 'Allow Group Additions',
-            description: 'Let others add you to new groups',
-            value: s.allowGroupAdditions,
-            onChanged: (value) => _patch({'allow_group_additions': value}),
-          ),
-          CommunityToggleSettingItem(
             icon: Icons.lock,
             title: 'Show Phone Number',
             description: 'Display your phone to community members',
@@ -384,10 +372,14 @@ class _CommunitySettingsScreenState extends State<CommunitySettingsScreen> {
           CommunityActionItem(
             icon: Icons.report_problem,
             title: 'Report Community',
-            description: 'Report fraud or violations',
+            description: 'Report fraud, extortion or other violations',
             iconColor: Colors.orange,
             textColor: Colors.orange,
-            onTap: () => _showReportDialog(context),
+            onTap: () => ReportCommunitySheet.show(
+              context,
+              cooperativeId: current.cooperativeId,
+              cooperativeName: current.cooperativeName,
+            ),
           ),
           CommunityActionItem(
             icon: Icons.exit_to_app,
@@ -395,7 +387,7 @@ class _CommunitySettingsScreenState extends State<CommunitySettingsScreen> {
             description: 'Leave this cooperative',
             iconColor: Colors.red,
             textColor: Colors.red,
-            onTap: () => _showExitDialog(context),
+            onTap: () => _exitCommunity(current),
           ),
           vSpace(24),
           const SettingsInfoBox(),
@@ -419,75 +411,25 @@ class _CommunitySettingsScreenState extends State<CommunitySettingsScreen> {
     );
   }
 
-  void _showReportDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Report Community',
-          style: TextStyle(fontSize: 19.sp, fontWeight: FontWeight.w700),
-        ),
-        content: Text(
-          'Are you sure you want to report this community?',
-          style: TextStyle(fontSize: 19.sp),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(fontSize: 19.sp)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Report submitted')),
-              );
-            },
-            child: Text(
-              'Report',
-              style: TextStyle(color: Colors.orange, fontSize: 19.sp),
-            ),
-          ),
-        ],
-      ),
+  /// Hands off to the same leave flow the community screen uses — closure
+  /// preview, acknowledgements, then the PIN — and reloads on return, since a
+  /// submitted request can change what this list should show.
+  Future<void> _exitCommunity(CommunityMembership membership) async {
+    final location = CommunityLocation(
+      id: membership.cooperativeId,
+      name: membership.cooperativeName,
+      category: 'Cooperative',
+      communityType: membership.roleLabel,
+      address: '',
+      members: membership.memberCount,
+      distanceKm: 0,
+      minContribution: 0,
+      rating: 0,
+      coordinate: null,
+      markerHue: BitmapDescriptor.hueViolet,
+      isMember: true,
     );
-  }
-
-  void _showExitDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Exit Community',
-          style: TextStyle(fontSize: 19.sp, fontWeight: FontWeight.w700),
-        ),
-        content: Text(
-          'Are you sure you want to leave this cooperative? This action cannot be undone.',
-          style: TextStyle(fontSize: 19.sp),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(fontSize: 19.sp)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Contact support to leave a cooperative. Self-service exit is not available yet.',
-                  ),
-                ),
-              );
-            },
-            child: Text(
-              'Exit',
-              style: TextStyle(color: Colors.red, fontSize: 19.sp),
-            ),
-          ),
-        ],
-      ),
-    );
+    await context.pushNamed('leave-cooperative', extra: location);
+    if (mounted) await _load();
   }
 }

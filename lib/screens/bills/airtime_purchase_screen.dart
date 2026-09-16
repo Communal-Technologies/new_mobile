@@ -2,6 +2,7 @@ import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/amount_input_formatter.dart';
 import 'package:communal_mobile/core/utils/money.dart';
+import 'package:communal_mobile/core/utils/ng_mobile_network.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/wallet_funding_required_banner.dart';
@@ -11,6 +12,7 @@ import 'package:communal_mobile/data/repositories/bills_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/bills/widgets/bill_brand_chip.dart';
 import 'package:communal_mobile/screens/bills/widgets/bill_inputs.dart';
+import 'package:communal_mobile/screens/bills/widgets/bill_phone_field.dart';
 import 'package:communal_mobile/screens/bills/widgets/bill_screen_hero.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:flutter/material.dart';
@@ -23,9 +25,10 @@ import 'package:go_router/go_router.dart';
 /// (cached server-side for an hour, so this is cheap). Amount is taken
 /// in major units (NGN) and converted to kobo for the API.
 ///
-/// On Continue we navigate to the shared bill-result screen with the
-/// purchase parameters as `extra`. The result screen owns the POST and
-/// the idempotency key.
+/// The network follows the phone number's prefix until the member picks one by
+/// hand. On Continue we navigate to the shared bill-confirm screen with the
+/// purchase parameters as `extra`; that screen owns the POST and the
+/// idempotency key.
 class AirtimePurchaseScreen extends StatefulWidget {
   const AirtimePurchaseScreen({super.key});
 
@@ -43,6 +46,9 @@ class _AirtimePurchaseScreenState extends State<AirtimePurchaseScreen> {
   bool _loadingProviders = true;
   String? _providersError;
   BillProvider? _selectedProvider;
+
+  NgMobileNetwork? _detectedNetwork;
+  bool _networkPickedByHand = false;
 
   static const _quickAmounts = [100, 200, 500, 1000, 2000];
 
@@ -72,6 +78,7 @@ class _AirtimePurchaseScreenState extends State<AirtimePurchaseScreen> {
         _selectedProvider = list.isNotEmpty ? list.first : null;
         _loadingProviders = false;
       });
+      _applyDetectedNetwork();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -81,15 +88,35 @@ class _AirtimePurchaseScreenState extends State<AirtimePurchaseScreen> {
     }
   }
 
+  void _onNetworkChanged(NgMobileNetwork? network) {
+    _detectedNetwork = network;
+    _networkPickedByHand = false;
+    _applyDetectedNetwork();
+  }
+
+  void _applyDetectedNetwork() {
+    final network = _detectedNetwork;
+    if (network == null || _networkPickedByHand) return;
+    for (final p in _providers) {
+      if (network.matchesProvider(p.name)) {
+        if (_selectedProvider?.id != p.id) {
+          setState(() => _selectedProvider = p);
+        }
+        return;
+      }
+    }
+  }
+
   void _onContinue() {
+    FocusManager.instance.primaryFocus?.unfocus();
     final provider = _selectedProvider;
     if (provider == null) {
       AppToast.error('Pick a network first.');
       return;
     }
-    final phone = _phoneController.text.trim();
-    if (phone.length < 10) {
-      AppToast.error('Enter a valid phone number.');
+    final phone = ngLocalPhone(_phoneController.text);
+    if (phone.length != 11) {
+      AppToast.error('Enter a valid 11-digit phone number.');
       return;
     }
     final money = Money.tryParseMajor(_amountController.text.trim(), 'NGN');
@@ -98,6 +125,7 @@ class _AirtimePurchaseScreenState extends State<AirtimePurchaseScreen> {
       return;
     }
 
+    BillPhoneField.remember(context, phone);
     context.pushNamed(
       'bill-confirm',
       extra: {
@@ -128,7 +156,7 @@ class _AirtimePurchaseScreenState extends State<AirtimePurchaseScreen> {
               const BillScreenHero(
                 icon: Iconsax.call_calling,
                 title: 'Top up airtime',
-                subtitle: 'Pick a network and an amount.',
+                subtitle: 'Enter a number and an amount.',
                 accent: Color(0xFFFF7B3D),
               ),
               vSpace(20),
@@ -139,19 +167,15 @@ class _AirtimePurchaseScreenState extends State<AirtimePurchaseScreen> {
                       'Fund your wallet to continue.',
                 ),
               ],
-              _buildProviderPicker(),
-              vSpace(20),
               _label('Phone number'),
               vSpace(8),
-              TextField(
+              BillPhoneField(
                 controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
-                  LengthLimitingTextInputFormatter(15),
-                ],
-                decoration: billInputDecoration(context, 'e.g. 08012345678'),
+                accent: const Color(0xFFFF7B3D),
+                onNetworkChanged: _onNetworkChanged,
               ),
+              vSpace(20),
+              _buildProviderPicker(),
               vSpace(20),
               _label('Amount (₦)'),
               vSpace(8),
@@ -172,8 +196,11 @@ class _AirtimePurchaseScreenState extends State<AirtimePurchaseScreen> {
                   for (final n in _quickAmounts)
                     ActionChip(
                       label: Text('₦${AmountInputFormatter.formatInt(n)}'),
-                      onPressed: () => _amountController.text =
-                          AmountInputFormatter.formatInt(n),
+                      onPressed: () {
+                        FocusManager.instance.primaryFocus?.unfocus();
+                        _amountController.text =
+                            AmountInputFormatter.formatInt(n);
+                      },
                     ),
                 ],
               ),
@@ -256,7 +283,13 @@ class _AirtimePurchaseScreenState extends State<AirtimePurchaseScreen> {
                 logoUrl: p.logoUrl,
                 selected: _selectedProvider?.id == p.id,
                 accent: const Color(0xFFFF7B3D),
-                onTap: () => setState(() => _selectedProvider = p),
+                onTap: () {
+                  FocusManager.instance.primaryFocus?.unfocus();
+                  setState(() {
+                    _selectedProvider = p;
+                    _networkPickedByHand = true;
+                  });
+                },
               ),
           ],
         ),

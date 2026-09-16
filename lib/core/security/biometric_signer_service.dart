@@ -136,24 +136,37 @@ class BiometricSignerService {
   Future<bool> enroll({String? deviceLabel, String? currentSecurityPin}) async {
     final id = await deviceId();
     final pem = await _keys.generateKeyPair(id);
-    final response = await _dio.post(
-      ApiEndpoints.biometricEnroll,
-      data: <String, dynamic>{
-        'device_id': id,
-        'public_key_pem': pem,
-        'key_alg': 'ES256',
-        if (deviceLabel != null) 'device_label': deviceLabel,
-        if (currentSecurityPin != null && currentSecurityPin.isNotEmpty)
-          'current_security_pin': currentSecurityPin,
-      },
-    );
-    final data = response.data;
-    if (data is! Map || data['status'] != true) {
-      throw Exception('Could not enroll device for biometric.');
+    try {
+      final response = await _dio.post(
+        ApiEndpoints.biometricEnroll,
+        data: <String, dynamic>{
+          'device_id': id,
+          'public_key_pem': pem,
+          'key_alg': 'ES256',
+          if (deviceLabel != null) 'device_label': deviceLabel,
+          if (currentSecurityPin != null && currentSecurityPin.isNotEmpty)
+            'current_security_pin': currentSecurityPin,
+        },
+      );
+      final data = response.data;
+      if (data is! Map || data['status'] != true) {
+        throw Exception('Could not enroll device for biometric.');
+      }
+      final verified = data['data'] is Map && data['data']['verified'] == true;
+      AppLogger.debug(_tag, 'enroll OK device_id=$id verified=$verified');
+      return verified;
+    } on DioException catch (e) {
+      // The server's own message — "Your current security PIN is incorrect.",
+      // "PIN locked. Try again in 42 minutes." — is what the member needs. The
+      // exception's toString is a paragraph about status codes.
+      final body = e.response?.data;
+      final message = body is Map ? body['message']?.toString().trim() : null;
+      throw Exception(
+        message != null && message.isNotEmpty
+            ? message
+            : 'Could not enable biometrics. Check your connection and try again.',
+      );
     }
-    final verified = data['data'] is Map && data['data']['verified'] == true;
-    AppLogger.debug(_tag, 'enroll OK device_id=$id verified=$verified');
-    return verified;
   }
 
   /// Revokes the local key and tells the backend to mark its public-key
@@ -221,14 +234,17 @@ class BiometricSignerService {
     );
   }
 
-  /// Used by the bill-payment confirm screen (airtime + data, plus any
-  /// future Anchor bill categories sharing the same `/v1/bills/*` route
-  /// family). Backend middleware: `biometric-sig:bill-purchase`.
+  /// Used by the bill-payment confirm screen for all four bill kinds.
+  ///
+  /// billsvc checks a PIN in the purchase body and cannot verify a signature, so
+  /// signing alone left a biometric purchase with no PIN and a refusal. Spending
+  /// the signature at authsvc leaves the `bill-purchase` marker billsvc accepts
+  /// in the PIN's place.
   Future<BiometricSignedHeaders> signBillPurchaseIntent({
     String promptTitle = 'Authorize bill payment',
     String promptSubtitle = 'Use biometrics to confirm this purchase',
   }) async {
-    return _signIntent(
+    return _signAndAuthorize(
       'bill-purchase',
       promptTitle: promptTitle,
       promptSubtitle: promptSubtitle,

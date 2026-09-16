@@ -1,9 +1,7 @@
-import 'package:communal_mobile/cubits/connectivity/connectivity_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart' as shared_prefs;
 
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
@@ -11,8 +9,8 @@ import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/idempotency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
-import 'package:communal_mobile/core/utils/tap_debouncer.dart';
-import 'package:communal_mobile/data/local/biometric_prefs.dart';
+import 'package:communal_mobile/core/widgets/payment_authorization.dart';
+import 'package:communal_mobile/core/widgets/pin_pad_body.dart';
 import 'package:communal_mobile/data/repositories/coop_payout_route.dart';
 import 'package:communal_mobile/data/models/loan_application.dart';
 import 'package:communal_mobile/data/repositories/loan_repository.dart';
@@ -23,15 +21,11 @@ import 'package:communal_mobile/screens/loans/data/loan_nip_settlement.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 
-/// Three states the confirm screen can be in. The biometric-sig
-/// middleware on /pay-loan accepts a biometric signature OR a valid
-/// transaction PIN supplied via `X-Security-Pin`. So when the device
-/// hasn't enrolled biometric we drop to a PIN prompt instead of
-/// forcing an enrollment detour.
-enum _AuthMode { checking, biometric, pin, notReady }
-
 const Color _kLoanOrange = Color(0xFFE67E22);
 
+/// The biometric-sig middleware on /pay-loan accepts a biometric signature OR
+/// a valid transaction PIN supplied via `X-Security-Pin`, so the screen offers
+/// both as described on [PaymentAuthorization].
 class LoanConfirmPaymentScreen extends StatefulWidget {
   const LoanConfirmPaymentScreen({
     super.key,
@@ -72,283 +66,123 @@ class LoanConfirmPaymentScreen extends StatefulWidget {
       _LoanConfirmPaymentScreenState();
 }
 
-class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
+class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen>
+    with PaymentAuthorization<LoanConfirmPaymentScreen> {
   final LoanRepository _loanRepo = LoanRepository(getIt());
   final MemberObligationsRepository _obligationsRepo =
       MemberObligationsRepository(getIt());
   final TransferRepository _transferRepo = getIt<TransferRepository>();
-  final BiometricSignerService _biometricSigner =
-      getIt<BiometricSignerService>();
-  final TapDebouncer _confirmDebouncer = TapDebouncer();
-  bool _submitting = false;
-
-  _AuthMode _authMode = _AuthMode.checking;
-  String? _notReadyReason;
-
-  final TextEditingController _pinController = TextEditingController();
-
-  @override
-  void dispose() {
-    _pinController.dispose();
-    super.dispose();
-  }
 
   late final String _idempotencyKey = newIdempotencyKey();
 
+  bool get _fundedFromObligation => widget.method == 'Obligation';
+
   @override
-  void initState() {
-    super.initState();
-    _checkAuthReadiness();
+  String get pinIntent => 'pay-obligation';
+
+  @override
+  Future<BiometricSignedHeaders> signBiometricIntent() {
+    return _fundedFromObligation
+        ? biometricSigner.signObligationIntent(
+            promptTitle: 'Authorize repayment',
+            promptSubtitle:
+                'Use biometrics to confirm repaying ${widget.loan.displayLabel}',
+          )
+        : biometricSigner.signTransferIntent(
+            promptTitle: 'Authorize repayment',
+            promptSubtitle: 'Use biometrics to confirm this loan repayment',
+          );
   }
 
-  Future<void> _checkAuthReadiness() async {
-    try {
-      final shared = await shared_prefs.SharedPreferences.getInstance();
-      final prefs = BiometricPrefs(shared);
-      if (!prefs.transactionsEnabled) {
-        if (!mounted) return;
-        setState(() => _authMode = _AuthMode.pin);
-        return;
-      }
-      // Enrolled is not enough — a sign-in-only enrollment, or an account with no
-      // transaction PIN, cannot mint the marker loans-svc spends, so those members
-      // get the PIN prompt they would have been bounced to anyway.
-      final canAuthorize = await _biometricSigner.canAuthorizePayments();
-      if (!mounted) return;
-      if (canAuthorize) {
-        setState(() => _authMode = _AuthMode.biometric);
-      } else {
-        setState(() => _authMode = _AuthMode.pin);
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _authMode = _AuthMode.pin;
-        _notReadyReason =
-            'Could not verify biometric setup: ${e.toString().replaceFirst('Exception: ', '')}. Use your PIN instead.';
-      });
+  @override
+  String? paymentBlockedReason() {
+    if (context.read<AuthBloc>().state is! AuthAuthenticated) {
+      return 'Please sign in again and retry.';
+    }
+    return null;
+  }
+
+  @override
+  Future<void> submitAuthorized({
+    String? pin,
+    Map<String, String>? biometricHeaders,
+  }) async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) {
+      throw Exception('Please sign in again and retry.');
+    }
+    final authHeaders = biometricHeaders ?? {'X-Security-Pin': pin!};
+    if (_fundedFromObligation) {
+      await _confirmObligationFundedRepayment(authState, authHeaders);
+    } else {
+      await _confirmNipFundedRepayment(authState, authHeaders);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isOnline = context.watch<ConnectivityCubit>().isConnected;
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Theme.of(context).cardColor,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        title: Text(
-          'Confirm Repayment',
-          style: TextStyle(
-            fontSize: 19.sp,
-            fontWeight: FontWeight.w700,
-            color: Theme.of(context).colorScheme.onSurface,
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.6);
+    return withPaymentLoader(
+      Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: theme.cardColor,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.of(context).maybePop(),
           ),
+          title: Text(
+            'Confirm Repayment',
+            style: TextStyle(
+              fontSize: 19.sp,
+              fontWeight: FontWeight.w700,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          centerTitle: true,
         ),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 24.h),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(
-              _authMode == _AuthMode.notReady
-                  ? Icons.fingerprint
-                  : Icons.lock_outline,
-              color: _kLoanOrange,
-              size: 44.sp,
-            ),
-            vSpace(16),
-            Text(
-              _headerForMode(),
-              style: TextStyle(
-                fontSize: 22.sp,
-                fontWeight: FontWeight.w700,
-                color: Theme.of(context).colorScheme.onSurface,
+        body: SafeArea(
+          child: PinPadBody(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+            header: [
+              Text(
+                offerBiometric
+                    ? 'Confirm Repayment'
+                    : 'Enter Transaction PIN',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.w700),
               ),
-              textAlign: TextAlign.center,
-            ),
-            vSpace(6),
-            Text(
-              _subheaderForMode(),
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 17.sp, color: Colors.grey.shade600),
-            ),
-            vSpace(24),
-            _buildAmountBanner(),
-            vSpace(24),
-            _buildSecureInfo(),
-            vSpace(32),
-            _buildPrimaryAction(isOnline),
-          ],
+              vSpace(4),
+              Text(
+                offerBiometric
+                    ? 'Use biometrics, or enter your 4-digit PIN.'
+                    : 'Enter your 4-digit PIN to authorise this repayment.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15.sp,
+                  color: muted,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              vSpace(12),
+              _buildAmountBanner(),
+              vSpace(20),
+            ],
+            pad: buildPaymentPinPad(),
+            footer: [
+              vSpace(12),
+              Text(
+                'Your transaction is encrypted and secure. Never share your PIN with anyone.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14.sp, color: muted),
+              ),
+            ],
+          ),
         ),
       ),
     );
-  }
-
-  String _headerForMode() {
-    switch (_authMode) {
-      case _AuthMode.checking:
-        return 'Preparing repayment…';
-      case _AuthMode.biometric:
-        return 'Authorize with Biometrics';
-      case _AuthMode.pin:
-        return 'Enter your transaction PIN';
-      case _AuthMode.notReady:
-        return 'Authorization Unavailable';
-    }
-  }
-
-  String _subheaderForMode() {
-    switch (_authMode) {
-      case _AuthMode.checking:
-        return 'One moment.';
-      case _AuthMode.biometric:
-        return 'Tap below and scan your fingerprint or face to confirm.';
-      case _AuthMode.pin:
-        return _notReadyReason ??
-            'Biometric isn\'t set up on this device. Enter your 4-digit PIN to confirm.';
-      case _AuthMode.notReady:
-        return _notReadyReason ??
-            'We could not verify your identity. Try again later.';
-    }
-  }
-
-  Widget _buildPrimaryAction(bool isOnline) {
-    switch (_authMode) {
-      case _AuthMode.checking:
-        return SizedBox(
-          height: 52.h,
-          width: 52.h,
-          child: const CircularProgressIndicator(strokeWidth: 2),
-        );
-      case _AuthMode.biometric:
-        return SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: (isOnline && !_submitting)
-                ? () => _confirmDebouncer.run(_onConfirm)
-                : null,
-            icon: const Icon(Icons.fingerprint),
-            label: Text(
-              _submitting ? 'Processing…' : 'Authorize Repayment',
-              style: TextStyle(fontSize: 19.sp, fontWeight: FontWeight.w600),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _kLoanOrange,
-              foregroundColor: Colors.white,
-              minimumSize: Size(double.infinity, 52.h),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18.r),
-              ),
-            ),
-          ),
-        );
-      case _AuthMode.pin:
-        return Column(
-          children: [
-            SizedBox(
-              width: 220.w,
-              child: TextField(
-                controller: _pinController,
-                keyboardType: TextInputType.number,
-                obscureText: true,
-                maxLength: 6,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 24.sp,
-                  letterSpacing: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-                decoration: InputDecoration(
-                  counterText: '',
-                  hintText: '••••',
-                  hintStyle: TextStyle(
-                    fontSize: 24.sp,
-                    letterSpacing: 12,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.4),
-                  ),
-                  filled: true,
-                  fillColor: Theme.of(
-                    context,
-                  ).colorScheme.surfaceContainerHighest,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14.r),
-                    borderSide: BorderSide(
-                      color: Theme.of(context).dividerColor,
-                    ),
-                  ),
-                  contentPadding: EdgeInsets.symmetric(vertical: 16.h),
-                ),
-              ),
-            ),
-            vSpace(16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: (isOnline && !_submitting)
-                    ? () => _confirmDebouncer.run(_onConfirm)
-                    : null,
-                icon: const Icon(Icons.lock_outline),
-                label: Text(
-                  _submitting ? 'Processing…' : 'Authorize Repayment',
-                  style: TextStyle(
-                    fontSize: 19.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _kLoanOrange,
-                  foregroundColor: Colors.white,
-                  minimumSize: Size(double.infinity, 52.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18.r),
-                  ),
-                ),
-              ),
-            ),
-            vSpace(8),
-            TextButton(
-              onPressed: () => context.pushNamed('biometric-enrollment'),
-              child: Text(
-                'Set up biometric instead',
-                style: TextStyle(fontSize: 16.sp, color: _kLoanOrange),
-              ),
-            ),
-          ],
-        );
-      case _AuthMode.notReady:
-        return SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            onPressed: _checkAuthReadiness,
-            style: OutlinedButton.styleFrom(
-              minimumSize: Size(double.infinity, 52.h),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18.r),
-              ),
-              side: const BorderSide(color: _kLoanOrange),
-            ),
-            child: Text(
-              'Retry',
-              style: TextStyle(
-                fontSize: 19.sp,
-                fontWeight: FontWeight.w600,
-                color: _kLoanOrange,
-              ),
-            ),
-          ),
-        );
-    }
   }
 
   Widget _buildAmountBanner() {
@@ -356,169 +190,55 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
     final isDark = theme.brightness == Brightness.dark;
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 18.h),
+      padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 14.h),
       decoration: BoxDecoration(
         color: isDark
             ? _kLoanOrange.withValues(alpha: 0.16)
             : const Color(0xFFFFF4E9),
-        borderRadius: BorderRadius.circular(18.r),
+        borderRadius: BorderRadius.circular(16.r),
       ),
       child: Column(
         children: [
           Text(
             "You're repaying",
             style: TextStyle(
-              fontSize: 17.sp,
+              fontSize: 15.sp,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
-          vSpace(4),
+          vSpace(2),
           Text(
             Money(widget.amountMinor, widget.loan.currency).format(),
             style: TextStyle(
-              fontSize: 30.sp,
+              fontSize: 24.sp,
               fontWeight: FontWeight.w800,
               color: _kLoanOrange,
             ),
           ),
-          vSpace(4),
+          vSpace(2),
           Text(
-            'to ${widget.loan.displayLabel}',
+            widget.loan.referenceId.isNotEmpty
+                ? '${widget.loan.displayLabel} · Ref ${widget.loan.referenceId}'
+                : widget.loan.displayLabel,
+            textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 17.sp,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-          if (widget.loan.referenceId.isNotEmpty)
-            Text(
-              'Ref ${widget.loan.referenceId}',
-              style: TextStyle(
-                fontSize: 15.sp,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSecureInfo() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    const accent = Color(0xFF4A90E2);
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: isDark
-            ? accent.withValues(alpha: 0.16)
-            : const Color(0xFFE6F1FF),
-        borderRadius: BorderRadius.circular(16.r),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline, color: accent, size: 20.sp),
-          hSpace(10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Secure Repayment',
-                  style: TextStyle(
-                    fontSize: 17.sp,
-                    fontWeight: FontWeight.w700,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                vSpace(4),
-                Text(
-                  'Your transaction is encrypted and secure. Never share your PIN with anyone.',
-                  style: TextStyle(
-                    fontSize: 17.sp,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
+              fontSize: 15.sp,
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
             ),
           ),
         ],
       ),
     );
-  }
-
-  Future<Map<String, String>> _resolveAuthHeaders({
-    required bool transfer,
-    required String promptSubtitle,
-  }) async {
-    if (_authMode == _AuthMode.pin) {
-      final pin = _pinController.text.trim();
-      if (pin.length < 4 || int.tryParse(pin) == null) {
-        throw Exception('Enter your 4-digit transaction PIN to continue.');
-      }
-      // transactions-svc's /transfer/initiate checks a Redis flag the
-      // monolith's verify-security-pin sets on success rather than
-      // validating the PIN inline (it can't — security_pin lives on
-      // tbl_users, owned exclusively by the monolith), so that call has
-      // to happen before initiateTransfer below.
-      await _transferRepo.verifySecurityPin(pin, intent: 'pay-obligation');
-      return {'X-Security-Pin': pin};
-    }
-    try {
-      final result = transfer
-          ? await _biometricSigner.signTransferIntent(
-              promptTitle: 'Authorize repayment',
-              promptSubtitle: promptSubtitle,
-            )
-          : await _biometricSigner.signObligationIntent(
-              promptTitle: 'Authorize repayment',
-              promptSubtitle: promptSubtitle,
-            );
-      return result.toHeaders();
-    } catch (e) {
-      // Biometrics is the shortcut and the PIN is the fallback, so a cancelled
-      // scan or a refused signature has to land the member on the keypad rather
-      // than on a retry of the thing that just failed.
-      if (mounted) setState(() => _authMode = _AuthMode.pin);
-      throw Exception(
-        '${e.toString().replaceFirst('Exception: ', '')} '
-        'Enter your transaction PIN to continue.',
-      );
-    }
-  }
-
-  Future<void> _onConfirm() async {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is! AuthAuthenticated) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please sign in again and retry.')),
-      );
-      return;
-    }
-
-    setState(() => _submitting = true);
-    try {
-      if (widget.method == 'Obligation') {
-        await _confirmObligationFundedRepayment(authState);
-      } else {
-        await _confirmNipFundedRepayment(authState);
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-      );
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
   }
 
   /// Wallet → cooperative-bank NIP transfer, then record the loan
   /// repayment via the no-biometric record route. Same shape as the
   /// obligation flow.
-  Future<void> _confirmNipFundedRepayment(AuthAuthenticated authState) async {
+  Future<void> _confirmNipFundedRepayment(
+    AuthAuthenticated authState,
+    Map<String, String> authHeaders,
+  ) async {
     CooperativeCashBankAccount? cash = widget.cashAccount;
     if (cash == null || cash.id.isEmpty) {
       final accounts = await _obligationsRepo
@@ -558,11 +278,6 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
         activeCurrency.display.forCurrency(widget.loan.currency).symbol;
     final currencyCode = resolveCurrencyCode(authState.user);
     final narration = 'Loan re-payment: ${widget.loan.displayLabel}';
-
-    final authHeaders = await _resolveAuthHeaders(
-      transfer: true,
-      promptSubtitle: 'Use biometrics to confirm this loan repayment',
-    );
 
     final result = await _transferRepo.initiateTransfer(
       type: route.type,
@@ -614,6 +329,7 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
   /// rejected server-side too.
   Future<void> _confirmObligationFundedRepayment(
     AuthAuthenticated authState,
+    Map<String, String> authHeaders,
   ) async {
     final sourceCode = widget.sourceObligationCode?.trim() ?? '';
     if (sourceCode.isEmpty) {
@@ -621,12 +337,6 @@ class _LoanConfirmPaymentScreenState extends State<LoanConfirmPaymentScreen> {
         'Missing source obligation. Please go back and pick one.',
       );
     }
-
-    final authHeaders = await _resolveAuthHeaders(
-      transfer: false,
-      promptSubtitle:
-          'Use biometrics to confirm repaying ${widget.loan.displayLabel}',
-    );
 
     await _loanRepo.payLoanFromObligation(
       user: authState.user,

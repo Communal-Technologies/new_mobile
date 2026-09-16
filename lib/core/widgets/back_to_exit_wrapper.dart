@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 
 /// Module-level timestamp shared across every root tab so the
 /// "press back again to exit" gesture survives switching tabs in
@@ -9,48 +10,41 @@ DateTime? _lastRootBackPress;
 
 const Duration _exitWindow = Duration(seconds: 2);
 
-/// Wrap the body of a root-tab screen (Home, Loans, Obligations,
-/// Community, Account Settings, Transfer, Transaction history) with
-/// this widget so the Android hardware back button shows a "Press
-/// back again to exit" snackbar instead of immediately closing the
-/// app.
+/// Back handling for the screens the bottom navigation can land on.
 ///
-/// First press inside the [_exitWindow]:
-///   - Captures the timestamp.
-///   - Surfaces a floating snackbar near the footer.
-///
-/// Second press inside the same window:
-///   - Calls [SystemNavigator.pop] so Android moves the task to the
-///     background (Android's idiomatic "exit" — full kill is reserved
-///     for the OS).
-///
-/// Detail screens push deeper than a root tab and SHOULD pop on back —
-/// that's the default behaviour and we leave them untouched. Only
-/// wrap the screens that sit at the bottom of the navigation stack
-/// (i.e. the BottomNavBar destinations).
+/// Back returns to the screen the member came from whenever there is one.
+/// Only when the screen is the bottom of the stack does it fall back to
+/// [fallbackRoute] (for screens that are not a tab, such as Transfer) or, on a
+/// real tab, ask for a second press within [_exitWindow] before
+/// [SystemNavigator.pop] moves the app to the background.
 class BackToExitWrapper extends StatelessWidget {
-  const BackToExitWrapper({super.key, required this.child});
+  const BackToExitWrapper({super.key, required this.child, this.fallbackRoute});
 
   final Widget child;
+  final String? fallbackRoute;
 
   @override
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      // onPopInvokedWithResult lands on Flutter 3.22+; older versions
-      // can swap to `onPopInvoked` with the same body.
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
+        final router = GoRouter.of(context);
+        if (router.canPop()) {
+          router.pop();
+          return;
+        }
+        if (fallbackRoute != null) {
+          router.goNamed(fallbackRoute!);
+          return;
+        }
         final now = DateTime.now();
         final last = _lastRootBackPress;
         if (last != null && now.difference(last) < _exitWindow) {
-          // Second press inside the window — exit.
           SystemNavigator.pop();
           return;
         }
         _lastRootBackPress = now;
-        // Floating snackbar near the bottom edge so it sits above the
-        // BottomNavBar and reads as the system asking for confirmation.
         final messenger = ScaffoldMessenger.of(context);
         messenger.hideCurrentSnackBar();
         messenger.showSnackBar(

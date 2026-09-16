@@ -12,6 +12,7 @@ import 'package:communal_mobile/core/widgets/otp_input_field.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 import 'package:communal_mobile/cubits/splash/splash_cubit.dart';
+import 'package:communal_mobile/data/models/otp_resend.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:dio/dio.dart';
@@ -21,6 +22,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 /// Completes login when another device was still signed in — OTP was sent during `/login`.
+///
+/// Resend stays locked while the code is valid and opens the moment it expires;
+/// a resend starts a fresh window. Both that countdown and the moment the sign-in
+/// step closes come from authsvc, which enforces the same rules.
 class SessionTakeoverScreen extends StatefulWidget {
   const SessionTakeoverScreen({super.key});
 
@@ -31,19 +36,25 @@ class SessionTakeoverScreen extends StatefulWidget {
 class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
   // Audit M25: single source of truth in [AppConstants.otpLength].
   static int get _otpLength => AppConstants.otpLength;
-  static int get _resendWindow => AppConstants.otpResendWindowSeconds;
+
+  /// The code window, for a backend that does not report one.
+  static int get _fallbackCodeSeconds => AppConstants.otpResendWindowSeconds;
 
   final OtpSessionStorage _sessionStorage = OtpSessionStorage();
 
   int _otpFieldKey = 0;
   String _code = '';
-  int _resendTimer = _resendWindow;
+  int _resendTimer = _fallbackCodeSeconds;
+  DateTime? _stepExpiresAt;
   Timer? _timer;
   bool _isVerifying = false;
   bool _isResending = false;
+  bool _expiredHandled = false;
   String? _takeoverChallengeId;
   String _maskedDestination = '';
   String _otpChannel = 'phone';
+  int? _serverResendIn;
+  int? _serverStepExpiresIn;
 
   void _restartSplashColdStart() {
     if (!mounted) return;
@@ -54,7 +65,7 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
   @override
   void initState() {
     super.initState();
-    _capturePendingState();
+    _capturePendingState(includeCountdowns: true);
     _restoreOrStartTimer();
   }
 
@@ -64,30 +75,43 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
     super.dispose();
   }
 
-  /// Resumes the countdown from a persisted session for this exact challenge
-  /// id if one exists (app was closed and reopened mid-takeover), otherwise
-  /// starts a fresh window. Persisting + resuming here means a user can't
-  /// force a resend by killing the app: the countdown is anchored to the
-  /// moment the OTP was actually sent, not to when the screen mounted.
+  /// Seeds the countdowns. The server's figures win: they are what it enforces,
+  /// and a login that found this challenge still open reports what is actually
+  /// left of it. A persisted session for the same challenge is next, then the
+  /// fallback window.
   Future<void> _restoreOrStartTimer() async {
     final challengeId = _takeoverChallengeId;
-    final session = await _sessionStorage.load(OtpFlow.sessionTakeover);
-    final matches = session != null &&
-        challengeId != null &&
-        session.challengeId == challengeId;
+    if (challengeId == null) return;
 
-    if (matches) {
-      final remaining = session.remainingSeconds;
-      if (!mounted) return;
-      setState(() => _resendTimer = remaining);
-      if (remaining > 0) _startTimer();
+    if (_serverResendIn != null) {
+      _applyCountdowns(
+        resendIn: _serverResendIn!,
+        stepExpiresIn: _serverStepExpiresIn,
+      );
+      await _persistSession();
       return;
     }
 
-    _startTimer();
-    // Persist the freshly-issued challenge so a cold start before the window
-    // elapses resumes mid-countdown rather than restarting the full window.
+    final session = await _sessionStorage.load(OtpFlow.sessionTakeover);
+    if (!mounted) return;
+    if (session != null && session.challengeId == challengeId) {
+      _applyCountdowns(resendIn: session.remainingSeconds);
+      return;
+    }
+
+    _applyCountdowns(resendIn: _fallbackCodeSeconds);
     await _persistSession();
+  }
+
+  void _applyCountdowns({required int resendIn, int? stepExpiresIn}) {
+    if (!mounted) return;
+    setState(() {
+      _resendTimer = resendIn < 0 ? 0 : resendIn;
+      if (stepExpiresIn != null) {
+        _stepExpiresAt = DateTime.now().add(Duration(seconds: stepExpiresIn));
+      }
+    });
+    _startTimer();
   }
 
   Future<void> _persistSession() async {
@@ -101,21 +125,39 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
       methodKey: _otpChannel,
       userId: null,
       sentAtMs: DateTime.now().millisecondsSinceEpoch,
-      resendWindowSeconds: _resendWindow,
+      resendWindowSeconds: _resendTimer,
     ));
   }
 
   void _startTimer() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      final stepExpiresAt = _stepExpiresAt;
+      if (stepExpiresAt != null && !DateTime.now().isBefore(stepExpiresAt)) {
+        timer.cancel();
+        _onChallengeExpired();
+        return;
+      }
       if (_resendTimer > 0) {
-        if (mounted) {
-          setState(() => _resendTimer--);
-        }
-      } else {
+        setState(() => _resendTimer--);
+      } else if (stepExpiresAt == null) {
         timer.cancel();
       }
     });
+  }
+
+  /// The sign-in step is gone on the server, so no code or resend can succeed.
+  void _onChallengeExpired({String? message}) {
+    if (_expiredHandled || !mounted) return;
+    _expiredHandled = true;
+    _timer?.cancel();
+    unawaited(_sessionStorage.clear(OtpFlow.sessionTakeover));
+    AppToast.error(message ?? 'This sign-in expired. Please log in again.');
+    _goToLogin();
   }
 
   AuthSessionTakeoverPending? _pending(BuildContext context) {
@@ -123,12 +165,16 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
     return s is AuthSessionTakeoverPending ? s : null;
   }
 
-  void _capturePendingState() {
+  void _capturePendingState({bool includeCountdowns = false}) {
     final pending = _pending(context);
     if (pending == null) return;
     _takeoverChallengeId = pending.takeoverChallengeId;
     _maskedDestination = pending.maskedDestination;
     _otpChannel = pending.otpChannel;
+    if (includeCountdowns) {
+      _serverResendIn = pending.resendAvailableIn ?? pending.otpExpiresIn;
+      _serverStepExpiresIn = pending.challengeExpiresIn;
+    }
   }
 
   void _goToLogin() {
@@ -159,18 +205,30 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
     if (_resendTimer > 0 || _isResending || challengeId == null) return;
     setState(() => _isResending = true);
     try {
-      await getIt<AuthRepository>().resendSessionTakeoverOtp(challengeId);
+      final result =
+          await getIt<AuthRepository>().resendSessionTakeoverOtp(challengeId);
       if (!mounted) return;
       setState(() {
-        _resendTimer = _resendWindow;
         _otpFieldKey++;
         _code = '';
       });
-      // Re-anchor the persisted session to "now" so the next cold start
-      // resumes from this new send, not the original one.
+      _applyCountdowns(
+        resendIn: result.resendAvailableIn ??
+            result.otpExpiresIn ??
+            _fallbackCodeSeconds,
+        stepExpiresIn: result.challengeExpiresIn,
+      );
       await _persistSession();
-      _startTimer();
       AppToast.success('A new code was sent.');
+    } on OtpResendException catch (e) {
+      if (!mounted) return;
+      if (e.challengeExpired) {
+        _onChallengeExpired(message: e.message);
+        return;
+      }
+      final wait = e.retryAfterSeconds;
+      if (wait != null && wait > 0) _applyCountdowns(resendIn: wait);
+      AppToast.error(e.message);
     } catch (e) {
       if (!mounted) return;
       if (e is DioException && isDioTransportFailure(e)) {
@@ -185,6 +243,9 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
       if (mounted) setState(() => _isResending = false);
     }
   }
+
+  String _clock(int seconds) =>
+      '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context) {
@@ -206,12 +267,17 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
           _takeoverChallengeId = state.takeoverChallengeId;
           _maskedDestination = state.maskedDestination;
           _otpChannel = state.otpChannel;
-          // A new challenge id means the backend issued a fresh OTP —
-          // restart the window and persist.
+          // A new challenge id means the backend issued a fresh OTP — take its
+          // countdowns and persist.
           if (changed) {
-            setState(() => _resendTimer = _resendWindow);
+            _expiredHandled = false;
+            _applyCountdowns(
+              resendIn: state.resendAvailableIn ??
+                  state.otpExpiresIn ??
+                  _fallbackCodeSeconds,
+              stepExpiresIn: state.challengeExpiresIn,
+            );
             _persistSession();
-            _startTimer();
           }
           return;
         }
@@ -239,13 +305,20 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
             _otpFieldKey++;
             _code = '';
           });
-          if (!state.error.toLowerCase().contains('cancelled')) {
+          final error = state.error.toLowerCase();
+          if (error.contains('sign-in step expired') ||
+              error.contains('log in again')) {
+            _onChallengeExpired(message: state.error);
+            return;
+          }
+          if (!error.contains('cancelled')) {
             AppToast.error(state.error);
           }
         }
       },
       builder: (context, state) {
         final verifying = _isVerifying;
+        final codeExpired = _resendTimer == 0;
         return Scaffold(
           backgroundColor: Theme.of(context).cardColor,
           appBar: AppBar(
@@ -293,6 +366,18 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
                       height: 1.35,
                     ),
                   ),
+                  if (codeExpired && !_isResending) ...[
+                    vSpace(8),
+                    Text(
+                      'This code has expired. Request a new one.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.red.shade400,
+                      ),
+                    ),
+                  ],
                   vSpace(32),
                   OtpInputField(
                     key: ValueKey(_otpFieldKey),
@@ -309,12 +394,12 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
                   ),
                   vSpace(20),
                   TextButton(
-                    onPressed: (_resendTimer > 0 || _isResending || verifying)
+                    onPressed: (!codeExpired || _isResending || verifying)
                         ? null
                         : _resend,
                     child: Text(
-                      _resendTimer > 0
-                          ? 'Resend code in ${_resendTimer ~/ 60}:${(_resendTimer % 60).toString().padLeft(2, '0')}'
+                      !codeExpired
+                          ? 'Resend code in ${_clock(_resendTimer)}'
                           : (_isResending ? 'Sending…' : 'Resend code'),
                       style: TextStyle(
                         fontSize: 19.sp,

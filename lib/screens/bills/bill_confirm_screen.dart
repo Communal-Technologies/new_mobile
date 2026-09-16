@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
+import 'package:communal_mobile/core/security/biometric_key_service.dart';
 import 'package:communal_mobile/core/security/biometric_signer_service.dart';
 import 'package:communal_mobile/core/utils/biometric_service.dart';
 import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
@@ -11,6 +12,8 @@ import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/utils/tap_debouncer.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/core/widgets/pin_pad_body.dart';
+import 'package:communal_mobile/core/widgets/transaction_pin_pad.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/local/biometric_prefs.dart';
 import 'package:communal_mobile/data/models/bills/bill_transaction.dart';
@@ -27,11 +30,11 @@ import 'package:shared_preferences/shared_preferences.dart' as shared_prefs;
 /// Single authorization screen used by all four bill kinds (airtime,
 /// data, electricity, television).
 ///
-/// Auth ordering: **PIN is always the default**. Biometric is shown as
-/// an optional secondary button when (a) the user has enabled biometric
-/// for transactions in their preferences, AND (b) the device has an
-/// enrolled biometric. Either path produces the headers the backend's
-/// `biometric-sig:bill-purchase` middleware accepts.
+/// Auth ordering: **biometrics first** when this device may authorise payments —
+/// the prompt opens with the screen — and the PIN pad beneath it as the fallback.
+/// The pad is the only path when biometrics is not set up, and becomes the only
+/// path once biometrics has failed [_maxBiometricFailures] times. The pad is drawn
+/// in-app, so no system keyboard ever covers the screen.
 ///
 /// Args (via go_router `extra`):
 ///   kind:           'airtime' | 'data' | 'electricity' | 'television'
@@ -58,6 +61,9 @@ enum _Phase { idle, submitting, pending, completed, failed }
 
 class _BillConfirmScreenState extends State<BillConfirmScreen>
     with SingleTickerProviderStateMixin {
+  static const int _pinLength = 4;
+  static const int _maxBiometricFailures = 3;
+
   late final BillsRepository _repo = BillsRepository(getIt<DioClient>());
   final BiometricSignerService _biometricSigner =
       getIt<BiometricSignerService>();
@@ -81,18 +87,21 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
   /// double-charging the user's Anchor account.
   late final String _idempotencyKey = newIdempotencyKey();
 
-  final TextEditingController _pinController = TextEditingController();
+  String _pin = '';
 
   /// True only when the user has enabled biometric for transactions AND
-  /// the device has a biometric enrolled. PIN is the default in every
-  /// other case.
+  /// the backend says this device may authorise a payment.
   bool _biometricAvailable = false;
+  int _biometricFailures = 0;
   String _biometricLabel = 'Biometrics';
   bool _authChecked = false;
 
   _Phase _phase = _Phase.idle;
   String? _errorMessage;
   BillTransaction? _txn;
+
+  bool get _offerBiometric =>
+      _biometricAvailable && _biometricFailures < _maxBiometricFailures;
 
   String get _kind => widget.args['kind'] as String;
   String get _provider => widget.args['provider'] as String;
@@ -149,7 +158,6 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
 
   @override
   void dispose() {
-    _pinController.dispose();
     _stopPolling();
     _spinController.dispose();
     super.dispose();
@@ -163,7 +171,7 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
       // transactions AND the backend says this device's key may authorise a
       // purchase — which needs a factor-verified enrollment and a transaction
       // PIN on the account, since biometrics is the quick alternative to that
-      // PIN. Anything else means PIN-only — which is the default path anyway.
+      // PIN. Anything else means PIN-only.
       final enabledForTransactions = prefs.transactionsEnabled;
       final enrolled = enabledForTransactions
           ? await _biometricSigner.canAuthorizePayments()
@@ -190,6 +198,13 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
         _biometricLabel = label;
         _authChecked = true;
       });
+      if (enrolled) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _phase == _Phase.idle) {
+            _confirmDebouncer.run(_onConfirmWithBiometric);
+          }
+        });
+      }
     } catch (e) {
       if (!mounted) return;
       // PIN path is always available, so a probe failure shouldn't
@@ -201,13 +216,30 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
     }
   }
 
-  Future<Map<String, String>?> _resolvePinHeaders() async {
-    final pin = _pinController.text.trim();
-    if (pin.length < 4 || int.tryParse(pin) == null) {
-      AppToast.error('Enter your 4-digit transaction PIN to continue.');
-      return null;
+  void _onDigit(String digit) {
+    if (_phase != _Phase.idle || !_authChecked || _pin.length >= _pinLength) {
+      return;
     }
-    return {'X-Security-Pin': pin};
+    HapticFeedback.selectionClick();
+    setState(() => _pin += digit);
+    if (_pin.length == _pinLength) {
+      // Let the last circle fill before the pad greys out for submission.
+      Future.delayed(const Duration(milliseconds: 80), () {
+        if (mounted && _phase == _Phase.idle) {
+          _confirmDebouncer.run(_onConfirmWithPin);
+        }
+      });
+    }
+  }
+
+  void _onBackspace() {
+    if (_phase != _Phase.idle || _pin.isEmpty) return;
+    setState(() => _pin = _pin.substring(0, _pin.length - 1));
+  }
+
+  Future<Map<String, String>?> _resolvePinHeaders() async {
+    if (_pin.length != _pinLength) return null;
+    return {'X-Security-Pin': _pin};
   }
 
   Future<Map<String, String>?> _resolveBiometricHeaders() async {
@@ -218,6 +250,19 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
             'Use $_biometricLabel to confirm this ${_kindLabel.toLowerCase()} purchase',
       );
       return result.toHeaders();
+    } on BiometricKeyException catch (e) {
+      if (!mounted || e.code == 'USER_CANCELED') return null;
+      setState(() {
+        _biometricFailures = e.code == 'LOCKOUT'
+            ? _maxBiometricFailures
+            : _biometricFailures + 1;
+      });
+      AppToast.error(
+        _offerBiometric
+            ? '$_biometricLabel did not work. Try again or enter your PIN.'
+            : '$_biometricLabel failed too many times. Enter your PIN instead.',
+      );
+      return null;
     } catch (e) {
       if (!mounted) return null;
       AppToast.error(humanizeError(e));
@@ -280,6 +325,7 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
       if (!mounted) return;
       setState(() {
         _txn = txn;
+        _pin = '';
         _phase = switch (txn.status) {
           BillStatus.completed => _Phase.completed,
           BillStatus.failed || BillStatus.reversed => _Phase.failed,
@@ -290,6 +336,7 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
     } catch (e) {
       if (!mounted) return;
       setState(() {
+        _pin = '';
         _phase = _Phase.failed;
         _errorMessage = humanizeError(e);
       });
@@ -369,20 +416,19 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
             ),
           ),
           body: SafeArea(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 24.h),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSummaryCard(),
-                  vSpace(20),
-                  if (_isResultPhase)
-                    _buildResultBlock()
-                  else
-                    _buildAuthBlock(),
-                ],
-              ),
-            ),
+            child: _isResultPhase
+                ? SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 24.h),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSummaryCard(),
+                        vSpace(20),
+                        _buildResultBlock(),
+                      ],
+                    ),
+                  )
+                : _buildAuthBody(),
           ),
           bottomNavigationBar: SafeArea(
             child: Padding(
@@ -552,124 +598,65 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
 
   // ---- Auth block (pre-confirmation) ---------------------------------
 
-  Widget _buildAuthBlock() {
+  Widget _buildAuthBody() {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Enter your transaction PIN',
-          style: TextStyle(
-            fontSize: 19.sp,
-            fontWeight: FontWeight.w700,
-            color: theme.colorScheme.onSurface,
+    final biometric = _offerBiometric;
+    return PinPadBody(
+      padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 24.h),
+      header: [
+        _buildSummaryCard(),
+        vSpace(20),
+        Center(
+          child: Text(
+            biometric
+                ? 'Authorize with $_biometricLabel'
+                : 'Enter your transaction PIN',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 19.sp,
+              fontWeight: FontWeight.w700,
+              color: theme.colorScheme.onSurface,
+            ),
           ),
         ),
-        vSpace(8),
+        vSpace(6),
         Text(
-          'Type your 4-digit PIN to authorize this purchase.${_biometricAvailable ? ' Biometric authorization is optional below.' : ''}',
+          biometric
+              ? 'Tap the ${_biometricLabel.toLowerCase()} key to try again, or type your 4-digit PIN.'
+              : 'Type your 4-digit PIN to authorize this purchase.',
+          textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 17.sp,
+            fontSize: 16.sp,
             color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             height: 1.4,
           ),
         ),
         vSpace(20),
-        _buildPinField(),
-        if (_biometricAvailable) ...[
-          vSpace(18),
-          Center(
-            child: Text(
-              'or',
-              style: TextStyle(
-                fontSize: 15.sp,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-            ),
-          ),
-          vSpace(12),
-          OutlinedButton.icon(
-            onPressed: _phase == _Phase.submitting
-                ? null
-                : () => _confirmDebouncer.run(_onConfirmWithBiometric),
-            icon: Icon(
-              _biometricLabel.toLowerCase().contains('face')
-                  ? Icons.face_outlined
-                  : Icons.fingerprint,
-              color: theme.primaryColor,
-            ),
-            label: Text(
-              'Use $_biometricLabel instead',
-              style: TextStyle(
-                fontSize: 17.sp,
-                fontWeight: FontWeight.w600,
-                color: theme.primaryColor,
-              ),
-            ),
-            style: OutlinedButton.styleFrom(
-              minimumSize: Size(double.infinity, 52.h),
-              side: BorderSide(color: theme.primaryColor),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18.r),
-              ),
-              foregroundColor: theme.primaryColor,
-              surfaceTintColor: Colors.transparent,
-            ),
-          ),
-        ],
-        vSpace(20),
+      ],
+      pad: TransactionPinPad(
+          pin: _pin,
+          length: _pinLength,
+          onDigit: _onDigit,
+          onBackspace: _onBackspace,
+          busy: !_authChecked || _phase == _Phase.submitting,
+          onBiometric: biometric
+              ? () => _confirmDebouncer.run(_onConfirmWithBiometric)
+              : null,
+          biometricIcon: _biometricLabel.toLowerCase().contains('face')
+              ? Icons.face_outlined
+              : Icons.fingerprint,
+        ),
+      footer: [
+        vSpace(18),
         Text(
           'Your transaction is encrypted and secure. Never share your PIN with anyone.',
+          textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 15.sp,
+            fontSize: 14.sp,
             color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildPinField() {
-    return Center(
-      child: SizedBox(
-        width: 220.w,
-        child: TextField(
-          controller: _pinController,
-          keyboardType: TextInputType.number,
-          obscureText: true,
-          maxLength: 6,
-          textAlign: TextAlign.center,
-          // Long-press paste / autofill from a password manager are
-          // anti-patterns for transaction PIN. Lock the field down to
-          // typed digits only.
-          enableInteractiveSelection: false,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          style: TextStyle(
-            fontSize: 24.sp,
-            letterSpacing: 12,
-            fontWeight: FontWeight.w700,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-          decoration: InputDecoration(
-            counterText: '',
-            hintText: '••••',
-            hintStyle: TextStyle(
-              fontSize: 24.sp,
-              letterSpacing: 12,
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.4),
-            ),
-            filled: true,
-            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14.r),
-              borderSide: BorderSide(color: Theme.of(context).dividerColor),
-            ),
-            contentPadding: EdgeInsets.symmetric(vertical: 16.h),
-          ),
-        ),
-      ),
     );
   }
 
@@ -784,13 +771,6 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
       );
     }
 
-    if (_phase == _Phase.pending) {
-      // No footer button while pending — the rotating result-block
-      // icon already signals "we're checking", and the auto-poll updates
-      // the screen as soon as the provider acks. Post-timeout the user
-      // gets an inline retry inside the result block.
-      return const SizedBox.shrink();
-    }
     if (_phase == _Phase.completed) {
       return ElevatedButton(
         onPressed: () => context.goNamed('home'),
@@ -805,7 +785,10 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
           ElevatedButton(
             onPressed: () {
               // Drop back to the auth UI with the same idempotency key.
-              setState(() => _phase = _Phase.idle);
+              setState(() {
+                _pin = '';
+                _phase = _Phase.idle;
+              });
             },
             style: _primaryStyle(purple),
             child: const Text('Try again'),
@@ -819,19 +802,9 @@ class _BillConfirmScreenState extends State<BillConfirmScreen>
       );
     }
 
-    // _Phase.idle — primary CTA is always PIN. The biometric button
-    // lives inside the auth block.
-    return ElevatedButton.icon(
-      onPressed: _authChecked
-          ? () => _confirmDebouncer.run(_onConfirmWithPin)
-          : null,
-      icon: const Icon(Icons.lock_outline),
-      label: Text(
-        'Authorize with PIN',
-        style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w600),
-      ),
-      style: _primaryStyle(purple),
-    );
+    // Idle submits from the pad itself, and pending needs no footer: the
+    // rotating result icon already says we're checking.
+    return const SizedBox.shrink();
   }
 
   ButtonStyle _primaryStyle(Color color) => ElevatedButton.styleFrom(

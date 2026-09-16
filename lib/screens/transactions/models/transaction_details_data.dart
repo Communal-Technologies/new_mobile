@@ -46,6 +46,8 @@ class TransactionDetailsData {
     this.bankLogoAsset,
     this.currencyCode,
     this.extraDetails = const [],
+    this.chargeLines = const [],
+    this.parentReference,
     this.balanceBeforeMinor,
     this.balanceAfterMinor,
   });
@@ -79,6 +81,14 @@ class TransactionDetailsData {
   /// rows — e.g. bill consumer details (Provider, Phone/Smartcard/Meter,
   /// Plan, Purchase type). Empty for ordinary transactions.
   final List<MapEntry<String, String>> extraDetails;
+
+  /// The charges on a transfer — the transfer charge (or "Free" on one of the
+  /// day's free transfers) and stamp duty — shown under Fees on its receipt.
+  final List<MapEntry<String, String>> chargeLines;
+
+  /// Set on a charge row: the reference of the transfer it was taken for. A
+  /// charge has no receipt of its own; tapping it opens that transfer's.
+  final String? parentReference;
 
   /// Wallet balance (minor units) before/after this transaction, for the
   /// receipt's on-screen balance line. Null when not captured. Deliberately
@@ -158,6 +168,8 @@ class TransactionDetailsData {
     bool clearFailureReason = false,
     String? currencyCode,
     List<MapEntry<String, String>>? extraDetails,
+    List<MapEntry<String, String>>? chargeLines,
+    String? parentReference,
     int? balanceBeforeMinor,
     int? balanceAfterMinor,
   }) {
@@ -184,6 +196,8 @@ class TransactionDetailsData {
           : (failureReason ?? this.failureReason),
       currencyCode: currencyCode ?? this.currencyCode,
       extraDetails: extraDetails ?? this.extraDetails,
+      chargeLines: chargeLines ?? this.chargeLines,
+      parentReference: parentReference ?? this.parentReference,
       balanceBeforeMinor: balanceBeforeMinor ?? this.balanceBeforeMinor,
       balanceAfterMinor: balanceAfterMinor ?? this.balanceAfterMinor,
     );

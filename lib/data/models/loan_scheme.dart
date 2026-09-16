@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:communal_mobile/core/utils/money.dart';
 
 /// Cooperative-defined loan scheme. A scheme constrains the duration,
@@ -26,7 +28,38 @@ class LoanScheme {
     this.memberDurationRateMode,
     this.memberDurationRateStep,
     this.interestType,
+    this.firstRepaymentAfterMonths = 1,
+    this.interestDeferralMode,
+    this.interestDeferralMonths = 0,
   });
+
+  /// Months between disbursement and the first repayment.
+  final int firstRepaymentAfterMonths;
+
+  /// `interest_free`, `deferred` or `principal_first` when the cooperative
+  /// holds interest back for the first [interestDeferralMonths] repayments.
+  final String? interestDeferralMode;
+  final int interestDeferralMonths;
+
+  bool defersInterestFor(int months) =>
+      _activeDeferral(interestDeferralMode, interestDeferralMonths, months,
+          rateForDuration(months)) !=
+      null;
+
+  List<PlannedInstalment> repaymentPlan({
+    required int principalMinor,
+    required int months,
+    DateTime? start,
+  }) =>
+      planRepayments(
+        principalMinor: principalMinor,
+        months: months,
+        annualRate: rateForDuration(months),
+        firstDueAfterMonths: firstRepaymentAfterMonths,
+        deferralMode: interestDeferralMode,
+        deferralMonths: interestDeferralMonths,
+        start: start,
+      );
 
   final String id;
   final String loanCode;
@@ -169,6 +202,14 @@ class LoanScheme {
       reGrantPeriod: _asInt(m['re_grant_period']),
       reGrantLimit: _asInt(m['re_grant_limit']),
       interestType: m['interest_type']?.toString(),
+      firstRepaymentAfterMonths: m['first_repayment_after_months'] == null
+          ? 1
+          : _asInt(m['first_repayment_after_months']),
+      interestDeferralMode:
+          (m['interest_deferral_mode']?.toString().trim() ?? '').isEmpty
+              ? null
+              : m['interest_deferral_mode'].toString().trim(),
+      interestDeferralMonths: _asInt(m['interest_deferral_months']),
     );
   }
 
@@ -185,6 +226,138 @@ class LoanScheme {
     if (v is num) return v.toDouble();
     return double.tryParse(v?.toString().trim() ?? '') ?? 0.0;
   }
+}
+
+const String kDeferralInterestFree = 'interest_free';
+const String kDeferralCollectLater = 'deferred';
+const String kDeferralPrincipalFirst = 'principal_first';
+
+class PlannedInstalment {
+  const PlannedInstalment({
+    required this.sequence,
+    required this.dueDate,
+    required this.principalMinor,
+    required this.interestMinor,
+  });
+
+  final int sequence;
+  final DateTime dueDate;
+  final int principalMinor;
+  final int interestMinor;
+
+  int get totalMinor => principalMinor + interestMinor;
+}
+
+String? _activeDeferral(String? mode, int deferralMonths, int months, double rate) {
+  const modes = {
+    kDeferralInterestFree,
+    kDeferralCollectLater,
+    kDeferralPrincipalFirst,
+  };
+  if (mode == null || !modes.contains(mode)) return null;
+  if (deferralMonths < 1 || deferralMonths >= months || rate <= 0) return null;
+  return mode;
+}
+
+int _roundMinor(double f) => f < 0 ? (f - 0.5).toInt() : (f + 0.5).toInt();
+
+int _pmt(int principal, double annualRate, int months) {
+  if (months <= 0) return principal;
+  if (annualRate == 0) return _roundMinor(principal / months);
+  final r = annualRate / 100 / 12;
+  final factor = math.pow(1 + r, months).toDouble();
+  return _roundMinor(principal * r * factor / (factor - 1));
+}
+
+int _totalInterest(int principal, double annualRate, int months) {
+  final total = _pmt(principal, annualRate, months) * months;
+  return total <= principal ? 0 : total - principal;
+}
+
+List<int> _evenSlices(int total, int n) {
+  if (n <= 0) return const [];
+  final base = total ~/ n;
+  return List<int>.generate(n, (i) => i == n - 1 ? total - base * (n - 1) : base);
+}
+
+DateTime _addMonths(DateTime t, int months) {
+  final target = DateTime(t.year, t.month + months, 1);
+  final lastDay = DateTime(target.year, target.month + 1, 0).day;
+  return DateTime(target.year, target.month, math.min(t.day, lastDay));
+}
+
+/// The schedule loans-svc builds on approval (its planInstalments), so the
+/// calculator quotes the same instalments and dates the member will be given.
+List<PlannedInstalment> planRepayments({
+  required int principalMinor,
+  required int months,
+  required double annualRate,
+  int firstDueAfterMonths = 1,
+  String? deferralMode,
+  int deferralMonths = 0,
+  DateTime? start,
+}) {
+  if (months <= 0) return const [];
+  final from = start ?? DateTime.now();
+  final firstAfter = firstDueAfterMonths < 1 ? 1 : firstDueAfterMonths;
+  final mode = _activeDeferral(deferralMode, deferralMonths, months, annualRate);
+  final d = mode == null ? 0 : deferralMonths;
+
+  final principal = List<int>.filled(months, 0);
+  final interest = List<int>.filled(months, 0);
+
+  void amortise(int from, int balance) {
+    final n = months - from;
+    final pmt = _pmt(balance, annualRate, n);
+    for (var i = from; i < months; i++) {
+      final due = annualRate > 0 ? _roundMinor(balance * (annualRate / 100 / 12)) : 0;
+      final part = i == months - 1 ? balance : pmt - due;
+      principal[i] = part;
+      interest[i] = due;
+      balance -= part;
+    }
+  }
+
+  switch (mode) {
+    case kDeferralInterestFree:
+      final slices = _evenSlices(principalMinor, months);
+      var balance = principalMinor;
+      for (var i = 0; i < d; i++) {
+        principal[i] = slices[i];
+        balance -= slices[i];
+      }
+      amortise(d, balance);
+    case kDeferralCollectLater:
+      final slices = _evenSlices(principalMinor, months);
+      for (var i = 0; i < months; i++) {
+        principal[i] = slices[i];
+      }
+      final later = _evenSlices(_totalInterest(principalMinor, annualRate, months), months - d);
+      for (var i = 0; i < later.length; i++) {
+        interest[d + i] = later[i];
+      }
+    case kDeferralPrincipalFirst:
+      final slices = _evenSlices(principalMinor, d);
+      for (var i = 0; i < d; i++) {
+        principal[i] = slices[i];
+      }
+      final later = _evenSlices(_totalInterest(principalMinor, annualRate, months), months - d);
+      for (var i = 0; i < later.length; i++) {
+        interest[d + i] = later[i];
+      }
+    default:
+      amortise(0, principalMinor);
+  }
+
+  return List<PlannedInstalment>.generate(
+    months,
+    (i) => PlannedInstalment(
+      sequence: i + 1,
+      dueDate: _addMonths(from, firstAfter + i),
+      principalMinor: principal[i],
+      interestMinor: interest[i],
+    ),
+  );
 }
 
 /// Convenience: estimated monthly repayment for a `(principal, scheme)`

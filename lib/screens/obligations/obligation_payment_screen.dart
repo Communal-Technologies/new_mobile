@@ -231,7 +231,9 @@ class _ObligationPaymentScreenState extends State<ObligationPaymentScreen> {
       _cashRepoError = null;
     });
     try {
-      final rows = await _obligationsRepo.fetchCooperativeCashBankAccounts();
+      final rows = await _obligationsRepo.fetchCooperativeCashBankAccounts(
+        cooperativeId: widget.obligation.cooperativeId,
+      );
       if (!mounted) return;
       setState(() {
         _cashRepos = rows;

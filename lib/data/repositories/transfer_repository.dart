@@ -477,6 +477,36 @@ class TransferRepository {
     _cachedSuggestionsAt ??= DateTime.now();
   }
 
+  final Map<String, List<String>> _bankHintCache = {};
+
+  /// Bank codes the platform has seen accounts beginning with [prefix] at,
+  /// likeliest first. A NUBAN does not carry its bank code, but banks issue
+  /// serials in runs, so this names the probable bank while the number is still
+  /// being typed. Cached per prefix; an unreachable server is an empty answer.
+  Future<List<String>> fetchBankHints(String prefix) async {
+    final cached = _bankHintCache[prefix];
+    if (cached != null) return cached;
+    try {
+      final response = await _dioClient.get(
+        ApiEndpoints.transferBankHints,
+        queryParameters: {'prefix': prefix},
+      );
+      final data = response.data;
+      if (data is! Map || data['status'] != true || data['data'] is! List) {
+        return const [];
+      }
+      final codes = (data['data'] as List)
+          .whereType<Map>()
+          .map((e) => e['code']?.toString().trim() ?? '')
+          .where((c) => c.isNotEmpty)
+          .toList(growable: false);
+      _bankHintCache[prefix] = codes;
+      return codes;
+    } on DioException {
+      return const [];
+    }
+  }
+
   /// Names the owner of an exact account number without asking Anchor.
   ///
   /// Answers from a Communal wallet first — that makes it a book transfer,

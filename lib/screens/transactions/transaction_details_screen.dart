@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 
 import 'package:communal_mobile/core/widgets/space.dart';
+import 'package:communal_mobile/data/local/transfer_favorites_prefs.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
 import 'package:communal_mobile/screens/transactions/transaction_history_filters.dart';
 
@@ -279,6 +280,8 @@ class TransactionDetailsScreen extends StatelessWidget {
     final isBill = details.extraDetails.isNotEmpty;
     final infoRows = <_InfoRowData>[
       _InfoRowData(label: 'Fees', value: details.feesLabel),
+      for (final charge in details.chargeLines)
+        _InfoRowData(label: charge.key, value: charge.value),
       if (!isBill)
         _InfoRowData(
           label: details.isIncoming ? 'Sender Details' : 'Recipient Details',
@@ -361,6 +364,16 @@ class TransactionDetailsScreen extends StatelessWidget {
     );
   }
 
+  /// Only an outgoing transfer to an account number can be sent again. A bill, a
+  /// cooperative payment or money received has no recipient to repeat.
+  bool get _canTransferAgain {
+    final account = details.counterpartyAccount?.trim() ?? '';
+    return !details.isIncoming &&
+        details.extraDetails.isEmpty &&
+        details.transactionType.toLowerCase().contains('transfer') &&
+        RegExp(r'^\d{10}$').hasMatch(account);
+  }
+
   Widget _buildActionsSection(BuildContext context, ThemeData theme) {
     final isDark = theme.brightness == Brightness.dark;
     Color tileTint(Color accent, Color lightFallback) {
@@ -391,17 +404,27 @@ class TransactionDetailsScreen extends StatelessWidget {
           extra: scopeFromDetails(details),
         ),
       ),
-      _ActionTileData(
-        label: 'Transfer again',
-        subtitle: 'Send money from your wallet',
-        icon: Iconsax.send_1,
-        iconColor: theme.colorScheme.onSurface,
-        tileColor: theme.cardColor,
-        onTap: () {
-          context.pop();
-          context.pushNamed('transfer');
-        },
-      ),
+      if (_canTransferAgain)
+        _ActionTileData(
+          label: 'Transfer again',
+          subtitle: 'Send to ${details.counterpartyName} again',
+          icon: Iconsax.send_1,
+          iconColor: theme.colorScheme.onSurface,
+          tileColor: theme.cardColor,
+          onTap: () => context.pushNamed(
+            'transfer-external',
+            extra: {
+              'favorite': TransferFavorite(
+                source: 'external',
+                accountId: '',
+                bank: details.counterpartyBank,
+                accountNumber: details.counterpartyAccount!.trim(),
+                accountName: details.counterpartyName,
+              ).toJson(),
+              'amount': details.amount,
+            },
+          ),
+        ),
     ];
 
     return Column(

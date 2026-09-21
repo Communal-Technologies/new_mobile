@@ -192,7 +192,6 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
       return;
     }
 
-    BillPhoneField.remember(context, phone);
     context.pushNamed(
       'bill-confirm',
       extra: {
@@ -306,6 +305,7 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
               vSpace(8),
               BillPhoneField(
                 controller: _phoneController,
+                showRecents: false,
                 accent: const Color(0xFFFFB627),
               ),
               vSpace(20),

@@ -38,6 +38,12 @@ class _DownloadStatementBottomSheetState
   bool get _showEmailField =>
       _selectedDelivery == 'Send to Email' || _selectedDelivery == 'Both';
 
+  /// Statements only ever go to the address on the account, so an account with
+  /// none cannot use email delivery: the two options are closed here rather than
+  /// letting the member type an address the service will refuse.
+  bool get _hasAccountEmail =>
+      (widget.initialEmail ?? '').trim().isNotEmpty;
+
   void _submit() {
     final (start, end) = statementRangeForPeriodChip(_selectedPeriod);
     final email = _emailController.text.trim();
@@ -166,6 +172,17 @@ class _DownloadStatementBottomSheetState
                   Expanded(child: _buildDeliveryChip('Both', theme)),
                 ],
               ),
+              if (!_hasAccountEmail) ...[
+                vSpace(10),
+                Text(
+                  'Your account has no email address, so a statement can only be '
+                  'downloaded. Add one under Profile to have it emailed to you.',
+                  style: TextStyle(
+                    fontSize: 17.sp,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
               if (_showEmailField) ...[
                 vSpace(20),
                 Row(
@@ -190,6 +207,9 @@ class _DownloadStatementBottomSheetState
                 TextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
+                  // The service accepts the account's own address and nothing
+                  // else, so editing it here only produced a refusal.
+                  readOnly: true,
                   style: TextStyle(fontSize: 19.sp),
                   decoration: InputDecoration(
                     hintText: 'you@example.com',
@@ -212,7 +232,7 @@ class _DownloadStatementBottomSheetState
                 ),
                 vSpace(8),
                 Text(
-                  'For security, statements are generated and sent by the backend only.',
+                  'Statements are sent to the email on your account only.',
                   style: TextStyle(
                     fontSize: 17.sp,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -323,31 +343,38 @@ class _DownloadStatementBottomSheetState
 
   Widget _buildDeliveryChip(String label, ThemeData theme) {
     final isSelected = _selectedDelivery == label;
+    final needsEmail = label == 'Send to Email' || label == 'Both';
+    final isDisabled = needsEmail && !_hasAccountEmail;
 
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedDelivery = label;
-        });
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 10.h),
-        decoration: BoxDecoration(
-          color: isSelected ? theme.primaryColor : theme.colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(10.r),
-          border: Border.all(
-            color: isSelected ? theme.primaryColor : theme.dividerColor,
-            width: 1,
+      onTap: isDisabled
+          ? null
+          : () {
+              setState(() {
+                _selectedDelivery = label;
+              });
+            },
+      child: Opacity(
+        opacity: isDisabled ? 0.45 : 1,
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 10.h),
+          decoration: BoxDecoration(
+            color: isSelected ? theme.primaryColor : theme.colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(10.r),
+            border: Border.all(
+              color: isSelected ? theme.primaryColor : theme.dividerColor,
+              width: 1,
+            ),
           ),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 17.sp,
-            fontWeight: FontWeight.w500,
-            color: isSelected ? Colors.white : theme.colorScheme.onSurface.withValues(alpha: 0.7),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 17.sp,
+              fontWeight: FontWeight.w500,
+              color: isSelected ? Colors.white : theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
           ),
         ),
       ),

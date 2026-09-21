@@ -599,7 +599,7 @@ Map<String, List<TransactionListItem>> groupTransactionsByMonth(
   List<TransactionListItem> items,
 ) {
   final buckets = <String, List<TransactionListItem>>{};
-  final monthFmt = DateFormat('MMMM yyyy');
+  final monthFmt = DateFormat('MMM yyyy');
   for (final i in items) {
     final k = monthFmt.format(i.details.dateTime);
     buckets.putIfAbsent(k, () => []).add(i);

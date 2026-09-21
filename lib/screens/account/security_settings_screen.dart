@@ -735,11 +735,16 @@ class _ActivityTile extends StatelessWidget {
     'account_unfrozen': 'Account unfrozen',
     'unfreeze_requested': 'Unfreeze requested',
     'account_deleted': 'Account closure requested',
+    'transaction_password_verification': 'Password confirmed for a payment',
   };
 
   String _actionLabel(String? action, String? status) {
     final a = (action ?? '').toLowerCase();
     final s = (status ?? '').toLowerCase();
+
+    if (a == 'payment_authorization') {
+      return s == 'failed' ? 'Payment authorisation refused' : 'Payment authorised';
+    }
 
     final exact = _actionLabels[a];
     if (exact != null) return exact;
@@ -756,6 +761,34 @@ class _ActivityTile extends StatelessWidget {
 
     final words = a.split('_').where((w) => w.isNotEmpty).join(' ');
     return words[0].toUpperCase() + words.substring(1);
+  }
+
+  /// What an authorisation was for and how it was given, as the server recorded
+  /// it: "Transfer · biometrics", "Bill purchase · PIN — incorrect PIN".
+  String _detailLine(Map<String, dynamic> log) {
+    final raw = log['details'];
+    final details = raw is Map ? Map<String, dynamic>.from(raw) : null;
+    if (details == null) return '';
+
+    String words(Object? value) {
+      final text = value?.toString().trim() ?? '';
+      if (text.isEmpty) return '';
+      final parts = text.replaceAll('-', ' ').replaceAll('_', ' ').split(' ');
+      final joined = parts.where((w) => w.isNotEmpty).join(' ');
+      if (joined.isEmpty) return '';
+      return joined[0].toUpperCase() + joined.substring(1);
+    }
+
+    final intent = words(details['intent']);
+    final method = details['method']?.toString().trim() ?? '';
+    final reason = words(details['reason']);
+
+    final parts = [
+      if (intent.isNotEmpty) intent,
+      if (method == 'pin') 'PIN' else if (method.isNotEmpty) method,
+    ].join(' · ');
+    if (parts.isEmpty) return reason;
+    return reason.isEmpty ? parts : '$parts — $reason';
   }
 
   String _deviceLabel(String? ua) {
@@ -795,6 +828,7 @@ class _ActivityTile extends StatelessWidget {
     final ua = log['user_agent']?.toString();
     final createdAt = log['created_at']?.toString();
     final isFailed = (status ?? '').toLowerCase() == 'failed';
+    final detail = _detailLine(log);
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
@@ -829,6 +863,13 @@ class _ActivityTile extends StatelessWidget {
                     color: onSurface,
                   ),
                 ),
+                if (detail.isNotEmpty) ...[
+                  vSpace(2),
+                  Text(
+                    detail,
+                    style: TextStyle(fontSize: 15.sp, color: muted),
+                  ),
+                ],
                 vSpace(3),
                 Row(
                   children: [

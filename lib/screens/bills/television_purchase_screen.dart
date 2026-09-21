@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
-import 'package:communal_mobile/core/utils/money.dart';
 import 'package:communal_mobile/core/utils/ng_mobile_network.dart';
 import 'package:communal_mobile/core/widgets/app_toast.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
@@ -16,6 +15,7 @@ import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/bills/widgets/bill_brand_chip.dart';
 import 'package:communal_mobile/screens/bills/widgets/bill_inputs.dart';
 import 'package:communal_mobile/screens/bills/widgets/bill_phone_field.dart';
+import 'package:communal_mobile/screens/bills/widgets/bill_plan_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -123,33 +123,6 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
     unawaited(_loadProducts(p));
   }
 
-  Future<void> _openProductSheet() async {
-    FocusManager.instance.primaryFocus?.unfocus();
-    if (_loadingProducts) return;
-    if (_productsError != null) {
-      if (_selectedProvider != null) {
-        unawaited(_loadProducts(_selectedProvider!));
-      }
-      return;
-    }
-    if (_products.isEmpty) {
-      AppToast.error('No plans available for this provider.');
-      return;
-    }
-    final picked = await showModalBottomSheet<BillProduct>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (ctx) => _TvPlanSheet(products: _products),
-    );
-    if (!mounted) return;
-    // Closing the sheet hands focus back to the last field, which reopens the
-    // keyboard over the Continue button.
-    FocusManager.instance.primaryFocus?.unfocus();
-    if (picked != null) {
-      setState(() => _selectedProduct = picked);
-    }
-  }
 
   Future<void> _onValidate() async {
     FocusManager.instance.primaryFocus?.unfocus();
@@ -213,7 +186,6 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
       return;
     }
 
-    BillPhoneField.remember(context, phone);
     context.pushNamed(
       'bill-confirm',
       extra: {
@@ -321,12 +293,13 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
               vSpace(20),
               _label('Plan'),
               vSpace(8),
-              _buildPlanTile(),
+              _buildPlans(),
               vSpace(20),
               _label('Phone number (for receipt SMS)'),
               vSpace(8),
               BillPhoneField(
                 controller: _phoneController,
+                showRecents: false,
                 accent: const Color(0xFF22C55E),
               ),
             ],
@@ -414,51 +387,57 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
     );
   }
 
-  Widget _buildPlanTile() {
-    final selected = _selectedProduct;
+  Widget _buildPlans() {
     final theme = Theme.of(context);
-    return InkWell(
-      onTap: _openProductSheet,
-      borderRadius: BorderRadius.circular(14.r),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.h),
+    if (_loadingProducts) {
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: 12.h),
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (_productsError != null) {
+      return Container(
+        padding: EdgeInsets.all(14.w),
         decoration: BoxDecoration(
-          // theme.cardColor + theme.dividerColor instead of grey.shade50
-          // / grey.shade300 so the tile follows the active theme. The
-          // hardcoded shades stayed near-white in dark mode and made
-          // the field read as a stuck-on-light artifact next to the
-          // theme-aware smartcard/phone TextFields above. Mirrors the
-          // data plan tile in DataPurchaseScreen._buildProductTile.
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(14.r),
-          border: Border.all(color: theme.dividerColor),
+          color: Colors.red.shade50,
+          borderRadius: BorderRadius.circular(12.r),
         ),
         child: Row(
           children: [
             Expanded(
               child: Text(
-                _loadingProducts
-                    ? 'Loading plans…'
-                    : _productsError != null
-                        ? 'Could not load plans — tap to retry'
-                        : selected == null
-                            ? 'Tap to pick a plan'
-                            : '${selected.name} • ${Money(selected.priceMinor, 'NGN').format()}',
-                style: TextStyle(
-                  fontSize: 17.sp,
-                  color: selected == null
-                      ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
-                      : theme.colorScheme.onSurface,
-                ),
+                _productsError!,
+                style: TextStyle(fontSize: 16.sp, color: Colors.red.shade700),
               ),
             ),
-            Icon(
-              Icons.keyboard_arrow_down_rounded,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            TextButton(
+              onPressed: () {
+                final provider = _selectedProvider;
+                if (provider != null) unawaited(_loadProducts(provider));
+              },
+              child: const Text('Retry'),
             ),
           ],
         ),
-      ),
+      );
+    }
+    if (_products.isEmpty) {
+      return Text(
+        'No plans available for this provider.',
+        style: TextStyle(
+          fontSize: 16.sp,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+        ),
+      );
+    }
+    return BillPlanPicker(
+      products: _products,
+      selected: _selectedProduct,
+      accent: const Color(0xFF22C55E),
+      onSelected: (plan) {
+        FocusManager.instance.primaryFocus?.unfocus();
+        setState(() => _selectedProduct = plan);
+      },
     );
   }
 
@@ -473,44 +452,3 @@ class _TelevisionPurchaseScreenState extends State<TelevisionPurchaseScreen> {
 
 }
 
-class _TvPlanSheet extends StatelessWidget {
-  const _TvPlanSheet({required this.products});
-
-  final List<BillProduct> products;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.7,
-        ),
-        child: ListView.separated(
-          shrinkWrap: true,
-          padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
-          itemCount: products.length,
-          separatorBuilder: (_, __) => Divider(color: Colors.grey.shade200),
-          itemBuilder: (ctx, i) {
-            final p = products[i];
-            return ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(
-                p.name,
-                style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w600),
-              ),
-              trailing: Text(
-                Money(p.priceMinor, 'NGN').format(),
-                style: TextStyle(
-                  fontSize: 17.sp,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF7434FF),
-                ),
-              ),
-              onTap: () => Navigator.of(ctx).pop(p),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}

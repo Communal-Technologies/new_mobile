@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
@@ -159,16 +160,13 @@ class ReceiptExportHelper {
     }
 
     if (Platform.isAndroid) {
-      // Android 10+: image_gallery_saver_plus uses MediaStore — no permission
-      // needed for the photo library. Only the legacy ≤Android 9 storage
-      // permission is requested as a fallback for older devices.
-      if (await hasPermission(Permission.photos) ||
-          await hasPermission(Permission.storage)) {
-        return true;
-      }
-      if (await requestPermission(Permission.photos)) return true;
-      if (await requestPermission(Permission.storage)) return true;
-      return false;
+      // MediaStore owns the write from Android 10, so nothing is asked for
+      // there. Asking for the photo library instead of nothing is what put
+      // READ_MEDIA_IMAGES in the manifest, which Play's photos and videos
+      // policy refuses. Android 9 and older still need legacy storage.
+      if (await _androidSdkInt() >= 29) return true;
+      if (await hasPermission(Permission.storage)) return true;
+      return requestPermission(Permission.storage);
     }
 
     if (await hasPermission(Permission.storage)) {
@@ -176,5 +174,17 @@ class ReceiptExportHelper {
     }
 
     return requestPermission(Permission.storage);
+  }
+
+  /// Falls back to 29 so an unreadable build number asks for nothing rather
+  /// than for a permission the app no longer declares.
+  Future<int> _androidSdkInt() async {
+    try {
+      final info = await DeviceInfoPlugin().androidInfo;
+      return info.version.sdkInt;
+    } catch (e) {
+      debugPrint('Android version lookup failed: $e');
+      return 29;
+    }
   }
 }

@@ -6,26 +6,32 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:communal_mobile/blocs/auth/auth_bloc.dart';
 import 'package:communal_mobile/blocs/auth/auth_state.dart';
 import 'package:communal_mobile/core/utils/ng_mobile_network.dart';
-import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/local/bill_recipient_prefs.dart';
 import 'package:communal_mobile/screens/bills/widgets/bill_inputs.dart';
 
 /// The phone number a bill is bought for, or its receipt is sent to.
 ///
-/// Starts on the member's own number, offers the last three other numbers this
-/// member paid for underneath it, and names the network as soon as the prefix is
-/// in — four digits, well before the number is complete.
+/// Starts on the member's own number, opens the last three other numbers this
+/// member paid for as a dropdown on the field itself, and names the network as
+/// soon as the prefix is in — four digits, well before the number is complete.
 class BillPhoneField extends StatefulWidget {
   const BillPhoneField({
     super.key,
     required this.controller,
     this.onNetworkChanged,
     this.accent = const Color(0xFF7434FF),
+    this.showRecents = true,
   });
 
   final TextEditingController controller;
   final ValueChanged<NgMobileNetwork?>? onNetworkChanged;
   final Color accent;
+
+  /// Airtime and data are bought for a number, so the numbers this member has
+  /// bought for before are worth offering. A meter or a smartcard is the
+  /// recipient on the other screens — the number there is only where the token
+  /// or receipt goes, so they start on the member's own number and offer none.
+  final bool showRecents;
 
   /// Adds [phone] to this member's recent numbers, unless it is their own.
   static Future<void> remember(BuildContext context, String phone) async {
@@ -51,6 +57,7 @@ class _BillPhoneFieldState extends State<BillPhoneField> {
   String? _own;
   List<String> _recent = const [];
   NgMobileNetwork? _network;
+  final GlobalKey _fieldKey = GlobalKey();
 
   @override
   void initState() {
@@ -73,7 +80,7 @@ class _BillPhoneFieldState extends State<BillPhoneField> {
   }
 
   Future<void> _loadRecent() async {
-    if (_userId.isEmpty) return;
+    if (_userId.isEmpty || !widget.showRecents) return;
     final prefs = await BillRecipientPrefs.load(_userId);
     if (!mounted) return;
     setState(() => _recent = prefs.recentPhones(ownPhone: _own));
@@ -95,80 +102,150 @@ class _BillPhoneFieldState extends State<BillPhoneField> {
     FocusManager.instance.primaryFocus?.unfocus();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  Future<void> _openOptions(List<String> options) async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    final box = _fieldKey.currentContext?.findRenderObject() as RenderBox?;
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (box == null || overlay == null) return;
+    final topLeft = box.localToGlobal(Offset.zero, ancestor: overlay);
     final current = ngLocalPhone(widget.controller.text);
-    final options = [if (_own != null) _own!, ..._recent];
-    final network = _network;
+    final theme = Theme.of(context);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextField(
-          controller: widget.controller,
-          keyboardType: TextInputType.phone,
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
-            LengthLimitingTextInputFormatter(14),
-          ],
-          decoration: billInputDecoration(context, 'e.g. 08012345678').copyWith(
-            suffixIconConstraints: const BoxConstraints(),
-            suffixIcon: network == null
-                ? null
-                : Padding(
-                    padding: EdgeInsets.only(right: 12.w),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 10.w,
-                        vertical: 4.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: widget.accent.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(20.r),
-                      ),
-                      child: Text(
-                        network.label,
+    final picked = await showMenu<String>(
+      context: context,
+      constraints: BoxConstraints.tightFor(width: box.size.width),
+      position: RelativeRect.fromLTRB(
+        topLeft.dx,
+        topLeft.dy + box.size.height + 4.h,
+        overlay.size.width - topLeft.dx - box.size.width,
+        0,
+      ),
+      color: theme.cardColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14.r),
+        side: BorderSide(color: theme.dividerColor),
+      ),
+      items: [
+        for (final phone in options)
+          PopupMenuItem<String>(
+            value: phone,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        phone,
                         style: TextStyle(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w700,
-                          color: widget.accent,
+                          fontSize: 17.sp,
+                          fontWeight: current == phone
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: theme.colorScheme.onSurface,
                         ),
                       ),
-                    ),
+                      if (phone == _own)
+                        Text(
+                          'My number',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.6,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-          ),
-        ),
-        if (options.isNotEmpty) ...[
-          vSpace(10),
-          Wrap(
-            spacing: 8.w,
-            runSpacing: 8.h,
-            children: [
-              for (final phone in options)
-                ChoiceChip(
-                  showCheckmark: false,
-                  selected: current == phone,
-                  selectedColor: widget.accent.withValues(alpha: 0.16),
-                  side: BorderSide(
-                    color: current == phone
-                        ? widget.accent
-                        : theme.dividerColor,
-                  ),
-                  label: Text(
-                    phone == _own ? 'My number · $phone' : phone,
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                  ),
-                  onSelected: (_) => _pick(phone),
                 ),
-            ],
+                if (detectNgMobileNetwork(phone) case final network?)
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 8.w,
+                      vertical: 3.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: widget.accent.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(20.r),
+                    ),
+                    child: Text(
+                      network.label,
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w700,
+                        color: widget.accent,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ],
       ],
+    );
+    if (picked != null) _pick(picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final options = widget.showRecents
+        ? [if (_own != null) _own!, ..._recent]
+        : const <String>[];
+    final network = _network;
+
+    return TextField(
+      key: _fieldKey,
+      controller: widget.controller,
+      keyboardType: TextInputType.phone,
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
+        LengthLimitingTextInputFormatter(14),
+      ],
+      decoration: billInputDecoration(context, 'e.g. 08012345678').copyWith(
+        suffixIconConstraints: const BoxConstraints(),
+        suffixIcon: (network == null && options.isEmpty)
+            ? null
+            : Padding(
+                padding: EdgeInsets.only(right: 8.w),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (network != null)
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 10.w,
+                          vertical: 4.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: widget.accent.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(20.r),
+                        ),
+                        child: Text(
+                          network.label,
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w700,
+                            color: widget.accent,
+                          ),
+                        ),
+                      ),
+                    if (options.isNotEmpty)
+                      IconButton(
+                        tooltip: 'Recent numbers',
+                        onPressed: () => _openOptions(options),
+                        icon: Icon(
+                          Icons.arrow_drop_down,
+                          size: 24.sp,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+      ),
     );
   }
 }

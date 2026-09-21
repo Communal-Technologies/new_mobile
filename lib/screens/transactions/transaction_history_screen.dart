@@ -822,44 +822,53 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             ),
             child: Row(
               children: [
-                Row(
-                  children: [
-                    Text(
-                      month,
-                      style: TextStyle(
-                        fontSize: 19.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    hSpace(6),
-                    Icon(
-                      isExpanded
-                          ? Icons.keyboard_arrow_down
-                          : Icons.keyboard_arrow_right,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.6),
-                      size: 22.sp,
-                    ),
-                  ],
-                ),
-                const Spacer(),
                 Text(
-                  'In: ${display.adorn(formatMoney(incoming))}',
+                  month,
                   style: TextStyle(
-                    fontSize: 19.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.green,
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                hSpace(12),
-                Text(
-                  'Out: ${display.adorn(formatMoney(outgoing))}',
-                  style: TextStyle(
-                    fontSize: 19.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.red,
+                hSpace(4),
+                Icon(
+                  isExpanded
+                      ? Icons.keyboard_arrow_down
+                      : Icons.keyboard_arrow_right,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
+                  size: 20.sp,
+                ),
+                hSpace(8),
+                // A month of six-figure transfers puts more digits in here than
+                // the card is wide, so the totals shrink to fit rather than
+                // running past its edge.
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Row(
+                      children: [
+                        Text(
+                          'In: ${display.adorn(formatMoney(incoming))}',
+                          style: TextStyle(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green,
+                          ),
+                        ),
+                        hSpace(10),
+                        Text(
+                          'Out: ${display.adorn(formatMoney(outgoing))}',
+                          style: TextStyle(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],

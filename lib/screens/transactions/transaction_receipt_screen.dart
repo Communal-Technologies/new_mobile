@@ -25,6 +25,7 @@ import 'package:communal_mobile/screens/transactions/models/transaction_details_
 import 'package:communal_mobile/screens/transactions/receipt/receipt_export_helper.dart';
 import 'package:communal_mobile/screens/transactions/receipt/widgets/receipt_action_button.dart';
 import 'package:communal_mobile/screens/transactions/receipt/widgets/receipt_card.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 enum ReceiptAction { preview, download, share }
 
@@ -278,7 +279,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
         SnackBar(
           content: Text(
             'Transfer succeeded but the obligation could not be updated. '
-            '${e.toString().replaceFirst('Exception: ', '')}',
+            '${userFacingError(e)}',
           ),
         ),
       );
@@ -314,7 +315,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
         SnackBar(
           content: Text(
             'Transfer succeeded but the loan could not be updated. '
-            '${e.toString().replaceFirst('Exception: ', '')}',
+            '${userFacingError(e)}',
           ),
         ),
       );
@@ -346,7 +347,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
         SnackBar(
           content: Text(
             'Transfer succeeded but the fine could not be updated. '
-            '${e.toString().replaceFirst('Exception: ', '')}',
+            '${userFacingError(e)}',
           ),
         ),
       );

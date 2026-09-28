@@ -11,6 +11,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 class SecuritySettingsScreen extends StatefulWidget {
   const SecuritySettingsScreen({super.key});
@@ -88,7 +89,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       revert();
       await getIt<SharedPreferences>().setBool(prefsKey, !value);
       messenger.showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        SnackBar(content: Text(userFacingError(e))),
       );
     }
   }
@@ -118,7 +119,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _activityError = e.toString().replaceFirst('Exception: ', '');
+        _activityError = userFacingError(e);
         _activityLoading = false;
       });
     }

@@ -22,6 +22,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 sealed class _SuggestRow {}
 
@@ -158,7 +159,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _banksError = e.toString().replaceFirst('Exception: ', '');
+        _banksError = userFacingError(e);
       });
     } finally {
       if (mounted) setState(() => _loadingBanks = false);
@@ -652,7 +653,7 @@ class _TransferExternalScreenState extends State<TransferExternalScreen> {
       } else {
         setState(() => _verifiedRecipient = null);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+          SnackBar(content: Text(userFacingError(e))),
         );
       }
     } finally {

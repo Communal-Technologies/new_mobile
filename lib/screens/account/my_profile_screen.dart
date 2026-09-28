@@ -16,6 +16,7 @@ import 'package:communal_mobile/screens/account/widgets/verification_details_car
 import 'package:communal_mobile/screens/account/widgets/personal_information_card.dart';
 import 'package:communal_mobile/screens/account/widgets/address_information_card.dart';
 import 'package:communal_mobile/screens/account/widgets/manage_account_card.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 class MyProfileScreen extends StatefulWidget {
   const MyProfileScreen({super.key});
@@ -93,9 +94,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                                 color: Color(0xFFB42318), size: 36),
                             vSpace(12),
                             Text(
-                              snapshot.error
-                                  .toString()
-                                  .replaceFirst('Exception: ', ''),
+                              userFacingError(snapshot.error),
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 17.sp,

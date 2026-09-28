@@ -14,6 +14,7 @@ import 'package:communal_mobile/data/models/member_search_result.dart';
 import 'package:communal_mobile/data/repositories/loan_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/loans/data/loan_application_draft.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 /// Step 2 of the apply flow: pick `scheme.numberOfGuarantors` members
 /// via typeahead. The dropdown is hidden when the input is empty — it
@@ -127,7 +128,7 @@ class _LoanApplicationStep2ScreenState
       if (!mounted) return;
       setState(() {
         _searching = false;
-        _searchError = e.toString().replaceFirst('Exception: ', '');
+        _searchError = userFacingError(e);
         _results = const [];
       });
       if (_searchFocus.hasFocus) _showOverlay();

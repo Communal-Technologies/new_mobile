@@ -27,6 +27,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
   const TransactionHistoryScreen({super.key, this.scope});
@@ -208,7 +209,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     } catch (e) {
       if (!mounted) return;
       AppToast.error(
-        'Could not export: ${e.toString().replaceFirst('Exception: ', '')}',
+        'Could not export: ${userFacingError(e)}',
       );
     } finally {
       if (mounted) {
@@ -289,7 +290,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         _loading = false;
         // Keep showing cached rows on a refresh failure; only surface the
         // error when there's nothing cached to fall back to.
-        if (!hasCache) _error = e.toString().replaceFirst('Exception: ', '');
+        if (!hasCache) _error = userFacingError(e);
       });
     }
   }

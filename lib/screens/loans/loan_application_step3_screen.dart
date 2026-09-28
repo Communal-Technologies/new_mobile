@@ -15,6 +15,7 @@ import 'package:communal_mobile/data/models/loan_scheme.dart';
 import 'package:communal_mobile/data/repositories/loan_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/loans/data/loan_application_draft.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 /// Step 3 — review the draft and submit. The submit button is gated on
 /// terms acceptance and disabled while the request is in flight.
@@ -99,7 +100,7 @@ class _LoanApplicationStep3ScreenState
       // Backend errors surface as toasts now — keeps a single, app-wide
       // pattern for server responses instead of mixing inline error
       // banners with the toasts every other screen already uses.
-      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
+      AppToast.error(userFacingError(e));
       setState(() => _submitting = false);
     }
   }

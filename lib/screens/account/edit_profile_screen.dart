@@ -21,6 +21,7 @@ import 'package:communal_mobile/screens/account/widgets/edit_profile_header.dart
 import 'package:communal_mobile/screens/account/widgets/personal_info_form_section.dart';
 import 'package:communal_mobile/screens/account/widgets/address_info_form_section.dart';
 import 'package:communal_mobile/screens/account/widgets/sign_in_details_section.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({
@@ -204,7 +205,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          content: Text(userFacingError(e)),
         ),
       );
     }
@@ -240,7 +241,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString().replaceFirst('Exception: ', '')),
+            content: Text(userFacingError(e)),
           ),
         );
       }

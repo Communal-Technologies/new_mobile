@@ -20,6 +20,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 /// Form for buying electricity via Anchor. Flow: pick disco → pick
 /// product (prepaid / postpaid) → enter meter → validate meter → enter
@@ -90,7 +91,7 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
       if (!mounted) return;
       setState(() {
         _loadingProviders = false;
-        _providersError = e.toString().replaceFirst('Exception: ', '');
+        _providersError = userFacingError(e);
       });
     }
   }
@@ -114,7 +115,7 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
       if (!mounted) return;
       setState(() {
         _loadingProducts = false;
-        _productsError = e.toString().replaceFirst('Exception: ', '');
+        _productsError = userFacingError(e);
       });
     }
   }
@@ -162,7 +163,7 @@ class _ElectricityPurchaseScreenState extends State<ElectricityPurchaseScreen> {
       setState(() => _validatedCustomer = customer);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _validationError = e.toString().replaceFirst('Exception: ', ''));
+      setState(() => _validationError = userFacingError(e));
     } finally {
       if (mounted) setState(() => _validating = false);
     }

@@ -163,7 +163,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
         return;
       }
       final message = e is Exception
-          ? e.toString().replaceFirst('Exception: ', '')
+          ? userFacingError(e)
           : e.toString();
       AppToast.error(message);
     }
@@ -237,7 +237,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
             return;
           }
           final message = e is Exception
-              ? e.toString().replaceFirst('Exception: ', '')
+              ? userFacingError(e)
               : e.toString();
           AppToast.error(message);
         }
@@ -266,7 +266,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
             return;
           }
           final message = e is Exception
-              ? e.toString().replaceFirst('Exception: ', '')
+              ? userFacingError(e)
               : e.toString();
           AppToast.error(message);
         }
@@ -342,7 +342,7 @@ class _VerifyResetScreenState extends State<VerifyResetScreen> {
           return;
         }
         final message = e is Exception
-            ? e.toString().replaceFirst('Exception: ', '')
+            ? userFacingError(e)
             : e.toString();
         AppToast.error(message);
         setState(() {

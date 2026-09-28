@@ -25,6 +25,7 @@ import 'package:communal_mobile/data/repositories/member_obligations_repository.
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/obligations/widgets/fine_detail_card.dart';
 import 'package:communal_mobile/screens/obligations/widgets/obligation_card.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 class FinancialObligationsScreen extends StatefulWidget {
   const FinancialObligationsScreen({super.key});
@@ -115,7 +116,7 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _error = userFacingError(e);
       });
     }
   }

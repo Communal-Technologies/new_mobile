@@ -263,24 +263,33 @@ class AuthRepository {
     );
   }
 
-  /// Verify password/PIN for an already-authenticated session unlock.
+  /// Verify the PIN for an already-authenticated session unlock.
   /// This avoids calling `/login` again (which can trigger session takeover OTP).
   ///
-  /// Audit M7: parses the backend's 429 + Retry-After response (the
-  /// `/security/transaction/verify-password` route is rate-limited at 5
-  /// attempts per 5 minutes per user) and throws a friendly countdown
-  /// message so the welcome-back screen can render "Try again in N
+  /// On **authsvc**, deliberately. This used to post to transactions-svc's
+  /// `/security/transaction/verify-password`, which was wrong twice over: it put
+  /// the lock screen behind the payments service — a member who only wanted to
+  /// read a chat could not get in while txnsvc was down, which is how this was
+  /// reported — and that route caches `password_verified_<uid>` for thirty
+  /// minutes, the precondition for minting a transaction token. Unlocking the
+  /// app pre-authorised spending. The replacement grants nothing.
+  ///
+  /// Audit M7: parses the backend's 429 + Retry-After response (the route is
+  /// rate-limited at 5 attempts per 5 minutes per user) and throws a friendly
+  /// countdown message so the welcome-back screen can render "Try again in N
   /// minutes" rather than a vague "Too Many Requests".
   Future<bool> verifySessionUnlockPassword(String password) async {
     try {
       final response = await dioClient.post(
-        ApiEndpoints.securityVerifyPassword,
+        ApiEndpoints.verifyUnlockPassword,
         data: {'password': password},
       );
 
       if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
         final body = response.data as Map<String, dynamic>;
-        // transactions-svc nests the payload under `data`.
+        // authsvc answers flat; the transactions-svc route this replaced nested
+        // the payload under `data`, so both shapes are read and an older build
+        // pointed at either one still resolves.
         final inner = body['data'];
         if (inner is Map) return inner['verified'] == true;
         return body['verified'] == true;

@@ -20,6 +20,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 /// Form for buying airtime. Provider list is fetched once on mount
 /// (cached server-side for an hour, so this is cheap). Amount is taken
@@ -83,7 +84,7 @@ class _AirtimePurchaseScreenState extends State<AirtimePurchaseScreen> {
       if (!mounted) return;
       setState(() {
         _loadingProviders = false;
-        _providersError = e.toString().replaceFirst('Exception: ', '');
+        _providersError = userFacingError(e);
       });
     }
   }

@@ -35,7 +35,7 @@ String dioTransportUserMessage(DioException e) {
       }
       return DioTransportUserMessages.couldNotReachServer;
     case DioExceptionType.unknown:
-      if (e.error is SocketException) {
+      if (_isTransportCause(e.error)) {
         return DioTransportUserMessages.noConnection;
       }
       break;
@@ -58,7 +58,7 @@ bool isDioTransportFailure(DioException e) {
       final code = e.response?.statusCode;
       return code == null || code >= 500;
     case DioExceptionType.unknown:
-      return e.error is SocketException;
+      return _isTransportCause(e.error);
     case DioExceptionType.cancel:
     case DioExceptionType.badCertificate:
       return false;
@@ -179,4 +179,37 @@ bool shouldRedirectToSplashForAuthFailure(String message) {
   }
   if (message.startsWith('Server error (')) return true;
   return false;
+}
+
+/// The causes Dio files under [DioExceptionType.unknown] that are really the
+/// network failing rather than the server answering.
+///
+/// A [SocketException] alone is not the set. A connection cut mid-reply raises
+/// `HttpException: HttpConnection closed before full header was received`, and a
+/// member on a dropping signal read exactly that, Dio prefix and URL included,
+/// under their PIN field — because an unrecognised cause is treated as a real
+/// backend answer and the raw error is what a backend answer prints.
+/// [TlsException] and its subtypes are deliberately absent. The pinned
+/// certificates are compiled into the build and do not refresh themselves, so a
+/// rotation that outruns a release reads as a handshake failure — and calling
+/// that "no internet connection" would hide it behind the one explanation a
+/// member cannot act on and nobody would investigate.
+bool _isTransportCause(Object? cause) =>
+    cause is SocketException || cause is HttpException;
+
+/// One line a member can read, for any error caught at a UI boundary.
+///
+/// The idiom this replaces — `e.toString().replaceFirst('Exception: ', '')` —
+/// is right only for an `Exception` the app threw on purpose, whose text is
+/// already a sentence. Handed a [DioException] it prints the exception type,
+/// the timeout in microseconds and the URL, and members read that: a data-plans
+/// fetch told somebody to "try raising the RequestOptions.connectTimeout".
+///
+/// So Dio failures go through [dioTransportUserMessage], which knows a timeout
+/// from a dead server, and everything else keeps the old behaviour.
+String userFacingError(Object? error) {
+  if (error is DioException) return dioTransportUserMessage(error);
+  if (error == null) return DioTransportUserMessages.generic;
+  final text = error.toString().replaceFirst('Exception: ', '').trim();
+  return text.isEmpty ? DioTransportUserMessages.generic : text;
 }

@@ -7,6 +7,7 @@ import 'package:communal_mobile/core/widgets/loader_overlay.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:go_router/go_router.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 class ChangeLoginPinScreen extends StatefulWidget {
   const ChangeLoginPinScreen({super.key});
@@ -119,7 +120,7 @@ class _ChangeLoginPinScreenState extends State<ChangeLoginPinScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      final msg = e.toString().replaceFirst('Exception: ', '');
+      final msg = userFacingError(e);
       setState(() {
         _isSubmitting = false;
         _errorMessage = msg;

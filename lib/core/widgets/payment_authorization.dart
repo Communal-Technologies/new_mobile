@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart' as shared_prefs;
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 /// Authorising a payment or an account action (leaving a cooperative, freezing
 /// or deleting the account), identical on every screen that asks for the
@@ -140,7 +141,7 @@ mixin PaymentAuthorization<T extends StatefulWidget> on State<T> {
       // Wipe on failure so the member can re-enter; a wrong PIN counts toward
       // the lockout on the backend.
       setState(() => _pin = '');
-      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
+      AppToast.error(userFacingError(e));
     } finally {
       if (mounted) {
         setState(() {
@@ -172,7 +173,7 @@ mixin PaymentAuthorization<T extends StatefulWidget> on State<T> {
       );
     } catch (e) {
       if (!mounted) return;
-      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
+      AppToast.error(userFacingError(e));
     } finally {
       if (mounted) {
         setState(() {

@@ -22,6 +22,7 @@ import 'package:communal_mobile/data/repositories/loan_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/loans/widgets/active_loan_card.dart';
 import 'package:communal_mobile/screens/loans/widgets/loan_offer_card.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 class LoansScreen extends StatefulWidget {
   const LoansScreen({super.key});
@@ -86,7 +87,7 @@ class _LoansScreenState extends State<LoansScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _error = userFacingError(e);
       });
     }
   }

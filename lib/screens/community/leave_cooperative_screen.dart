@@ -9,6 +9,7 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/account_actions_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_locations.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 /// Carried from the checkpoints screen to the PIN step: which membership is
 /// closing, the position the member was shown when they agreed, and their
@@ -79,7 +80,7 @@ class _LeaveCooperativeScreenState extends State<LeaveCooperativeScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _loadError = e.toString().replaceFirst('Exception: ', '');
+        _loadError = userFacingError(e);
       });
     }
   }

@@ -19,6 +19,7 @@ import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/data/repositories/regions_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:intl_phone_number_input/intl_phone_number_input.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 enum SignupType { phone, email }
 
@@ -155,7 +156,7 @@ class _SignupScreenState extends State<SignupScreen> {
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _setContactError(e.toString().replaceFirst('Exception: ', ''));
+        _setContactError(userFacingError(e));
       });
       return;
     }

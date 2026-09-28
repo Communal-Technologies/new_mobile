@@ -11,6 +11,7 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/guarantor_request.dart';
 import 'package:communal_mobile/data/repositories/loan_repository.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 /// Full review surface a guarantor sees before they accept or decline
 /// the invitation. The inbox card on the previous screen routes here
@@ -54,7 +55,7 @@ class _GuarantorRequestDetailScreenState
       context.pop(true);
     } catch (e) {
       if (!mounted) return;
-      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
+      AppToast.error(userFacingError(e));
     } finally {
       if (mounted) setState(() => _processing = false);
     }

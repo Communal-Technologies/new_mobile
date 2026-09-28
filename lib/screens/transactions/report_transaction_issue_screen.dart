@@ -9,6 +9,7 @@ import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/repositories/transactions_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 /// Lets a member report a problem with a specific transaction. The report goes
 /// to the COMMUNAL platform admin (not the cooperative) via transactions-svc.
@@ -71,7 +72,7 @@ class _ReportTransactionIssueScreenState
       context.pop();
     } catch (e) {
       if (!mounted) return;
-      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
+      AppToast.error(userFacingError(e));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }

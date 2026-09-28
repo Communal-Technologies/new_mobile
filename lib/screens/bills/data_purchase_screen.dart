@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 /// Form for buying data. The phone number comes first and picks the network
 /// from its prefix; the network's fixed-price plans load into a bottom sheet.
@@ -83,7 +84,7 @@ class _DataPurchaseScreenState extends State<DataPurchaseScreen> {
       if (!mounted) return;
       setState(() {
         _loadingProviders = false;
-        _providersError = e.toString().replaceFirst('Exception: ', '');
+        _providersError = userFacingError(e);
       });
     }
   }
@@ -106,7 +107,7 @@ class _DataPurchaseScreenState extends State<DataPurchaseScreen> {
       if (!mounted) return;
       setState(() {
         _loadingProducts = false;
-        _productsError = e.toString().replaceFirst('Exception: ', '');
+        _productsError = userFacingError(e);
       });
     }
   }

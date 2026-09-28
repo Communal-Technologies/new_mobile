@@ -17,6 +17,7 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/core/widgets/transaction_pin_pad.dart';
 import 'package:communal_mobile/data/local/biometric_prefs.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 /// Audit M38 Phase D: user-facing enrollment + management screen for the
 /// biometric-bound nonce signing flow.
@@ -134,7 +135,7 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
         if (!mounted) return;
         _toast(
           'Could not verify biometrics: '
-          '${e.toString().replaceFirst('Exception: ', '')}',
+          '${userFacingError(e)}',
         );
         return;
       }
@@ -192,7 +193,7 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
     } catch (e) {
       if (!mounted) return;
       _toast(
-        e.toString().replaceFirst('Exception: ', ''),
+        userFacingError(e),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -257,7 +258,7 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
         }
       } catch (e) {
         if (!mounted) return;
-        _toast(e.toString().replaceFirst('Exception: ', ''));
+        _toast(userFacingError(e));
         return;
       } finally {
         if (mounted) setState(() => _busy = false);
@@ -313,7 +314,7 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
       _toast(_messageForBiometricError(e));
     } catch (e) {
       if (!mounted) return;
-      _toast(e.toString().replaceFirst('Exception: ', ''));
+      _toast(userFacingError(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

@@ -704,8 +704,16 @@ class _WelcomeBackScreenState extends State<WelcomeBackScreen> {
     context.go('/');
   }
 
+  /// A member reads this under the PIN field, so it can never be a stack trace.
+  ///
+  /// A thrown `Exception("Too many PIN attempts…")` from the repository is
+  /// already a sentence and is meant to be shown. Anything from Dio is not: the
+  /// raw text names the exception type, the timeout in microseconds and the URL,
+  /// which is how "HttpConnection closed before full header was received" ended
+  /// up on the lock screen.
   String _friendlyBackendError(Object error) {
-    return error.toString().replaceFirst('Exception: ', '').trim();
+    if (error is DioException) return dioTransportUserMessage(error);
+    return userFacingError(error).trim();
   }
 
   void _switchMethod(SignInMethod method) {

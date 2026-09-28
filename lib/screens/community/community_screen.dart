@@ -22,6 +22,7 @@ import 'package:communal_mobile/screens/community/widgets/community_tile.dart';
 import 'package:communal_mobile/screens/community/widgets/featured_community_card.dart';
 import 'package:communal_mobile/screens/community/widgets/find_nearby_card.dart';
 import 'package:communal_mobile/screens/community/widgets/join_community_invite_sheet.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 class CommunityScreen extends StatefulWidget {
   const CommunityScreen({super.key});
@@ -132,7 +133,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        SnackBar(content: Text(userFacingError(e))),
       );
     }
   }
@@ -149,7 +150,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        SnackBar(content: Text(userFacingError(e))),
       );
     }
   }
@@ -329,7 +330,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             borderRadius: BorderRadius.circular(16.r),
           ),
           child: Text(
-            snapshot.error.toString().replaceFirst('Exception: ', ''),
+            userFacingError(snapshot.error),
             style: TextStyle(fontSize: 16.sp, color: const Color(0xFFB42318)),
           ),
         ),

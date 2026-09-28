@@ -6,6 +6,7 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/profile_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/account/widgets/pin_input_field.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 /// The email address and phone number the account signs in with.
 ///
@@ -228,7 +229,7 @@ class _ContactChangeSheetState extends State<_ContactChangeSheet> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _error = userFacingError(e);
       });
     }
   }
@@ -260,7 +261,7 @@ class _ContactChangeSheetState extends State<_ContactChangeSheet> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _error = userFacingError(e);
       });
     }
   }

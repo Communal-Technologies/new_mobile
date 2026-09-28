@@ -18,6 +18,7 @@ import 'package:communal_mobile/data/models/loan_scheme.dart';
 import 'package:communal_mobile/data/repositories/loan_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/loans/data/loan_application_draft.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 /// Step 1 of the apply flow. The slider's min and max bounds, plus the
 /// interest treatment that gets stamped on the application, all come
@@ -144,7 +145,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       if (!mounted) return;
       // All loan-application errors (backend + local validation) are
       // surfaced as toasts so the screen stays uncluttered.
-      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
+      AppToast.error(userFacingError(e));
       setState(() => _loading = false);
     }
   }

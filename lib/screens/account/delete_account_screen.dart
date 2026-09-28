@@ -13,6 +13,7 @@ import 'package:communal_mobile/screens/account/widgets/data_loss_item.dart';
 import 'package:communal_mobile/screens/account/widgets/freeze_suggestion_box.dart';
 import 'package:communal_mobile/screens/account/widgets/delete_account_warning_section.dart';
 import 'package:communal_mobile/screens/account/widgets/delete_account_action_buttons.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 class DeleteAccountScreen extends StatefulWidget {
   const DeleteAccountScreen({super.key});
@@ -53,7 +54,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _loadError = e.toString().replaceFirst('Exception: ', '');
+        _loadError = userFacingError(e);
       });
     }
   }

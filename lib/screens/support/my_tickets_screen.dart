@@ -9,6 +9,7 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/support_models.dart';
 import 'package:communal_mobile/data/repositories/support_repository.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 const Color _brand = Color(0xFF7434FF);
 
@@ -282,7 +283,7 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
             Icon(Icons.error_outline, size: 40.sp, color: Colors.red),
             vSpace(12),
             Text(
-              error.toString().replaceFirst('Exception: ', ''),
+              userFacingError(error),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 17.sp,

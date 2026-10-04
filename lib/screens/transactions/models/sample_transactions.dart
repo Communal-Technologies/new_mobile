@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'package:communal_mobile/screens/transactions/models/transaction_details_data.dart';
+import 'package:communal_mobile/screens/transactions/receipt/receipt_status_style.dart';
 
 class TransactionListItem {
   const TransactionListItem({
@@ -54,5 +55,15 @@ class TransactionListItem {
         return isCredit ? const Color(0xFF1AAE70) : const Color(0xFFD7263D);
     }
   }
+
+  /// Human status word ("Successful"/"Pending"/"Failed"), shown in place of the
+  /// amount on the dashboard when balances are hidden. Single-sourced from the
+  /// receipt's status style so the wording never drifts from the receipt.
+  String get statusLabel => ReceiptStatusStyle(status: details.status).statusLabel;
+
+  /// Colour for [statusLabel] — the receipt's canonical status coding: green
+  /// successful, amber pending, red failed. Independent of credit/debit direction,
+  /// which the hidden amount is not revealing.
+  Color get statusColor => ReceiptStatusStyle(status: details.status).statusColor;
 }
 

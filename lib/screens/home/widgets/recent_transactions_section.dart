@@ -133,9 +133,9 @@ class RecentTransactionsSectionState extends State<RecentTransactionsSection> {
         builder: (context) {
           final auth = context.read<AuthBloc>().state;
           final uid = auth is AuthAuthenticated ? auth.user.id.trim() : '';
-          if (uid.isNotEmpty && !_walletPrefs.isBalanceVisible(uid)) {
-            return const SizedBox.shrink();
-          }
+          // The section always shows. Balance visibility only decides whether each
+          // row shows its amount (colour-coded) or, when hidden, its status word.
+          final showAmount = uid.isEmpty || _walletPrefs.isBalanceVisible(uid);
           final theme = Theme.of(context);
           final onSurface = theme.colorScheme.onSurface;
           return Padding(
@@ -223,6 +223,7 @@ class RecentTransactionsSectionState extends State<RecentTransactionsSection> {
                   final item = _items[index];
                   return TransactionTile(
                     item: item,
+                    showAmount: showAmount,
                     onTap: () => context.pushNamed(
                       'transaction-details',
                       extra: item.details,

@@ -258,11 +258,15 @@ class UserModel extends Equatable {
   /// number is not on the user yet (provisioning / review pending).
   bool get shouldShowHomeKycPendingWalletProvisioning {
     if (hasProvisionedWalletAccountNumber || isKycRejected) return false;
-    final t = communalTier?.trim().toLowerCase() ?? '';
-    if (t == 'tier_1' || t == 'tier_2') return true;
-    if (kycStep2Submitted) return true;
-    final w = kycWorkflowStatus?.trim().toLowerCase() ?? '';
-    return w == 'tier2_submitted';
+    // The wallet is provisioned only once BVN (step 2) is approved, so a
+    // "pending wallet" state must mean BVN was actually submitted. A tier promoted
+    // by an ID-only acceptance with no BVN — the pre-guard bypass — has no wallet
+    // coming, so it must NOT read as pending: it falls through to the verify
+    // prompt, whose resume routes to the bank step (the backend reports
+    // step_2_submitted=false) so the member can still submit their BVN. Gating on
+    // the tier alone stranded such a user on a perpetual "pending" card with no way
+    // back to BVN.
+    return kycStep2Submitted;
   }
 
   UserModel copyWith({

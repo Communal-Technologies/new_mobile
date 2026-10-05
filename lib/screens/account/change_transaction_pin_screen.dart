@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 class ChangeTransactionPinScreen extends StatefulWidget {
   const ChangeTransactionPinScreen({super.key});
@@ -205,7 +206,7 @@ class _ChangeTransactionPinScreenState extends State<ChangeTransactionPinScreen>
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorText = e.toString().replaceFirst('Exception: ', '');
+        _errorText = userFacingError(e);
       });
     } finally {
       if (mounted) setState(() => _submitting = false);

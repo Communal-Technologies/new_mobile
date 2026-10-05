@@ -236,7 +236,7 @@ class _SessionTakeoverScreenState extends State<SessionTakeoverScreen> {
         return;
       }
       final msg = e is Exception
-          ? e.toString().replaceFirst('Exception: ', '')
+          ? userFacingError(e)
           : e.toString();
       AppToast.error(msg);
     } finally {

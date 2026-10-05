@@ -9,6 +9,7 @@ import 'package:communal_mobile/core/widgets/bottomsheet_handlebar.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/community_repository.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 /// Joining with an invite code. The cooperative already decided by issuing it, so
 /// redeeming makes the member a member on the spot — but it still needs a name to
@@ -61,7 +62,7 @@ class _JoinCommunityInviteSheetState extends State<JoinCommunityInviteSheet> {
       if (!mounted) return;
       setState(() {
         _isSubmitting = false;
-        _errorMessage = e.toString().replaceFirst('Exception: ', '');
+        _errorMessage = userFacingError(e);
       });
     }
   }

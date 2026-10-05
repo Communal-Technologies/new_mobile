@@ -13,6 +13,7 @@ import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/money.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 class ObligationWithdrawalScreen extends StatefulWidget {
   const ObligationWithdrawalScreen({super.key, required this.obligation});
@@ -112,7 +113,7 @@ class _ObligationWithdrawalScreenState
       await _loadRequests();
     } catch (e) {
       if (!mounted) return;
-      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
+      AppToast.error(userFacingError(e));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -151,7 +152,7 @@ class _ObligationWithdrawalScreenState
       await _loadRequests();
     } catch (e) {
       if (!mounted) return;
-      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
+      AppToast.error(userFacingError(e));
     } finally {
       if (mounted) setState(() => _revoking = false);
     }

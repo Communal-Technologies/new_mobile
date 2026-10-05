@@ -14,6 +14,7 @@ import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/data/repositories/regions_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:intl_phone_number_input/intl_phone_number_input.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 enum LoginType { phone, email }
 
@@ -157,7 +158,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : e.toString();
+      final message = e is Exception ? userFacingError(e) : e.toString();
       AppToast.error(message);
     } finally {
       if (mounted) {

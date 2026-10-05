@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 class RecentTransactionsSection extends StatefulWidget {
   const RecentTransactionsSection({super.key});
@@ -111,7 +112,7 @@ class RecentTransactionsSectionState extends State<RecentTransactionsSection> {
       if (!showLoader) return;
       setState(() {
         _loading = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _error = userFacingError(e);
       });
     }
   }
@@ -132,9 +133,9 @@ class RecentTransactionsSectionState extends State<RecentTransactionsSection> {
         builder: (context) {
           final auth = context.read<AuthBloc>().state;
           final uid = auth is AuthAuthenticated ? auth.user.id.trim() : '';
-          if (uid.isNotEmpty && !_walletPrefs.isBalanceVisible(uid)) {
-            return const SizedBox.shrink();
-          }
+          // The section always shows. Balance visibility only decides whether each
+          // row shows its amount (colour-coded) or, when hidden, its status word.
+          final showAmount = uid.isEmpty || _walletPrefs.isBalanceVisible(uid);
           final theme = Theme.of(context);
           final onSurface = theme.colorScheme.onSurface;
           return Padding(
@@ -222,6 +223,7 @@ class RecentTransactionsSectionState extends State<RecentTransactionsSection> {
                   final item = _items[index];
                   return TransactionTile(
                     item: item,
+                    showAmount: showAmount,
                     onTap: () => context.pushNamed(
                       'transaction-details',
                       extra: item.details,

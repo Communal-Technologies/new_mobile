@@ -11,6 +11,7 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/auth_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:go_router/go_router.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 enum VerificationMethod { sms, whatsapp, call }
 
@@ -243,7 +244,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _error = userFacingError(e);
       });
     }
   }
@@ -437,7 +438,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _error = userFacingError(e);
       });
     }
   }

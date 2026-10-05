@@ -11,6 +11,7 @@ import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/community/community_map/join_community_bottom_sheet.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_details.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_locations.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 class CommunityDetailScreen extends StatefulWidget {
   const CommunityDetailScreen({super.key, required this.detail});
@@ -141,7 +142,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        SnackBar(content: Text(userFacingError(e))),
       );
     } finally {
       if (mounted) setState(() => _submittingRating = false);

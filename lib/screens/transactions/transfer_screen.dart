@@ -15,6 +15,7 @@ import 'package:communal_mobile/core/widgets/back_to_exit_wrapper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 class TransferScreen extends StatefulWidget {
   const TransferScreen({super.key});
@@ -70,7 +71,7 @@ class _TransferScreenState extends State<TransferScreen> {
       if (!mounted) return;
       setState(() {
         _recentLoading = false;
-        _recentError = e.toString().replaceFirst('Exception: ', '');
+        _recentError = userFacingError(e);
       });
     }
   }

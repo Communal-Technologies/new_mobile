@@ -6,6 +6,7 @@ import 'package:communal_mobile/data/repositories/community_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_details.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_locations.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 class CommunityApplicationStatusScreen extends StatefulWidget {
   const CommunityApplicationStatusScreen({super.key, required this.detail});
@@ -79,7 +80,7 @@ class _CommunityApplicationStatusScreenState
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          content: Text(userFacingError(e)),
         ),
       );
     }
@@ -158,7 +159,7 @@ class _CommunityApplicationStatusScreenState
         iconColor: const Color(0xFFB42318),
         textColor: const Color(0xFFB42318),
         title: 'Could not load status',
-        body: snapshot.error.toString().replaceFirst('Exception: ', ''),
+        body: userFacingError(snapshot.error),
       );
     }
     if (request == null) {

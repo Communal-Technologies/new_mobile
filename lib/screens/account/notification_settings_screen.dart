@@ -9,6 +9,7 @@ import 'package:communal_mobile/data/models/notification_preferences.dart';
 import 'package:communal_mobile/data/repositories/notifications_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/account/widgets/notification_toggle_item.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -53,7 +54,7 @@ class _NotificationSettingsScreenState
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _error = userFacingError(e);
       });
     }
   }
@@ -76,7 +77,7 @@ class _NotificationSettingsScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
+            userFacingError(e),
           ),
         ),
       );

@@ -10,6 +10,7 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/repositories/community_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_locations.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 /// Bottom sheet for the request-to-join flow (no invite code). Submits
 /// to /members/join-requests and pops the resulting [CommunityJoinRequest]
@@ -91,7 +92,7 @@ class _JoinCommunityBottomSheetState extends State<JoinCommunityBottomSheet> {
       if (!mounted) return;
       setState(() {
         _isSubmitting = false;
-        _errorMessage = e.toString().replaceFirst('Exception: ', '');
+        _errorMessage = userFacingError(e);
       });
     }
   }

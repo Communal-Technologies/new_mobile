@@ -14,6 +14,7 @@ import 'package:communal_mobile/cubits/security/security_cubit.dart';
 import 'package:communal_mobile/data/models/member_profile_details.dart';
 import 'package:communal_mobile/data/repositories/profile_repository.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 class ProfileHeader extends StatefulWidget {
   const ProfileHeader({super.key, required this.profile});
@@ -63,7 +64,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString().replaceFirst('Exception: ', '')),
+            content: Text(userFacingError(e)),
           ),
         );
       } finally {

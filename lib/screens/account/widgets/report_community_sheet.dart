@@ -6,6 +6,7 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/support_models.dart';
 import 'package:communal_mobile/data/repositories/support_repository.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 /// Reports a cooperative to Communal's support team.
 ///
@@ -94,7 +95,7 @@ class _ReportCommunitySheetState extends State<ReportCommunitySheet> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _sending = false);
-      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
+      AppToast.error(userFacingError(e));
     }
   }
 

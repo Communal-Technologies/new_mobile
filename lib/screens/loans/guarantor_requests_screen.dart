@@ -11,6 +11,7 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/guarantor_request.dart';
 import 'package:communal_mobile/data/repositories/loan_repository.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 /// Inbox of incoming "stand as guarantor" requests for the logged-in
 /// member. Each row pairs an applicant + amount with accept/decline
@@ -54,7 +55,7 @@ class _GuarantorRequestsScreenState extends State<GuarantorRequestsScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _error = userFacingError(e);
       });
     }
   }

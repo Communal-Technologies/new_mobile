@@ -18,6 +18,7 @@ import 'package:communal_mobile/data/models/loan_installment.dart';
 import 'package:communal_mobile/data/models/member_search_result.dart';
 import 'package:communal_mobile/data/repositories/loan_repository.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 /// Member-side loan detail screen. Repayments are admin-driven (the
 /// cooperative's processor pulls from obligations + wallet — see
@@ -96,7 +97,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
       await _loadGuarantors();
     } catch (e) {
       if (!mounted) return;
-      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
+      AppToast.error(userFacingError(e));
     } finally {
       if (mounted) {
         setState(() => _processingGuarantorActions.remove(g.approvalId));
@@ -137,7 +138,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
       await _loadGuarantors();
     } catch (e) {
       if (!mounted) return;
-      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
+      AppToast.error(userFacingError(e));
     } finally {
       if (mounted) {
         setState(() => _processingGuarantorActions.remove(g.approvalId));
@@ -194,7 +195,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
       if (!mounted) return;
       setState(() {
         _loadingHistory = false;
-        _historyError = e.toString().replaceFirst('Exception: ', '');
+        _historyError = userFacingError(e);
       });
     }
   }
@@ -235,7 +236,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
       context.pop();
     } catch (e) {
       if (!mounted) return;
-      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
+      AppToast.error(userFacingError(e));
       setState(() => _cancelling = false);
     }
   }
@@ -1297,7 +1298,7 @@ class _ReplaceGuarantorSheetState extends State<_ReplaceGuarantorSheet> {
       if (!mounted) return;
       setState(() {
         _searching = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _error = userFacingError(e);
       });
     }
   }

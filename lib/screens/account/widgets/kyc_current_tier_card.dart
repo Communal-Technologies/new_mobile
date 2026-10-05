@@ -36,6 +36,10 @@ class KycCurrentTierCard extends StatelessWidget {
         current.tierKey == 'tier_1' || current.tierKey == 'tier_2';
     final hasStatusBadge =
         statusBadgeLabel != null && statusBadgeLabel!.trim().isNotEmpty;
+    // The big title already names the tier ("Tier 1"); show the API label line
+    // only when it says something different, so the tier is not printed twice.
+    final showLabelLine = current.label.trim().isNotEmpty &&
+        current.label.trim().toLowerCase() != title.trim().toLowerCase();
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w),
@@ -47,93 +51,65 @@ class KycCurrentTierCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 10.w,
+            runSpacing: 8.h,
             children: [
-              Row(
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 28.sp,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                  if (showCurrentBadge) ...[
-                    hSpace(12),
-                    Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF5A1FE6),
-                        borderRadius: BorderRadius.circular(20.r),
-                      ),
-                      child: Text(
-                        'Current',
-                        style: TextStyle(
-                          fontSize: 17.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (hasStatusBadge) ...[
-                    hSpace(8),
-                    Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
-                      decoration: BoxDecoration(
-                        color: statusBadgeBgColor ?? const Color(0xFF4B2EA4),
-                        borderRadius: BorderRadius.circular(20.r),
-                      ),
-                      child: Text(
-                        statusBadgeLabel!,
-                        style: TextStyle(
-                          fontSize: 17.sp,
-                          fontWeight: FontWeight.w700,
-                          color: statusBadgeColor ?? Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 28.sp,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
               ),
-              Column(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(8.w),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    child: Icon(
-                      Icons.shield_outlined,
-                      color: Colors.white,
-                      size: 24.sp,
-                    ),
+              if (showCurrentBadge)
+                Container(
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF5A1FE6),
+                    borderRadius: BorderRadius.circular(20.r),
                   ),
-                  vSpace(4),
-                  Text(
-                    'Status',
+                  child: Text(
+                    'Current',
                     style: TextStyle(
                       fontSize: 17.sp,
-                      color: Colors.white.withOpacity(0.9),
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
                     ),
                   ),
-                ],
-              ),
+                ),
+              if (hasStatusBadge)
+                Container(
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                  decoration: BoxDecoration(
+                    color: statusBadgeBgColor ?? const Color(0xFF4B2EA4),
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                  child: Text(
+                    statusBadgeLabel!,
+                    style: TextStyle(
+                      fontSize: 17.sp,
+                      fontWeight: FontWeight.w700,
+                      color: statusBadgeColor ?? Colors.white,
+                    ),
+                  ),
+                ),
             ],
           ),
-          vSpace(8),
-          Text(
-            current.label,
-            style: TextStyle(
-              fontSize: 19.sp,
-              color: Colors.white.withOpacity(0.9),
+          if (showLabelLine) ...[
+            vSpace(8),
+            Text(
+              current.label,
+              style: TextStyle(
+                fontSize: 19.sp,
+                color: Colors.white.withValues(alpha: 0.9),
+              ),
             ),
-          ),
+          ],
           vSpace(20),
           if (current.isPreVerificationTier) ...[
             Text(
@@ -142,7 +118,7 @@ class KycCurrentTierCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 19.sp,
                 height: 1.35,
-                color: Colors.white.withOpacity(0.92),
+                color: Colors.white.withValues(alpha: 0.92),
               ),
             ),
           ] else ...[
@@ -169,7 +145,7 @@ class KycCurrentTierCard extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.white,
                   side: BorderSide(
-                    color: Colors.white.withOpacity(0.35),
+                    color: Colors.white.withValues(alpha: 0.35),
                     width: 1.5,
                   ),
                   padding: EdgeInsets.symmetric(vertical: 12.h),
@@ -206,7 +182,7 @@ class KycCurrentTierCard extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 19.sp,
-            color: Colors.white.withOpacity(0.82),
+            color: Colors.white.withValues(alpha: 0.82),
           ),
         ),
         vSpace(4),

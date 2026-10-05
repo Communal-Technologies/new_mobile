@@ -11,6 +11,7 @@ import 'package:communal_mobile/data/models/support_models.dart';
 import 'package:communal_mobile/data/repositories/support_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/account/widgets/faq_category_section.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 /// The FAQ catalogue, read from the support knowledge base.
 ///
@@ -84,7 +85,7 @@ class _FaqScreenState extends State<FaqScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _error = userFacingError(e);
       });
     }
   }

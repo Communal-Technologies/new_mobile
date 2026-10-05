@@ -14,6 +14,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:communal_mobile/core/widgets/kyc_rejection_banner.dart';
 import 'package:communal_mobile/core/widgets/custom_text_field.dart';
 import 'package:communal_mobile/core/widgets/kyc_consent_dialog.dart';
 import 'package:communal_mobile/core/widgets/kyc_idle_suppressor.dart';
@@ -827,6 +828,24 @@ class _ProofOfIdentityScreenState extends State<ProofOfIdentityScreen> {
               ),
 
               vSpace(24),
+
+              // When the member is here to re-do a turned-down submission, show
+              // what Anchor flagged so they correct it rather than resubmit blind.
+              Builder(
+                builder: (context) {
+                  final s = context.read<AuthBloc>().state;
+                  if (s is! AuthAuthenticated || !s.user.isKycRejected) {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 16.h),
+                    child: KycRejectionBanner(
+                      message: s.user.kycRejectionMessage ??
+                          'Your previous submission was not approved. Please review the details below and submit again.',
+                    ),
+                  );
+                },
+              ),
 
               // Form content
               Expanded(

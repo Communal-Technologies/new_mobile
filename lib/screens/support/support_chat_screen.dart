@@ -11,6 +11,7 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/support_models.dart';
 import 'package:communal_mobile/data/repositories/support_repository.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 const Color _brand = Color(0xFF7434FF);
 
@@ -356,7 +357,7 @@ class _SupportChatScreenState extends State<SupportChatScreen>
   }
 
   String _clean(Object e) =>
-      e.toString().replaceFirst('Exception: ', '').trim();
+      userFacingError(e).trim();
 
   String get _title => widget.categoryTitle ?? 'Help';
 

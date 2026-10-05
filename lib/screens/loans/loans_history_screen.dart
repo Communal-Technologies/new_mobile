@@ -14,6 +14,7 @@ import 'package:communal_mobile/data/models/loan_application.dart';
 import 'package:communal_mobile/data/repositories/loan_repository.dart';
 import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/loans/widgets/active_loan_card.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 /// Full list of every loan application on the signed-in member's
 /// ledger, grouped by status. The loans hub only surfaces the active +
@@ -62,7 +63,7 @@ class _LoansHistoryScreenState extends State<LoansHistoryScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      AppToast.error(e.toString().replaceFirst('Exception: ', ''));
+      AppToast.error(userFacingError(e));
       setState(() => _loading = false);
     }
   }

@@ -17,6 +17,7 @@ import 'package:communal_mobile/injection.dart';
 import 'package:communal_mobile/screens/community/community_map/community_card.dart';
 import 'package:communal_mobile/screens/community/community_map/join_community_bottom_sheet.dart';
 import 'package:communal_mobile/screens/community/data/sample_community_locations.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 class CommunityMapScreen extends StatefulWidget {
   const CommunityMapScreen({super.key});
@@ -121,7 +122,7 @@ class _CommunityMapScreenState extends State<CommunityMapScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _loadError = e.toString().replaceFirst('Exception: ', '');
+        _loadError = userFacingError(e);
       });
     }
   }

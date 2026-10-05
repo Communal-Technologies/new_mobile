@@ -67,6 +67,12 @@ class ApiEndpoints {
   static const String generatePasswordResetLink =
       '$_v1/generate-password-reset-link';
   static const String verifyPasswordResetPin = '$_v1/verify-password-reset-pin';
+
+  /// The lock screen's check. On authsvc, and granting nothing — see
+  /// [AuthRepository.verifySessionUnlockPassword]. Not the transactions-svc
+  /// route it replaced, which opened a 30-minute payment window.
+  static const String verifyUnlockPassword =
+      '$_v1/members/verify-unlock-password';
   static const String resetPassword = '$_v1/reset-password';
   static const String otpSend = '$_v1/otp/send';
   static const String otpVerify = '$_v1/otp/verify';
@@ -349,8 +355,13 @@ class ApiEndpoints {
       '$_coopV2/fetch-internal-accounts/$cooperativeId';
 
   // --- Security / biometric (audit M7, M38) -------------------------------
-  static const String securityVerifyPassword =
-      '$_txnV2/security/transaction/verify-password';
+  // transactions-svc's /security/transaction/verify-password is deliberately
+  // absent. It was the lock screen's check, and verifying through it caches
+  // `password_verified_<uid>` on txnsvc for thirty minutes — the precondition
+  // for minting a transaction token — so unlocking the app authorised spending.
+  // Unlock now goes to [verifyUnlockPassword] on authsvc, which grants nothing.
+  // Payments are authorised separately and correctly, through
+  // `members/verify-security-pin` with an intent, which mints a scoped marker.
   static const String biometricEnroll = '$_v1/security/biometric/enroll';
   static const String biometricChallenge = '$_v1/security/biometric/challenge';
   static const String biometricRevoke = '$_v1/security/biometric/revoke';

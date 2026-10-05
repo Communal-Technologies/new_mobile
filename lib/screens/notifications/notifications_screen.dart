@@ -12,6 +12,7 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/data/models/notification_model.dart';
 import 'package:communal_mobile/data/repositories/notifications_repository.dart';
 import 'package:communal_mobile/injection.dart';
+import 'package:communal_mobile/core/utils/dio_transport_user_message.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -95,7 +96,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+          SnackBar(content: Text(userFacingError(e))),
         );
       }
     } finally {

@@ -58,10 +58,11 @@ class KycProgressStorage {
     // rule does not apply: the completed-step flags are exactly what a rejection
     // invalidates. The tier says which submission failed — still tier_0 means
     // Tier 1 (BVN) was turned down, anything higher means the documents were.
-    // A turned-down BVN starts at the profile, not at bank: the usual cause is
-    // that the name or date of birth does not match the BVN record, and that is
-    // only fixable on the profile form (which edits the Anchor customer when one
-    // already exists).
+    // A turned-down BVN goes back to the profile: the common cause is a name or
+    // date-of-birth mismatch against the BVN record, which is fixed on the profile
+    // form. That form edits the existing Anchor customer (it does not recreate one,
+    // which would fail on the duplicate email/phone), so returning here is safe.
+    // An ID rejection goes to proof.
     if (kycRejected) {
       return _tierPastBank(communalTier)
           ? KycResumeDestination.proof

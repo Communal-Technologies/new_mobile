@@ -5,10 +5,21 @@ import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/screens/transactions/models/sample_transactions.dart';
 
 class TransactionTile extends StatelessWidget {
-  const TransactionTile({super.key, required this.item, this.onTap});
+  const TransactionTile({
+    super.key,
+    required this.item,
+    this.onTap,
+    this.showAmount = true,
+  });
 
   final TransactionListItem item;
   final VoidCallback? onTap;
+
+  /// When false (balances hidden on the dashboard), the trailing amount is
+  /// replaced by the transaction's status word, colour-coded by status. The
+  /// amount already carries the colour coding when shown, so the status is only
+  /// surfaced while the amount is hidden.
+  final bool showAmount;
 
   @override
   Widget build(BuildContext context) {
@@ -59,11 +70,11 @@ class TransactionTile extends StatelessWidget {
               ),
             ),
             Text(
-              item.signedAmountLabel,
+              showAmount ? item.signedAmountLabel : item.statusLabel,
               style: TextStyle(
                 fontSize: 17.sp,
                 fontWeight: FontWeight.w700,
-                color: item.amountColor,
+                color: showAmount ? item.amountColor : item.statusColor,
               ),
             ),
           ],

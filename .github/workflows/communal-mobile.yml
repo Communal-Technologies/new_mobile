@@ -391,8 +391,26 @@ jobs:
             echo "::warning::Play Store secrets not set — skipping Play upload. Add PLAY_STORE_SERVICE_ACCOUNT_JSON and PLAY_STORE_PACKAGE_NAME to enable."
           fi
 
+      # Play contradicts itself about changesNotSentForReview depending on the
+      # listing's state, and it has now failed a release in both directions:
+      #
+      #   listing has something a person must submit (an open policy declaration):
+      #     omitting the flag  -> "Changes cannot be sent for review automatically"
+      #   listing is clear, Play reviews automatically:
+      #     setting the flag   -> "Changes are sent for review automatically.
+      #                            The query parameter changesNotSentForReview
+      #                            must not be set."
+      #
+      # Both arrive after the AAB has uploaded, so the build is wasted either way.
+      # The two cases need the parameter genuinely absent or genuinely present —
+      # a value of false is still a value — and an action input cannot be omitted
+      # conditionally. Hence two steps selected by a repository variable, so the
+      # next time the listing state flips it is a settings change rather than a
+      # failed release and a code edit.
+      #
+      # Default is absent: that is the healthy listing, and the state Play is in now.
       - name: Upload to Google Play
-        if: env.IS_PROD == 'true' && steps.play_check.outputs.available == 'true'
+        if: env.IS_PROD == 'true' && steps.play_check.outputs.available == 'true' && vars.PLAY_CHANGES_NOT_SENT_FOR_REVIEW != 'true'
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
@@ -400,13 +418,19 @@ jobs:
           releaseFiles: communal-mobile.aab
           track: ${{ vars.PLAY_STORE_TRACK || 'internal' }}
           status: ${{ vars.PLAY_STORE_RELEASE_STATUS || 'draft' }}
-          # Play refuses to send an edit for review over the API while the listing
-          # has something a person must submit — an open policy declaration, for
-          # one — and answers "Changes cannot be sent for review automatically",
-          # after the AAB has already uploaded. Committing the edit without the
-          # review request lands the build on the track; it is then sent for
-          # review from the Play Console, which is where the declaration is
-          # answered anyway.
+
+      # Set PLAY_CHANGES_NOT_SENT_FOR_REVIEW=true when the listing has an
+      # outstanding declaration. The build lands on the track and is sent for
+      # review from the Play Console, where that declaration is answered anyway.
+      - name: Upload to Google Play (review requested manually)
+        if: env.IS_PROD == 'true' && steps.play_check.outputs.available == 'true' && vars.PLAY_CHANGES_NOT_SENT_FOR_REVIEW == 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ secrets.PLAY_STORE_PACKAGE_NAME }}
+          releaseFiles: communal-mobile.aab
+          track: ${{ vars.PLAY_STORE_TRACK || 'internal' }}
+          status: ${{ vars.PLAY_STORE_RELEASE_STATUS || 'draft' }}
           changesNotSentForReview: true
 
       # This repo holds source, not binaries — every artifact lives on the public

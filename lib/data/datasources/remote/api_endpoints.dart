@@ -84,6 +84,12 @@ class ApiEndpoints {
   // --- Members account / settings -----------------------------------------
   static const String membersChangePassword = '$_v1/members/change-password';
   static const String memberLoginActivity = '$_v1/auth/login-activity';
+  static String membersAnnouncements(String? cooperativeId) =>
+      cooperativeId == null || cooperativeId.isEmpty
+          ? '$_v1/members/announcements'
+          : '$_v1/members/announcements?cooperative=$cooperativeId';
+  static String membersAcknowledgeAnnouncement(String id) =>
+      '$_v1/members/announcements/$id/ack';
   static const String membersUpdateSecurityPin =
       '$_v1/members/update-security-pin';
   static const String membersVerifySecurityPin =

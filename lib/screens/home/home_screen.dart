@@ -24,6 +24,8 @@ import 'package:communal_mobile/screens/home/widgets/pin_setup_notice_card.dart'
 import 'package:communal_mobile/screens/home/widgets/quick_actions_section.dart';
 import 'package:communal_mobile/screens/home/widgets/recent_transactions_section.dart';
 import 'package:communal_mobile/screens/home/widgets/new_feature_banner.dart';
+import 'package:communal_mobile/core/widgets/announcement_modal.dart';
+import 'package:communal_mobile/data/repositories/announcement_repository.dart';
 import 'package:go_router/go_router.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -47,7 +49,37 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _activity.revision.addListener(_onTransactionActivity);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _showPendingAnnouncements());
   }
+
+  /// Anything the platform wants this member to see once, acknowledged as it
+  /// closes so it does not return. Never interrupts the home screen on failure.
+  Future<void> _showPendingAnnouncements() async {
+    if (_announcementsShown) return;
+    _announcementsShown = true;
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) return;
+
+    final repository = AnnouncementRepository(getIt());
+    final pending = await repository.fetch(
+      cooperativeId: authState.user.cooperativeId?.trim(),
+    );
+    for (final announcement in pending) {
+      if (!mounted) return;
+      await AnnouncementModal.show(
+        context,
+        announcement: announcement,
+        onDismiss: () => repository.acknowledge(announcement.id, outcome: 'dismissed'),
+        onAction: (a) async {
+          await repository.acknowledge(a.id, outcome: 'acted');
+          if (mounted) await openAnnouncementAction(context, a);
+        },
+      );
+      await repository.acknowledge(announcement.id);
+    }
+  }
+
+  bool _announcementsShown = false;
 
   @override
   void dispose() {

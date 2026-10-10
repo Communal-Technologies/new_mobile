@@ -19,6 +19,8 @@ import 'package:communal_mobile/core/widgets/animated_logo_loader.dart';
 import 'package:communal_mobile/core/widgets/loader_overlay.dart';
 import 'package:communal_mobile/core/widgets/space.dart';
 import 'package:communal_mobile/cubits/obligation_categories/obligation_categories_cubit.dart';
+import 'package:communal_mobile/data/models/member_sundry.dart';
+import 'package:communal_mobile/data/models/user_model.dart';
 import 'package:communal_mobile/data/models/obligation.dart';
 import 'package:communal_mobile/data/models/obligation_category.dart';
 import 'package:communal_mobile/data/repositories/member_obligations_repository.dart';
@@ -43,6 +45,7 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
   final _searchController = TextEditingController();
   List<Obligation> _obligations = const [];
   List<FineRecord> _memberFines = const [];
+  MemberSundryPosition _sundry = const MemberSundryPosition();
 
   String _selectedCategory = '';
   final int _currentNavIndex = 1;
@@ -112,12 +115,23 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
         _loading = false;
       });
       unawaited(_loadFines(authState.user));
+      unawaited(_loadSundry(authState.user));
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
         _error = userFacingError(e);
       });
+    }
+  }
+
+  Future<void> _loadSundry(UserModel user) async {
+    try {
+      final position = await _repository.fetchMemberSundries(user);
+      if (!mounted) return;
+      setState(() => _sundry = position);
+    } catch (_) {
+      // Extra context on this screen, never the reason it fails to render.
     }
   }
 
@@ -390,6 +404,18 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
         icon: Icons.calendar_today_outlined,
         valueColor: theme.primaryColor,
       ),
+      if (_sundry.hasPosition)
+        _SummaryCardData(
+          label: _sundry.netMinor < 0 ? 'Sundry Owed' : 'Sundry Held',
+          value: Money(_sundry.netMinor.abs(), currency).format(),
+          color: _sundry.netMinor < 0 ? const Color(0xFFFFF4E5) : const Color(0xFFE7FFF2),
+          icon: _sundry.netMinor < 0
+              ? Icons.arrow_circle_up_outlined
+              : Icons.savings_outlined,
+          valueColor: _sundry.netMinor < 0
+              ? const Color(0xFFB26A00)
+              : const Color(0xFF1AAE70),
+        ),
     ];
 
     return LayoutBuilder(
@@ -400,24 +426,34 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
         if (needsWrap) {
           return Column(
             children: [
-              _SummaryCard(card: cards[0]),
-              vSpace(spacing),
-              _SummaryCard(card: cards[1]),
-              vSpace(spacing),
-              _SummaryCard(card: cards[2]),
+              for (int i = 0; i < cards.length; i++) ...[
+                _SummaryCard(card: cards[i]),
+                if (i != cards.length - 1) vSpace(spacing),
+              ],
             ],
           );
         }
 
-        return Row(
-          children: [
-            Expanded(child: _SummaryCard(card: cards[0])),
-            SizedBox(width: spacing),
-            Expanded(child: _SummaryCard(card: cards[1])),
-            SizedBox(width: spacing),
-            Expanded(child: _SummaryCard(card: cards[2])),
-          ],
-        );
+        final perRow = cards.length > 3 ? 2 : cards.length;
+        final rows = <Widget>[];
+        for (int start = 0; start < cards.length; start += perRow) {
+          final slice = cards.skip(start).take(perRow).toList();
+          rows.add(Row(
+            children: [
+              for (int i = 0; i < slice.length; i++) ...[
+                Expanded(child: _SummaryCard(card: slice[i])),
+                if (i != slice.length - 1) SizedBox(width: spacing),
+              ],
+              if (slice.length < perRow)
+                for (int pad = slice.length; pad < perRow; pad++) ...[
+                  SizedBox(width: spacing),
+                  const Expanded(child: SizedBox.shrink()),
+                ],
+            ],
+          ));
+          if (start + perRow < cards.length) rows.add(vSpace(spacing));
+        }
+        return Column(children: rows);
       },
     );
   }
@@ -574,7 +610,39 @@ class _FinancialObligationsScreenState extends State<FinancialObligationsScreen>
         ),
         if (i != items.length - 1) vSpace(16),
       ],
+      ..._buildSundrySection(theme),
       vSpace(20),
+    ];
+  }
+
+  List<Widget> _buildSundrySection(ThemeData theme) {
+    final pending = _sundry.entries.where((e) => e.isPending).toList();
+    if (pending.isEmpty) return const [];
+    final auth = context.read<AuthBloc>().state;
+    final currency = auth is AuthAuthenticated
+        ? cooperativeCurrencyCode(auth.user)
+        : 'NGN';
+    return [
+      vSpace(24),
+      Text(
+        'SUNDRY',
+        style: TextStyle(
+          fontSize: 12.sp,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.6,
+          color: Colors.grey.shade600,
+        ),
+      ),
+      vSpace(4),
+      Text(
+        'Amounts held for you, or still owed to the cooperative, outside your obligations.',
+        style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
+      ),
+      vSpace(12),
+      for (int i = 0; i < pending.length; i++) ...[
+        _SundryTile(entry: pending[i], currency: currency),
+        if (i != pending.length - 1) vSpace(12),
+      ],
     ];
   }
 
@@ -735,6 +803,71 @@ class _SummaryCard extends StatelessWidget {
               fontWeight: FontWeight.w700,
               color: card.valueColor,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+class _SundryTile extends StatelessWidget {
+  const _SundryTile({required this.entry, required this.currency});
+
+  final MemberSundry entry;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final credit = entry.isCredit;
+    final accent = credit ? const Color(0xFF1AAE70) : const Color(0xFFB26A00);
+    return Container(
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40.w,
+            height: 40.w,
+            decoration: BoxDecoration(
+              color: credit ? const Color(0xFFE7FFF2) : const Color(0xFFFFF4E5),
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            child: Icon(
+              credit ? Icons.savings_outlined : Icons.arrow_circle_up_outlined,
+              color: accent,
+              size: 20.sp,
+            ),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  credit ? 'Held for you' : 'You owe',
+                  style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  entry.sourceLabel,
+                  style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
+                ),
+                if (entry.reference.isNotEmpty)
+                  Text(
+                    'Ref ${entry.reference}',
+                    style: TextStyle(fontSize: 11.sp, color: Colors.grey.shade500),
+                  ),
+              ],
+            ),
+          ),
+          Text(
+            Money(entry.amountMinor, currency).format(),
+            style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w700, color: accent),
           ),
         ],
       ),

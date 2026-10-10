@@ -2,6 +2,7 @@ import 'package:communal_mobile/core/utils/app_currency.dart';
 import 'package:communal_mobile/core/utils/server_time.dart';
 import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
+import 'package:communal_mobile/data/models/member_sundry.dart';
 import 'package:communal_mobile/data/models/obligation.dart';
 import 'package:communal_mobile/data/models/obligation_withdrawal_request.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
@@ -247,6 +248,25 @@ class MemberObligationsRepository {
         throw Exception(data['message'].toString());
       }
       throw Exception('Unable to fetch obligations');
+    }
+  }
+
+  Future<MemberSundryPosition> fetchMemberSundries(UserModel user) async {
+    final cooperativeId = user.cooperativeId?.trim() ?? '';
+    final ledgerNumber = user.ledgerNumber?.trim() ?? '';
+    if (cooperativeId.isEmpty || ledgerNumber.isEmpty) {
+      return const MemberSundryPosition();
+    }
+    try {
+      final response = await _dioClient.get(
+        ApiEndpoints.membersSundries(ledgerNumber, cooperativeId),
+      );
+      final data = response.data;
+      final raw = data is Map ? data['sundries'] : null;
+      if (raw is! Map) return const MemberSundryPosition();
+      return MemberSundryPosition.fromJson(Map<String, dynamic>.from(raw));
+    } on DioException {
+      return const MemberSundryPosition();
     }
   }
 

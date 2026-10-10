@@ -212,6 +212,8 @@ class ApiEndpoints {
   ) => '$_oblV2/$ledgerNumber/$cooperativeId';
   static String membersFines(String ledgerNumber, String cooperativeId) =>
       '$_oblV2/fines/$ledgerNumber/$cooperativeId';
+  static String membersSundries(String ledgerNumber, String cooperativeId) =>
+      '$_oblV2/sundries/$ledgerNumber?cooperative=$cooperativeId';
   // Cash repositories are owned by cooperative-svc; the monolith copy is gone
   // post-migration.
   static const String membersCooperativeCashRepositories =

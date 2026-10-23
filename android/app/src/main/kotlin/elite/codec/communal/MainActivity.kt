@@ -6,6 +6,7 @@ import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
@@ -145,6 +146,19 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                     result.success(null)
                 }
+            } else {
+                result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "elite.codec.communal/handset",
+        ).setMethodCallHandler { call, result ->
+            if (call.method == "androidId") {
+                result.success(
+                    Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: ""
+                )
             } else {
                 result.notImplemented()
             }

@@ -1,4 +1,7 @@
 // auth_repository.dart
+import 'dart:io';
+
+import 'package:communal_mobile/core/services/handset_id.dart';
 import 'package:communal_mobile/data/datasources/remote/api_endpoints.dart';
 import 'package:communal_mobile/data/datasources/remote/dio/dio_client.dart';
 import 'package:communal_mobile/data/models/user_model.dart';
@@ -23,7 +26,8 @@ class AuthRepository {
   static const String _tag = 'AuthRepository';
 
   final DioClient dioClient;
-  static const String _platform = 'mobile_app'; // Platform identifier for mobile app
+  static const String _platform =
+      'mobile_app'; // Platform identifier for mobile app
 
   AuthRepository(this.dioClient);
 
@@ -53,8 +57,11 @@ class AuthRepository {
     try {
       await dioClient.logoutRevoke(ApiEndpoints.logout);
     } catch (e) {
-      AppLogger.warn(_tag, 'logout revoke failed; clearing locally anyway',
-          error: e);
+      AppLogger.warn(
+        _tag,
+        'logout revoke failed; clearing locally anyway',
+        error: e,
+      );
     }
   }
 
@@ -66,7 +73,8 @@ class AuthRepository {
         data: {
           'login': login,
           'password': password,
-          'platform': _platform, // Required by backend to identify platform type
+          'platform':
+              _platform, // Required by backend to identify platform type
         },
         requireAuth: false, // No auth required for login
       );
@@ -80,64 +88,77 @@ class AuthRepository {
         final statusCode = e.response?.statusCode;
         final responseData = e.response?.data;
         String errorMessage = 'Login failed. Please check your credentials.';
-        
+
         // Handle rate limiting and account lockout (429 Too Many Requests)
         if (statusCode == 429) {
           if (responseData is Map) {
-            final message = responseData['message']?.toString().toLowerCase() ?? '';
-            
+            final message =
+                responseData['message']?.toString().toLowerCase() ?? '';
+
             // Check if it's an account lockout (from our custom security service)
             if (message.contains('locked') || message.contains('lockout')) {
               final lockedUntil = responseData['locked_until'];
               final minutesRemaining = responseData['minutes_remaining'];
-              
+
               if (minutesRemaining != null) {
                 final minutes = int.tryParse(minutesRemaining.toString()) ?? 30;
-                errorMessage = 'Account temporarily locked due to multiple failed attempts. Please try again in $minutes minute${minutes > 1 ? 's' : ''}.';
+                errorMessage =
+                    'Account temporarily locked due to multiple failed attempts. Please try again in $minutes minute${minutes > 1 ? 's' : ''}.';
               } else if (lockedUntil != null) {
-                errorMessage = 'Account temporarily locked. Please try again later.';
+                errorMessage =
+                    'Account temporarily locked. Please try again later.';
               } else {
-                errorMessage = responseData['message'] ?? 'Account temporarily locked. Please try again later.';
+                errorMessage =
+                    responseData['message'] ??
+                    'Account temporarily locked. Please try again later.';
               }
             } else {
               // It's a rate limit from Laravel's throttle middleware
               // Check for retry-after header or provide default message
               final retryAfter = e.response?.headers.value('retry-after');
-              
+
               if (retryAfter != null) {
                 final seconds = int.tryParse(retryAfter) ?? 60;
                 final minutes = (seconds / 60).ceil();
-                errorMessage = 'Too many login attempts. Please wait $minutes minute${minutes > 1 ? 's' : ''} before trying again.';
+                errorMessage =
+                    'Too many login attempts. Please wait $minutes minute${minutes > 1 ? 's' : ''} before trying again.';
               } else {
-                errorMessage = responseData['message'] ?? 'Too many login attempts. Please wait a few minutes before trying again.';
+                errorMessage =
+                    responseData['message'] ??
+                    'Too many login attempts. Please wait a few minutes before trying again.';
               }
             }
           } else if (responseData is String) {
             final message = responseData.toLowerCase();
             if (message.contains('too many') || message.contains('throttle')) {
-              errorMessage = 'Too many login attempts. Please wait a few minutes before trying again.';
-            } else if (message.contains('locked') || message.contains('lockout')) {
-              errorMessage = 'Account temporarily locked. Please try again later.';
+              errorMessage =
+                  'Too many login attempts. Please wait a few minutes before trying again.';
+            } else if (message.contains('locked') ||
+                message.contains('lockout')) {
+              errorMessage =
+                  'Account temporarily locked. Please try again later.';
             } else {
               errorMessage = responseData;
             }
           } else {
-            errorMessage = 'Too many login attempts. Please wait a few minutes before trying again.';
+            errorMessage =
+                'Too many login attempts. Please wait a few minutes before trying again.';
           }
           throw Exception(errorMessage);
         }
-        
+
         // Handle other errors
         if (responseData is Map) {
-          errorMessage = responseData['message'] ?? 
-                        responseData['error'] ?? 
-                        (responseData['errors'] != null 
-                          ? responseData['errors'].toString() 
-                          : errorMessage);
+          errorMessage =
+              responseData['message'] ??
+              responseData['error'] ??
+              (responseData['errors'] != null
+                  ? responseData['errors'].toString()
+                  : errorMessage);
         } else if (responseData is String) {
           errorMessage = responseData;
         }
-        
+
         throw Exception(errorMessage);
       } else {
         throw Exception('Network error. Please check your connection.');
@@ -156,10 +177,7 @@ class AuthRepository {
     try {
       final response = await dioClient.post(
         ApiEndpoints.sessionTakeoverVerify,
-        data: {
-          'takeover_challenge_id': takeoverChallengeId,
-          'otp': otp,
-        },
+        data: {'takeover_challenge_id': takeoverChallengeId, 'otp': otp},
         requireAuth: false,
       );
 
@@ -217,8 +235,9 @@ class AuthRepository {
           ? (data['message']?.toString() ?? 'Unable to resend code')
           : 'Unable to resend code';
       final wait = data is Map
-          ? ((data['resend_available_in'] ?? data['retry_after_seconds']) as num?)
-              ?.toInt()
+          ? ((data['resend_available_in'] ?? data['retry_after_seconds'])
+                    as num?)
+                ?.toInt()
           : null;
       throw OtpResendException(
         message,
@@ -228,8 +247,10 @@ class AuthRepository {
     }
   }
 
-  Future<UserModel?> getUserInfo(String token,
-      {bool skipProactiveRefresh = false}) async {
+  Future<UserModel?> getUserInfo(
+    String token, {
+    bool skipProactiveRefresh = false,
+  }) async {
     // Ensure token is set in DioClient before making the request.
     updateToken(token);
     try {
@@ -247,8 +268,12 @@ class AuthRepository {
       );
       rethrow;
     } catch (e, stackTrace) {
-      AppLogger.error(_tag, 'getUserInfo unexpected error',
-          error: e, stackTrace: stackTrace);
+      AppLogger.error(
+        _tag,
+        'getUserInfo unexpected error',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
     return null;
@@ -260,6 +285,25 @@ class AuthRepository {
     await dioClient.post(
       ApiEndpoints.profileDeviceToken,
       data: {'device_token': token},
+    );
+  }
+
+  /// Register this install in the per-app push address book.
+  ///
+  /// [updateDeviceToken] writes the single `members_profiles.device_token`
+  /// column, which cannot say which app a token belongs to. This names the app
+  /// and the handset, so a notification for Communal Meet reaches Meet.
+  Future<void> registerDevice(String deviceToken) async {
+    final token = deviceToken.trim();
+    if (token.isEmpty) return;
+    await dioClient.post(
+      ApiEndpoints.profileDevices,
+      data: {
+        'app': 'wallet',
+        'fcm_token': token,
+        'device_id': await handsetId(),
+        'platform': Platform.isIOS ? 'ios' : 'android',
+      },
     );
   }
 
@@ -367,9 +411,10 @@ class AuthRepository {
     } on DioException catch (e) {
       // Extract error message from response
       if (e.response != null) {
-        final errorMessage = e.response?.data['message'] ?? 
-                           e.response?.data['error'] ?? 
-                           'User not found';
+        final errorMessage =
+            e.response?.data['message'] ??
+            e.response?.data['error'] ??
+            'User not found';
         throw Exception(errorMessage);
       } else {
         throw Exception('Network error. Please check your connection.');
@@ -495,7 +540,8 @@ class AuthRepository {
       if (e.response != null) {
         final data = e.response?.data;
         final msg = data is Map
-            ? (data['message']?.toString() ?? 'Unable to send verification code')
+            ? (data['message']?.toString() ??
+                  'Unable to send verification code')
             : 'Unable to send verification code';
         throw Exception(msg);
       }
@@ -543,7 +589,8 @@ class AuthRepository {
           );
         }
         final msg = data is Map
-            ? (data['message']?.toString() ?? 'Unable to send verification code')
+            ? (data['message']?.toString() ??
+                  'Unable to send verification code')
             : 'Unable to send verification code';
         throw Exception(msg);
       }
@@ -561,10 +608,7 @@ class AuthRepository {
     try {
       final response = await dioClient.post(
         ApiEndpoints.otpDeliveryStatus,
-        data: <String, dynamic>{
-          'login': contact.trim(),
-          'purpose': purpose,
-        },
+        data: <String, dynamic>{'login': contact.trim(), 'purpose': purpose},
         requireAuth: false,
       );
       if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
@@ -579,7 +623,8 @@ class AuthRepository {
       if (e.response != null) {
         final data = e.response?.data;
         final msg = data is Map
-            ? (data['message']?.toString() ?? 'Unable to fetch OTP delivery status')
+            ? (data['message']?.toString() ??
+                  'Unable to fetch OTP delivery status')
             : 'Unable to fetch OTP delivery status';
         throw Exception(msg);
       }
@@ -619,16 +664,16 @@ class AuthRepository {
             responseData['user'] as Map<String, dynamic>,
           );
         } catch (userParseError, stackTrace) {
-          AppLogger.warn(_tag, 'createPassword: user parse failed',
-              error: userParseError);
+          AppLogger.warn(
+            _tag,
+            'createPassword: user parse failed',
+            error: userParseError,
+          );
           AppLogger.debug(_tag, 'stack', stackTrace: stackTrace);
         }
       }
 
-      return LoginResponse(
-        token: responseData['token'] as String?,
-        user: user,
-      );
+      return LoginResponse(token: responseData['token'] as String?, user: user);
     } on DioException catch (e) {
       AppLogger.warn(
         _tag,
@@ -638,7 +683,8 @@ class AuthRepository {
         final responseData = e.response?.data;
         String errorMessage = 'Failed to create password';
         if (responseData is Map) {
-          errorMessage = responseData['message'] ??
+          errorMessage =
+              responseData['message'] ??
               responseData['error'] ??
               (responseData['errors'] != null
                   ? responseData['errors'].toString()
@@ -650,8 +696,12 @@ class AuthRepository {
       }
       throw Exception('Network error. Please check your connection.');
     } catch (e, stackTrace) {
-      AppLogger.error(_tag, 'createPassword unexpected error',
-          error: e, stackTrace: stackTrace);
+      AppLogger.error(
+        _tag,
+        'createPassword unexpected error',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
@@ -700,7 +750,11 @@ class AuthRepository {
     }
   }
 
-  Future<bool> resetPassword(String login, String newPassword, String pin) async {
+  Future<bool> resetPassword(
+    String login,
+    String newPassword,
+    String pin,
+  ) async {
     try {
       // Note: Backend uses PUT method.
       final response = await dioClient.put(
@@ -720,8 +774,7 @@ class AuthRepository {
 
       final responseData = response.data;
       if (responseData is Map) {
-        final message =
-            responseData['message']?.toString().toLowerCase() ?? '';
+        final message = responseData['message']?.toString().toLowerCase() ?? '';
         if (message.contains('success') ||
             message.contains('updated') ||
             responseData['status'] == true ||
@@ -740,7 +793,8 @@ class AuthRepository {
         final responseData = e.response?.data;
         String errorMessage = 'Unable to reset password. Please try again.';
         if (responseData is Map) {
-          errorMessage = responseData['message'] ??
+          errorMessage =
+              responseData['message'] ??
               responseData['error'] ??
               (responseData['errors'] != null
                   ? responseData['errors'].toString()
@@ -752,8 +806,12 @@ class AuthRepository {
       }
       throw Exception('Network error: ${e.message}');
     } catch (e, stackTrace) {
-      AppLogger.error(_tag, 'resetPassword unexpected error',
-          error: e, stackTrace: stackTrace);
+      AppLogger.error(
+        _tag,
+        'resetPassword unexpected error',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
@@ -787,10 +845,7 @@ class AuthRepository {
     try {
       final response = await dioClient.post(
         ApiEndpoints.membersChangePassword,
-        data: <String, dynamic>{
-          'old_password': oldPin,
-          'new_password': newPin,
-        },
+        data: <String, dynamic>{'old_password': oldPin, 'new_password': newPin},
       );
       if (response.statusCode == 200 || response.statusCode == 201) return;
       final data = response.data;

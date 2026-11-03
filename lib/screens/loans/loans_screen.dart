@@ -101,12 +101,9 @@ class _LoansScreenState extends State<LoansScreen> {
   void _onApplyTapped({LoanScheme? scheme}) {
     final el = _eligibility;
     if (el != null && !el.canApply) {
-      // The banner above the Quick Actions row already explains the
-      // sundry debt; the toast is a redundant tap-time confirmation
-      // for users who didn't read it.
-      AppToast.error(
-        'Settle your sundry debt of ${el.sundryDebtLabel} before requesting a new loan.',
-      );
+      // The banner above the Quick Actions row already says this; the toast is
+      // the tap-time confirmation for anyone who did not read it.
+      AppToast.error(el.cannotApplyMessage);
       return;
     }
     final hasPending = _loans.any((l) => l.status == LoanStatus.pending);
@@ -157,7 +154,7 @@ class _LoansScreenState extends State<LoansScreen> {
                         _buildSummaryCard(),
                         vSpace(24),
                         if (_eligibility?.canApply == false) ...[
-                          _buildSundryBanner(_eligibility!),
+                          _buildBlockedBanner(_eligibility!),
                           vSpace(20),
                         ],
                         _buildQuickActions(),
@@ -321,7 +318,11 @@ class _LoansScreenState extends State<LoansScreen> {
   /// debt. The Apply CTA is also gated in [_onApplyTapped]; this
   /// banner is the proactive explanation that keeps the gate from
   /// feeling arbitrary.
-  Widget _buildSundryBanner(LoanEligibility el) {
+  // The banner carries whatever the backend said is in the way, not only a
+  // sundry debt: a cooperative that has not chosen which savings count towards
+  // a loan blocks every member, and saying "sundry debt" there sends them
+  // looking for money they do not owe.
+  Widget _buildBlockedBanner(LoanEligibility el) {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(16.w),
@@ -351,7 +352,9 @@ class _LoansScreenState extends State<LoansScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Sundry debt outstanding',
+                  el.cannotApplyReason == 'sundry_debt_active'
+                      ? 'Sundry debt outstanding'
+                      : 'You cannot apply yet',
                   style: TextStyle(
                     fontSize: 17.sp,
                     fontWeight: FontWeight.w700,
@@ -360,8 +363,7 @@ class _LoansScreenState extends State<LoansScreen> {
                 ),
                 vSpace(4),
                 Text(
-                  'You have ${el.sundryDebtLabel} of unsettled sundry debt with this cooperative. '
-                  'New loan requests are blocked until it is cleared.',
+                  el.cannotApplyMessage,
                   style: TextStyle(
                     fontSize: 15.sp,
                     color: Colors.red.shade900.withValues(alpha: 0.85),

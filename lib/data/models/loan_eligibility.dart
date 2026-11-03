@@ -88,13 +88,50 @@ class LoanEligibility {
   final int sundryDebtMinor;
 
   /// `false` when the member is blocked from applying for any reason
-  /// the backend recognises; today only `sundry_debt_active` triggers
-  /// this. Defaults true when the field is missing (older backend).
+  /// the backend recognises. Defaults true when the field is missing
+  /// (older backend).
   final bool canApply;
 
-  /// Machine-readable reason matching [canApply]. Currently only
-  /// `'sundry_debt_active'`. Null when the member can apply.
+  /// Machine-readable reason matching [canApply], null when they can apply:
+  ///
+  ///  - `sundry_debt_active` — an unsettled debt to the cooperative.
+  ///  - `loan_access_obligations_unset` — the cooperative has not chosen which
+  ///    obligations count towards loan eligibility, so every member's holdings
+  ///    read as zero. Nothing the member can do about it.
+  ///  - `no_holdings` — configured, but this member holds nothing in them yet.
+  ///  - `fully_pledged_as_guarantor` — their whole limit is pledged to loans
+  ///    they are guaranteeing.
+  ///  - `below_minimum` — their limit is under the cooperative's minimum loan
+  ///    amount.
   final String? cannotApplyReason;
+
+  /// What to tell the member, from the reason the backend gave. The app used to
+  /// infer one reason for every case and name a minimum loan amount even when
+  /// the cooperative had set none.
+  String get cannotApplyMessage {
+    switch (cannotApplyReason) {
+      case 'sundry_debt_active':
+        return 'You have an unsettled debt of $sundryDebtLabel with your '
+            'cooperative. Clear it to apply for a loan.';
+      case 'loan_access_obligations_unset':
+        return 'Your cooperative has not yet set which savings count towards a '
+            'loan, so no limit can be worked out. Ask an administrator to set '
+            'it under Loan Settings.';
+      case 'no_holdings':
+        return 'You have nothing saved in the accounts your cooperative counts '
+            'towards a loan yet. Contribute to them and your limit will appear '
+            'here.';
+      case 'fully_pledged_as_guarantor':
+        return 'Your whole loan limit is pledged to loans you are guaranteeing. '
+            'It frees up as those loans are repaid.';
+      case 'below_minimum':
+        return 'Your limit of $maxLabel is below your cooperative\'s minimum '
+            'loan amount of $minLabel.';
+      default:
+        return 'You cannot apply for a loan at the moment. Ask your cooperative '
+            'for the reason.';
+    }
+  }
 
   String get sundryDebtLabel => Money(sundryDebtMinor, currency).format();
 

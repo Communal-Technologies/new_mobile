@@ -165,7 +165,15 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     return el.maxAmountMinor / factorFor(el.currency);
   }
 
-  bool get _hasEligibility => _eligibility != null && _maxAmount > _minAmount;
+  // A member whose limit lands exactly on the cooperative's minimum can borrow
+  // it: the old `>` refused them. A limit of zero is no limit at all, whatever
+  // the minimum is — and when the cooperative has set no minimum, zero was
+  // compared against zero and read as "your holdings are below the minimum".
+  bool get _hasEligibility =>
+      _eligibility != null &&
+      (_eligibility!.canApply || _eligibility!.cannotApplyReason == null) &&
+      _maxAmount > 0 &&
+      _maxAmount >= _minAmount;
 
   void _setAmount(double value) {
     if (!_hasEligibility) return;
@@ -526,8 +534,8 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             child: Text(
               _loading
                   ? 'Loading your eligibility…'
-                  : (_eligibility != null && _maxAmount <= _minAmount
-                        ? 'You don\'t qualify for a loan yet — your EPC holdings are below your cooperative\'s minimum loan amount.'
+                  : (_eligibility != null
+                        ? _eligibility!.cannotApplyMessage
                         : 'Loan limits unavailable. Pull to refresh.'),
               style: TextStyle(
                 fontSize: 17.sp,

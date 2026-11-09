@@ -57,7 +57,7 @@ class LoanOfferCard extends StatelessWidget {
                   ),
                 ),
               ),
-              if (scheme.category.isNotEmpty)
+              if (scheme.categoryLabel.isNotEmpty)
                 Container(
                   padding: EdgeInsets.symmetric(
                     horizontal: 10.w,
@@ -68,7 +68,7 @@ class LoanOfferCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12.r),
                   ),
                   child: Text(
-                    scheme.category,
+                    scheme.categoryLabel,
                     style: TextStyle(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w600,

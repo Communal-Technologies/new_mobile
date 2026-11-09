@@ -80,10 +80,17 @@ class ApiEndpoints {
 
   // --- Profile ------------------------------------------------------------
   static const String profileDeviceToken = '$_v1/profile/device-token';
+  static const String profileDevices = '$_v1/profile/devices';
 
   // --- Members account / settings -----------------------------------------
   static const String membersChangePassword = '$_v1/members/change-password';
   static const String memberLoginActivity = '$_v1/auth/login-activity';
+  static String membersAnnouncements(String? cooperativeId) =>
+      cooperativeId == null || cooperativeId.isEmpty
+      ? '$_v1/members/announcements'
+      : '$_v1/members/announcements?cooperative=$cooperativeId';
+  static String membersAcknowledgeAnnouncement(String id) =>
+      '$_v1/members/announcements/$id/ack';
   static const String membersUpdateSecurityPin =
       '$_v1/members/update-security-pin';
   static const String membersVerifySecurityPin =
@@ -212,6 +219,8 @@ class ApiEndpoints {
   ) => '$_oblV2/$ledgerNumber/$cooperativeId';
   static String membersFines(String ledgerNumber, String cooperativeId) =>
       '$_oblV2/fines/$ledgerNumber/$cooperativeId';
+  static String membersSundries(String ledgerNumber, String cooperativeId) =>
+      '$_oblV2/sundries/$ledgerNumber?cooperative=$cooperativeId';
   // Cash repositories are owned by cooperative-svc; the monolith copy is gone
   // post-migration.
   static const String membersCooperativeCashRepositories =
@@ -307,6 +316,7 @@ class ApiEndpoints {
 
   // --- KYC / compliance (kycsvc — /api/kyc/v2/...) ------------------------
   static const String kycCreate = '/api/kyc/v2';
+
   /// PATCH — edits the customer that [kycCreate] created. Re-POSTing instead
   /// would try to create a second Anchor customer on the same email and phone,
   /// which Anchor refuses.
@@ -343,7 +353,8 @@ class ApiEndpoints {
       '$_supportV1/tickets/$id/messages';
   static String supportTicketEscalate(String id) =>
       '$_supportV1/tickets/$id/escalate';
-  static String supportTicketClose(String id) => '$_supportV1/tickets/$id/close';
+  static String supportTicketClose(String id) =>
+      '$_supportV1/tickets/$id/close';
   static String supportTicketCsat(String id) => '$_supportV1/tickets/$id/csat';
 
   // --- Regions / locations ------------------------------------------------

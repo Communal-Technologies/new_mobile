@@ -16,6 +16,7 @@ class LoanScheme {
     required this.loanCode,
     required this.title,
     required this.category,
+    this.categoryLabel = '',
     required this.durationMonths,
     required this.interestRate,
     required this.serviceCharge,
@@ -65,6 +66,9 @@ class LoanScheme {
   final String loanCode;
   final String title;
   final String category;
+
+  /// The category's name as the service resolves it.
+  final String categoryLabel;
   /// Legacy single-value duration. Kept for one release while the
   /// backend writes both `duration` and the new
   /// `min_duration_months` / `max_duration_months` columns. Prefer
@@ -160,6 +164,7 @@ class LoanScheme {
         'loan_code': loanCode,
         'title': title,
         'category': category,
+        'category_label': categoryLabel,
         'duration': pickedDurationMonths ?? effectiveMaxDuration,
         'min_duration_months': effectiveMinDuration,
         'max_duration_months': effectiveMaxDuration,
@@ -184,6 +189,7 @@ class LoanScheme {
       loanCode: m['loan_code']?.toString() ?? m['code']?.toString() ?? '',
       title: m['title']?.toString().trim() ?? '',
       category: m['category']?.toString().trim() ?? '',
+      categoryLabel: m['category_label']?.toString().trim() ?? '',
       durationMonths: _asInt(m['duration']),
       minDurationMonths: minRaw == null ? null : _asInt(minRaw),
       maxDurationMonths: maxRaw == null ? null : _asInt(maxRaw),

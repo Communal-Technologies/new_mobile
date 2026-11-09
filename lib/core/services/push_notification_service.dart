@@ -18,6 +18,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Channel ID referenced by AndroidManifest.xml's
 /// `com.google.firebase.messaging.default_notification_channel_id` meta-data.
@@ -281,6 +282,22 @@ class PushNotificationService {
     }
   }
 
+  /// Open Communal Meet, or its store listing when it is not installed.
+  static Future<void> _openMeet(Map<String, dynamic> data) async {
+    final target = (data['install_url']?.toString() ?? '').trim();
+    final url = Uri.tryParse(
+      target.isEmpty
+          ? 'https://play.google.com/store/apps/details?id=com.communal.meet'
+          : target,
+    );
+    if (url == null) return;
+    try {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('PushNotificationService: could not open Meet: $e');
+    }
+  }
+
   /// Navigate to a deep-link [intent] with `/home` (the dashboard) anchored
   /// as the base of the stack, so the hardware back button from the opened
   /// screen returns to the dashboard instead of exiting the app.
@@ -302,9 +319,8 @@ class PushNotificationService {
   /// `data` payload. Shares the exact routing + hydration logic used
   /// for push taps so the Notifications screen navigates identically.
   /// Returns null when the payload carries no actionable type.
-  static Future<DeepLinkIntent?> resolveIntent(
-    Map<String, dynamic> data,
-  ) => _intentForData(data);
+  static Future<DeepLinkIntent?> resolveIntent(Map<String, dynamic> data) =>
+      _intentForData(data);
 
   /// Async because some types need to hydrate a model from the
   /// backend (loan-detail expects a fully built [LoanApplication] in
@@ -317,6 +333,17 @@ class PushNotificationService {
   ) async {
     final type = (data['type']?.toString() ?? '').trim();
     final legacyRoute = (data['route']?.toString() ?? '').trim();
+
+    // Communal Meet's notices, addressed here because the member has no Meet
+    // install for meetsvc to reach. Nothing in this app can show a Meet thread
+    // or join a meeting, so the tap leaves for the app that can.
+    if (type == 'meet_invite' ||
+        type == 'meet_message' ||
+        type == 'meet_meeting_started' ||
+        type == 'meet_call') {
+      await _openMeet(data);
+      return null;
+    }
 
     if (type == 'guarantor_loan_approval') {
       // No id-based hydration needed — the guarantor-requests screen
@@ -507,6 +534,7 @@ class PushNotificationService {
     }
     try {
       await authRepository.updateDeviceToken(t);
+      await authRepository.registerDevice(t);
       _lastSyncedToken = t;
     } catch (e) {
       debugPrint('PushNotificationService: token sync failed: $e');

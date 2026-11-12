@@ -57,6 +57,9 @@ class LoanApplication {
     required this.amountPaidMinor,
     required this.monthlyRepaymentMinor,
     required this.interestMinor,
+    this.interestPaidMinor = 0,
+    this.overdueInterestMinor = 0,
+    this.overdueInterestPaidMinor = 0,
     required this.currency,
     required this.guarantors,
     required this.createdAt,
@@ -93,6 +96,9 @@ class LoanApplication {
   final int amountPaidMinor;
   final int monthlyRepaymentMinor;
   final int interestMinor;
+  final int interestPaidMinor;
+  final int overdueInterestMinor;
+  final int overdueInterestPaidMinor;
   final String currency;
   final List<String> guarantors;
   final DateTime createdAt;
@@ -106,14 +112,17 @@ class LoanApplication {
   /// history (a declined loan never has any).
   final String? declineNote;
 
-  int get balanceMinor {
-    final remaining = amountMinor - amountPaidMinor;
-    return remaining < 0 ? 0 : remaining;
-  }
+  int _left(int owed, int paid) => owed > paid ? owed - paid : 0;
+
+  int get balanceMinor =>
+      _left(amountMinor, amountPaidMinor) +
+      _left(interestMinor, interestPaidMinor) +
+      _left(overdueInterestMinor, overdueInterestPaidMinor);
 
   double get repaymentProgress {
-    if (amountMinor <= 0) return 0;
-    final p = amountPaidMinor / amountMinor;
+    final owed = amountMinor + interestMinor + overdueInterestMinor;
+    if (owed <= 0) return 0;
+    final p = (owed - balanceMinor) / owed;
     if (p < 0) return 0;
     if (p > 1) return 1;
     return p;
@@ -158,6 +167,9 @@ class LoanApplication {
       amountPaidMinor: _asInt(m['amount_paid']),
       monthlyRepaymentMinor: _asInt(m['monthly_repayment']),
       interestMinor: _asInt(m['interest']),
+      interestPaidMinor: _asInt(m['interest_paid']),
+      overdueInterestMinor: _asInt(m['overdue_interest']),
+      overdueInterestPaidMinor: _asInt(m['overdue_interest_paid']),
       currency: currency,
       guarantors: guarantors,
       createdAt: _parseDate(m['created_at']) ?? DateTime.now(),
